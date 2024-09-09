@@ -1,0 +1,10 @@
+setup.py
+src/__init__.py
+src/data_loader.py
+src/hybrid.py
+src/utils.py
+src/canari.egg-info/PKG-INFO
+src/canari.egg-info/SOURCES.txt
+src/canari.egg-info/dependency_links.txt
+src/canari.egg-info/requires.txt
+src/canari.egg-info/top_level.txt
