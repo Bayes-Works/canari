@@ -1,3 +1,5 @@
+LICENSE
+README.md
 setup.py
 src/__init__.py
 src/data_loader.py

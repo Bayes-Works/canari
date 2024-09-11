@@ -4,6 +4,7 @@ Version: 0.1
 Summary: A Python package that uses pyTAGI
 Author: Van-Dai Vuong, James-A. Goulet
 Author-email: vuongdai@gmail.com
+License-File: LICENSE
 Requires-Dist: pyTAGI
 Requires-Dist: matplotlib==3.8.2
 Requires-Dist: ninja==1.11.1.1
