@@ -17,7 +17,7 @@ from pytagi import Normalizer as normalizer
 from pytagi import exponential_scheduler
 from pytagi.nn import LSTM, Linear, OutputUpdater, Sequential
 
-from data_loader import TimeSeriesDataloader
+from data_loader import TimeSeriesDataloader_cutagi
 from hybrid import LSTM_SSM, process_input_ssm
 
 
@@ -30,7 +30,7 @@ def main(num_epochs: int = 30, batch_size: int = 1, sigma_v: float = 1):
     output_seq_len = 1
     seq_stride = 1
 
-    train_dtl = TimeSeriesDataloader(
+    train_dtl = TimeSeriesDataloader_cutagi(
         x_file="data/HQ/LGA007PIAP-E010_Y_train.csv",
         date_time_file="data/HQ/LGA007PIAP-E010_Y_train_datetime.csv",
         output_col=output_col,
@@ -40,7 +40,7 @@ def main(num_epochs: int = 30, batch_size: int = 1, sigma_v: float = 1):
         stride=seq_stride,
         time_covariates = ['week_of_year'],  # 'hour_of_day','day_of_week', 'week_of_year', 'month_of_year','quarter_of_year'
     )
-    test_dtl = TimeSeriesDataloader(
+    test_dtl = TimeSeriesDataloader_cutagi(
         x_file="data/HQ/LGA007PIAP-E010_Y_val.csv",
         date_time_file="data/HQ/LGA007PIAP-E010_Y_val_datetime.csv",
         output_col=output_col,
