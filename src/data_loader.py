@@ -5,272 +5,119 @@ import numpy as np
 import pandas as pd
 
 from pytagi import Normalizer, Utils
+from sklearn.preprocessing import StandardScaler
 
-
-class TimeSeriesDataloader:
-    """Data loader for time series"""
-
+class DataPreProcess:
     def __init__(
-        self,
-        value: np.ndarray,
-        time: np.ndarray,
-        output_col: np.ndarray,
-        input_seq_len: int,
-        output_seq_len: int,
-        num_features: int,
-        stride: int,
-        x_mean: Optional[np.ndarray] = None,
-        x_std: Optional[np.ndarray] = None,
-        ts_idx: Optional[int] = None,
+        self, 
+        data: pd.DataFrame, 
+        train_time_start: str, 
+        val_time_start: str, 
+        test_time_start: str, 
+        test_time_end: str,
         time_covariates: Optional[str] = None,
-        keep_last_time_cov: Optional[bool] = False,
-    ) -> None:
-        self.value = value
-        self.time = time
-        self.output_col = output_col
-        self.input_seq_len = input_seq_len
-        self.output_seq_len = output_seq_len
-        self.num_features = num_features
-        self.stride = stride
-        self.x_mean = x_mean
-        self.x_std = x_std
-        self.ts_idx = ts_idx  # add time series index when data having multiple ts
-        self.time_covariates = time_covariates  # for adding time covariates
-        self.keep_last_time_cov = keep_last_time_cov
-        self.dataset = self.process_data()
+        ) -> None:
+        self.data = data.values
+        self.time = data.index
+        self.train_time_start   = pd.to_datetime(train_time_start)
+        self.val_time_start     = pd.to_datetime(val_time_start)
+        self.test_time_start    = pd.to_datetime(test_time_start)
+        self.test_time_end      = pd.to_datetime(test_time_end)
+        self.time_covariates    = time_covariates
 
-    @staticmethod
-    def batch_generator(
-        input_data: np.ndarray,
-        output_data: np.ndarray,
-        batch_size: int,
-        shuffle: bool = True,
-    ) -> Generator[Tuple[np.ndarray, ...], None, None]:
-        """
-        Generator function to yield batches of data.
-        """
-        num_data = input_data.shape[0]
-        indices = np.arange(num_data)
-        if shuffle:
-            np.random.shuffle(indices)
-
-        for start_idx in range(0, num_data, batch_size):
-            # if start_idx + batch_size > num_data:
-            #     continue
-            end_idx = min(start_idx + batch_size, num_data)
-            idx = indices[start_idx:end_idx]
-            yield input_data[idx].flatten(), output_data[idx].flatten()
-
-    def process_data(self) -> dict:
-        """Process time series"""
-        # Initialization
-        utils = Utils()
-
-        x = self.value
-        date_time = self.time
+        # Add time covariates when needed
+        if self.time_covariates is not None:
+            self.add_time_covariates() 
+         
+        # Perform preprocessing
+        self.preprocess_data()
         
+    def preprocess_data(self):
+        # Filter data based on time ranges
+        train_mask      = (self.time >= self.train_time_start) & (self.time < self.val_time_start)
+        trainVal_mask   = (self.time >= self.train_time_start) & (self.time < self.test_time_start)
+        val_mask        = (self.time >= self.val_time_start) & (self.time < self.test_time_start)
+        test_mask       = (self.time >= self.test_time_start) & (self.time <= self.test_time_end)
+
+        # split data
+        data_train      = self.data[train_mask,:]
+        data_val        = self.data[val_mask,:]
+        data_test       = self.data[test_mask,:]
+        self.time       = np.array(self.time, dtype="datetime64")
+        self.time_train = self.time[train_mask]
+        self.time_val   = self.time[val_mask]
+        self.time_test  = self.time[test_mask]
+
+        # Calulate the mean and std from the training and validation sets
+        self.x_mean, self.x_std = Normalizer.compute_mean_std(self.data[trainVal_mask,:])
+        self.data_train = Normalizer.standardize(data=data_train, mu=self.x_mean, std=self.x_std)
+        self.data_val = Normalizer.standardize(data=data_val, mu=self.x_mean, std=self.x_std)
+        self.data_test = Normalizer.standardize(data=data_test, mu=self.x_mean, std=self.x_std)
+
+        # return data_train, data_val, data_test, x_mean, x_std
+
+
+    def add_time_covariates(self):
         # Add time covariates
-        if self.time_covariates is not None:
-            date_time = np.array(date_time, dtype="datetime64")
-            for time_cov in self.time_covariates:
-                if time_cov == "hour_of_day":
-                    hour_of_day = date_time.astype("datetime64[h]").astype(int) % 24
-                    x = np.concatenate((x, hour_of_day), axis=1)
-                elif time_cov == "day_of_week":
-                    day_of_week = date_time.astype("datetime64[D]").astype(int) % 7
-                    x = np.concatenate((x, day_of_week), axis=1)
-                elif time_cov == "week_of_year":
-                    week_of_year = (
-                        date_time.astype("datetime64[W]").astype(int) % 52 + 1
-                    )
-                    x = np.concatenate((x, week_of_year), axis=1)
-                elif time_cov == "month_of_year":
-                    month_of_year = (
-                        date_time.astype("datetime64[M]").astype(int) % 12 + 1
-                    )
-                    x = np.concatenate((x, month_of_year), axis=1)
-                elif time_cov == "quarter_of_year":
-                    month_of_year = (
-                        date_time.astype("datetime64[M]").astype(int) % 12 + 1
-                    )
-                    quarter_of_year = (month_of_year - 1) // 3 + 1
-                    x = np.concatenate((x, quarter_of_year), axis=1)
-
-        # Normalizer
-        if self.x_mean is None and self.x_std is None:
-            self.x_mean, self.x_std = Normalizer.compute_mean_std(x)
-        x = Normalizer.standardize(data=x, mu=self.x_mean, std=self.x_std)
-
-        # Create rolling windows
-        x_rolled, y_rolled = utils.create_rolling_window(
-            data=x,
-            output_col=self.output_col,
-            input_seq_len=self.input_seq_len,
-            output_seq_len=self.output_seq_len,
-            num_features=self.num_features,
-            stride=self.stride,
-        )
-
-        if self.keep_last_time_cov:
-            x_rolled = self.remove_time_cov(x_rolled)
-
-        # Dataloader
-        dataset = {}
-        dataset["value"] = (x_rolled, y_rolled)
-
-        # NOTE: Datetime is saved for the visualization purpose
-        dataset["date_time"] = [np.datetime64(date) for date in np.squeeze(date_time)]
-
-        return dataset
-
-    def remove_time_cov(self, x):
-        x_new = np.zeros((len(x), self.input_seq_len + self.num_features - 1), dtype=np.float32)
-        for i in range(0,len(x)):
-            x_ = x[i]
-            keep_idx = np.arange(0, len(x_), self.num_features)
-            x_new[i] = np.concatenate((x_[keep_idx],x_[-self.num_features+1:]))
-        return x_new
-
-
-    def create_data_loader(self, batch_size: int, shuffle: bool = True):
-        return self.batch_generator(*self.dataset["value"], batch_size, shuffle)
-
-
-class TimeSeriesDataloader_cutagi:
-    """Data loader for time series"""
-
-    def __init__(
-        self,
-        x_file: str,
-        date_time_file: str,
-        output_col: np.ndarray,
-        input_seq_len: int,
-        output_seq_len: int,
-        num_features: int,
-        stride: int,
-        x_mean: Optional[np.ndarray] = None,
-        x_std: Optional[np.ndarray] = None,
-        ts_idx: Optional[int] = None,
-        time_covariates: Optional[str] = None,
-        keep_last_time_cov: Optional[bool] = False,
-    ) -> None:
-        self.x_file = x_file
-        self.date_time_file = date_time_file
-        self.output_col = output_col
-        self.input_seq_len = input_seq_len
-        self.output_seq_len = output_seq_len
-        self.num_features = num_features
-        self.stride = stride
-        self.x_mean = x_mean
-        self.x_std = x_std
-        self.ts_idx = ts_idx  # add time series index when data having multiple ts
-        self.time_covariates = time_covariates  # for adding time covariates
-        self.keep_last_time_cov = keep_last_time_cov
-        self.dataset = self.process_data()
-
-    def load_data_from_csv(self, data_file: str) -> pd.DataFrame:
-        """Load data from csv file"""
-
-        data = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-
-        return data.values
+        time = self.time.values.reshape(-1, 1)
+        time = np.array(time, dtype="datetime64")
+        for time_cov in self.time_covariates:
+            if time_cov == "hour_of_day":
+                hour_of_day = time.astype("datetime64[h]").astype(int) % 24
+                self.data = np.concatenate((self.data, hour_of_day), axis=1)
+            elif time_cov == "day_of_week":
+                day_of_week = time.astype("datetime64[D]").astype(int) % 7
+                self.data = np.concatenate((self.data, day_of_week), axis=1)
+            elif time_cov == "week_of_year":
+                week_of_year = (
+                    time.astype("datetime64[W]").astype(int) % 52 + 1
+                )
+                self.data = np.concatenate((self.data, week_of_year), axis=1)
+            elif time_cov == "month_of_year":
+                month_of_year = (
+                    time.astype("datetime64[M]").astype(int) % 12 + 1
+                )
+                self.data = np.concatenate((self.data, month_of_year), axis=1)
+            elif time_cov == "quarter_of_year":
+                month_of_year = (
+                    time.astype("datetime64[M]").astype(int) % 12 + 1
+                )
+                quarter_of_year = (month_of_year - 1) // 3 + 1
+                self.data = np.concatenate((self.data, quarter_of_year), axis=1)
 
     @staticmethod
-    def batch_generator(
-        input_data: np.ndarray,
-        output_data: np.ndarray,
-        batch_size: int,
-        shuffle: bool = True,
-    ) -> Generator[Tuple[np.ndarray, ...], None, None]:
+    def resample_data(data, time: str, freq: str, agg_func='mean') -> pd.DataFrame:
         """
-        Generator function to yield batches of data.
+        Resample the data based on the provided frequency and take the average for aggregation.
+        
+        Parameters:
+        freq (str): Frequency for resampling, e.g., 'H' for hourly, 'W' for weekly, 'M' for monthly.
+        
+        Returns:
+        pd.DataFrame: Resampled data with a uniform time step.
         """
-        num_data = input_data.shape[0]
-        indices = np.arange(num_data)
-        if shuffle:
-            np.random.shuffle(indices)
+        # Ensure that time is part of the DataFrame for resampling
+        data.columns = [f'col_{i+1}' for i in range(data.shape[1])]
+        data['time']  = pd.to_datetime(time[0], format='%Y-%m-%d %H:%M:%S')
 
-        for start_idx in range(0, num_data, batch_size):
-            # if start_idx + batch_size > num_data:
-            #     continue
-            end_idx = min(start_idx + batch_size, num_data)
-            idx = indices[start_idx:end_idx]
-            yield input_data[idx].flatten(), output_data[idx].flatten()
+        # Set 'time' as the index
+        data.set_index('time', inplace=True)
 
-    def process_data(self) -> dict:
-        """Process time series"""
-        # Initialization
-        utils = Utils()
-
-        # Load data
-        x = self.load_data_from_csv(self.x_file)
-        if self.ts_idx is not None:
-            x = x[:, self.ts_idx : self.ts_idx + 1]  # choose time series column
-        date_time = self.load_data_from_csv(self.date_time_file)
-
-        # Add time covariates
-        if self.time_covariates is not None:
-            date_time = np.array(date_time, dtype="datetime64")
-            for time_cov in self.time_covariates:
-                if time_cov == "hour_of_day":
-                    hour_of_day = date_time.astype("datetime64[h]").astype(int) % 24
-                    x = np.concatenate((x, hour_of_day), axis=1)
-                elif time_cov == "day_of_week":
-                    day_of_week = date_time.astype("datetime64[D]").astype(int) % 7
-                    x = np.concatenate((x, day_of_week), axis=1)
-                elif time_cov == "week_of_year":
-                    week_of_year = (
-                        date_time.astype("datetime64[W]").astype(int) % 52 + 1
-                    )
-                    x = np.concatenate((x, week_of_year), axis=1)
-                elif time_cov == "month_of_year":
-                    month_of_year = (
-                        date_time.astype("datetime64[M]").astype(int) % 12 + 1
-                    )
-                    x = np.concatenate((x, month_of_year), axis=1)
-                elif time_cov == "quarter_of_year":
-                    month_of_year = (
-                        date_time.astype("datetime64[M]").astype(int) % 12 + 1
-                    )
-                    quarter_of_year = (month_of_year - 1) // 3 + 1
-                    x = np.concatenate((x, quarter_of_year), axis=1)
-
-        # Normalizer
-        if self.x_mean is None and self.x_std is None:
-            self.x_mean, self.x_std = Normalizer.compute_mean_std(x)
-        x = Normalizer.standardize(data=x, mu=self.x_mean, std=self.x_std)
-
-        # Create rolling windows
-        x_rolled, y_rolled = utils.create_rolling_window(
-            data=x,
-            output_col=self.output_col,
-            input_seq_len=self.input_seq_len,
-            output_seq_len=self.output_seq_len,
-            num_features=self.num_features,
-            stride=self.stride,
-        )
-
-        if self.keep_last_time_cov:
-            x_rolled = self.remove_time_cov(x_rolled)
-
-        # Dataloader
-        dataset = {}
-        dataset["value"] = (x_rolled, y_rolled)
-
-        # NOTE: Datetime is saved for the visualization purpose
-        dataset["date_time"] = [np.datetime64(date) for date in np.squeeze(date_time)]
-
-        return dataset
-
-    def remove_time_cov(self, x):
-        x_new = np.zeros((len(x), self.input_seq_len + self.num_features - 1), dtype=np.float32)
-        for i in range(0,len(x)):
-            x_ = x[i]
-            keep_idx = np.arange(0, len(x_), self.num_features)
-            x_new[i] = np.concatenate((x_[keep_idx],x_[-self.num_features+1:]))
-        return x_new
+        if agg_func == 'mean':
+            resampled = data.resample(freq).mean()
+        elif agg_func == 'sum':
+            resampled = data.resample(freq).sum()
+        elif agg_func == 'max':
+            resampled = data.resample(freq).max()
+        elif agg_func == 'min':
+            resampled = data.resample(freq).min()
+        else:
+            raise ValueError(f"Unsupported aggregation function: {agg_func}")
+        
+        # resampled = resampled.reset_index()
+        
+        return resampled
+    
 
 
-    def create_data_loader(self, batch_size: int, shuffle: bool = True):
-        return self.batch_generator(*self.dataset["value"], batch_size, shuffle)
-
+        
