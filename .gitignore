@@ -1,0 +1,11 @@
+*build
+*.vscode
+*.json
+# *.csv
+debug_data/
+saved_results/
+src/__pycache__/
+*.DS_Store
+
+
+# !test/data/*.csv

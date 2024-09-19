@@ -1,14 +1,14 @@
 import os
 import sys
 
-# Add the src directory to the sys.path
-try:
-    # Try using __file__ in a script
-    current_dir = os.path.dirname(__file__)
-except NameError:
-    # Use current working directory in Jupyter notebooks
-    current_dir = os.path.join(os.path.dirname(os.getcwd()), 'src')
-sys.path.append(os.path.join(current_dir, 'src'))
+# # # Add the src directory to the sys.path
+# try:
+#     # Try using __file__ in a script
+#     current_dir = os.path.dirname(__file__)
+# except NameError:
+#     # Use current working directory in Jupyter notebooks
+#     current_dir = os.path.join(os.path.dirname(os.getcwd()), 'src')
+# sys.path.append(os.path.join(current_dir, 'src'))
 
 # import libraries
 import fire
@@ -20,13 +20,13 @@ from tqdm import tqdm
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from pytagi import exponential_scheduler
-from pytagi.nn import LSTM, Linear, OutputUpdater, Sequential
+from pytagi.nn import LSTM, Linear, Sequential
 
-from data_loader import TimeSeriesDataloader
+from data_loader import DataPreProcess
 from hybrid import LSTM_SSM, process_input_ssm
 
 
-# Define parameters
+# Define parametersx
 num_epochs = 30
 batch_size = 1
 sigma_v = 1
@@ -44,29 +44,24 @@ df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # Time
 time_file = "data/HQ/LGA007PIAP-E010_Y_train_datetime.csv"
 time = pd.read_csv(time_file, skiprows=1, delimiter=",", header=None)
-time = pd.to_datetime(time[0], format='%Y-%m-%d %H:%M:%S')
 
-# # plotting
-# plt.figure()
-# plt.figure(figsize=(10, 6))
-# plt.plot(time, df.values[:,output_col], color='r')
-
+# Resampling data
+df = DataPreProcess.resample_data(df, time, freq='D', agg_func='mean')
 
 # split data into training, validation and test sets
 train_start = '2010-02-07 00:00:00'
 val_start = '2013-03-23 00:00:00'
 val_end = '2014-03-23 00:00:00'
 
-# Filter data for the two periods
-train_period_data = df.values[(time >= train_start) & (time <= val_start)]
-val_period_data = df.values[(time >= val_start) & (time <= val_end)]
+data = DataPreProcess(
+    data=df,
+    train_time_start = '2010-02-07 00:00:00',
+    val_time_start = '2012-03-23 00:00:00',
+    test_time_start = '2013-03-23 00:00:00',
+    test_time_end = '2014-03-23 00:00:00',
+    time_covariates = ['week_of_year']  # 'hour_of_day','day_of_week', 'week_of_year', 'month_of_year','quarter_of_year'
+)
 
-# # Plot the data
-# plt.figure(figsize=(10, 6))
-# # Plot for training period
-# plt.plot(time[(time >= train_start) & (time <= val_start)], train_period_data[:,output_col], label='Training Period', color='k')
-# # Plot for validation period
-# plt.plot(time[(time >= val_start) & (time <= val_end)], val_period_data[:,output_col], label='Validation Period', color='b')
 
 
 train_time = np.array(time[(time >= train_start) & (time <= val_start)], dtype="datetime64") 
@@ -168,4 +163,3 @@ for epoch in pbar:
         refresh=True,
     )
 
-check = 1

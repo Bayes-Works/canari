@@ -121,15 +121,15 @@ def main(num_epochs: int = 30, batch_size: int = 1, sigma_v: float = 1):
         hybrid.smoother()
 
         # # Figures for each epoch
-        # mu_smoothed = np.array(hybrid.mu_smoothed)
-        # plt.switch_backend('Agg')
-        # plt.figure()
-        # plt.plot(obs_unnorm, color='r')
-        # plt.plot(mu_smoothed[:,0,:],color='k')
-        # plt.plot(mu_preds_unnorm,color='b')
-        # filename = f'saved_results/hq/hybrid_epoch_#{epoch}.png'
-        # plt.savefig(filename)
-        # plt.close()  # Close the plot to free up memory
+        mu_smoothed = np.array(hybrid.mu_smoothed)
+        plt.switch_backend('Agg')
+        plt.figure()
+        plt.plot(obs_unnorm, color='r')
+        plt.plot(mu_smoothed[:,0,:],color='k')
+        plt.plot(mu_preds_unnorm,color='b')
+        filename = f'saved_results/hybrid_epoch_#{epoch}.png'
+        plt.savefig(filename)
+        plt.close()  # Close the plot to free up memory
 
         # Progress bar
         pbar.set_description(
@@ -193,15 +193,15 @@ def main(num_epochs: int = 30, batch_size: int = 1, sigma_v: float = 1):
     std_preds_unnorm_test = std_preds_unnorm_test.flatten()
 
     # figure for final test predictions
-    # plt.figure()
-    # plt.plot(idx,obs, color='r',label=r"data")
-    # plt.plot(idx_test, mu_preds_unnorm_test, color='b',label=r"test prediction")
-    # plt.fill_between(idx_test, mu_preds_unnorm_test - std_preds_unnorm_test, mu_preds_unnorm_test + std_preds_unnorm_test, color='blue', alpha=0.3, label='±1 SD')
-    # plt.plot(idx_train,mu_smoothed[:,0,:],color='k',label=r"level")
-    # plt.plot(idx_train, mu_preds_unnorm,color='g', label=r"train prediction")
-    # filename = f'saved_results/hq/test_prediction.png'
-    # plt.savefig(filename)
-    # plt.close()  # Close the plot to free up memory
+    plt.figure()
+    plt.plot(idx,obs, color='r',label=r"data")
+    plt.plot(idx_test, mu_preds_unnorm_test, color='b',label=r"test prediction")
+    plt.fill_between(idx_test, mu_preds_unnorm_test - std_preds_unnorm_test, mu_preds_unnorm_test + std_preds_unnorm_test, color='blue', alpha=0.3, label='±1 SD')
+    plt.plot(idx_train,mu_smoothed[:,0,:],color='k',label=r"level")
+    plt.plot(idx_train, mu_preds_unnorm,color='g', label=r"train prediction")
+    filename = f'saved_results/test_prediction.png'
+    plt.savefig(filename)
+    plt.close()  # Close the plot to free up memory
 
     print("#############")
     print(f"MSE           : {mse: 0.2f}")

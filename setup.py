@@ -1,21 +1,23 @@
-# setup.py
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
-    name="canari",
-    version="0.1",
-    # packages=find_packages(where="src"),
-    # package_dir={"": "src"},  # Specify the src directory
+    name='canari',
+    version='0.1',
+    description='Time series baseline change detection',
+    author="Van-Dai Vuong, James-A. Goulet",
+    author_email="vuongdai@gmail.com",
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    include_package_data=True,
+    zip_safe=False,
     install_requires=[
-        "pyTAGI",  
+        "pyTAGI",
         "matplotlib==3.8.2",
         "ninja==1.11.1.1",
         "numpy==1.26.0",
         "pandas==2.1.4",
         "tqdm==4.66.1",
         "fire==0.5.0",
+        "scikit-learn==1.3.0"
     ],
-    description="A Python package that uses pyTAGI",
-    author="Van-Dai Vuong, James-A. Goulet",
-    author_email="vuongdai@gmail.com"
 )
