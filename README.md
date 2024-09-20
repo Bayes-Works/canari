@@ -22,7 +22,7 @@ canari
 |    |----hybridmodel TAGI-LSTM/SSM (model)
 |    |    |----model constructions
 |    |    |    |----model components and their parameters
-|    |    |    |    |  baselines: LL(),LT(),LA(),LcT(), LcA(), TcA(), exponential smoothing()
+|    |    |    |    |  baselines: LL(param_value),LT(),LA(),LcT(), LcA(), TcA(), exponential smoothing()
 |    |    |    |    |  interventions: LL(),LT(),LA(),\theta() for LSTM
 |    |    |    |    |  TAGI-LSTM: LSTM() (from pyTAGI)
 |    |    |    |    |  periodic
@@ -31,7 +31,7 @@ canari
 |    |    |    |              e.g. user-define: AR(sigma_AR = 0.9)  vs grid-search: AR(sigma_AR = [0.7, 0.8, 0.9])
 |    |    |    |    
 |    |    |    |----initial hidden states for components
-|    |    |    |    |  baselines: LL(),LT(),LA(),LcT(), LcA(), TcA(), exponential smoothing()
+|    |    |    |    |  baselines: LL(hidden_state_value),LT(),LA(),LcT(), LcA(), TcA(), exponential smoothing()
 |    |    |    |    |  interventions: LL(),LT(),LA(),\theta() for LSTM
 |    |    |    |    |  TAGI-LSTM: LSTM() (from pyTAGI)
 |    |    |    |    |  periodic
