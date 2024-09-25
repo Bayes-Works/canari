@@ -20,20 +20,21 @@ canari
 |    |      (v0) step()
 |    |
 |    |----base_component (class) (v0)
-|    |----baseline_component (inherent class)
+|    |----baseline_component (derived class)
 |    |      (v0) LL(param_value, initial hidden states),LT, LA, LcT, LcA, TcA 
 |    |      (v2) exponential smoothing
-|    |----intervention_component (inherent class)
+|    |----intervention_component (derived class)
 |    |      (v1) LL, LT, LA
 |    |      (v2) \theta for LSTM
-|    |----LSTM_component (inherent class) (v0)
-|    |----periodic_component (inherent class) (v0)
-|    |----residual_component (inherent class)
-|    |      (v0) AR
+|    |----LSTM_component (derived class) (v0)
+|    |----periodic_component (derived class) (v0)
+|    |----residual_component (derived class)
+|    |      (v0) AR: deterministic
+|    |      (v1) AR: online
 |    |      (v2) BAR
 |    |
 |    |----base_model (class) (v0)
-|    |----TAGI-LSTM/SSM model (inherent class)
+|    |----TAGI-LSTM/SSM model (derived class)
 |    |      (v0) training: model.train(ts_data) (v0)
 |    |                     goal: obtain TAGI-LSTM's weights and biases.
 |    |      (v0) filter: model.filter(ts_data), recursively apply forward(1sample) and backward(1sample),
@@ -45,21 +46,21 @@ canari
 |    |      (v1) save/load model/parameters: component wise
 |    |      (v2) parallel computing with multiple seeds: model.seeds([1]) or model.seeds([1 2 3]).
 |    |      (v2) online learning (David): model.onlineTrain()
-|    |----SKF model (inherent class)
+|    |----SKF model (derived class)
 |    |      (v0) filter: model.filter
 |    |      (v0) forecast: model.forecast
 |    |      (v0) smoother: model.smoother
 |    |      (v1) hyper-paramters grid-search: model.gridSearch()
 |    |      (v1) save/load model/parameters: component wise
 |    |      (v2) parallel computing with multiple seeds: model.seeds([1]) or model.seeds([1 2 3]).
-|    |----RL model (inherent class) (v2)
+|    |----RL model (derived class) (v2)
 |    |
 |    |
-|    |----metrics(MSE/RMSE, MAE, p50, p90, Likelihood, log-likelihood) (v0)
-|    |----dataVisualization (plot data, predictions, hidden states) (v0)
+|    |----metrics(Likelihood, log-likelihood (v0), MSE/RMSE, MAE, p50, p90 (v1))
+|    |----dataVisualization (plot data, predictions, hidden states) (v0:basic, v1:advanced)
 |    |----task
+|           (v0) unit tests
 |           (v1) synthetic data generation
-|           (v1) unit tests
 |           (v2) benmarking on some datasetes
 |
 |----data
