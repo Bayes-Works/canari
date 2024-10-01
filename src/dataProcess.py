@@ -5,9 +5,8 @@ import numpy as np
 import pandas as pd
 
 from pytagi import Normalizer, Utils
-from sklearn.preprocessing import StandardScaler
 
-class DataPreProcess:
+class DataProcess:
     def __init__(
         self, 
         data: pd.DataFrame, 
@@ -54,8 +53,6 @@ class DataPreProcess:
         self.data_val = Normalizer.standardize(data=data_val, mu=self.x_mean, std=self.x_std)
         self.data_test = Normalizer.standardize(data=data_test, mu=self.x_mean, std=self.x_std)
 
-        # return data_train, data_val, data_test, x_mean, x_std
-
 
     def add_time_covariates(self):
         # Add time covariates
@@ -86,7 +83,7 @@ class DataPreProcess:
                 self.data = np.concatenate((self.data, quarter_of_year), axis=1)
 
     @staticmethod
-    def resample_data(data, time: str, freq: str, agg_func='mean') -> pd.DataFrame:
+    def resample_data(data, freq: str, agg_func='mean') -> pd.DataFrame:
         """
         Resample the data based on the provided frequency and take the average for aggregation.
         
@@ -97,8 +94,8 @@ class DataPreProcess:
         pd.DataFrame: Resampled data with a uniform time step.
         """
         # Ensure that time is part of the DataFrame for resampling
-        data.columns = [f'col_{i+1}' for i in range(data.shape[1])]
-        data['time']  = pd.to_datetime(time[0], format='%Y-%m-%d %H:%M:%S')
+        data['time']  = pd.to_datetime(data.iloc[:,0], infer_datetime_format=True, errors='coerce')
+        data.drop(data.columns[0], axis=1, inplace=True)
 
         # Set 'time' as the index
         data.set_index('time', inplace=True)
@@ -114,10 +111,43 @@ class DataPreProcess:
         else:
             raise ValueError(f"Unsupported aggregation function: {agg_func}")
         
-        # resampled = resampled.reset_index()
-        
         return resampled
     
+    @staticmethod
+    def read_dat_file(file_path):
+        """
+        A class to read and process .DAT files with semicolon-separated values and quoted fields.
 
+        Attributes:
+            file_path (str): The path to the .DAT file.
+            df (pd.DataFrame): The pandas DataFrame containing the processed data.
+        """
 
+        # Read and process the file upon initialization
+        df = pd.read_csv(
+                    file_path,
+                    sep=';',                 # Semicolon as delimiter
+                    quotechar='"',           # Double quotes as text qualifier
+                    engine='python',         # Python engine for complex cases
+                    na_values=[''],          # Treat empty strings as NaN
+                    skipinitialspace=True   # Skip spaces after delimiter
+                )
         
+        # Drop columns with missing data
+        df.dropna(axis=1, how='all', inplace=True)
+
+        # Rename columns by removing surrounding quotes and stripping whitespace
+        df.columns = [col.strip('"').strip() for col in df.columns]
+
+        return df
+    
+    @staticmethod
+    def combine_data(*df: pd.DataFrame, time_ref_from: str, interpolate_method='linear'):
+        check = 1
+        df_combined = 0
+        df=df[0]
+
+        return df_combined
+
+    
+
