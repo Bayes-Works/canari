@@ -8,8 +8,8 @@ class baseComponent:
     Base class for state-space components.
 
     Attributes:
-        mu_x (Optional[np.ndarray]): Mean of the hidden states.
-        var_x (Optional[np.ndarray]): Variance of the hidden states.
+        mu (Optional[np.ndarray]): Mean of the hidden states.
+        var (Optional[np.ndarray]): Variance of the hidden states.
         A (Optional[np.ndarray]):  Transition matrix.
         Q (Optional[np.ndarray]): Process noise covariance matrix.
         C (Optional[np.ndarray]): Observation matrix.
@@ -21,36 +21,38 @@ class baseComponent:
     """
     def __init__(
         self,
-        mu_x: Optional[np.ndarray] = None,
-        var_x: Optional[np.ndarray] = None,
+        mu: Optional[np.ndarray] = None,
+        var: Optional[np.ndarray] = None,
         A: Optional[np.ndarray] = None,
         Q: Optional[np.ndarray] = None,
         C: Optional[np.ndarray] = None,  
+        sigma: Optional[float] = 0.0,
         num_states: int = 0,    
         num_param: int = 0, 
         component_name: Optional[str] = None,
         parameter_name: Optional[List[str]] = None,  
         states_name: Optional[List[str]] = None,
     ) -> None:
-        # Initialize mu_x and var_x based on num_states if not provided
-        if mu_x is not None:
-            self.mu_x = np.atleast_2d(mu_x).T
-            if self.mu_x.shape[0] != num_states:
-                raise ValueError(f"Incorrect mu_x dimension.")
+        # Initialize mu and var based on num_states if not provided
+        if mu is not None:
+            self.mu = np.atleast_2d(mu).T
+            if self.mu.shape[0] != num_states:
+                raise ValueError(f"Incorrect mu dimension.")
         else:
-            self.mu_x = np.zeros((num_states, 1))
+            self.mu = np.zeros((num_states, 1))
 
-        if var_x is not None:
-            self.var_x = np.atleast_2d(var_x).T
-            if self.var_x.shape[0] != num_states:
-                raise ValueError(f"Incorrect var_x dimension.")
+        if var is not None:
+            self.var = np.atleast_2d(var).T
+            if self.var.shape[0] != num_states:
+                raise ValueError(f"Incorrect var dimension.")
         else:
-            self.var_x = np.zeros((num_states, 1))
+            self.var = np.zeros((num_states, 1))
 
         self.A = A if A is not None else np.zeros((num_states, num_states))  
         self.Q = Q if Q is not None else np.zeros((num_states, num_states))  
         self.C = C if C is not None else np.zeros((num_states))  
         
+        self.sigma = sigma
         self.num_states = num_states
         self.num_param = num_param
         self.component_name = component_name
@@ -60,8 +62,8 @@ class baseComponent:
     
     # @staticmethod
     # def init_states(self, data):
-    #     self.mu_x = np.zeros(self.num_states)
-    #     self.var_x = np.zeros(self.num_states)
+    #     self.mu = np.zeros(self.num_states)
+    #     self.var = np.zeros(self.num_states)
 
 
     
