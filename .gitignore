@@ -5,6 +5,7 @@
 debug_data/
 saved_results/
 src/__pycache__/
+examples/__pycache__/
 *.DS_Store
 
 
