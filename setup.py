@@ -5,7 +5,7 @@ setup(
     version='0.1',
     description='Time series baseline change detection',
     author="Van-Dai Vuong, James-A. Goulet",
-    author_email="vuongdai@gmail.com",
+    author_email="vuongdai@gmail.com, james.goulet@polymtl.ca",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
