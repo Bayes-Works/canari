@@ -41,7 +41,7 @@ class baseComponent:
             self.mu_x = np.zeros((num_states, 1))
 
         if var_x is not None:
-            self.var_x = np.atleast_2d(var_x)
+            self.var_x = np.atleast_2d(var_x).T
             if self.var_x.shape[0] != num_states:
                 raise ValueError(f"Incorrect var_x dimension.")
         else:
