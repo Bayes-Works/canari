@@ -3,8 +3,8 @@ from setuptools import find_packages, setup
 setup(
     name='canari',
     version='0.1',
-    description='Time series baseline change detection',
-    author="Van-Dai Vuong, James-A. Goulet",
+    description='Probabilistic anomaly detection in time series',
+    author="Van-Dai Vuong, James-A. Goulet, Luong-Ha Nguyen",
     author_email="vuongdai@gmail.com, james.goulet@polymtl.ca",
     packages=find_packages('src'),
     package_dir={'': 'src'},
