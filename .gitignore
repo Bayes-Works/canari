@@ -1,0 +1,12 @@
+# macOS
+*.DS_Store
+*.vscode
+*.json
+saved_results/
+src/__pycache__/
+examples/__pycache__/
+*.egg-info/
+
+!.vscode/launch.json
+!.vscode/settings.json
+
