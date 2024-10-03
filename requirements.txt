@@ -1,4 +1,4 @@
-pyTAGI
+pyTAGI==0.1.11
 matplotlib==3.8.2
 ninja==1.11.1.1
 numpy==1.26.0

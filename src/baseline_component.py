@@ -1,70 +1,160 @@
-import numpy as np
 from typing import Optional
-from base_component import baseComponent
+import numpy as np
+from base_component import BaseComponent
 
-# Local level component
-class Local_level(baseComponent):
+
+class LocalLevel(BaseComponent):
+    """
+    Local level component
+    """
+
     def __init__(
         self,
-        **kwargs 
-    ) -> None:
-        sigma = kwargs.get('sigma',0.0)
-        super().__init__(
-            num_states = 1, 
-            num_param = 1,
-            component_name = 'local level',
-            parameter_name = ['sigma'],
-            A = np.array([[1]]),
-            Q = np.array([[sigma**2]]),
-            C = np.array([[1]]),
-            states_name = ['level'],
-            **kwargs  
-            )
+        std_error: Optional[float] = 0.0,
+        mu_states: Optional[np.ndarray] = None,
+        var_states: Optional[np.ndarray] = None,
+    ):
+        self.std_error = std_error
+        self.mu_states = mu_states
+        self.var_states = var_states
+        super().__init__()
+
+    def initialize_component_name(self):
+        self._component_name = "LocalLevel"
+
+    def initialize_num_states(self):
+        self._num_states = 1
+
+    def initialize_states_name(self):
+        self._states_name = ["local level"]
+
+    def initialize_transition_matrix(self):
+        self._transition_matrix = np.array([[1]])
+
+    def initialize_observation_matrix(self):
+        self._observation_matrix = np.array([[1]])
+
+    def initialize_process_noise_matrix(self):
+        self._process_noise_matrix = np.array([[self.std_error**2]])
+
+    def initialize_mu_states(self):
+        if self.mu_states is None:
+            self.mu_states = np.zeros((self.num_states, 1))
+        elif len(self.mu_states) == self.num_states:
+            self.mu_states = np.atleast_2d(self.mu_states).T
+        else:
+            raise ValueError(f"Incorrect mu_states dimension.")
+
+    def initialize_var_states(self):
+        if self.var_states is None:
+            self.var_states = np.zeros((self.num_states, 1))
+        elif len(self.var_states) == self.num_states:
+            self.var_states = np.atleast_2d(self.var_states).T
+        else:
+            raise ValueError(f"Incorrect var_states dimension.")
 
 
-# Local trend component
-class Local_trend(baseComponent):
+class LocalTrend(BaseComponent):
+    """
+    Local level component
+    """
+
     def __init__(
         self,
-        **kwargs 
-    ) -> None:
-        sigma = kwargs.get('sigma', 0.0)
-        super().__init__(
-            num_states = 2, 
-            num_param = 1,
-            component_name = 'local trend',
-            parameter_name = ['sigma'],
-            A = np.array([[1, 1], [0, 1]]),
-            Q = sigma**2 * np.array([[1/3, 1/2],[1/2, 1/3]]),
-            C = np.array([[1,0]]),
-            states_name = ['level','trend'],
-            **kwargs 
-            )
-        
-# Local acceleration component
-class Local_acceleration(baseComponent):
+        std_error: Optional[float] = 0.0,
+        mu_states: Optional[np.ndarray] = None,
+        var_states: Optional[np.ndarray] = None,
+    ):
+        self.std_error = std_error
+        self.mu_states = mu_states
+        self.var_states = var_states
+        super().__init__()
+
+    def initialize_component_name(self):
+        self._component_name = "LocalTrend"
+
+    def initialize_num_states(self):
+        self._num_states = 2
+
+    def initialize_states_name(self):
+        self._states_name = ["local level", "local trend"]
+
+    def initialize_transition_matrix(self):
+        self._transition_matrix = np.array([[1, 1], [0, 1]])
+
+    def initialize_observation_matrix(self):
+        self._observation_matrix = np.array([[1, 0]])
+
+    def initialize_process_noise_matrix(self):
+        self._process_noise_matrix = self.std_error**2 * np.array(
+            [[1 / 3, 1 / 2], [1 / 2, 1 / 3]]
+        )
+
+    def initialize_mu_states(self):
+        if self.mu_states is None:
+            self.mu_states = np.zeros((self.num_states, 1))
+        elif len(self.mu_states) == self.num_states:
+            self.mu_states = np.atleast_2d(self.mu_states).T
+        else:
+            raise ValueError(f"Incorrect mu_states dimension.")
+
+    def initialize_var_states(self):
+        if self.var_states is None:
+            self.var_states = np.zeros((self.num_states, 1))
+        elif len(self.var_states) == self.num_states:
+            self.var_states = np.atleast_2d(self.var_states).T
+        else:
+            raise ValueError(f"Incorrect var_states dimension.")
+
+
+class LocalAcceleration(BaseComponent):
+    """
+    Local level component
+    """
+
     def __init__(
         self,
-        **kwargs 
-    ) -> None:
-        sigma = kwargs.get('sigma', 0.0)
-        super().__init__(
-            num_states = 3, 
-            num_param = 1,
-            component_name = 'local acceleration',
-            parameter_name = ['sigma'],
-            A = np.array([[1, 1, 0], [0, 1, 1], [0, 0, 1]]),
-            Q = sigma**2 * np.array([[1/20, 1/8, 1/6],[1/8, 1/3, 1/2], [1/6, 1/2, 1]]),
-            C = np.array([[1, 0, 0]]),
-            states_name = ['level','trend','acceralation'],
-            **kwargs 
-            )
+        std_error: Optional[float] = 0.0,
+        mu_states: Optional[np.ndarray] = None,
+        var_states: Optional[np.ndarray] = None,
+    ):
+        self.std_error = std_error
+        self.mu_states = mu_states
+        self.var_states = var_states
+        super().__init__()
 
+    def initialize_component_name(self):
+        self._component_name = "LocalAcceleration"
 
-    
-    
+    def initialize_num_states(self):
+        self._num_states = 3
 
-    
+    def initialize_states_name(self):
+        self._states_name = ["local level", "local trend", "local acceleration"]
 
-    
+    def initialize_transition_matrix(self):
+        self._transition_matrix = np.array([[1, 1, 0], [0, 1, 1], [0, 0, 1]])
 
+    def initialize_observation_matrix(self):
+        self._observation_matrix = np.array([[1, 0, 0]])
+
+    def initialize_process_noise_matrix(self):
+        self._process_noise_matrix = self.std_error**2 * np.array(
+            [[1 / 20, 1 / 8, 1 / 6], [1 / 8, 1 / 3, 1 / 2], [1 / 6, 1 / 2, 1]]
+        )
+
+    def initialize_mu_states(self):
+        if self.mu_states is None:
+            self.mu_states = np.zeros((self.num_states, 1))
+        elif len(self.mu_states) == self.num_states:
+            self.mu_states = np.atleast_2d(self.mu_states).T
+        else:
+            raise ValueError(f"Incorrect mu_states dimension.")
+
+    def initialize_var_states(self):
+        if self.var_states is None:
+            self.var_states = np.zeros((self.num_states, 1))
+        elif len(self.var_states) == self.num_states:
+            self.var_states = np.atleast_2d(self.var_states).T
+        else:
+            raise ValueError(f"Incorrect var_states dimension.")
