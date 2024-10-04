@@ -1,6 +1,7 @@
 from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
 from periodic_component import Periodic
 from residual_component import Autoregression
+from lstm_component import Lstm
 
 # initialize with no param, no initial hiddens states
 local_level = LocalLevel()
@@ -23,3 +24,7 @@ local_acceleration_2 = LocalAcceleration(
 )
 periodic_2 = Periodic(period=52, mu_states=[0.1, 0.1], var_states=[0.1, 0.1])
 autoregression_2 = Autoregression(std_error=0.1, mu_states=[0.1], var_states=[0.1])
+
+lstm = Lstm(look_back_len=52, num_features=1, num_layer=2, num_hidden_unit=[10, 11])
+
+check = 1
