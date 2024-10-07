@@ -31,10 +31,10 @@ class Autoregression(BaseComponent):
         self._states_name = ["autoregression"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array([[1]])
+        self._transition_matrix = np.array([[self.phi]])
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[self.phi]])
+        self._observation_matrix = np.array([[1]])
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = np.array([[self.std_error**2]])

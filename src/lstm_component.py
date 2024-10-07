@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from pytagi.nn import LSTM, Linear, Sequential
+from pytagi.nn import LSTM, Linear
 from base_component import BaseComponent
 
 
@@ -28,9 +28,8 @@ class Lstm(BaseComponent):
         self.input_features = input_features
         self.mu_states = mu_states
         self.var_states = var_states
-        BaseComponent.__init__(self)
-        layers = self.initialize_lstm_layers()
-        Sequential.__init__(self, *layers)
+        self.initialize_lstm_layers()
+        super().__init__()
 
     def initialize_component_name(self):
         self._component_name = "Lstm"
@@ -78,4 +77,4 @@ class Lstm(BaseComponent):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
         # Last layer
         layers.append(Linear(self.num_hidden_unit[-1], 1, 1))
-        return layers
+        self.layers = layers

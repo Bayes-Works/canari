@@ -13,10 +13,8 @@ def block_diag(*arrays: np.ndarray) -> np.ndarray:
     """
     if not arrays:
         return np.array([[]])
-    # Calculate the total size of the new matrix
     total_rows = sum(a.shape[0] for a in arrays)
     total_cols = sum(a.shape[1] for a in arrays)
-    # Initialize the block diagonal matrix with zeros
     block_matrix = np.zeros((total_rows, total_cols))
     current_row = 0
     current_col = 0
@@ -38,7 +36,7 @@ def forward(
 ):
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
-        transition_matrix @ var_states_posterior * transition_matrix.T
+        transition_matrix @ np.diagflat(var_states_posterior) @ transition_matrix.T
         + process_noise_matrix
     )
     return mu_states_prior, var_states_prior
