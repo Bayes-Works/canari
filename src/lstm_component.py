@@ -16,8 +16,7 @@ class Lstm(BaseComponent):
         num_hidden_unit: Optional[int] = 50,
         look_back_len: int = 1,
         num_features: int = 1,
-        device: Optional[str] = "cpu",
-        num_thread: Optional[int] = 1,
+        input_features: Optional[str] = None,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
     ):
@@ -26,12 +25,12 @@ class Lstm(BaseComponent):
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
         self.num_features = num_features
-        self.device = device
-        self.num_thread = num_thread
+        self.input_features = input_features
         self.mu_states = mu_states
         self.var_states = var_states
-        super().__init__()
-        self.initialize_network()
+        BaseComponent.__init__(self)
+        layers = self.initialize_lstm_layers()
+        Sequential.__init__(self, *layers)
 
     def initialize_component_name(self):
         self._component_name = "Lstm"
@@ -49,7 +48,7 @@ class Lstm(BaseComponent):
         self._observation_matrix = np.array([[1]])
 
     def initialize_process_noise_matrix(self):
-        self._process_noise_matrix = self.std_error**2
+        self._process_noise_matrix = np.array([[self.std_error**2]])
 
     def initialize_mu_states(self):
         if self.mu_states is None:
@@ -67,19 +66,16 @@ class Lstm(BaseComponent):
         else:
             raise ValueError(f"Incorrect var_states dimension.")
 
-    def initialize_network(self):
+    def initialize_lstm_layers(self):
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
+        # First layer
         layers.append(
             LSTM(self.num_features + self.look_back_len - 1, self.num_hidden_unit[0], 1)
         )
         for i in range(1, self.num_layer):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
+        # Last layer
         layers.append(Linear(self.num_hidden_unit[-1], 1, 1))
-        net = Sequential(*layers)
-        if self.device == "cpu":
-            net.set_threads(self.num_thread)
-        elif self.device == "gpu":
-            net.to_device("cuda")
-        self.net = net
+        return layers

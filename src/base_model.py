@@ -40,6 +40,11 @@ class BaseModel(ABC):
         self._seeds = seeds
 
     @abstractmethod
+    def search_parameters(self):
+        """grid-search for model's parameters"""
+        pass
+
+    @abstractmethod
     def detect_anomaly(self, time_series_data: np.ndarray):
         """Detect anomaly"""
         pass
