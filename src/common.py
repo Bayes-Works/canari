@@ -17,7 +17,7 @@ def block_diag(*arrays: np.ndarray) -> np.ndarray:
     total_rows = sum(a.shape[0] for a in arrays)
     total_cols = sum(a.shape[1] for a in arrays)
     # Initialize the block diagonal matrix with zeros
-    block_matrix = np.zeros((total_rows, total_cols), dtype=arrays[0].dtype)
+    block_matrix = np.zeros((total_rows, total_cols))
     current_row = 0
     current_col = 0
     for a in arrays:
