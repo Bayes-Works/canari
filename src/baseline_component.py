@@ -133,14 +133,14 @@ class LocalAcceleration(BaseComponent):
         self._states_name = ["local level", "local trend", "local acceleration"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array([[1, 1, 1 / 2], [0, 1, 1], [0, 0, 1]])
+        self._transition_matrix = np.array([[1, 1, 0.5], [0, 1, 1], [0, 0, 1]])
 
     def initialize_observation_matrix(self):
         self._observation_matrix = np.array([[1, 0, 0]])
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = self.std_error**2 * np.array(
-            [[1 / 20, 1 / 8, 1 / 6], [1 / 8, 1 / 3, 1 / 2], [1 / 6, 1 / 2, 1]]
+            [[1 / 20, 1 / 8, 1 / 6], [1 / 8, 1 / 3, 0.5], [1 / 6, 0.5, 1]]
         )
 
     def initialize_mu_states(self):

@@ -42,7 +42,7 @@ def forward(
     return mu_states_prior, var_states_prior
 
 
-def cal_obsevation(
+def calc_obsevation(
     mu_states: np.ndarray,
     var_states: np.ndarray,
     observation_matrix: np.ndarray,
@@ -63,7 +63,7 @@ def backward(
     observation_noise_matrix: np.ndarray,
     obs: float,
 ):
-    mu_obs_predicted, var_obs_predicted = cal_obsevation(
+    mu_obs_predicted, var_obs_predicted = calc_obsevation(
         mu_states_prior, var_states_prior, observation_matrix, observation_noise_matrix
     )
     cov_states_time = observation_matrix @ var_states_prior

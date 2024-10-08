@@ -12,9 +12,6 @@ class BaseModel(ABC):
         self._num_threads = 1
         self._seeds = 1
 
-    def __call__(self, time_series_data: np.ndarray):
-        return self.detect_anomaly(time_series_data)
-
     @property
     def device(self) -> str:
         """Get the device"""
@@ -42,11 +39,6 @@ class BaseModel(ABC):
     @abstractmethod
     def search_parameters(self):
         """grid-search for model's parameters"""
-        pass
-
-    @abstractmethod
-    def detect_anomaly(self, time_series_data: np.ndarray):
-        """Detect anomaly"""
         pass
 
     @abstractmethod
