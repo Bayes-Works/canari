@@ -17,6 +17,7 @@ class Lstm(BaseComponent):
         look_back_len: int = 1,
         num_features: int = 1,
         input_features: Optional[str] = None,
+        num_output: Optional[int] = 1,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
     ):
@@ -26,13 +27,14 @@ class Lstm(BaseComponent):
         self.look_back_len = look_back_len
         self.num_features = num_features
         self.input_features = input_features
+        self.num_output = num_output
         self.mu_states = mu_states
         self.var_states = var_states
         self.initialize_lstm_layers()
         super().__init__()
 
     def initialize_component_name(self):
-        self._component_name = "Lstm"
+        self._component_name = "lstm"
 
     def initialize_num_states(self):
         self._num_states = 1
@@ -55,7 +57,7 @@ class Lstm(BaseComponent):
         elif len(self.mu_states) == self.num_states:
             self.mu_states = np.atleast_2d(self.mu_states).T
         else:
-            raise ValueError(f"Incorrect mu_states dimension.")
+            raise ValueError(f"Incorrect mu_states dimension for the lstm component.")
 
     def initialize_var_states(self):
         if self.var_states is None:
@@ -63,7 +65,7 @@ class Lstm(BaseComponent):
         elif len(self.var_states) == self.num_states:
             self.var_states = np.atleast_2d(self.var_states).T
         else:
-            raise ValueError(f"Incorrect var_states dimension.")
+            raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
     def initialize_lstm_layers(self):
         layers = []
@@ -76,5 +78,5 @@ class Lstm(BaseComponent):
         for i in range(1, self.num_layer):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
         # Last layer
-        layers.append(Linear(self.num_hidden_unit[-1], 1, 1))
+        layers.append(Linear(self.num_hidden_unit[-1], self.num_output, 1))
         self.layers = layers

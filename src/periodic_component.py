@@ -22,7 +22,7 @@ class Periodic(BaseComponent):
         super().__init__()
 
     def initialize_component_name(self):
-        self._component_name = "Periodic"
+        self._component_name = "periodic"
 
     def initialize_num_states(self):
         self._num_states = 2
@@ -48,7 +48,9 @@ class Periodic(BaseComponent):
         elif len(self.mu_states) == self.num_states:
             self.mu_states = np.atleast_2d(self.mu_states).T
         else:
-            raise ValueError(f"Incorrect mu_states dimension.")
+            raise ValueError(
+                f"Incorrect mu_states dimension for the periodic component."
+            )
 
     def initialize_var_states(self):
         if self.var_states is None:
@@ -56,4 +58,6 @@ class Periodic(BaseComponent):
         elif len(self.var_states) == self.num_states:
             self.var_states = np.atleast_2d(self.var_states).T
         else:
-            raise ValueError(f"Incorrect var_states dimension.")
+            raise ValueError(
+                f"Incorrect var_states dimension for the periodic component."
+            )
