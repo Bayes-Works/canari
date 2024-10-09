@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 
 
@@ -28,26 +29,12 @@ def block_diag(*arrays: np.ndarray) -> np.ndarray:
     return block_matrix
 
 
-def forward(
-    mu_states_posterior: np.ndarray,
-    var_states_posterior: np.ndarray,
-    transition_matrix: np.ndarray,
-    process_noise_matrix: np.ndarray,
-):
-    mu_states_prior = transition_matrix @ mu_states_posterior
-    var_states_prior = (
-        transition_matrix @ np.diagflat(var_states_posterior) @ transition_matrix.T
-        + process_noise_matrix
-    )
-    return mu_states_prior, var_states_prior
-
-
-def calc_obsevation(
+def calc_observation(
     mu_states: np.ndarray,
     var_states: np.ndarray,
     observation_matrix: np.ndarray,
     observation_noise_matrix: np.ndarray,
-):
+) -> Tuple[np.ndarray, np.ndarray]:
     mu_obs_predicted = observation_matrix @ mu_states
     var_obs_predicted = (
         observation_matrix @ var_states @ observation_matrix.T
@@ -56,19 +43,35 @@ def calc_obsevation(
     return mu_obs_predicted, var_obs_predicted
 
 
-def backward(
-    mu_states_prior: np.ndarray,
-    var_states_prior: np.ndarray,
+def forward(
+    mu_states_posterior: np.ndarray,
+    var_states_posterior: np.ndarray,
+    transition_matrix: np.ndarray,
+    process_noise_matrix: np.ndarray,
     observation_matrix: np.ndarray,
     observation_noise_matrix: np.ndarray,
-    obs: float,
-):
-    mu_obs_predicted, var_obs_predicted = calc_obsevation(
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    mu_states_prior = transition_matrix @ mu_states_posterior
+    var_states_prior = (
+        transition_matrix @ np.diagflat(var_states_posterior) @ transition_matrix.T
+        + process_noise_matrix
+    )
+    mu_obs_predicted, var_obs_predicted = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix, observation_noise_matrix
     )
-    cov_states_time = observation_matrix @ var_states_prior
-    delta_mu_states = cov_states_time.T / var_obs_predicted @ (obs - mu_obs_predicted)
-    delta_var_states = -cov_states_time.T / var_obs_predicted @ cov_states_time
+    return mu_obs_predicted, var_obs_predicted, mu_states_prior, var_states_prior
+
+
+def backward(
+    obs: float,
+    mu_obs_predicted: np.ndarray,
+    var_obs_predicted: np.ndarray,
+    var_states_prior: np.ndarray,
+    observation_matrix: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    cov_obs_states = observation_matrix @ var_states_prior
+    delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
+    delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
     return delta_mu_states, delta_var_states
 
 
@@ -77,9 +80,9 @@ def rts_smoother(
     var_states_smooth: np.ndarray,
     mu_states_prior: np.ndarray,
     var_states_prior: np.ndarray,
-    cros_cov: np.ndarray,
-):
-    jcb = cros_cov @ np.linalg.pinv(var_states_prior)
+    cross_cov_states: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior)
     delta_mu_states = jcb @ (mu_states_smooth - mu_states_prior)
     delta_var_states = jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     return delta_mu_states, delta_var_states

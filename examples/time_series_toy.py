@@ -1,6 +1,6 @@
 from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
 from periodic_component import Periodic
-from residual_component import Autoregression
+from autoregression_component import Autoregression
 from lstm_component import Lstm
 
 # initialize with no param, no initial hiddens states
