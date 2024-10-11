@@ -2,6 +2,7 @@ from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
 from periodic_component import Periodic
 from autoregression_component import Autoregression
 from lstm_component import Lstm
+from model import Model
 
 # initialize with no param, no initial hiddens states
 local_level = LocalLevel()
@@ -31,6 +32,11 @@ lstm = Lstm(
     num_features=1,
     num_layer=2,
     num_hidden_unit=50,
+)
+
+# Model
+model = Model(
+    components=[local_acceleration, lstm, autoregression], std_observation_error=0.1
 )
 
 check = 1
