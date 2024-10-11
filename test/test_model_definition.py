@@ -11,7 +11,7 @@ from model import Model
 
 
 def model_definition(component: List) -> Tuple[np.ndarray, np.ndarray]:
-    """Ffunction to be tested: define model"""
+    """Function to be tested: define model"""
 
     model = Model(components=component, std_observation_error=0.0)
     mu_obs_pred, var_obs_pred, _, _ = forward(
@@ -48,14 +48,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([4, 4])
+        process_noise_matrix_true = np.zeros([4, 4])
         observation_matrix_true = np.array([[1, 1, 0, 1]])
         mu_x = np.array([[0.15, 0.1, 0.2, 0.5]]).T
         var_x = np.array([[0.25, 0.1, 0.2, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
@@ -92,14 +92,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([5, 5])
+        process_noise_matrix_true = np.zeros([5, 5])
         observation_matrix_true = np.array([[1, 0, 1, 0, 1]])
         mu_x = np.array([[0.15, 0.5, 0.1, 0.2, 0.5]]).T
         var_x = np.array([[0.3, 0.25, 0.1, 0.2, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
@@ -139,14 +139,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0, 0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([6, 6])
+        process_noise_matrix_true = np.zeros([6, 6])
         observation_matrix_true = np.array([[1, 0, 0, 1, 0, 1]])
         mu_x = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0.5]]).T
         var_x = np.array([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
@@ -187,14 +187,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([3, 3])
+        process_noise_matrix_true = np.zeros([3, 3])
         observation_matrix_true = np.array([[1, 1, 1]])
         mu_x = np.array([[0.6, 0.6, 0.5]]).T
         var_x = np.array([[0.7, 0.6, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
@@ -236,14 +236,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([4, 4])
+        process_noise_matrix_true = np.zeros([4, 4])
         observation_matrix_true = np.array([[1, 0, 1, 1]])
         mu_x = np.array([[0.6, 0.2, 0.6, 0.5]]).T
         var_x = np.array([[0.7, 0.2, 0.6, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
@@ -288,14 +288,14 @@ class TestModelDefinition(unittest.TestCase):
                 [0, 0, 0, 0, 0.9],
             ]
         )
-        process_nois_matrix_true = np.zeros([5, 5])
+        process_noise_matrix_true = np.zeros([5, 5])
         observation_matrix_true = np.array([[1, 0, 0, 1, 1]])
         mu_x = np.array([[0.1, 0.1, 0.1, 0.6, 0.5]]).T
         var_x = np.array([[0.1, 0.2, 0.3, 0.6, 0.5]]).T
         mu_states_true = transition_matrix_true @ mu_x
         var_states_true = (
             transition_matrix_true @ np.diagflat(var_x) @ transition_matrix_true.T
-            + process_nois_matrix_true
+            + process_noise_matrix_true
         )
         mu_obs_true = observation_matrix_true @ mu_states_true
         var_obs_true = (
