@@ -2,11 +2,10 @@ import numpy as np
 from typing import Optional, List
 from pytagi.nn import Sequential
 from base_component import BaseComponent
-from base_model import BaseModel
 from common import block_diag
 
 
-class Model(BaseModel):
+class Model:
     """
     LSTM/SSM model
     """
