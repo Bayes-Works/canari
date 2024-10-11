@@ -22,7 +22,7 @@ class Autoregression(BaseComponent):
         super().__init__()
 
     def initialize_component_name(self):
-        self._component_name = "Autoregression"
+        self._component_name = "autoregression"
 
     def initialize_num_states(self):
         self._num_states = 1
@@ -31,10 +31,10 @@ class Autoregression(BaseComponent):
         self._states_name = ["autoregression"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array([[1]])
+        self._transition_matrix = np.array([[self.phi]])
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[self.phi]])
+        self._observation_matrix = np.array([[1]])
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = np.array([[self.std_error**2]])
@@ -45,7 +45,9 @@ class Autoregression(BaseComponent):
         elif len(self.mu_states) == self.num_states:
             self.mu_states = np.atleast_2d(self.mu_states).T
         else:
-            raise ValueError(f"Incorrect mu_states dimension.")
+            raise ValueError(
+                f"Incorrect mu_states dimension for the autoregression component."
+            )
 
     def initialize_var_states(self):
         if self.var_states is None:
@@ -53,4 +55,6 @@ class Autoregression(BaseComponent):
         elif len(self.var_states) == self.num_states:
             self.var_states = np.atleast_2d(self.var_states).T
         else:
-            raise ValueError(f"Incorrect var_states dimension.")
+            raise ValueError(
+                f"Incorrect var_states dimension for the autoregression component."
+            )
