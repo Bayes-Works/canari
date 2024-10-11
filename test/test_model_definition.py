@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import unittest
 import numpy as np
 from base_component import BaseComponent
@@ -10,8 +10,8 @@ from lstm_component import Lstm
 from model import Model
 
 
-def model_definition(component: List):
-    """Define model function to be tested"""
+def model_definition(component: List) -> Tuple[np.ndarray, np.ndarray]:
+    """Ffunction to be tested: define model"""
 
     model = Model(components=component, std_observation_error=0.0)
     mu_obs_pred, var_obs_pred, _, _ = forward(
