@@ -1,3 +1,8 @@
+import os
+import sys
+
+sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "src")))
+
 from typing import List, Tuple
 import unittest
 import numpy as np
@@ -36,11 +41,11 @@ def model_prediction(
     model = Model(*components)
     observation_noise_matrix = np.array([[0.0]])
     mu_obs_pred, var_obs_pred, _, _ = forward(
-        model._mu_states,
-        model._var_states,
-        model._transition_matrix,
-        model._process_noise_matrix,
-        model._observation_matrix,
+        model.mu_states,
+        model.var_states,
+        model.transition_matrix,
+        model.process_noise_matrix,
+        model.observation_matrix,
         observation_noise_matrix,
     )
     return mu_obs_pred, var_obs_pred, model
@@ -88,11 +93,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
     def test_local_trend_periodic_autoregression(self):
         """
@@ -134,11 +139,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
     def test_local_acceleration_periodic_autoregression(self):
         """
@@ -181,11 +186,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
     def test_local_level_lstm_autoregression(self):
         """
@@ -229,11 +234,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
     def test_local_trend_lstm_autoregression(self):
         """
@@ -278,11 +283,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
     def test_local_acceleration_lstm_autoregression(self):
         """
@@ -328,11 +333,11 @@ class TestModelPrediction(unittest.TestCase):
         # Check if model's predictions match the ground true
         self.assertEqual(mu_obs_pred, mu_obs_true)
         self.assertEqual(var_obs_pred, var_obs_true)
-        npt.assert_allclose(model._transition_matrix, transition_matrix_true)
-        npt.assert_allclose(model._process_noise_matrix, process_noise_matrix_true)
-        npt.assert_allclose(model._observation_matrix, observation_matrix_true)
-        npt.assert_allclose(model._mu_states, mu_states_true)
-        npt.assert_allclose(model._var_states, var_states_true)
+        npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+        npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+        npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+        npt.assert_allclose(model.mu_states, mu_states_true)
+        npt.assert_allclose(model.var_states, var_states_true)
 
 
 if __name__ == "__main__":

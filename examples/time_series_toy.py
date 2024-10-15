@@ -1,3 +1,10 @@
+import copy
+import os
+import sys
+
+
+sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "src")))
+
 from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
 from periodic_component import Periodic
 from autoregression_component import Autoregression
