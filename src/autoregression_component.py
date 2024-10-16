@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Optional
-from base_component import BaseComponent
+from src.base_component import BaseComponent
 
 
 class Autoregression(BaseComponent):

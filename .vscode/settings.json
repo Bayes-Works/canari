@@ -5,5 +5,5 @@
     "python.linting.pylintEnabled": true,
     "python.linting.flake8Enabled": false,
     "python.linting.mypyEnabled": false,
-    "python.linting.pylamaEnabled": false
+    "python.linting.pylamaEnabled": false,
 }
