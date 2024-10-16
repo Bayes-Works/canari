@@ -4,7 +4,7 @@ from pytagi.nn import LSTM, Linear
 from src.base_component import BaseComponent
 
 
-class Lstm(BaseComponent):
+class LstmNetwork(BaseComponent):
     """
     LSTM component
     """
