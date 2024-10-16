@@ -2,13 +2,17 @@ from typing import Tuple
 import unittest
 import numpy as np
 import numpy.testing as npt
-from base_component import BaseComponent
-from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
-from common import forward
-from periodic_component import Periodic
-from autoregression_component import Autoregression
-from lstm_component import Lstm
-from model import Model
+from src import (
+    BaseComponent,
+    LocalAcceleration,
+    LocalLevel,
+    LocalTrend,
+    Periodic,
+    Autoregression,
+    Lstm,
+    Model,
+    forward,
+)
 
 
 def predict(

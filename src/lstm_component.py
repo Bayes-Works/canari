@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
 from pytagi.nn import LSTM, Linear
-from base_component import BaseComponent
+from src.base_component import BaseComponent
 
 
 class Lstm(BaseComponent):
