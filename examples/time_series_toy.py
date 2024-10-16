@@ -1,14 +1,13 @@
-from src import (
-    LocalTrend,
-    Autoregression,
-    LstmNetwork,
-    Model,
-)
+from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
+from periodic_component import Periodic
+from autoregression_component import Autoregression
+from lstm_component import Lstm
+from model import Model
 
 
 model = Model(
     LocalTrend(std_error=0.1, mu_states=[0.1, 0.1], var_states=[0.1, 0.1]),
-    LstmNetwork(
+    Lstm(
         look_back_len=10,
         num_features=1,
         num_layer=2,
@@ -18,4 +17,3 @@ model = Model(
 )
 
 check = 1
-print("crap")
