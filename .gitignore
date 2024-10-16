@@ -3,9 +3,7 @@
 *.vscode
 *.json
 saved_results/
-src/__pycache__/
-examples/__pycache__/
-test/__pycache__/
+**/__pycache__/
 *.egg-info/
 
 !.vscode/launch.json

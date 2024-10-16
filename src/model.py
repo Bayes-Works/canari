@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Optional, List
 from pytagi.nn import Sequential
-from base_component import BaseComponent
-from common import block_diag
+from src.base_component import BaseComponent
+from src.common import block_diag
 
 
 class Model:
