@@ -1,15 +1,10 @@
-import os
-import sys
-
-sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "src")))
-
-from typing import List, Tuple
+from typing import Tuple
 import unittest
 import numpy as np
 import numpy.testing as npt
 from base_component import BaseComponent
 from baseline_component import LocalLevel, LocalTrend, LocalAcceleration
-from common import forward, calc_observation
+from common import forward
 from periodic_component import Periodic
 from autoregression_component import Autoregression
 from lstm_component import Lstm
