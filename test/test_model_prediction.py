@@ -9,7 +9,7 @@ from src import (
     LocalTrend,
     Periodic,
     Autoregression,
-    Lstm,
+    LstmNetwork,
     Model,
     forward,
 )
@@ -219,7 +219,7 @@ class TestModelPrediction(unittest.TestCase):
         # Model's prediction
         mu_obs_pred, var_obs_pred, model = model_prediction(
             LocalLevel(mu_states=[0.6], var_states=[0.7]),
-            Lstm(
+            LstmNetwork(
                 look_back_len=52,
                 num_features=1,
                 num_layer=2,
@@ -268,7 +268,7 @@ class TestModelPrediction(unittest.TestCase):
         # Model's prediction
         mu_obs_pred, var_obs_pred, model = model_prediction(
             LocalTrend(mu_states=[0.6, 0.2], var_states=[0.7, 0.2]),
-            Lstm(
+            LstmNetwork(
                 look_back_len=52,
                 num_features=1,
                 num_layer=2,
@@ -318,7 +318,7 @@ class TestModelPrediction(unittest.TestCase):
         # Model's prediction
         mu_obs_pred, var_obs_pred, model = model_prediction(
             LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
-            Lstm(
+            LstmNetwork(
                 look_back_len=52,
                 num_features=1,
                 num_layer=2,
