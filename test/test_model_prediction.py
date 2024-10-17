@@ -10,7 +10,7 @@ from src import (
     Periodic,
     Autoregression,
     LstmNetwork,
-    ObservationNoise,
+    WhiteNoise,
     Model,
     forward,
     backward,
@@ -112,7 +112,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalLevel(mu_states=[0.15], var_states=[0.25]),
             Periodic(period=period, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -173,7 +173,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalTrend(mu_states=[0.15, 0.5], var_states=[0.3, 0.25]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -235,7 +235,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -298,7 +298,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -362,7 +362,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -427,7 +427,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
-            ObservationNoise(std_error=0.1),
+            WhiteNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true

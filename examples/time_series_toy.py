@@ -2,7 +2,7 @@ from src import (
     LocalTrend,
     LstmNetwork,
     Autoregression,
-    ObservationNoise,
+    WhiteNoise,
     Model,
 )
 
@@ -16,7 +16,7 @@ model = Model(
         num_hidden_unit=50,
     ),
     Autoregression(std_error=0.1, mu_states=[0.1], var_states=[0.1]),
-    ObservationNoise(std_error=0.1),
+    WhiteNoise(std_error=0.1),
 )
 
 check = 1
