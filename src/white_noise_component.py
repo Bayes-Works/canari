@@ -3,7 +3,7 @@ from typing import Optional
 from src.base_component import BaseComponent
 
 
-class ObservationNoise(BaseComponent):
+class WhiteNoise(BaseComponent):
     """
     Autoregression component
     """
@@ -16,13 +16,13 @@ class ObservationNoise(BaseComponent):
         super().__init__()
 
     def initialize_component_name(self):
-        self._component_name = "observation noise"
+        self._component_name = "white noise"
 
     def initialize_num_states(self):
         self._num_states = 1
 
     def initialize_states_name(self):
-        self._states_name = ["observation noise"]
+        self._states_name = ["white noise"]
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array([[0]])
