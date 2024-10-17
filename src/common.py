@@ -71,13 +71,17 @@ def backward(
 
 
 def rts_smoother(
-    mu_states_smooth: np.ndarray,
-    var_states_smooth: np.ndarray,
     mu_states_prior: np.ndarray,
     var_states_prior: np.ndarray,
+    mu_states_smooth: np.ndarray,
+    var_states_smooth: np.ndarray,
+    mu_states_posterior: np.ndarray,
+    var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior)
-    delta_mu_states = jcb @ (mu_states_smooth - mu_states_prior)
-    delta_var_states = jcb @ (var_states_smooth - var_states_prior) @ jcb.T
-    return delta_mu_states, delta_var_states
+    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-12)
+    mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
+    var_states_smooth = (
+        var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
+    )
+    return mu_states_smooth, var_states_smooth
