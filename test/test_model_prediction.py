@@ -10,6 +10,7 @@ from src import (
     Periodic,
     Autoregression,
     LstmNetwork,
+    ObservationNoise,
     Model,
     forward,
 )
@@ -38,14 +39,12 @@ def model_prediction(
     """Function to be tested: model prediction"""
 
     model = Model(*components)
-    observation_noise_matrix = np.array([[0.0]])
     mu_obs_pred, var_obs_pred, _, _ = forward(
         model.mu_states,
         model.var_states,
         model.transition_matrix,
         model.process_noise_matrix,
         model.observation_matrix,
-        observation_noise_matrix,
     )
     return mu_obs_pred, var_obs_pred, model
 
@@ -64,16 +63,19 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 0, 0, 0],
-                [0, np.cos(w), np.sin(w), 0],
-                [0, -np.sin(w), np.cos(w), 0],
-                [0, 0, 0, 0.9],
+                [1, 0, 0, 0, 0],
+                [0, np.cos(w), np.sin(w), 0, 0],
+                [0, -np.sin(w), np.cos(w), 0, 0],
+                [0, 0, 0, 0.9, 0],
+                [0, 0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([4, 4])
-        observation_matrix_true = np.array([[1, 1, 0, 1]])
-        mu_states_true = np.array([[0.15, 0.1, 0.2, 0.5]]).T
-        var_states_true = np.array([[0.25, 0.1, 0.2, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([5, 5])
+        process_noise_matrix_true[4, 4] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 1, 0, 1, 1]])
+        mu_states_true = np.array([[0.15, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.array([[0.25, 0.1, 0.2, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -87,6 +89,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalLevel(mu_states=[0.15], var_states=[0.25]),
             Periodic(period=period, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -109,17 +112,20 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 1, 0, 0, 0],
-                [0, 1, 0, 0, 0],
-                [0, 0, np.cos(w), np.sin(w), 0],
-                [0, 0, -np.sin(w), np.cos(w), 0],
-                [0, 0, 0, 0, 0.9],
+                [1, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0],
+                [0, 0, np.cos(w), np.sin(w), 0, 0],
+                [0, 0, -np.sin(w), np.cos(w), 0, 0],
+                [0, 0, 0, 0, 0.9, 0],
+                [0, 0, 0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([5, 5])
-        observation_matrix_true = np.array([[1, 0, 1, 0, 1]])
-        mu_states_true = np.array([[0.15, 0.5, 0.1, 0.2, 0.5]]).T
-        var_states_true = np.array([[0.3, 0.25, 0.1, 0.2, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([6, 6])
+        process_noise_matrix_true[5, 5] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 0, 1, 0, 1, 1]])
+        mu_states_true = np.array([[0.15, 0.5, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.array([[0.3, 0.25, 0.1, 0.2, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -133,6 +139,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalTrend(mu_states=[0.15, 0.5], var_states=[0.3, 0.25]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -155,18 +162,21 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 1, 0.5, 0, 0, 0],
-                [0, 1, 1, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0],
-                [0, 0, 0, np.cos(w), np.sin(w), 0],
-                [0, 0, 0, -np.sin(w), np.cos(w), 0],
-                [0, 0, 0, 0, 0, 0.9],
+                [1, 1, 0.5, 0, 0, 0, 0],
+                [0, 1, 1, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, np.cos(w), np.sin(w), 0, 0],
+                [0, 0, 0, -np.sin(w), np.cos(w), 0, 0],
+                [0, 0, 0, 0, 0, 0.9, 0],
+                [0, 0, 0, 0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([6, 6])
-        observation_matrix_true = np.array([[1, 0, 0, 1, 0, 1]])
-        mu_states_true = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0.5]]).T
-        var_states_true = np.array([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([7, 7])
+        process_noise_matrix_true[6, 6] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 0, 0, 1, 0, 1, 1]])
+        mu_states_true = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.array([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -180,6 +190,7 @@ class TestModelPrediction(unittest.TestCase):
             LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -199,15 +210,18 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 0, 0],
-                [0, 0, 0],
-                [0, 0, 0.9],
+                [1, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0.9, 0],
+                [0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([3, 3])
-        observation_matrix_true = np.array([[1, 1, 1]])
-        mu_states_true = np.array([[0.6, 0.6, 0.5]]).T
-        var_states_true = np.array([[0.7, 0.6, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([4, 4])
+        process_noise_matrix_true[3, 3] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 1, 1, 1]])
+        mu_states_true = np.array([[0.6, 0.6, 0.5, 0]]).T
+        var_states_true = np.array([[0.7, 0.6, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -228,6 +242,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -247,16 +262,19 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 1, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0.9],
+                [1, 1, 0, 0, 0],
+                [0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0.9, 0],
+                [0, 0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([4, 4])
-        observation_matrix_true = np.array([[1, 0, 1, 1]])
-        mu_states_true = np.array([[0.6, 0.2, 0.6, 0.5]]).T
-        var_states_true = np.array([[0.7, 0.2, 0.6, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([5, 5])
+        process_noise_matrix_true[4, 4] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 0, 1, 1, 1]])
+        mu_states_true = np.array([[0.6, 0.2, 0.6, 0.5, 0]]).T
+        var_states_true = np.array([[0.7, 0.2, 0.6, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -277,6 +295,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true
@@ -296,17 +315,20 @@ class TestModelPrediction(unittest.TestCase):
         # Expected results: ground true
         transition_matrix_true = np.array(
             [
-                [1, 1, 0.5, 0, 0],
-                [0, 1, 1, 0, 0],
-                [0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0.9],
+                [1, 1, 0.5, 0, 0, 0],
+                [0, 1, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0.9, 0],
+                [0, 0, 0, 0, 0, 0],
             ]
         )
-        process_noise_matrix_true = np.zeros([5, 5])
-        observation_matrix_true = np.array([[1, 0, 0, 1, 1]])
-        mu_states_true = np.array([[0.1, 0.1, 0.1, 0.6, 0.5]]).T
-        var_states_true = np.array([[0.1, 0.2, 0.3, 0.6, 0.5]]).T
+        std_observation_noise = 0.1
+        process_noise_matrix_true = np.zeros([6, 6])
+        process_noise_matrix_true[5, 5] = std_observation_noise**2
+        observation_matrix_true = np.array([[1, 0, 0, 1, 1, 1]])
+        mu_states_true = np.array([[0.1, 0.1, 0.1, 0.6, 0.5, 0]]).T
+        var_states_true = np.array([[0.1, 0.2, 0.3, 0.6, 0.5, 0]]).T
         mu_obs_true, var_obs_true = predict(
             transition_matrix_true,
             process_noise_matrix_true,
@@ -327,6 +349,7 @@ class TestModelPrediction(unittest.TestCase):
                 var_states=[0.6],
             ),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+            ObservationNoise(std_error=0.1),
         )
 
         # Check if model's predictions match the ground true

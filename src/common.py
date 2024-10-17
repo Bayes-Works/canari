@@ -33,13 +33,9 @@ def calc_observation(
     mu_states: np.ndarray,
     var_states: np.ndarray,
     observation_matrix: np.ndarray,
-    observation_noise_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     mu_obs_predicted = observation_matrix @ mu_states
-    var_obs_predicted = (
-        observation_matrix @ var_states @ observation_matrix.T
-        + observation_noise_matrix
-    )
+    var_obs_predicted = observation_matrix @ var_states @ observation_matrix.T
     return mu_obs_predicted, var_obs_predicted
 
 
@@ -49,7 +45,6 @@ def forward(
     transition_matrix: np.ndarray,
     process_noise_matrix: np.ndarray,
     observation_matrix: np.ndarray,
-    observation_noise_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
@@ -57,7 +52,7 @@ def forward(
         + process_noise_matrix
     )
     mu_obs_predicted, var_obs_predicted = calc_observation(
-        mu_states_prior, var_states_prior, observation_matrix, observation_noise_matrix
+        mu_states_prior, var_states_prior, observation_matrix
     )
     return mu_obs_predicted, var_obs_predicted, mu_states_prior, var_states_prior
 
