@@ -5,4 +5,4 @@ from src.periodic_component import Periodic
 from src.lstm_component import LstmNetwork
 from src.obsevation_noise_component import ObservationNoise
 from src.model import Model
-from src.common import forward
+from src.common import block_diag, forward, backward, rts_smoother
