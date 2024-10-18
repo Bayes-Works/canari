@@ -12,12 +12,12 @@ class DataProcess:
     def __init__(
         self,
         data: pd.DataFrame,
-        time_covariates: Optional[List[str]] = None,
         train_start: str,
         train_end: str,
         validation_start: Optional[str] = None,
         validation_end: Optional[str] = None,
         test_start: Optional[str] = None,
+        time_covariates: Optional[List[str]] = None,
     ) -> None:
         self._train_start = train_start
         self._train_end = train_end
