@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, List
 import numpy as np
 import pandas as pd
-from pytagi import Normalizer, Utils
+from pytagi import Normalizer
 
 
 class DataProcess:
@@ -13,80 +13,86 @@ class DataProcess:
         self,
         data: pd.DataFrame,
         train_start: str,
-        train_end: Optional[str] = None,
+        train_end: str,
         validation_start: Optional[str] = None,
         validation_end: Optional[str] = None,
         test_start: Optional[str] = None,
-        test_end: Optional[str] = None,
         time_covariates: Optional[List[str]] = None,
     ) -> None:
-        self.data = data.values
-        self.time = data.index
-        self.train_start = train_start
-        self.train_end = train_end
-        self.validation_start = validation_start
-        self.validation_end = validation_end
-        self.test_start = test_start
-        self.test_end = test_end
+        self.data = data
+        self._train_start = train_start
+        self._train_end = train_end
+        self._validation_start = validation_start
+        self._validation_end = validation_end
+        self._test_start = test_start
         self.time_covariates = time_covariates
+        self.train_data = None
+        self.validation_data = None
+        self.test_data = None
 
         # # Add time covariates when needed
-        # if self.time_covariates is not None:
-        #     self.add_time_covariates()
+        if self.time_covariates is not None:
+            self.add_time_covariates()
 
-        # Perform preprocessing
-        self.preprocess_data()
+        # Split data
+        self.split_data()
 
-    def preprocess_data(self):
-        # Filter data based on time ranges
-        train_mask = (self.time >= self.train_start) & (
-            self.time < self.validation_start
-        )
-        trainVal_mask = (self.time >= self.train_start) & (self.time < self.test_start)
-        val_mask = (self.time >= self.validation_start) & (self.time < self.test_start)
-        test_mask = (self.time >= self.test_start) & (self.time <= self.test_end)
-
-        # split data
-        data_train = self.data[train_mask, :]
-        data_val = self.data[val_mask, :]
-        data_test = self.data[test_mask, :]
-        self.time = np.array(self.time, dtype="datetime64")
-        self.time_train = self.time[train_mask]
-        self.time_val = self.time[val_mask]
-        self.time_test = self.time[test_mask]
-
-        # Calulate the mean and std from the training and validation sets
-        self.x_mean, self.x_std = Normalizer.compute_mean_std(
-            self.data[trainVal_mask, :]
-        )
-        self.data_train = Normalizer.standardize(
-            data=data_train, mu=self.x_mean, std=self.x_std
-        )
-        self.data_val = Normalizer.standardize(
-            data=data_val, mu=self.x_mean, std=self.x_std
-        )
-        self.data_test = Normalizer.standardize(
-            data=data_test, mu=self.x_mean, std=self.x_std
-        )
+        #  Normalize data
+        self.normalize_data()
 
     def add_time_covariates(self):
-        # Add time covariates
-        time = self.time.values.reshape(-1, 1)
-        time = np.array(time, dtype="datetime64")
+        """
+        Add time covariates to the data
+        """
+
         for time_cov in self.time_covariates:
             if time_cov == "hour_of_day":
-                hour_of_day = time.astype("datetime64[h]").astype(int) % 24
-                self.data = np.concatenate((self.data, hour_of_day), axis=1)
+                self.data["hour_of_day"] = self.data.index.hour
             elif time_cov == "day_of_week":
-                day_of_week = time.astype("datetime64[D]").astype(int) % 7
-                self.data = np.concatenate((self.data, day_of_week), axis=1)
+                self.data["day_of_week"] = self.data.index.dayofweek
+            elif time_cov == "day_of_year":
+                self.data["day_of_year"] = self.data.index.dayofyear
             elif time_cov == "week_of_year":
-                week_of_year = time.astype("datetime64[W]").astype(int) % 52 + 1
-                self.data = np.concatenate((self.data, week_of_year), axis=1)
+                self.data["week_of_year"] = self.data.index.isocalendar().week
             elif time_cov == "month_of_year":
-                month_of_year = time.astype("datetime64[M]").astype(int) % 12 + 1
-                self.data = np.concatenate((self.data, month_of_year), axis=1)
+                self.data["month"] = self.data.index.month
             elif time_cov == "quarter_of_year":
-                month_of_year = time.astype("datetime64[M]").astype(int) % 12 + 1
-                quarter_of_year = (month_of_year - 1) // 3 + 1
-                self.data = np.concatenate((self.data, quarter_of_year), axis=1)
+                self.data["quarter"] = self.data.index.quarter
+
+    def split_data(self):
+        """ "
+        Split data into train, validation and test sets
+        """
+
+        self.train_data = self.data.loc[self._train_start : self._train_end].values
+        if self._validation_start is not None:
+            self.validation_data = self.data.loc[
+                self._validation_start : self._validation_end
+            ].values
+        if self._test_start is not None:
+            self.test_data = self.data.loc[self._test_start :].values
+
+    def normalize_data(self):
+        """
+        Nomalize data
+        """
+
+        self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
+
+        self.train_data = Normalizer.standardize(
+            data=self.train_data, mu=self.data_mean, std=self.data_std
+        )
+        if self.validation_data is not None:
+            self.validation_data = Normalizer.standardize(
+                data=self.validation_data, mu=self.data_mean, std=self.data_std
+            )
+        if self.test_data is not None:
+            self.test_data = Normalizer.standardize(
+                data=self.test_data, mu=self.data_mean, std=self.data_std
+            )
+
+    def get_splits(self):
+        """
+        Get the train, valiation, test splits
+        """
+        return self.train_data, self.validation_data, self.test_data
