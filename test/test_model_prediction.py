@@ -17,13 +17,15 @@ from src import (
 )
 
 
-def predict(
+def compute_observation_and_state_updates(
     transition_matrix: np.ndarray,
     process_noise_matrix: np.ndarray,
     observation_matrix: np.ndarray,
     mu_states: np.ndarray,
     var_states: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Manually estimate the prediction and states update"""
+
     mu_states_true = transition_matrix @ mu_states
     var_states_true = (
         transition_matrix @ np.diagflat(var_states) @ transition_matrix.T
@@ -39,10 +41,10 @@ def predict(
     return mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true
 
 
-def model_prediction(
+def model_forward_backward(
     *components: BaseComponent,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Model]:
-    """Function to be tested: model prediction"""
+    """Function to be tested: model forward and backward"""
 
     model = Model(*components)
     mu_obs_pred, var_obs_pred, _, var_states_prior = forward(
@@ -63,7 +65,7 @@ def model_prediction(
     return mu_obs_pred, var_obs_pred, delta_mu_states_pred, delta_var_states_pred, model
 
 
-class TestModelPrediction(unittest.TestCase):
+class TestModelForwardBackward(unittest.TestCase):
     """Test model prediction"""
 
     def test_local_level_periodic_autoregression(self):
@@ -92,7 +94,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.25, 0.1, 0.2, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -108,7 +110,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalLevel(mu_states=[0.15], var_states=[0.25]),
             Periodic(period=period, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
@@ -153,7 +155,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.3, 0.25, 0.1, 0.2, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -169,7 +171,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalTrend(mu_states=[0.15, 0.5], var_states=[0.3, 0.25]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
@@ -215,7 +217,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -231,7 +233,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
             Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
             Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
@@ -271,7 +273,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.7, 0.6, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -287,7 +289,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalLevel(mu_states=[0.6], var_states=[0.7]),
             LstmNetwork(
                 look_back_len=52,
@@ -335,7 +337,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.7, 0.2, 0.6, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -351,7 +353,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalTrend(mu_states=[0.6, 0.2], var_states=[0.7, 0.2]),
             LstmNetwork(
                 look_back_len=52,
@@ -400,7 +402,7 @@ class TestModelPrediction(unittest.TestCase):
         var_states_true = np.array([[0.1, 0.2, 0.3, 0.6, 0.5, 0]]).T
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
-            predict(
+            compute_observation_and_state_updates(
                 transition_matrix_true,
                 process_noise_matrix_true,
                 observation_matrix_true,
@@ -416,7 +418,7 @@ class TestModelPrediction(unittest.TestCase):
             delta_mu_states_pred,
             delta_var_states_pred,
             model,
-        ) = model_prediction(
+        ) = model_forward_backward(
             LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
             LstmNetwork(
                 look_back_len=52,
