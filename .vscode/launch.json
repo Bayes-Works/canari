@@ -3,11 +3,15 @@
     "configurations": [
         {
             "name": "Python: Current File",
-            "type": "debugpy",
+            "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
+            "cwd": "${workspaceFolder}", // Set the current working directory to the workspace root
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}" // Add the workspace root to PYTHONPATH
+            }
         }
     ]
 }
