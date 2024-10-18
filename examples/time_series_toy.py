@@ -1,3 +1,4 @@
+import pandas as pd
 from src import (
     LocalTrend,
     LstmNetwork,
@@ -5,8 +6,16 @@ from src import (
     WhiteNoise,
     Model,
 )
+from src import DataProcess
 
 
+# Data
+data_file = "./data/toy_time_series/sine_trend.csv"
+df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+data_file_time = "./data/toy_time_series/sine_trend_datetime.csv"
+time = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+
+# Model
 model = Model(
     LocalTrend(std_error=0.1, mu_states=[0.1, 0.1], var_states=[0.1, 0.1]),
     LstmNetwork(
