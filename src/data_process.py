@@ -12,25 +12,26 @@ class DataProcess:
     def __init__(
         self,
         data: pd.DataFrame,
+        time_covariates: Optional[List[str]] = None,
         train_start: str,
         train_end: str,
         validation_start: Optional[str] = None,
         validation_end: Optional[str] = None,
         test_start: Optional[str] = None,
-        time_covariates: Optional[List[str]] = None,
     ) -> None:
-        self.data = data
         self._train_start = train_start
         self._train_end = train_end
         self._validation_start = validation_start
         self._validation_end = validation_end
         self._test_start = test_start
+
+        self.data = data
         self.time_covariates = time_covariates
         self.train_data = None
         self.validation_data = None
         self.test_data = None
 
-        # # Add time covariates when needed
+        # # Add time covariates if needed
         if self.time_covariates is not None:
             self.add_time_covariates()
 
@@ -91,8 +92,9 @@ class DataProcess:
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
 
-    def get_splits(self):
+    def get_splits(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get the train, valiation, test splits
         """
+
         return self.train_data, self.validation_data, self.test_data
