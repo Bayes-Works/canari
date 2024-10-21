@@ -21,8 +21,8 @@ class Model:
         self._mu_states_smooths = []
         self._var_states_smooths = []
         self._cov_states = []
-
-        self._save_for_smoother = None
+        self._save_for_smoother = False
+        self._net = None
 
         self.components = list(components)
         self.define_model()
@@ -33,7 +33,6 @@ class Model:
         """
 
         self.assemble_matrices()
-        self.observation_noise_matrix = np.array([[0]])
         self.assemble_states()
 
     def filter(
@@ -46,6 +45,7 @@ class Model:
 
         mu_obs_preds = []
         var_obs_preds = []
+
         for obs in time_series_data:
             mu_obs_pred, var_obs_pred = self.forward()
             delta_mu_states, delta_var_states = self.backward(
@@ -62,6 +62,7 @@ class Model:
         Forecast for whole time series
         """
 
+        self._save_for_smoother = False
         mu_obs_preds = []
         var_obs_preds = []
         for _ in range(horizon):
@@ -104,6 +105,31 @@ class Model:
         self.var_states = self._var_states_smooths[0]
 
         return mu_obs_preds, var_obs_preds
+
+    def lstm_train(
+        self,
+        train_data: np.ndarray,
+        validation_data: np.ndarray,
+        num_epoch: int,
+    ):
+        """
+        Train LstmNetwork
+        """
+
+        if self._net is None:
+            lstm_component = next(
+                (
+                    component
+                    for component in self.components
+                    if component.component_name == "lstm"
+                ),
+                None,
+            )
+            self._net = Sequential(*lstm_component.layers)
+
+        for epoch in range(num_epoch):
+            self.smoother(train_data)
+            self.forecast(validation_data)
 
     def search_parameters(self):
         """Grid-search model's parameters"""
@@ -172,7 +198,6 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            self.observation_noise_matrix,
         )
         if self._save_for_smoother is not None:
             self._mu_states_priors = self._mu_states_priors.append(mu_states_prior)
