@@ -49,5 +49,6 @@ model = Model(
     WhiteNoise(std_error=0.1),
 )
 
+model.lstm_train(train_data=train_data, validation_data=validation_data, num_epoch=50)
 
 check = 1
