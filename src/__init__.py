@@ -6,4 +6,3 @@ from src.lstm_component import LstmNetwork
 from src.white_noise_component import WhiteNoise
 from src.model import Model
 from src.common import block_diag, forward, backward, rts_smoother
-from src.data_process import DataProcess

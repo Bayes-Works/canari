@@ -6,7 +6,7 @@ from src import (
     WhiteNoise,
     Model,
 )
-from src import DataProcess
+from examples import DataProcess
 
 
 # # Read data
