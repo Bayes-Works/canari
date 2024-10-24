@@ -2,6 +2,7 @@ from typing import Optional
 import numpy as np
 from pytagi.nn import LSTM, Linear
 from src.base_component import BaseComponent
+from pytagi.nn import Sequential
 
 
 class LstmNetwork(BaseComponent):
@@ -30,7 +31,6 @@ class LstmNetwork(BaseComponent):
         self.num_output = num_output
         self.mu_states = mu_states
         self.var_states = var_states
-        self.initialize_lstm_layers()
         super().__init__()
 
     def initialize_component_name(self):
@@ -67,7 +67,7 @@ class LstmNetwork(BaseComponent):
         else:
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
-    def initialize_lstm_layers(self):
+    def initialize_lstm_network(self):
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
@@ -79,4 +79,6 @@ class LstmNetwork(BaseComponent):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
         # Last layer
         layers.append(Linear(self.num_hidden_unit[-1], self.num_output, 1))
-        self.layers = layers
+        # Initialize lstm network
+        lstm_network = Sequential(*layers)
+        return lstm_network

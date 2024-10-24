@@ -3,7 +3,8 @@ from typing import Optional, List, Tuple
 from collections import deque
 from pytagi.nn import Sequential
 from src.base_component import BaseComponent
-from src.common import block_diag, forward, backward, rts_smoother
+import src.common as common
+from src.data_struct import LstmInput, LstmStates, SmootherStates
 
 
 class Model:
@@ -15,191 +16,18 @@ class Model:
         self,
         *components: BaseComponent,
     ):
-        self._mu_states_priors = []
-        self._var_states_priors = []
-        self._mu_states_posteriors = []
-        self._var_states_posteriors = []
-        self._mu_states_smooths = []
-        self._var_states_smooths = []
-        self._cov_states = []
-        self._save_for_smoother = False
-
-        self._net = None
-        self._lstm_indice = None
-        self._use_lstm_prediction = False
-        self._mu_lstm_input = None
-        self._var_lstm_input = None
-        self._update_lstm_param = None
-
         self.components = list(components)
-        self.define_model()
+        self.assemble_components()
+        self.lstm_net = None
+        self.smoother_states = None
 
-    def define_model(self):
+    def assemble_components(self):
         """
         Define_model
         """
 
         self.assemble_matrices()
         self.assemble_states()
-
-    def filter(
-        self,
-        time_series_data,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Filter for whole time series data
-        """
-
-        mu_obs_preds = []
-        var_obs_preds = []
-        mu_lstm_pred = None
-        var_lstm_pred = None
-
-        for obs in time_series_data:
-            if self._use_lstm_prediction:
-                mu_lstm_input = np.concatenate((self._mu_lstm_input, obs[1:]))
-                var_lstm_input = np.concatenate(
-                    (
-                        self._var_lstm_input,
-                        np.zeros(self._num_features - 1, dtype=np.float32),
-                    )
-                )
-                mu_lstm_pred, var_lstm_pred = self._net(
-                    mu_x=mu_lstm_input, var_x=var_lstm_input
-                )
-
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
-            delta_mu_states, delta_var_states = self.backward(
-                obs[0], mu_obs_pred, var_obs_pred
-            )
-
-            self.update_states(delta_mu_states, delta_var_states)
-            if self._update_lstm_param:
-                self.update_lstm_param(delta_mu_states, delta_var_states, var_lstm_pred)
-
-            if self._use_lstm_prediction:
-                self._mu_lstm_input[:-1] = self._mu_lstm_input[1:]
-                self._mu_lstm_input[-1] = mu_lstm_pred
-                self._var_lstm_input[:-1] = self._var_lstm_input[1:]
-                self._var_lstm_input[-1] = var_lstm_pred
-
-                # self._mu_lstm_input.popleft()
-                # self._mu_lstm_input.append(mu_lstm_pred)
-                # self._var_lstm_input.popleft()
-                # self._var_lstm_input.append(var_lstm_pred)
-
-            mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
-
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
-
-    def forecast(self, time_series_data) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Forecast for whole time series
-        """
-
-        self._save_for_smoother = False
-        mu_obs_preds = []
-        var_obs_preds = []
-        mu_lstm_pred = None
-        var_lstm_pred = None
-
-        for obs in time_series_data:
-            if self._use_lstm_prediction:
-                mu_lstm_input = np.concatenate((self._mu_lstm_input, obs[1:]))
-                var_lstm_input = np.concatenate(
-                    (
-                        self._var_lstm_input,
-                        np.zeros(self._num_features - 1, dtype=np.float32),
-                    )
-                )
-                mu_lstm_pred, var_lstm_pred = self._net(
-                    mu_x=mu_lstm_input, var_x=var_lstm_input
-                )
-
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
-
-            if self._use_lstm_prediction:
-                self._mu_lstm_input[:-1] = self._mu_lstm_input[1:]
-                self._mu_lstm_input[-1] = mu_lstm_pred
-                self._var_lstm_input[:-1] = self._var_lstm_input[1:]
-                self._var_lstm_input[-1] = var_lstm_pred
-
-            mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
-
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
-
-    def smoother(self, time_series_data):
-        """
-        Smoother for whole time series
-        """
-
-        self._save_for_smoother = True
-
-        # Filter
-        mu_obs_preds, var_obs_preds = self.filter(time_series_data)
-
-        # Smoother
-        self._mu_states_smooths = np.zeros_like(self._mu_states_priors)
-        self._var_states_smooths = np.zeros_like(self._var_states_priors)
-        self._mu_states_smooths[-1] = self._mu_states_posteriors[-1]
-        self._var_states_smooths[-1] = self._var_states_posteriors[-1]
-
-        num_time_steps = len(self._mu_states_priors)
-        for i in reversed(range(1, num_time_steps)):
-            self._mu_states_smooths[i - 1], self._var_states_smooths[i - 1] = (
-                rts_smoother(
-                    self._mu_states_priors[i],
-                    self._var_states_priors[i],
-                    self._mu_states_smooths[i],
-                    self._var_states_smooths[i],
-                    self._mu_states_posteriors[i - 1],
-                    self._var_states_posteriors[i - 1],
-                    self._cov_states[i],
-                )
-            )
-
-        self.mu_states = self._mu_states_smooths[0]
-        self.var_states = self._var_states_smooths[0]
-
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
-
-    def lstm_train(
-        self,
-        train_data: np.ndarray,
-        validation_data: np.ndarray,
-        num_epoch: int,
-    ):
-        """
-        Train LstmNetwork
-        """
-
-        train_data = np.float32(train_data)
-        validation_data = np.float32(validation_data)
-        if self._net is None:
-            self.initialize_lstm_network()
-
-        for epoch in range(num_epoch):
-            self.smoother(train_data)
-            mu_validation_preds, var_validation_preds = self.forecast(validation_data)
-
-        return (
-            np.array(mu_validation_preds).flatten(),
-            np.array(var_validation_preds).flatten(),
-        )
-
-    def search_parameters(self):
-        """Grid-search model's parameters"""
-        pass
-
-    def save(self, filename: str):
-        """Save model"""
-        pass
-
-    def load(self, filename: str):
-        """Load model"""
-        pass
 
     def assemble_matrices(self):
         """
@@ -210,13 +38,13 @@ class Model:
         transition_matrices = [
             component.transition_matrix for component in self.components
         ]
-        self.transition_matrix = block_diag(*transition_matrices)
+        self.transition_matrix = common.block_diag(*transition_matrices)
 
         # Global process_noise_matrix
         process_noise_matrices = [
             component.process_noise_matrix for component in self.components
         ]
-        self.process_noise_matrix = block_diag(*process_noise_matrices)
+        self.process_noise_matrix = common.block_diag(*process_noise_matrices)
 
         # Glolabl observation noise matrix
         global_observation_matrix = np.array([])
@@ -246,34 +74,16 @@ class Model:
         ]
         self.num_states = sum(component.num_states for component in self.components)
 
-    def initialize_lstm_network(self):
-        """
-        Initilize lstm network
-        """
-
-        lstm_component = next(
+    @staticmethod
+    def prepare_lstm_input(lstm_input, sample):
+        mu_lstm_input = np.concatenate((lstm_input.mu, sample[1:]))
+        var_lstm_input = np.concatenate(
             (
-                component
-                for component in self.components
-                if component.component_name == "lstm"
-            ),
-            None,
+                lstm_input.var,
+                np.zeros(len(sample) - 1, dtype=np.float32),
+            )
         )
-        self._net = Sequential(*lstm_component.layers)
-        self._use_lstm_prediction = True
-        self._update_lstm_param = True
-        self._mu_lstm_input = np.zeros(lstm_component.look_back_len, dtype=np.float32)
-        self._var_lstm_input = np.zeros(lstm_component.look_back_len, dtype=np.float32)
-
-        # self._mu_lstm_input = deque(
-        #     np.zeros(lstm_component.look_back_len, dtype=np.float32)
-        # )
-        # self._var_lstm_input = deque(
-        #     np.ones(lstm_component.look_back_len, dtype=np.float32)
-        # )
-
-        self._lstm_indice = self.states_name.index("lstm")
-        self._num_features = lstm_component.num_features
+        return mu_lstm_input, var_lstm_input
 
     def forward(
         self,
@@ -281,10 +91,10 @@ class Model:
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Prediction step in states-space model for one sample
+        One step prediction in states-space model
         """
 
-        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = forward(
+        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
             self.transition_matrix,
@@ -292,17 +102,10 @@ class Model:
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
-            self._lstm_indice,
+            self.lstm_states_index,
         )
-
-        if self._save_for_smoother:
-            self._mu_states_priors.append(mu_states_prior)
-            self._var_states_priors.append(var_states_prior)
-            self._cov_states.append(self.transition_matrix @ self.var_states)
-
-        self.mu_states = mu_states_prior
-        self.var_states = var_states_prior
-
+        self._mu_states_prior = mu_states_prior
+        self._var_states_prior = var_states_prior
         return mu_obs_pred, var_obs_pred
 
     def backward(
@@ -312,17 +115,35 @@ class Model:
         var_obs_pred: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Update step in states-space model for one sample
+        Update step in states-space model
         """
 
-        delta_mu_states, delta_var_states = backward(
+        delta_mu_states, delta_var_states = common.backward(
             obs,
             mu_obs_pred,
             var_obs_pred,
-            self.var_states,
+            self._var_states_prior,
             self.observation_matrix,
         )
         return delta_mu_states, delta_var_states
+
+    def rts_smoother(self, time_step):
+        """
+        RTS smoother
+        """
+
+        (
+            self.smoother_states.mu_smooths[time_step - 1],
+            self.smoother_states.var_smooths[time_step - 1],
+        ) = common.rts_smoother(
+            self.smoother_states.mu_priors[time_step],
+            self.smoother_states.var_priors[time_step],
+            self.smoother_states.mu_smooths[time_step],
+            self.smoother_states.var_smooths[time_step],
+            self.smoother_states.mu_posteriors[time_step - 1],
+            self.smoother_states.var_posteriors[time_step - 1],
+            self.smoother_states.cov_states[time_step],
+        )
 
     def update_states(
         self,
@@ -335,29 +156,189 @@ class Model:
 
         mu_states_posterior = self.mu_states + delta_mu_states
         var_states_posterior = self.var_states + delta_var_states
-        self.mu_states = mu_states_posterior
-        self.var_states = var_states_posterior
-        if self._save_for_smoother:
-            self._mu_states_posteriors.append(mu_states_posterior)
-            self._var_states_posteriors.append(var_states_posterior)
+        self._mu_states_posterior = mu_states_posterior
+        self._var_states_posterior = var_states_posterior
+
+    def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
+        self.lstm_output_history.mu[:-1] = self.lstm_output_history.mu[1:]
+        self.lstm_output_history.mu[-1] = mu_lstm_pred
+        self.lstm_output_history.var[:-1] = self.lstm_output_history.var[1:]
+        self.lstm_output_history.var[-1] = var_lstm_pred
 
     def update_lstm_param(
         self,
-        delta_mu_states: np.ndarray,
-        delta_var_states: np.ndarray,
-        var_lstm_pred: np.ndarray,
+        delta_mu_lstm: np.ndarray,
+        delta_var_lstm: np.ndarray,
     ):
         """
         update lstm's prameters
         """
 
-        delta_mean_lstm = delta_mu_states[self._lstm_indice] / var_lstm_pred
-        delta_var_lstm = (
-            delta_var_states[self._lstm_indice, self._lstm_indice] / var_lstm_pred**2
-        )
+        self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
+        self.lstm_net.input_delta_z_buffer.delta_var = delta_var_lstm
+        self.lstm_net.backward()
+        self.lstm_net.step()
 
-        # # update lstm network
-        self._net.input_delta_z_buffer.delta_mu = delta_mean_lstm
-        self._net.input_delta_z_buffer.delta_var = delta_var_lstm
-        self._net.backward()
-        self._net.step()
+    def save_for_smoother(self):
+        """ "
+        Save variables for smoother
+        """
+
+        self.smoother_states.mu_priors.append(self._mu_states_prior)
+        self.smoother_states.var_priors.append(
+            (self._var_states_prior + self._var_states_prior.T) / 2
+        )
+        self.smoother_states.mu_posteriors.append(self._mu_states_posterior)
+        self.smoother_states.var_posteriors.append(self._var_states_posterior)
+        self.smoother_states.cov_states.append(self.transition_matrix @ self.var_states)
+
+    def initialize_lstm_network(self):
+        """
+        Initialize_lstm_network from lstm_component
+        """
+
+        lstm_component = next(
+            (
+                component
+                for component in self.components
+                if component.component_name == "lstm"
+            ),
+            None,
+        )
+        if lstm_component:
+            self.lstm_net = lstm_component.initialize_lstm_network()
+            self.lstm_net.update_param = self.update_lstm_param
+            self.lstm_states = LstmStates()
+            self.lstm_output_history = LstmInput(lstm_component.look_back_len)
+            self.lstm_states_index = self.states_name.index("lstm")
+            self._lstm_look_back_len = lstm_component.look_back_len
+        else:
+            raise ValueError(f"No LstmNetwork component found")
+
+    def forecast(self, data) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Forecast for whole time series data
+        """
+
+        mu_obs_preds = []
+        var_obs_preds = []
+        mu_lstm_pred = None
+        var_lstm_pred = None
+
+        for obs in data:
+            if self.lstm_net:
+                mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
+                    self.lstm_output_history, obs
+                )
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=mu_lstm_input, var_x=var_lstm_input
+                )
+
+            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+
+            if self.lstm_net:
+                self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
+
+            self.mu_states = self._mu_states_prior
+            self.var_states = self._var_states_prior
+            mu_obs_preds.append(mu_obs_pred)
+            var_obs_preds.append(var_obs_pred)
+        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+
+    def filter(
+        self,
+        data,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Filter for whole time series data
+        """
+
+        mu_obs_preds = []
+        var_obs_preds = []
+        mu_lstm_pred = None
+        var_lstm_pred = None
+
+        for obs in data:
+            if self.lstm_net:
+                mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
+                    self.lstm_output_history, obs
+                )
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=mu_lstm_input, var_x=var_lstm_input
+                )
+
+            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+            delta_mu_states, delta_var_states = self.backward(
+                obs[0], mu_obs_pred, var_obs_pred
+            )
+            self.update_states(delta_mu_states, delta_var_states)
+
+            if self.lstm_net:
+                delta_mu_lstm = delta_mu_states[self.lstm_states_index] / var_lstm_pred
+                delta_var_lstm = (
+                    delta_var_states[self.lstm_states_index] / var_lstm_pred**2
+                )
+                self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
+                self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
+
+            if self.smoother_states:
+                self.save_for_smoother()
+
+            self.mu_states = self._mu_states_posterior
+            self.var_states = self._var_states_posterior
+            mu_obs_preds.append(mu_obs_pred)
+            var_obs_preds.append(var_obs_pred)
+        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+
+    def smoother(self, data):
+        """
+        Smoother for whole time series
+        """
+
+        num_time_steps = len(data)
+        self.smoother_states = SmootherStates()
+
+        # Filter
+        mu_obs_preds, var_obs_preds = self.filter(data)
+
+        # Smoother
+        self.smoother_states.mu_smooths = np.zeros_like(
+            self.smoother_states.mu_posteriors
+        )
+        self.smoother_states.var_smooths = np.zeros_like(
+            self.smoother_states.var_posteriors
+        )
+        self.smoother_states.mu_smooths[-1] = self.smoother_states.mu_posteriors[-1]
+        self.smoother_states.var_smooths[-1] = self.smoother_states.var_posteriors[-1]
+
+        for i in reversed(range(1, num_time_steps)):
+            self.rts_smoother(i)
+
+        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+
+    def lstm_train(
+        self,
+        train_data: np.ndarray,
+        validation_data: np.ndarray,
+    ):
+        """
+        Train LstmNetwork
+        """
+
+        train_data = np.float32(train_data)
+        validation_data = np.float32(validation_data)
+        if self.lstm_net is None:
+            self.initialize_lstm_network()
+        else:
+            self.lstm_output_history = LstmInput(self._lstm_look_back_len)
+
+        self.smoother(train_data)
+        mu_validation_preds, var_validation_preds = self.forecast(validation_data)
+
+        self.mu_states = self.smoother_states.mu_smooths[0]
+        self.var_states = self.smoother_states.var_smooths[0]
+
+        return (
+            np.array(mu_validation_preds).flatten(),
+            np.array(var_validation_preds).flatten(),
+        )
