@@ -38,6 +38,7 @@ train_data, validation_data, test_data = data_processor.get_splits()
 
 # Define parameters
 output_col = [0]
+num_epoch = 10
 
 # Model
 model = Model(
@@ -45,16 +46,22 @@ model = Model(
     LstmNetwork(
         look_back_len=24,
         num_features=3,
-        num_layer=2,
+        num_layer=1,
         num_hidden_unit=50,
     ),
-    Autoregression(std_error=0.0, mu_states=[0], var_states=[0.00]),
+    # Autoregression(std_error=0.0, mu_states=[0], var_states=[0.00]),
     WhiteNoise(std_error=0.1),
 )
 
-mu_obs_preds, var_obs_preds = model.lstm_train(
-    train_data=train_data, validation_data=validation_data, num_epoch=20
-)
+for epoch in range(num_epoch):
+    (mu_validation_preds, var_validation_preds) = model.lstm_train(
+        train_data=train_data, validation_data=validation_data
+    )
+
+
+# mu_validation_preds, var_validation_preds = model.lstm_train(
+#     train_data=train_data, validation_data=validation_data, num_epoch=num_epoch
+# )
 
 idx_train = range(0, len(train_data))
 idx_val = range(len(train_data), len(validation_data) + len(train_data))
@@ -62,7 +69,7 @@ idx_val = range(len(train_data), len(validation_data) + len(train_data))
 plt.figure(figsize=(10, 6))
 plt.plot(idx_train, train_data[:, 0], color="r")
 plt.plot(idx_val, validation_data[:, 0], color="b")
-plt.plot(idx_val, mu_obs_preds, color="k")
+plt.plot(idx_val, mu_validation_preds, color="k")
 plt.show()
 
 
