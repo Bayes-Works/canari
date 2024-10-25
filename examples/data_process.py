@@ -83,14 +83,19 @@ class DataProcess:
         self.train_data = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std
         )
+        self.train_data = np.float32(self.train_data)
+
         if self.validation_data is not None:
             self.validation_data = Normalizer.standardize(
                 data=self.validation_data, mu=self.data_mean, std=self.data_std
             )
+            self.validation_data = np.float32(self.validation_data)
+
         if self.test_data is not None:
             self.test_data = Normalizer.standardize(
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
+            self.test_data = np.float32(self.test_data)
 
     def get_splits(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
