@@ -38,18 +38,18 @@ train_data, validation_data, test_data = data_processor.get_splits()
 
 # Define parameters
 output_col = [0]
-num_epoch = 10
+num_epoch = 20
 
 # Model
 model = Model(
-    LocalTrend(std_error=0, mu_states=[0, 0], var_states=[1e-6, 1e-6]),
+    LocalTrend(),
     LstmNetwork(
         look_back_len=24,
         num_features=3,
-        num_layer=1,
+        num_layer=2,
         num_hidden_unit=50,
     ),
-    # Autoregression(std_error=0.0, mu_states=[0], var_states=[0.00]),
+    Autoregression(),
     WhiteNoise(std_error=0.1),
 )
 
@@ -58,10 +58,6 @@ for epoch in range(num_epoch):
         train_data=train_data, validation_data=validation_data
     )
 
-
-# mu_validation_preds, var_validation_preds = model.lstm_train(
-#     train_data=train_data, validation_data=validation_data, num_epoch=num_epoch
-# )
 
 idx_train = range(0, len(train_data))
 idx_val = range(len(train_data), len(validation_data) + len(train_data))
