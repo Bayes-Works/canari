@@ -160,9 +160,9 @@ class Model:
         self._var_states_posterior = var_states_posterior
 
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
-        self.lstm_output_history.mu[:-1] = self.lstm_output_history.mu[1:]
+        self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
+        self.lstm_output_history.var = np.roll(self.lstm_output_history.var, -1)
         self.lstm_output_history.mu[-1] = mu_lstm_pred
-        self.lstm_output_history.var[:-1] = self.lstm_output_history.var[1:]
         self.lstm_output_history.var[-1] = var_lstm_pred
 
     def update_lstm_param(
@@ -214,6 +214,33 @@ class Model:
             self._lstm_look_back_len = lstm_component.look_back_len
         else:
             raise ValueError(f"No LstmNetwork component found")
+
+    def initialize_states_with_smoother_estimates(self):
+        """
+        Set the model initial hidden states = the smoothed estimates
+        """
+
+        self.mu_states = self.smoother_states.mu_smooths[0]
+        self.var_states = self.smoother_states.var_smooths[0]
+
+    def reset_lstm_output_history(self):
+        self.lstm_output_history = LstmInput(self._lstm_look_back_len)
+
+    def initialize_smoother_states(self):
+        self.smoother_states = SmootherStates()
+
+    def initialize_smoother_buffers(self):
+        """
+        Set the smoothed estimates at the last time step = posterior
+        """
+        self.smoother_states.mu_smooths = np.zeros_like(
+            self.smoother_states.mu_posteriors
+        )
+        self.smoother_states.var_smooths = np.zeros_like(
+            self.smoother_states.var_posteriors
+        )
+        self.smoother_states.mu_smooths[-1] = self.smoother_states.mu_posteriors[-1]
+        self.smoother_states.var_smooths[-1] = self.smoother_states.var_posteriors[-1]
 
     def forecast(self, data) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -296,23 +323,15 @@ class Model:
         """
 
         num_time_steps = len(data)
-        self.smoother_states = SmootherStates()
+        self.initialize_smoother_states()
 
         # Filter
         mu_obs_preds, var_obs_preds = self.filter(data)
 
         # Smoother
-        self.smoother_states.mu_smooths = np.zeros_like(
-            self.smoother_states.mu_posteriors
-        )
-        self.smoother_states.var_smooths = np.zeros_like(
-            self.smoother_states.var_posteriors
-        )
-        self.smoother_states.mu_smooths[-1] = self.smoother_states.mu_posteriors[-1]
-        self.smoother_states.var_smooths[-1] = self.smoother_states.var_posteriors[-1]
-
-        for i in reversed(range(1, num_time_steps)):
-            self.rts_smoother(i)
+        self.initialize_smoother_buffers()
+        for time_step in reversed(range(1, num_time_steps)):
+            self.rts_smoother(time_step)
 
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
 
@@ -329,14 +348,11 @@ class Model:
         validation_data = np.float32(validation_data)
         if self.lstm_net is None:
             self.initialize_lstm_network()
-        else:
-            self.lstm_output_history = LstmInput(self._lstm_look_back_len)
 
         self.smoother(train_data)
         mu_validation_preds, var_validation_preds = self.forecast(validation_data)
-
-        self.mu_states = self.smoother_states.mu_smooths[0]
-        self.var_states = self.smoother_states.var_smooths[0]
+        self.reset_lstm_output_history()
+        self.initialize_states_with_smoother_estimates()
 
         return (
             np.array(mu_validation_preds).flatten(),
