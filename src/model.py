@@ -4,7 +4,7 @@ from collections import deque
 from pytagi.nn import Sequential
 from src.base_component import BaseComponent
 import src.common as common
-from src.data_struct import LstmInput, LstmStates, SmootherStates
+from src.data_struct import LstmOutputHistory, SmootherStates
 
 
 class Model:
@@ -22,12 +22,12 @@ class Model:
         self.smoother_states = None
 
     @staticmethod
-    def prepare_lstm_input(lstm_output_history, sample):
-        mu_lstm_input = np.concatenate((lstm_output_history.mu, sample[1:]))
+    def prepare_lstm_input(lstm_output_history, x):
+        mu_lstm_input = np.concatenate((lstm_output_history.mu, x))
         var_lstm_input = np.concatenate(
             (
                 lstm_output_history.var,
-                np.zeros(len(sample) - 1, dtype=np.float32),
+                np.zeros(len(x), dtype=np.float32),
             )
         )
         return mu_lstm_input, var_lstm_input
@@ -186,23 +186,28 @@ class Model:
         self.var_states = self.smoother_states.var_smooths[0]
 
     def reset_lstm_output_history(self):
-        self.lstm_output_history = LstmInput(self._lstm_look_back_len)
+        self.lstm_output_history = LstmOutputHistory(self._lstm_look_back_len)
 
-    def initialize_smoother_states(self):
+    def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
+        self.smoother_states.initialize(num_time_steps, self.num_states)
 
-    def save_for_smoother(self):
+    def save_for_smoother(self, time_step):
         """ "
         Save variables for smoother
         """
 
-        self.smoother_states.mu_priors.append(self._mu_states_prior)
-        self.smoother_states.var_priors.append(
-            (self._var_states_prior + self._var_states_prior.T) / 2
+        self.smoother_states.mu_priors[time_step] = self._mu_states_prior.flatten()
+        self.smoother_states.var_priors[time_step] = (
+            self._var_states_prior + self._var_states_prior.T
+        ) / 2
+        self.smoother_states.mu_posteriors[time_step] = (
+            self._mu_states_posterior.flatten()
         )
-        self.smoother_states.mu_posteriors.append(self._mu_states_posterior)
-        self.smoother_states.var_posteriors.append(self._var_states_posterior)
-        self.smoother_states.cov_states.append(self.transition_matrix @ self.var_states)
+        self.smoother_states.var_posteriors[time_step] = self._var_states_posterior
+        self.smoother_states.cov_states[time_step] = (
+            self.transition_matrix @ self.var_states
+        )
 
     def initialize_smoother_buffers(self):
         """
@@ -235,7 +240,6 @@ class Model:
             self._lstm_look_back_len = lstm_component.look_back_len
             self.lstm_states_index = self.states_name.index("lstm")
             self.lstm_net.update_param = self.update_lstm_param
-            self.lstm_states = LstmStates()
             self.reset_lstm_output_history()
         else:
             raise ValueError(f"No LstmNetwork component found")
@@ -250,10 +254,10 @@ class Model:
         mu_lstm_pred = None
         var_lstm_pred = None
 
-        for obs in data:
+        for x, y in zip(data["x"], data["y"]):
             if self.lstm_net:
                 mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
-                    self.lstm_output_history, obs
+                    self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                     mu_x=mu_lstm_input, var_x=var_lstm_input
@@ -283,10 +287,10 @@ class Model:
         mu_lstm_pred = None
         var_lstm_pred = None
 
-        for obs in data:
+        for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             if self.lstm_net:
                 mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
-                    self.lstm_output_history, obs
+                    self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                     mu_x=mu_lstm_input, var_x=var_lstm_input
@@ -294,7 +298,7 @@ class Model:
 
             mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
             delta_mu_states, delta_var_states = self.backward(
-                obs[0], mu_obs_pred, var_obs_pred
+                y, mu_obs_pred, var_obs_pred
             )
             self.estimate_posterior_states(delta_mu_states, delta_var_states)
 
@@ -307,7 +311,7 @@ class Model:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
             if self.smoother_states:
-                self.save_for_smoother()
+                self.save_for_smoother(time_step)
 
             self.mu_states = self._mu_states_posterior
             self.var_states = self._var_states_posterior
@@ -320,8 +324,8 @@ class Model:
         Smoother for whole time series
         """
 
-        num_time_steps = len(data)
-        self.initialize_smoother_states()
+        num_time_steps = len(data["y"])
+        self.initialize_smoother_states(num_time_steps)
 
         # Filter
         mu_obs_preds, var_obs_preds = self.filter(data)

@@ -10,6 +10,7 @@ from src import (
     Model,
 )
 from examples import DataProcess
+import time
 
 
 # # Read data
@@ -26,6 +27,10 @@ df_raw.columns = ["values"]
 # Resampling data
 df = df_raw.resample("H").mean()
 
+# Define parameters
+output_col = [0]
+num_epoch = 20
+
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
@@ -33,12 +38,10 @@ data_processor = DataProcess(
     train_end="2000-01-08 21:00:00",
     validation_start="2000-01-08 22:00:00",
     validation_end="2000-01-09 23:00:00",
+    output_col=output_col,
 )
 train_data, validation_data, test_data = data_processor.get_splits()
 
-# Define parameters
-output_col = [0]
-num_epoch = 20
 
 # Model
 model = Model(
@@ -53,20 +56,31 @@ model = Model(
     WhiteNoise(std_error=0.1),
 )
 
+# Training
 for epoch in range(num_epoch):
     (mu_validation_preds, var_validation_preds) = model.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
 
-idx_train = range(0, len(train_data))
-idx_val = range(len(train_data), len(validation_data) + len(train_data))
+#  Plot
+idx_train = range(0, len(train_data["y"]))
+idx_val = range(len(train_data["y"]), len(validation_data["y"]) + len(train_data["y"]))
 
 plt.figure(figsize=(10, 6))
-plt.plot(idx_train, train_data[:, 0], color="r")
-plt.plot(idx_val, validation_data[:, 0], color="b")
-plt.plot(idx_val, mu_validation_preds, color="k")
+plt.plot(idx_train, train_data["y"], color="r", label="train_obs")
+plt.plot(
+    idx_val, validation_data["y"], color="r", linestyle="--", label="validation_obs"
+)
+plt.plot(idx_val, mu_validation_preds, color="b", label="mu_pred")
+std = np.sqrt(var_validation_preds)
+plt.fill_between(
+    idx_val,
+    mu_validation_preds - std,
+    mu_validation_preds + std,
+    color="blue",
+    alpha=0.2,
+    label="±1 std",
+)
+plt.legend()
 plt.show()
-
-
-check = 1
