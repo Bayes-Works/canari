@@ -17,6 +17,9 @@ import time
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+linear_space = np.linspace(0, 2, num=len(df_raw))
+df_raw = df_raw.add(linear_space, axis=0)
+
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -30,7 +33,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 20
+num_epoch = 100
 
 data_processor = DataProcess(
     data=df,
@@ -45,15 +48,16 @@ train_data, validation_data, test_data = data_processor.get_splits()
 
 # Model
 model = Model(
-    LocalTrend(),
+    LocalTrend(mu_states=[-1, 1e-2], var_states=[1e-3, 1e-3]),
     LstmNetwork(
         look_back_len=24,
         num_features=3,
-        num_layer=2,
+        num_layer=1,
         num_hidden_unit=50,
+        device="cpu",
     ),
-    Autoregression(),
-    WhiteNoise(std_error=0.1),
+    # Autoregression(),
+    WhiteNoise(std_error=1e-2),
 )
 
 # Training

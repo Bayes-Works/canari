@@ -5,6 +5,7 @@
 saved_results/
 **/__pycache__/
 *.egg-info/
+*.png
 
 !.vscode/launch.json
 !.vscode/settings.json

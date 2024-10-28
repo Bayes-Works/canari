@@ -73,17 +73,23 @@ class DataProcess:
         Split data into train, validation and test sets
         """
 
-        self.train_data = self.data.loc[self._train_start : self._train_end].values
+        self.train_data = np.float32(
+            self.data.loc[self._train_start : self._train_end].values
+        )
         self.train_time = self.data.loc[self._train_start : self._train_end].index
+        self.train_val_data = np.float32(
+            self.data.loc[self._train_start : self._validation_end].values
+        )
+
         if self._validation_start is not None:
-            self.validation_data = self.data.loc[
-                self._validation_start : self._validation_end
-            ].values
+            self.validation_data = np.float32(
+                self.data.loc[self._validation_start : self._validation_end].values
+            )
             self.validation_time = self.data.loc[
                 self._validation_start : self._validation_end
             ].index
         if self._test_start is not None:
-            self.test_data = self.data.loc[self._test_start :].values
+            self.test_data = np.float32(self.data.loc[self._test_start :].values)
             self.test_time = self.data.loc[self._test_start :].index
 
     def normalize_data(self):
@@ -93,12 +99,12 @@ class DataProcess:
         covariates_col = np.ones(self.train_data.shape[1], dtype=bool)
         covariates_col[self.output_col] = False
 
-        self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
+        # self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
+        self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_val_data)
 
         self.train_data = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std
         )
-        self.train_data = np.float32(self.train_data)
         self.train_y = self.train_data[:, self.output_col]
         self.train_x = self.train_data[:, covariates_col]
 
@@ -106,7 +112,6 @@ class DataProcess:
             self.validation_data = Normalizer.standardize(
                 data=self.validation_data, mu=self.data_mean, std=self.data_std
             )
-            self.validation_data = np.float32(self.validation_data)
             self.validation_x = self.validation_data[:, covariates_col]
             self.validation_y = self.validation_data[:, self.output_col]
 
@@ -114,7 +119,6 @@ class DataProcess:
             self.test_data = Normalizer.standardize(
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
-            self.test_data = np.float32(self.test_data)
             self.test_x = self.test_data[:, covariates_col]
             self.test_y = self.test_data[:, self.output_col]
 
