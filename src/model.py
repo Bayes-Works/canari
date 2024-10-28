@@ -22,12 +22,17 @@ class Model:
         self.smoother_states = None
 
     @staticmethod
-    def prepare_lstm_input(lstm_output_history, x):
-        mu_lstm_input = np.concatenate((lstm_output_history.mu, x))
+    def prepare_lstm_input(
+        lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Prepare input for lstm network, concatenate lstm output history and the input covariates
+        """
+        mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
         var_lstm_input = np.concatenate(
             (
                 lstm_output_history.var,
-                np.zeros(len(x), dtype=np.float32),
+                np.zeros(len(input_covariates), dtype=np.float32),
             )
         )
         return mu_lstm_input, var_lstm_input
@@ -149,7 +154,7 @@ class Model:
         self,
         delta_mu_states: np.ndarray,
         delta_var_states: np.ndarray,
-    ) -> None:
+    ):
         """
         Estimate the posterirors for the states
         """
@@ -169,7 +174,7 @@ class Model:
         delta_var_lstm: np.ndarray,
     ):
         """
-        update lstm's prameters
+        update lstm network's parameters
         """
 
         self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
@@ -186,7 +191,8 @@ class Model:
         self.var_states = self.smoother_states.var_smooths[0]
 
     def reset_lstm_output_history(self):
-        self.lstm_output_history = LstmOutputHistory(self._lstm_look_back_len)
+        self.lstm_output_history = LstmOutputHistory()
+        self.lstm_output_history.initialize(self._lstm_look_back_len)
 
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
@@ -194,7 +200,7 @@ class Model:
 
     def save_for_smoother(self, time_step):
         """ "
-        Save variables for smoother
+        Save states' priors, posteriors and cross-covariances for smoother
         """
 
         self.smoother_states.mu_priors[time_step] = self._mu_states_prior.flatten()
@@ -319,7 +325,7 @@ class Model:
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
 
-    def smoother(self, data):
+    def smoother(self, data) -> Tuple[np.ndarray, np.ndarray]:
         """
         Smoother for whole time series
         """
@@ -341,7 +347,7 @@ class Model:
         self,
         train_data: np.ndarray,
         validation_data: np.ndarray,
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Train LstmNetwork
         """

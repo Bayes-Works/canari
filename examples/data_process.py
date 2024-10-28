@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 import numpy as np
 import pandas as pd
 from pytagi import Normalizer
@@ -74,12 +74,17 @@ class DataProcess:
         """
 
         self.train_data = self.data.loc[self._train_start : self._train_end].values
+        self.train_time = self.data.loc[self._train_start : self._train_end].index
         if self._validation_start is not None:
             self.validation_data = self.data.loc[
                 self._validation_start : self._validation_end
             ].values
+            self.validation_time = self.data.loc[
+                self._validation_start : self._validation_end
+            ].index
         if self._test_start is not None:
             self.test_data = self.data.loc[self._test_start :].values
+            self.test_time = self.data.loc[self._test_start :].index
 
     def normalize_data(self):
         """
@@ -113,7 +118,9 @@ class DataProcess:
             self.test_x = self.test_data[:, covariates_col]
             self.test_y = self.test_data[:, self.output_col]
 
-    def get_splits(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_splits(
+        self,
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """
         Get the train, valiation, test splits
         """
