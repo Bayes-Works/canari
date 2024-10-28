@@ -42,7 +42,6 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data = data_processor.get_splits()
 
-
 # Model
 model = Model(
     LocalTrend(),
@@ -64,18 +63,21 @@ for epoch in range(num_epoch):
 
 
 #  Plot
-idx_train = range(0, len(train_data["y"]))
-idx_val = range(len(train_data["y"]), len(validation_data["y"]) + len(train_data["y"]))
-
 plt.figure(figsize=(10, 6))
-plt.plot(idx_train, train_data["y"], color="r", label="train_obs")
+plt.plot(data_processor.train_time, train_data["y"], color="r", label="train_obs")
 plt.plot(
-    idx_val, validation_data["y"], color="r", linestyle="--", label="validation_obs"
+    data_processor.validation_time,
+    validation_data["y"],
+    color="r",
+    linestyle="--",
+    label="validation_obs",
 )
-plt.plot(idx_val, mu_validation_preds, color="b", label="mu_pred")
+plt.plot(
+    data_processor.validation_time, mu_validation_preds, color="b", label="mu_pred"
+)
 std = np.sqrt(var_validation_preds)
 plt.fill_between(
-    idx_val,
+    data_processor.validation_time,
     mu_validation_preds - std,
     mu_validation_preds + std,
     color="blue",

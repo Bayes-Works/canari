@@ -7,9 +7,9 @@ class LstmOutputHistory:
     mu: np.ndarray = field(init=False)
     var: np.ndarray = field(init=False)
 
-    def __init__(self, look_back_len: int):
+    def initialize(self, look_back_len: int):
         self.mu = np.zeros(look_back_len, dtype=np.float32)
-        self.var = np.zeros(look_back_len, dtype=np.float32)
+        self.var = np.ones(look_back_len, dtype=np.float32)
 
 
 @dataclass
