@@ -188,7 +188,7 @@ class Model:
         """
 
         self.mu_states = self.smoother_states.mu_smooths[0]
-        self.var_states = self.smoother_states.var_smooths[0]
+        self.var_states = np.diag(np.diag(self.smoother_states.var_smooths[0]))
 
     def reset_lstm_output_history(self):
         self.lstm_output_history = LstmOutputHistory()
@@ -212,7 +212,7 @@ class Model:
         )
         self.smoother_states.var_posteriors[time_step] = self._var_states_posterior
         self.smoother_states.cov_states[time_step] = (
-            self.transition_matrix @ self.var_states
+            self.var_states @ self.transition_matrix.T
         )
 
     def initialize_smoother_buffers(self):
@@ -357,10 +357,12 @@ class Model:
 
         self.smoother(train_data)
         mu_validation_preds, var_validation_preds = self.forecast(validation_data)
+
         self.reset_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
 
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(var_validation_preds).flatten(),
+            self.smoother_states,
         )

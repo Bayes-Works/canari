@@ -9,7 +9,7 @@ class LstmOutputHistory:
 
     def initialize(self, look_back_len: int):
         self.mu = np.zeros(look_back_len, dtype=np.float32)
-        self.var = np.ones(look_back_len, dtype=np.float32)
+        self.var = 0.1 * np.ones(look_back_len, dtype=np.float32)
 
 
 @dataclass
