@@ -9,9 +9,6 @@ class LstmOutputHistory:
 
     def initialize(self, look_back_len: int):
         self.mu = 0.1 * np.ones(look_back_len, dtype=np.float32)
-        # self.mu = np.random.normal(loc=0, scale=1, size=look_back_len).astype(
-        #     np.float32
-        # )
         self.var = 1 * np.ones(look_back_len, dtype=np.float32)
 
 
@@ -26,18 +23,20 @@ class SmootherStates:
     cov_states: np.ndarray = field(init=False)
 
     def initialize(self, num_time_steps: int, num_states: int) -> None:
-        self.mu_priors = np.zeros((num_time_steps, num_states), dtype=np.float32)
+        self.mu_priors = np.zeros((num_time_steps + 1, num_states), dtype=np.float32)
         self.var_priors = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
+            (num_time_steps + 1, num_states, num_states), dtype=np.float32
         )
-        self.mu_posteriors = np.zeros((num_time_steps, num_states), dtype=np.float32)
+        self.mu_posteriors = np.zeros(
+            (num_time_steps + 1, num_states), dtype=np.float32
+        )
         self.var_posteriors = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
+            (num_time_steps + 1, num_states, num_states), dtype=np.float32
         )
-        self.mu_smooths = np.zeros((num_time_steps, num_states), dtype=np.float32)
+        self.mu_smooths = np.zeros((num_time_steps + 1, num_states), dtype=np.float32)
         self.var_smooths = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
+            (num_time_steps + 1, num_states, num_states), dtype=np.float32
         )
         self.cov_states = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
+            (num_time_steps + 1, num_states, num_states), dtype=np.float32
         )
