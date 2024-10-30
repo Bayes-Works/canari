@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src import (
     LocalTrend,
+    LocalAcceleration,
     LstmNetwork,
     Periodic,
     Autoregression,
@@ -33,14 +34,14 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 100
+num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-08 21:00:00",
-    validation_start="2000-01-08 22:00:00",
+    train_end="2000-01-07 21:00:00",
+    validation_start="2000-01-07 22:00:00",
     validation_end="2000-01-09 23:00:00",
     output_col=output_col,
 )
@@ -48,7 +49,7 @@ train_data, validation_data, test_data = data_processor.get_splits()
 
 # Model
 model = Model(
-    LocalTrend(mu_states=[-1, 1e-2], var_states=[1e-3, 1e-3]),
+    LocalTrend(),
     LstmNetwork(
         look_back_len=24,
         num_features=3,
@@ -56,9 +57,10 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
     ),
-    # Autoregression(),
-    WhiteNoise(std_error=1e-2),
+    Autoregression(),
+    WhiteNoise(std_error=1e-3),
 )
+model.auto_initialize_baseline_states(train_data["y"])
 
 # Training
 for epoch in range(num_epoch):
@@ -68,6 +70,8 @@ for epoch in range(num_epoch):
 
     mu_smooths = smoother_states.mu_smooths
     var_smooths = smoother_states.var_smooths
+    # mu_smooths = smoother_states.mu_posteriors
+    # var_smooths = smoother_states.var_posteriors
 
     # #  Plot
     plt.figure(figsize=(10, 6))

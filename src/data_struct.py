@@ -8,8 +8,11 @@ class LstmOutputHistory:
     var: np.ndarray = field(init=False)
 
     def initialize(self, look_back_len: int):
-        self.mu = np.zeros(look_back_len, dtype=np.float32)
-        self.var = 0.1 * np.ones(look_back_len, dtype=np.float32)
+        self.mu = 0.1 * np.ones(look_back_len, dtype=np.float32)
+        # self.mu = np.random.normal(loc=0, scale=1, size=look_back_len).astype(
+        #     np.float32
+        # )
+        self.var = 1 * np.ones(look_back_len, dtype=np.float32)
 
 
 @dataclass
