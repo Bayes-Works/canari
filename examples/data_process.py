@@ -77,9 +77,6 @@ class DataProcess:
             self.data.loc[self._train_start : self._train_end].values
         )
         self.train_time = self.data.loc[self._train_start : self._train_end].index
-        self.train_val_data = np.float32(
-            self.data.loc[self._train_start : self._validation_end].values
-        )
 
         if self._validation_start is not None:
             self.validation_data = np.float32(
@@ -100,7 +97,6 @@ class DataProcess:
         covariates_col[self.output_col] = False
 
         self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
-        # self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_val_data)
 
         self.train_data = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std

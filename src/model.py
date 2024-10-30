@@ -90,7 +90,6 @@ class Model:
             state for component in self.components for state in component.states_name
         ]
         self.num_states = sum(component.num_states for component in self.components)
-        self._mu_states_init = copy.copy(self.mu_states)
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -111,7 +110,6 @@ class Model:
             elif _state_name == "local acceleration":
                 self.mu_states[i] = 2 * coefficients[0]
                 self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
-        self._mu_states_init = copy.copy(self.mu_states)
 
     def forward(
         self,
@@ -211,9 +209,6 @@ class Model:
         """
 
         self.mu_states = self.smoother_states.mu_smooths[0]
-        # if "local level" in self.states_name:
-        #     index_local_level = self.states_name.index("local level")
-        #     self.mu_states[index_local_level] = self._mu_states_init[index_local_level]
         self.var_states = np.diag(np.diag(self.smoother_states.var_smooths[0]))
 
     def reset_lstm_output_history(self):
@@ -222,7 +217,7 @@ class Model:
 
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
-        self.smoother_states.initialize(num_time_steps, self.num_states)
+        self.smoother_states.initialize(num_time_steps + 1, self.num_states)
         self.smoother_states.mu_priors[0] = self.mu_states.flatten()
         self.smoother_states.var_priors[0] = self.var_states
         self.smoother_states.mu_posteriors[0] = self.mu_states.flatten()
@@ -233,15 +228,15 @@ class Model:
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.smoother_states.mu_priors[time_step + 1] = self._mu_states_prior.flatten()
-        self.smoother_states.var_priors[time_step + 1] = (
+        self.smoother_states.mu_priors[time_step] = self._mu_states_prior.flatten()
+        self.smoother_states.var_priors[time_step] = (
             self._var_states_prior + self._var_states_prior.T
         ) / 2
-        self.smoother_states.mu_posteriors[time_step + 1] = (
+        self.smoother_states.mu_posteriors[time_step] = (
             self._mu_states_posterior.flatten()
         )
-        self.smoother_states.var_posteriors[time_step + 1] = self._var_states_posterior
-        self.smoother_states.cov_states[time_step + 1] = (
+        self.smoother_states.var_posteriors[time_step] = self._var_states_posterior
+        self.smoother_states.cov_states[time_step] = (
             self.var_states @ self.transition_matrix.T
         )
 
@@ -280,7 +275,7 @@ class Model:
         else:
             raise ValueError(f"No LstmNetwork component found")
 
-    def forecast(self, data) -> Tuple[np.ndarray, np.ndarray]:
+    def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Forecast for whole time series data
         """
@@ -290,7 +285,7 @@ class Model:
         mu_lstm_pred = None
         var_lstm_pred = None
 
-        for x, _ in zip(data["x"], data["y"]):
+        for x in data["x"]:
             if self.lstm_net:
                 mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
                     self.lstm_output_history, x
@@ -312,7 +307,7 @@ class Model:
 
     def filter(
         self,
-        data,
+        data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Filter for whole time series data
@@ -348,7 +343,7 @@ class Model:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
             if self.smoother_states:
-                self.save_for_smoother(time_step)
+                self.save_for_smoother(time_step + 1)
 
             self.mu_states = self._mu_states_posterior
             self.var_states = self._var_states_posterior
@@ -356,7 +351,7 @@ class Model:
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
 
-    def smoother(self, data) -> Tuple[np.ndarray, np.ndarray]:
+    def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Smoother for whole time series
         """
@@ -376,9 +371,9 @@ class Model:
 
     def lstm_train(
         self,
-        train_data: np.ndarray,
-        validation_data: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        train_data: Dict[str, np.ndarray],
+        validation_data: Dict[str, np.ndarray],
+    ) -> Tuple[np.ndarray, np.ndarray, SmootherStates]:
         """
         Train LstmNetwork
         """
