@@ -76,8 +76,6 @@ def backward(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    # var_obs_predicted = var_obs_predicted + (1e-8) ** 2
-    var_obs_predicted = var_obs_predicted
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
     delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
@@ -94,7 +92,7 @@ def rts_smoother(
     cross_cov_states: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-12)
+    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-10)
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T

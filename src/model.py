@@ -1,5 +1,6 @@
 import numpy as np
-from typing import Optional, List, Tuple
+import copy
+from typing import Optional, List, Tuple, Dict
 from collections import deque
 from pytagi.nn import Sequential
 from src.base_component import BaseComponent
@@ -17,7 +18,7 @@ class Model:
         *components: BaseComponent,
     ):
         self.components = list(components)
-        self.assemble_components()
+        self.define_model()
         self.lstm_net = None
         self.smoother_states = None
 
@@ -37,7 +38,7 @@ class Model:
         )
         return mu_lstm_input, var_lstm_input
 
-    def assemble_components(self):
+    def define_model(self):
         """
         Assemble components
         """
@@ -89,6 +90,28 @@ class Model:
             state for component in self.components for state in component.states_name
         ]
         self.num_states = sum(component.num_states for component in self.components)
+        self._mu_states_init = copy.copy(self.mu_states)
+
+    def auto_initialize_baseline_states(self, y: np.ndarray):
+        """
+        Automatically initialize baseline states from data
+        """
+        t = np.arange(len(y))
+        y = y.flatten()
+        t_no_nan = t[~np.isnan(y)]
+        y_no_nan = y[~np.isnan(y)]
+        coefficients = np.polyfit(t_no_nan, y_no_nan, 2)
+        for i, _state_name in enumerate(self.states_name):
+            if _state_name == "local level":
+                self.mu_states[i] = coefficients[2]
+                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+            elif _state_name == "local trend":
+                self.mu_states[i] = coefficients[1]
+                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+            elif _state_name == "local acceleration":
+                self.mu_states[i] = 2 * coefficients[0]
+                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+        self._mu_states_init = copy.copy(self.mu_states)
 
     def forward(
         self,
@@ -188,6 +211,9 @@ class Model:
         """
 
         self.mu_states = self.smoother_states.mu_smooths[0]
+        if "local level" in self.states_name:
+            index_local_level = self.states_name.index("local level")
+            self.mu_states[index_local_level] = self._mu_states_init[index_local_level]
         self.var_states = np.diag(np.diag(self.smoother_states.var_smooths[0]))
 
     def reset_lstm_output_history(self):
@@ -260,7 +286,7 @@ class Model:
         mu_lstm_pred = None
         var_lstm_pred = None
 
-        for x, y in zip(data["x"], data["y"]):
+        for x, _ in zip(data["x"], data["y"]):
             if self.lstm_net:
                 mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
                     self.lstm_output_history, x
@@ -311,7 +337,8 @@ class Model:
             if self.lstm_net:
                 delta_mu_lstm = delta_mu_states[self.lstm_states_index] / var_lstm_pred
                 delta_var_lstm = (
-                    delta_var_states[self.lstm_states_index] / var_lstm_pred**2
+                    delta_var_states[self.lstm_states_index, self.lstm_states_index]
+                    / var_lstm_pred**2
                 )
                 self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)

@@ -99,8 +99,8 @@ class DataProcess:
         covariates_col = np.ones(self.train_data.shape[1], dtype=bool)
         covariates_col[self.output_col] = False
 
-        # self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
-        self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_val_data)
+        self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
+        # self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_val_data)
 
         self.train_data = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std
