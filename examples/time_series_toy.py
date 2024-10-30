@@ -85,6 +85,4 @@ PlotWithUncertainty(
     label=["mu_val_pred", "±1σ"],
 )
 plt.legend()
-filename = f"saved_results/time_series_toy.png"
-plt.savefig(filename)
-plt.close()
+plt.show()
