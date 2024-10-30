@@ -104,7 +104,7 @@ class Model:
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
                 self.mu_states[i] = coefficients[2]
-                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+                self.var_states[i, i] = 1
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
                 self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
@@ -211,9 +211,9 @@ class Model:
         """
 
         self.mu_states = self.smoother_states.mu_smooths[0]
-        if "local level" in self.states_name:
-            index_local_level = self.states_name.index("local level")
-            self.mu_states[index_local_level] = self._mu_states_init[index_local_level]
+        # if "local level" in self.states_name:
+        #     index_local_level = self.states_name.index("local level")
+        #     self.mu_states[index_local_level] = self._mu_states_init[index_local_level]
         self.var_states = np.diag(np.diag(self.smoother_states.var_smooths[0]))
 
     def reset_lstm_output_history(self):
@@ -223,21 +223,25 @@ class Model:
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
         self.smoother_states.initialize(num_time_steps, self.num_states)
+        self.smoother_states.mu_priors[0] = self.mu_states.flatten()
+        self.smoother_states.var_priors[0] = self.var_states
+        self.smoother_states.mu_posteriors[0] = self.mu_states.flatten()
+        self.smoother_states.var_posteriors[0] = self.var_states
 
     def save_for_smoother(self, time_step):
         """ "
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.smoother_states.mu_priors[time_step] = self._mu_states_prior.flatten()
-        self.smoother_states.var_priors[time_step] = (
+        self.smoother_states.mu_priors[time_step + 1] = self._mu_states_prior.flatten()
+        self.smoother_states.var_priors[time_step + 1] = (
             self._var_states_prior + self._var_states_prior.T
         ) / 2
-        self.smoother_states.mu_posteriors[time_step] = (
+        self.smoother_states.mu_posteriors[time_step + 1] = (
             self._mu_states_posterior.flatten()
         )
-        self.smoother_states.var_posteriors[time_step] = self._var_states_posterior
-        self.smoother_states.cov_states[time_step] = (
+        self.smoother_states.var_posteriors[time_step + 1] = self._var_states_posterior
+        self.smoother_states.cov_states[time_step + 1] = (
             self.var_states @ self.transition_matrix.T
         )
 
@@ -365,7 +369,7 @@ class Model:
 
         # Smoother
         self.initialize_smoother_buffers()
-        for time_step in reversed(range(1, num_time_steps)):
+        for time_step in reversed(range(1, num_time_steps + 1)):
             self.rts_smoother(time_step)
 
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()

@@ -34,7 +34,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 50
+num_epoch = 20
 
 data_processor = DataProcess(
     data=df,
@@ -53,7 +53,7 @@ model = Model(
     LstmNetwork(
         look_back_len=24,
         num_features=3,
-        num_layer=1,
+        num_layer=4,
         num_hidden_unit=50,
         device="cpu",
     ),
@@ -68,10 +68,12 @@ for epoch in range(num_epoch):
         train_data=train_data, validation_data=validation_data
     )
 
-    mu_smooths = smoother_states.mu_smooths
-    var_smooths = smoother_states.var_smooths
-    # mu_smooths = smoother_states.mu_posteriors
-    # var_smooths = smoother_states.var_posteriors
+    # mu_smooths = smoother_states.mu_smooths
+    # var_smooths = smoother_states.var_smooths
+    mu_smooths = smoother_states.mu_posteriors[:-1, :]
+    var_smooths = smoother_states.var_posteriors[:-1, :, :]
+    # mu_smooths = smoother_states.mu_smooths[:-1, :]
+    # var_smooths = smoother_states.var_smooths[:-1, :, :]
 
     # #  Plot
     plt.figure(figsize=(10, 6))
