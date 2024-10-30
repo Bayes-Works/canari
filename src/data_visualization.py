@@ -3,18 +3,26 @@ import numpy as np
 from typing import Optional
 
 
-def PlotStates(time, mu, var, color, index: Optional[int] = None):
+def PlotWithUncertainty(
+    time,
+    mu,
+    var,
+    color,
+    label: Optional[list[str]] = ["", ""],
+    index: Optional[int] = None,
+):
     if index is not None:
         _mu = mu[:, index]
         _std = var[:, index, index].flatten() ** 0.5
     else:
         _mu = mu
         _std = var.flatten() ** 0.5
-    plt.plot(time, _mu, color=color)
+    plt.plot(time, _mu, color=color, label=label[0])
     plt.fill_between(
         time,
         _mu - _std,
         _mu + _std,
         color=color,
         alpha=0.2,
+        label=label[1],
     )

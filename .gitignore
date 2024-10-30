@@ -9,4 +9,5 @@ saved_results/
 
 !.vscode/launch.json
 !.vscode/settings.json
+!saved_results/time_series_toy_trend.png
 

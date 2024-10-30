@@ -9,7 +9,7 @@ from src import (
     Autoregression,
     WhiteNoise,
     Model,
-    PlotStates,
+    PlotWithUncertainty,
 )
 from examples import DataProcess
 import time
@@ -34,7 +34,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 20
+num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
@@ -51,9 +51,9 @@ train_data, validation_data, test_data = data_processor.get_splits()
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=24,
+        look_back_len=10,
         num_features=3,
-        num_layer=4,
+        num_layer=2,
         num_hidden_unit=50,
         device="cpu",
     ),
@@ -68,37 +68,24 @@ for epoch in range(num_epoch):
         train_data=train_data, validation_data=validation_data
     )
 
-    # mu_smooths = smoother_states.mu_smooths
-    # var_smooths = smoother_states.var_smooths
-    mu_smooths = smoother_states.mu_posteriors[:-1, :]
-    var_smooths = smoother_states.var_posteriors[:-1, :, :]
-    # mu_smooths = smoother_states.mu_smooths[:-1, :]
-    # var_smooths = smoother_states.var_smooths[:-1, :, :]
-
-    # #  Plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(data_processor.train_time, train_data["y"], color="r", label="train_obs")
-    plt.plot(
-        data_processor.validation_time,
-        validation_data["y"],
-        color="r",
-        linestyle="--",
-        label="validation_obs",
-    )
-    PlotStates(
-        time=data_processor.train_time,
-        mu=mu_smooths,
-        var=var_smooths,
-        index=0,
-        color="k",
-    )
-    PlotStates(
-        time=data_processor.validation_time,
-        mu=mu_validation_preds,
-        var=var_validation_preds,
-        color="b",
-    )
-    plt.legend()
-    filename = f"saved_results/smoother#{epoch}.png"
-    plt.savefig(filename)
-    plt.close()
+# #  Plot
+plt.figure(figsize=(10, 6))
+plt.plot(data_processor.train_time, train_data["y"], color="r", label="train_obs")
+plt.plot(
+    data_processor.validation_time,
+    validation_data["y"],
+    color="r",
+    linestyle="--",
+    label="validation_obs",
+)
+PlotWithUncertainty(
+    time=data_processor.validation_time,
+    mu=mu_validation_preds,
+    var=var_validation_preds,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+)
+plt.legend()
+filename = f"saved_results/time_series_toy_trend.png"
+plt.savefig(filename)
+plt.close()
