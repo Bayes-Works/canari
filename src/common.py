@@ -1,5 +1,6 @@
 from typing import Tuple, Optional
 import numpy as np
+from src.data_struct import LstmOutputHistory
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -98,3 +99,19 @@ def rts_smoother(
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
     return mu_states_smooth, var_states_smooth
+
+
+def prepare_lstm_input(
+    lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Prepare input for lstm network, concatenate lstm output history and the input covariates
+    """
+    mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
+    var_lstm_input = np.concatenate(
+        (
+            lstm_output_history.var,
+            np.zeros(len(input_covariates), dtype=np.float32),
+        )
+    )
+    return mu_lstm_input, var_lstm_input
