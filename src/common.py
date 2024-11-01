@@ -2,7 +2,7 @@ from typing import Tuple, Optional
 import numpy as np
 
 
-def block_diag(*arrays: np.ndarray) -> np.ndarray:
+def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
     """
     Create a block diagonal matrix from the provided arrays.
 

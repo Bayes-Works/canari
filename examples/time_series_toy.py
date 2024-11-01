@@ -9,10 +9,9 @@ from src import (
     Autoregression,
     WhiteNoise,
     Model,
-    PlotWithUncertainty,
+    plot_with_uncertainty,
 )
 from examples import DataProcess
-import time
 
 
 # # Read data
@@ -77,7 +76,7 @@ plt.plot(
     linestyle="--",
     label="validation_obs",
 )
-PlotWithUncertainty(
+plot_with_uncertainty(
     time=data_processor.validation_time,
     mu=mu_validation_preds,
     var=var_validation_preds,
