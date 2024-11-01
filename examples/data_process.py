@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 import numpy as np
 import pandas as pd
 from pytagi import Normalizer
@@ -18,6 +18,7 @@ class DataProcess:
         validation_end: Optional[str] = None,
         test_start: Optional[str] = None,
         time_covariates: Optional[List[str]] = None,
+        output_col: list[int] = [0],
     ) -> None:
         self._train_start = train_start
         self._train_end = train_end
@@ -27,9 +28,16 @@ class DataProcess:
 
         self.data = data
         self.time_covariates = time_covariates
+        self.output_col = output_col
         self.train_data = None
         self.validation_data = None
         self.test_data = None
+        self.train_x = None
+        self.train_y = None
+        self.validation_x = None
+        self.validation_y = None
+        self.test_x = None
+        self.test_y = None
 
         # # Add time covariates if needed
         if self.time_covariates is not None:
@@ -65,36 +73,60 @@ class DataProcess:
         Split data into train, validation and test sets
         """
 
-        self.train_data = self.data.loc[self._train_start : self._train_end].values
+        self.train_data = np.float32(
+            self.data.loc[self._train_start : self._train_end].values
+        )
+        self.train_time = self.data.loc[self._train_start : self._train_end].index
+
         if self._validation_start is not None:
-            self.validation_data = self.data.loc[
+            self.validation_data = np.float32(
+                self.data.loc[self._validation_start : self._validation_end].values
+            )
+            self.validation_time = self.data.loc[
                 self._validation_start : self._validation_end
-            ].values
+            ].index
         if self._test_start is not None:
-            self.test_data = self.data.loc[self._test_start :].values
+            self.test_data = np.float32(self.data.loc[self._test_start :].values)
+            self.test_time = self.data.loc[self._test_start :].index
 
     def normalize_data(self):
         """
         Nomalize data
         """
+        covariates_col = np.ones(self.train_data.shape[1], dtype=bool)
+        covariates_col[self.output_col] = False
 
         self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
 
         self.train_data = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std
         )
+        self.train_y = self.train_data[:, self.output_col]
+        self.train_x = self.train_data[:, covariates_col]
+
         if self.validation_data is not None:
             self.validation_data = Normalizer.standardize(
                 data=self.validation_data, mu=self.data_mean, std=self.data_std
             )
+            self.validation_x = self.validation_data[:, covariates_col]
+            self.validation_y = self.validation_data[:, self.output_col]
+
         if self.test_data is not None:
             self.test_data = Normalizer.standardize(
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
+            self.test_x = self.test_data[:, covariates_col]
+            self.test_y = self.test_data[:, self.output_col]
 
-    def get_splits(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_splits(
+        self,
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """
         Get the train, valiation, test splits
         """
 
-        return self.train_data, self.validation_data, self.test_data
+        return (
+            {"x": self.train_x, "y": self.train_y},
+            {"x": self.validation_x, "y": self.validation_y},
+            {"x": self.test_x, "y": self.test_y},
+        )

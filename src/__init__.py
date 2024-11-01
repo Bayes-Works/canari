@@ -5,4 +5,5 @@ from src.periodic_component import Periodic
 from src.lstm_component import LstmNetwork
 from src.white_noise_component import WhiteNoise
 from src.model import Model
-from src.common import block_diag, forward, backward, rts_smoother
+from src.common import create_block_diag, forward, backward, rts_smoother
+from src.data_visualization import plot_with_uncertainty

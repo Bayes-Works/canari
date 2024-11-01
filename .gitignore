@@ -5,7 +5,9 @@
 saved_results/
 **/__pycache__/
 *.egg-info/
+*.png
 
 !.vscode/launch.json
 !.vscode/settings.json
+!saved_results/time_series_toy.png
 

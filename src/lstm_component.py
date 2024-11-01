@@ -2,6 +2,7 @@ from typing import Optional
 import numpy as np
 from pytagi.nn import LSTM, Linear
 from src.base_component import BaseComponent
+from pytagi.nn import Sequential
 
 
 class LstmNetwork(BaseComponent):
@@ -20,6 +21,8 @@ class LstmNetwork(BaseComponent):
         num_output: Optional[int] = 1,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
+        device: Optional[str] = "cpu",
+        num_thread: Optional[int] = 1,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -30,7 +33,8 @@ class LstmNetwork(BaseComponent):
         self.num_output = num_output
         self.mu_states = mu_states
         self.var_states = var_states
-        self.initialize_lstm_layers()
+        self.device = device
+        self.num_thread = num_thread
         super().__init__()
 
     def initialize_component_name(self):
@@ -67,7 +71,7 @@ class LstmNetwork(BaseComponent):
         else:
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
-    def initialize_lstm_layers(self):
+    def initialize_lstm_network(self) -> Sequential:
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
@@ -79,4 +83,11 @@ class LstmNetwork(BaseComponent):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
         # Last layer
         layers.append(Linear(self.num_hidden_unit[-1], self.num_output, 1))
-        self.layers = layers
+        # Initialize lstm network
+        lstm_network = Sequential(*layers)
+        if self.device == "cpu":
+            lstm_network.set_threads(self.num_thread)
+        elif self.device == "cuda":
+            lstm_network.to_device("cuda")
+
+        return lstm_network
