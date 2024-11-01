@@ -3,7 +3,7 @@ import numpy as np
 from typing import Optional
 
 
-def PlotWithUncertainty(
+def plot_with_uncertainty(
     time,
     mu,
     var,

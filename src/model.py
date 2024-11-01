@@ -20,6 +20,7 @@ class Model:
         self.components = list(components)
         self.define_model()
         self.lstm_net = None
+        self.lstm_states_index = None
         self.smoother_states = None
 
     @staticmethod
@@ -55,13 +56,13 @@ class Model:
         transition_matrices = [
             component.transition_matrix for component in self.components
         ]
-        self.transition_matrix = common.block_diag(*transition_matrices)
+        self.transition_matrix = common.create_block_diag(*transition_matrices)
 
         # Global process_noise_matrix
         process_noise_matrices = [
             component.process_noise_matrix for component in self.components
         ]
-        self.process_noise_matrix = common.block_diag(*process_noise_matrices)
+        self.process_noise_matrix = common.create_block_diag(*process_noise_matrices)
 
         # Glolabl observation noise matrix
         global_observation_matrix = np.array([])
@@ -159,15 +160,15 @@ class Model:
         """
 
         (
-            self.smoother_states.mu_smooths[time_step - 1],
-            self.smoother_states.var_smooths[time_step - 1],
+            self.smoother_states.mu_smooth[time_step - 1],
+            self.smoother_states.var_smooth[time_step - 1],
         ) = common.rts_smoother(
-            self.smoother_states.mu_priors[time_step],
-            self.smoother_states.var_priors[time_step],
-            self.smoother_states.mu_smooths[time_step],
-            self.smoother_states.var_smooths[time_step],
-            self.smoother_states.mu_posteriors[time_step - 1],
-            self.smoother_states.var_posteriors[time_step - 1],
+            self.smoother_states.mu_prior[time_step],
+            self.smoother_states.var_prior[time_step],
+            self.smoother_states.mu_smooth[time_step],
+            self.smoother_states.var_smooth[time_step],
+            self.smoother_states.mu_posterior[time_step - 1],
+            self.smoother_states.var_posterior[time_step - 1],
             self.smoother_states.cov_states[time_step],
         )
 
@@ -208,8 +209,8 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = self.smoother_states.mu_smooths[0]
-        self.var_states = np.diag(np.diag(self.smoother_states.var_smooths[0]))
+        self.mu_states = self.smoother_states.mu_smooth[0]
+        self.var_states = np.diag(np.diag(self.smoother_states.var_smooth[0]))
 
     def reset_lstm_output_history(self):
         self.lstm_output_history = LstmOutputHistory()
@@ -218,24 +219,24 @@ class Model:
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
         self.smoother_states.initialize(num_time_steps + 1, self.num_states)
-        self.smoother_states.mu_priors[0] = self.mu_states.flatten()
-        self.smoother_states.var_priors[0] = self.var_states
-        self.smoother_states.mu_posteriors[0] = self.mu_states.flatten()
-        self.smoother_states.var_posteriors[0] = self.var_states
+        self.smoother_states.mu_prior[0] = self.mu_states.flatten()
+        self.smoother_states.var_prior[0] = self.var_states
+        self.smoother_states.mu_posterior[0] = self.mu_states.flatten()
+        self.smoother_states.var_posterior[0] = self.var_states
 
     def save_for_smoother(self, time_step):
         """ "
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.smoother_states.mu_priors[time_step] = self._mu_states_prior.flatten()
-        self.smoother_states.var_priors[time_step] = (
+        self.smoother_states.mu_prior[time_step] = self._mu_states_prior.flatten()
+        self.smoother_states.var_prior[time_step] = (
             self._var_states_prior + self._var_states_prior.T
-        ) / 2
-        self.smoother_states.mu_posteriors[time_step] = (
+        ) * 0.5
+        self.smoother_states.mu_posterior[time_step] = (
             self._mu_states_posterior.flatten()
         )
-        self.smoother_states.var_posteriors[time_step] = self._var_states_posterior
+        self.smoother_states.var_posterior[time_step] = self._var_states_posterior
         self.smoother_states.cov_states[time_step] = (
             self.var_states @ self.transition_matrix.T
         )
@@ -244,14 +245,14 @@ class Model:
         """
         Set the smoothed estimates at the last time step = posterior
         """
-        self.smoother_states.mu_smooths = np.zeros_like(
-            self.smoother_states.mu_posteriors
+        self.smoother_states.mu_smooth = np.zeros_like(
+            self.smoother_states.mu_posterior
         )
-        self.smoother_states.var_smooths = np.zeros_like(
-            self.smoother_states.var_posteriors
+        self.smoother_states.var_smooth = np.zeros_like(
+            self.smoother_states.var_posterior
         )
-        self.smoother_states.mu_smooths[-1] = self.smoother_states.mu_posteriors[-1]
-        self.smoother_states.var_smooths[-1] = self.smoother_states.var_posteriors[-1]
+        self.smoother_states.mu_smooth[-1] = self.smoother_states.mu_posterior[-1]
+        self.smoother_states.var_smooth[-1] = self.smoother_states.var_posterior[-1]
 
     def initialize_lstm_network(self):
         """
