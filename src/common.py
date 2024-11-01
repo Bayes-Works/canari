@@ -1,8 +1,8 @@
-from typing import Tuple
+from typing import Tuple, Optional
 import numpy as np
 
 
-def block_diag(*arrays: np.ndarray) -> np.ndarray:
+def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
     """
     Create a block diagonal matrix from the provided arrays.
 
@@ -12,6 +12,7 @@ def block_diag(*arrays: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: A block diagonal matrix.
     """
+
     if not arrays:
         return np.array([[]])
     total_rows = sum(a.shape[0] for a in arrays)
@@ -34,6 +35,7 @@ def calc_observation(
     var_states: np.ndarray,
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
+
     mu_obs_predicted = observation_matrix @ mu_states
     var_obs_predicted = observation_matrix @ var_states @ observation_matrix.T
     return mu_obs_predicted, var_obs_predicted
@@ -45,12 +47,21 @@ def forward(
     transition_matrix: np.ndarray,
     process_noise_matrix: np.ndarray,
     observation_matrix: np.ndarray,
+    mu_lstm_pred: Optional[np.ndarray] = None,
+    var_lstm_pred: Optional[np.ndarray] = None,
+    lstm_indice: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
-        transition_matrix @ np.diagflat(var_states_posterior) @ transition_matrix.T
+        transition_matrix @ var_states_posterior @ transition_matrix.T
         + process_noise_matrix
     )
+
+    if mu_lstm_pred:
+        mu_states_prior[lstm_indice] = mu_lstm_pred
+        var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred
+
     mu_obs_predicted, var_obs_predicted = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix
     )
@@ -64,6 +75,7 @@ def backward(
     var_states_prior: np.ndarray,
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
+
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
     delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
@@ -71,13 +83,18 @@ def backward(
 
 
 def rts_smoother(
-    mu_states_smooth: np.ndarray,
-    var_states_smooth: np.ndarray,
     mu_states_prior: np.ndarray,
     var_states_prior: np.ndarray,
+    mu_states_smooth: np.ndarray,
+    var_states_smooth: np.ndarray,
+    mu_states_posterior: np.ndarray,
+    var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior)
-    delta_mu_states = jcb @ (mu_states_smooth - mu_states_prior)
-    delta_var_states = jcb @ (var_states_smooth - var_states_prior) @ jcb.T
-    return delta_mu_states, delta_var_states
+
+    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-10)
+    mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
+    var_states_smooth = (
+        var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
+    )
+    return mu_states_smooth, var_states_smooth

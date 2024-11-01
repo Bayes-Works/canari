@@ -28,8 +28,7 @@ def compute_observation_and_state_updates(
 
     mu_states_true = transition_matrix @ mu_states
     var_states_true = (
-        transition_matrix @ np.diagflat(var_states) @ transition_matrix.T
-        + process_noise_matrix
+        transition_matrix @ var_states @ transition_matrix.T + process_noise_matrix
     )
     mu_obs_true = observation_matrix @ mu_states_true
     var_obs_true = observation_matrix @ var_states_true @ observation_matrix.T
@@ -91,7 +90,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[4, 4] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 1, 0, 1, 1]])
         mu_states_true = np.array([[0.15, 0.1, 0.2, 0.5, 0]]).T
-        var_states_true = np.array([[0.25, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.25, 0.1, 0.2, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
@@ -152,7 +151,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[5, 5] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 0, 1, 0, 1, 1]])
         mu_states_true = np.array([[0.15, 0.5, 0.1, 0.2, 0.5, 0]]).T
-        var_states_true = np.array([[0.3, 0.25, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.3, 0.25, 0.1, 0.2, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
@@ -214,7 +213,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[6, 6] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 0, 0, 1, 0, 1, 1]])
         mu_states_true = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0.5, 0]]).T
-        var_states_true = np.array([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.1, 0.2, 0.3, 0.1, 0.2, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
@@ -270,7 +269,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[3, 3] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 1, 1, 1]])
         mu_states_true = np.array([[0.6, 0.6, 0.5, 0]]).T
-        var_states_true = np.array([[0.7, 0.6, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.7, 0.6, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
@@ -334,7 +333,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[4, 4] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 0, 1, 1, 1]])
         mu_states_true = np.array([[0.6, 0.2, 0.6, 0.5, 0]]).T
-        var_states_true = np.array([[0.7, 0.2, 0.6, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.7, 0.2, 0.6, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
@@ -399,7 +398,7 @@ class TestModelForwardBackward(unittest.TestCase):
         process_noise_matrix_true[5, 5] = std_observation_noise**2
         observation_matrix_true = np.array([[1, 0, 0, 1, 1, 1]])
         mu_states_true = np.array([[0.1, 0.1, 0.1, 0.6, 0.5, 0]]).T
-        var_states_true = np.array([[0.1, 0.2, 0.3, 0.6, 0.5, 0]]).T
+        var_states_true = np.diagflat([[0.1, 0.2, 0.3, 0.6, 0.5, 0]])
 
         mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
             compute_observation_and_state_updates(
