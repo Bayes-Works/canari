@@ -35,7 +35,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 50
+num_epoch = 5
 
 data_processor = DataProcess(
     data=df,
@@ -48,7 +48,7 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data = data_processor.get_splits()
 
-# Model
+# Normal model
 model = Model(
     LocalTrend(),
     LstmNetwork(
@@ -62,6 +62,7 @@ model = Model(
 )
 model.auto_initialize_baseline_states(train_data["y"])
 
+#  Abnormal model
 abnormal_model = Model(
     LocalAcceleration(),
     LstmNetwork(
@@ -73,11 +74,10 @@ abnormal_model = Model(
     ),
     WhiteNoise(std_error=1e-3),
 )
-abnormal_model.auto_initialize_baseline_states(train_data["y"])
 
 
 # Switching Kalman filter
-skf = SKF(normal_model=model, abnormal_model=abnormal_model)
+skf = SKF(normal_model=model, abnormal_model=abnormal_model, std_transition_error=0.1)
 
 # for epoch in range(num_epoch):
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
@@ -85,14 +85,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         train_data=train_data, validation_data=validation_data
     )
 
-
-# model.auto_initialize_baseline_states(train_data["y"])
-
-# # Training
-# for epoch in range(num_epoch):
-#     (mu_validation_preds, var_validation_preds, smoother_states) = model.lstm_train(
-#         train_data=train_data, validation_data=validation_data
-#     )
+# skf.filter(data=train_data)
 
 # #  Plot
 plt.figure(figsize=(10, 6))
