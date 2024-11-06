@@ -17,27 +17,14 @@ class Model:
         self,
         *components: BaseComponent,
     ):
-        self.components = list(components)
-        self.define_model()
-        self.lstm_net = None
-        self.lstm_states_index = None
-        self.smoother_states = None
-
-    @staticmethod
-    def prepare_lstm_input(
-        lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Prepare input for lstm network, concatenate lstm output history and the input covariates
-        """
-        mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
-        var_lstm_input = np.concatenate(
-            (
-                lstm_output_history.var,
-                np.zeros(len(input_covariates), dtype=np.float32),
-            )
-        )
-        return mu_lstm_input, var_lstm_input
+        if not components:
+            pass
+        else:
+            self.components = list(components)
+            self.define_model()
+            self.lstm_net = None
+            self.lstm_states_index = None
+            self.smoother_states = None
 
     def define_model(self):
         """
@@ -172,6 +159,14 @@ class Model:
             self.smoother_states.cov_states[time_step],
         )
 
+    def set_states(self, mu_states: np.ndarray, var_states: np.ndarray):
+        """
+        Set states for the model
+        """
+
+        self.mu_states = mu_states
+        self.var_states = var_states
+
     def estimate_posterior_states(
         self,
         delta_mu_states: np.ndarray,
@@ -209,7 +204,7 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = self.smoother_states.mu_smooth[0]
+        self.mu_states = np.atleast_2d(self.smoother_states.mu_smooth[0]).T
         self.var_states = np.diag(np.diag(self.smoother_states.var_smooth[0]))
 
     def reset_lstm_output_history(self):
@@ -276,6 +271,23 @@ class Model:
         else:
             raise ValueError(f"No LstmNetwork component found")
 
+    def duplicate_model(self):
+        """
+        Duplicate models
+        """
+
+        model_copy = Model()
+        model_copy.transition_matrix = self.transition_matrix
+        model_copy.process_noise_matrix = self.process_noise_matrix
+        model_copy.observation_matrix = self.observation_matrix
+        model_copy.mu_states = self.mu_states
+        model_copy.var_states = self.var_states
+        model_copy.states_name = self.states_name
+        model_copy.lstm_net = None
+        model_copy.lstm_states_index = self.lstm_states_index
+        model_copy.states_name = self.states_name
+        return model_copy
+
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Forecast for whole time series data
@@ -288,7 +300,7 @@ class Model:
 
         for x in data["x"]:
             if self.lstm_net:
-                mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
@@ -321,7 +333,7 @@ class Model:
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             if self.lstm_net:
-                mu_lstm_input, var_lstm_input = self.prepare_lstm_input(
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
@@ -341,6 +353,7 @@ class Model:
                     / var_lstm_pred**2
                 )
                 self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
+                # TODO: posterior for lstm
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
             if self.smoother_states:
