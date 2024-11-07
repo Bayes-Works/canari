@@ -34,6 +34,14 @@ class Model:
         self.assemble_matrices()
         self.assemble_states()
 
+    # def save_components(self):
+    #     """
+    #     Save components
+    #     """
+    #     for component in self.components:
+
+    #         self.
+
     def assemble_matrices(self):
         """
         Assemble_matrices
@@ -83,6 +91,7 @@ class Model:
         """
         Automatically initialize baseline states from data
         """
+
         t = np.arange(len(y))
         y = y.flatten()
         t_no_nan = t[~np.isnan(y)]
@@ -95,9 +104,9 @@ class Model:
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
                 self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
-            elif _state_name == "local acceleration":
-                self.mu_states[i] = 2 * coefficients[0]
-                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+            # elif _state_name == "local acceleration":
+            #     self.mu_states[i] = 2 * coefficients[0]
+            #     self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
 
     def forward(
         self,
@@ -120,13 +129,13 @@ class Model:
         )
         self._mu_states_prior = mu_states_prior
         self._var_states_prior = var_states_prior
+        self._mu_obs_prior = mu_obs_pred
+        self._var_obs_prior = var_obs_pred
         return mu_obs_pred, var_obs_pred
 
     def backward(
         self,
         obs: float,
-        mu_obs_pred: np.ndarray,
-        var_obs_pred: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Update step in states-space model
@@ -134,8 +143,8 @@ class Model:
 
         delta_mu_states, delta_var_states = common.backward(
             obs,
-            mu_obs_pred,
-            var_obs_pred,
+            self._mu_obs_prior,
+            self._var_obs_prior,
             self._var_states_prior,
             self.observation_matrix,
         )
@@ -198,6 +207,18 @@ class Model:
         self.lstm_net.input_delta_z_buffer.delta_var = delta_var_lstm
         self.lstm_net.backward()
         self.lstm_net.step()
+
+    def update_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
+    ):
+        """
+        Assign new states
+        """
+
+        self.mu_states = new_mu_states
+        self.var_states = new_var_states
 
     def initialize_states_with_smoother_estimates(self):
         """
@@ -312,8 +333,7 @@ class Model:
             if self.lstm_net:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
-            self.mu_states = self._mu_states_prior
-            self.var_states = self._var_states_prior
+            self.update_states(self._mu_states_prior, self._var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
@@ -341,9 +361,7 @@ class Model:
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
-            delta_mu_states, delta_var_states = self.backward(
-                y, mu_obs_pred, var_obs_pred
-            )
+            delta_mu_states, delta_var_states = self.backward(y)
             self.estimate_posterior_states(delta_mu_states, delta_var_states)
 
             if self.lstm_net:
@@ -359,8 +377,7 @@ class Model:
             if self.smoother_states:
                 self.save_for_smoother(time_step + 1)
 
-            self.mu_states = self._mu_states_posterior
-            self.var_states = self._var_states_posterior
+            self.update_states(self._mu_states_posterior, self._var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
