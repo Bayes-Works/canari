@@ -19,7 +19,7 @@ import time
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 linear_space = np.linspace(0, 1, num=len(df_raw))
-point_anomaly = 110
+point_anomaly = 140
 trend = np.linspace(0, 1, num=len(df_raw) - point_anomaly)
 linear_space[point_anomaly:] = linear_space[point_anomaly:] + trend
 df_raw = df_raw.add(linear_space, axis=0)
@@ -42,10 +42,10 @@ data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-06 20:00:00",
-    validation_start="2000-01-06 21:00:00",
-    validation_end="2000-01-07 22:00:00",
-    test_start="2000-01-07 23:00:00",
+    train_end="2000-01-07 20:00:00",
+    validation_start="2000-01-07 21:00:00",
+    validation_end="2000-01-08 22:00:00",
+    test_start="2000-01-08 23:00:00",
     output_col=output_col,
 )
 train_data, validation_data, test_data = data_processor.get_splits()
@@ -64,25 +64,24 @@ all_data = {"x": combined_x, "y": combined_y}
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=5,
+        look_back_len=10,
         num_features=3,
-        num_layer=1,
+        num_layer=2,
         num_hidden_unit=50,
         device="cpu",
     ),
     WhiteNoise(std_error=1e-6),
 )
-model.auto_initialize_baseline_states(train_data["y"])
 
 # TODO: model.LstmNetwork, model.WhiteNoise
 #  Abnormal model
 ab_model = Model(
     LocalAcceleration(),
     LstmNetwork(
-        look_back_len=24,
+        look_back_len=10,
         num_features=3,
-        num_layer=1,
-        num_hidden_unit=30,
+        num_layer=2,
+        num_hidden_unit=50,
         device="cpu",
     ),
     WhiteNoise(std_error=1e-6),
@@ -90,27 +89,26 @@ ab_model = Model(
 
 
 # Switching Kalman filter
-prob_norm_to_ab = 0.01
-prob_ab_to_norm = 0.99
-prior_prob_norm = 0.99
+normal_to_abnormal_prob = 1e-6
+abnormal_to_normal_prob = 0.1
+normal_model_prior_prob = 0.99
 
 skf = SKF(
     normal_model=model,
     abnormal_model=ab_model,
-    std_transition_error=1e-1,
-    prob_norm_to_ab=prob_norm_to_ab,
-    prob_ab_to_norm=prob_ab_to_norm,
-    prob_norm=prior_prob_norm,
+    std_transition_error=1e-4,
+    normal_to_abnormal_prob=normal_to_abnormal_prob,
+    abnormal_to_normal_prob=abnormal_to_normal_prob,
+    normal_model_prior_prob=normal_model_prior_prob,
 )
+skf.auto_initialize_baseline_states(train_data["y"])
 
-# for epoch in range(num_epoch):
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     (mu_validation_preds, var_validation_preds, smoother_states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
 prob_abnorm = skf.filter(data=all_data)
-
 
 #  Plot
 plt.figure(figsize=(10, 6))
