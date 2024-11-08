@@ -34,14 +34,6 @@ class Model:
         self.assemble_matrices()
         self.assemble_states()
 
-    # def save_components(self):
-    #     """
-    #     Save components
-    #     """
-    #     for component in self.components:
-
-    #         self.
-
     def assemble_matrices(self):
         """
         Assemble_matrices
@@ -168,14 +160,6 @@ class Model:
             self.smoother_states.cov_states[time_step],
         )
 
-    def set_states(self, mu_states: np.ndarray, var_states: np.ndarray):
-        """
-        Set states for the model
-        """
-
-        self.mu_states = mu_states
-        self.var_states = var_states
-
     def estimate_posterior_states(
         self,
         delta_mu_states: np.ndarray,
@@ -187,6 +171,18 @@ class Model:
 
         self._mu_states_posterior = self._mu_states_prior + delta_mu_states
         self._var_states_posterior = self._var_states_prior + delta_var_states
+
+    def set_posterior_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
+    ):
+        """
+        Set the posterirors for the states
+        """
+
+        self._mu_states_posterior = new_mu_states
+        self._var_states_posterior = new_var_states
 
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
         self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
@@ -208,7 +204,7 @@ class Model:
         self.lstm_net.backward()
         self.lstm_net.step()
 
-    def update_states(
+    def set_states(
         self,
         new_mu_states: np.ndarray,
         new_var_states: np.ndarray,
@@ -241,7 +237,7 @@ class Model:
         self.smoother_states.var_posterior[0] = self.var_states
 
     def save_for_smoother(self, time_step):
-        """ "
+        """
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
@@ -261,12 +257,6 @@ class Model:
         """
         Set the smoothed estimates at the last time step = posterior
         """
-        self.smoother_states.mu_smooth = np.zeros_like(
-            self.smoother_states.mu_posterior
-        )
-        self.smoother_states.var_smooth = np.zeros_like(
-            self.smoother_states.var_posterior
-        )
         self.smoother_states.mu_smooth[-1] = self.smoother_states.mu_posterior[-1]
         self.smoother_states.var_smooth[-1] = self.smoother_states.var_posterior[-1]
 
@@ -304,6 +294,7 @@ class Model:
         model_copy.mu_states = self.mu_states
         model_copy.var_states = self.var_states
         model_copy.states_name = self.states_name
+        model_copy.num_states = self.num_states
         model_copy.lstm_net = None
         model_copy.lstm_states_index = self.lstm_states_index
         model_copy.states_name = self.states_name
@@ -333,7 +324,7 @@ class Model:
             if self.lstm_net:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
-            self.update_states(self._mu_states_prior, self._var_states_prior)
+            self.set_states(self._mu_states_prior, self._var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
@@ -377,7 +368,7 @@ class Model:
             if self.smoother_states:
                 self.save_for_smoother(time_step + 1)
 
-            self.update_states(self._mu_states_posterior, self._var_states_posterior)
+            self.set_states(self._mu_states_posterior, self._var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()

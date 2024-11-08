@@ -38,3 +38,15 @@ class SmootherStates:
         self.cov_states = np.zeros(
             (num_time_steps, num_states, num_states), dtype=np.float32
         )
+
+
+@dataclass
+class SmootherStatesSKF:
+    var_smooth: np.ndarray = field(init=False)
+    cov_states: np.ndarray = field(init=False)
+
+    def initialize(self, num_time_steps: int, num_states: int) -> None:
+        self.mu_smooth = np.zeros((num_time_steps, num_states), dtype=np.float32)
+        self.var_smooth = np.zeros(
+            (num_time_steps, num_states, num_states), dtype=np.float32
+        )
