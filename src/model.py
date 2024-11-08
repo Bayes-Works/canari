@@ -140,6 +140,9 @@ class Model:
             self._var_states_prior,
             self.observation_matrix,
         )
+        delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
+        delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
+
         return delta_mu_states, delta_var_states
 
     def rts_smoother(self, time_step):
