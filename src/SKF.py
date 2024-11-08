@@ -5,6 +5,7 @@ from src.model import Model
 import src.common as common
 from src.data_struct import SmootherStates
 import pytagi.metric as metric
+from src.data_struct import SmootherStatesSKF
 
 
 class SKF:
@@ -17,30 +18,33 @@ class SKF:
         normal_model: Model,
         abnormal_model: Model,
         std_transition_error: Optional[float] = 0.0,
-        normal_to_abnormal_prob: Optional[float] = 1e-3,
-        abnormal_to_normal_prob: Optional[float] = 1e-3,
+        normal_to_abnormal_prob: Optional[float] = 1e-4,
+        abnormal_to_normal_prob: Optional[float] = 0.1,
         normal_model_prior_prob: Optional[float] = 0.99,
     ):
         self.initialize_SKF_models(normal_model, abnormal_model, std_transition_error)
+        #  TODO:  not using a matrix
         self.transition_prob_matrix = np.array(
             [
                 [1 - normal_to_abnormal_prob, normal_to_abnormal_prob],
                 [abnormal_to_normal_prob, 1 - abnormal_to_normal_prob],
             ]
         )
-        self.prob_model = np.array(
+        self._prob_model = np.array(
             [[normal_model_prior_prob], [1 - normal_model_prior_prob]]
         )
         self.coef_model = np.zeros((2, 2))
         self.likelihood = np.zeros((2, 2))
+        #
+        self.SKF_smoother = False
+        self.prob_model = None
 
     @staticmethod
     def create_compatible_model(source: Model, target: Model) -> Model:
-        """ "
+        """
         Create compatiable model by padding zero to states and matrices
         """
 
-        # TODO: should not be like this, this class
         pad_row = np.zeros((source.num_states)).flatten()
         pad_col = np.zeros((target.num_states)).flatten()
         for i, state in enumerate(target.states_name):
@@ -144,6 +148,40 @@ class SKF:
 
         self.norm_model.auto_initialize_baseline_states(y)
 
+    def save_for_smoother(self, time_step: int):
+        """
+        Save states' priors, posteriors and cross-covariances for smoother
+        """
+        self.norm_model.save_for_smoother(time_step)
+        self.abnorm_model.save_for_smoother(time_step)
+        self.norm_to_abnorm_model.save_for_smoother(time_step)
+        self.abnorm_to_norm_model.save_for_smoother(time_step)
+
+    def initialize_smoother_states(self, num_time_steps: int):
+        self.SKF_smoother = True
+        self.norm_model.initialize_smoother_states(num_time_steps)
+        self.abnorm_model.initialize_smoother_states(num_time_steps)
+        self.norm_to_abnorm_model.initialize_smoother_states(num_time_steps)
+        self.abnorm_to_norm_model.initialize_smoother_states(num_time_steps)
+        self.smoother_states = SmootherStatesSKF()
+        self.smoother_states.initialize(num_time_steps + 1, self.norm_model.num_states)
+
+    def initialize_smoother_buffers(self):
+        self.norm_model.initialize_smoother_buffers()
+        self.norm_to_abnorm_model.initialize_smoother_buffers()
+        self.abnorm_model.initialize_smoother_buffers()
+        self.abnorm_to_norm_model.initialize_smoother_buffers()
+        self.smoother_states.mu_smooth[-1], self.smoother_states.var_smooth[-1] = (
+            SKF.gaussian_mixture(
+                self.norm_model.smoother_states.mu_posterior[-1],
+                self.norm_model.smoother_states.var_posterior[-1],
+                self.prob_model[-1, 0],
+                self.abnorm_model.smoother_states.mu_posterior[-1],
+                self.abnorm_model.smoother_states.var_posterior[-1],
+                self.prob_model[-1, 1],
+            )
+        )
+
     def lstm_train(
         self,
         train_data: Dict[str, np.ndarray],
@@ -168,7 +206,7 @@ class SKF:
         mu_pred_norm, var_pred_norm = self.norm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.norm_model.update_states(
+        self.norm_model.set_states(
             self.norm_model._mu_states_prior, self.norm_model._var_states_prior
         )
 
@@ -176,7 +214,7 @@ class SKF:
         mu_pred_norm_to_ab, var_pred_norm_to_ab = self.norm_to_abnorm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.norm_to_abnorm_model.update_states(
+        self.norm_to_abnorm_model.set_states(
             self.norm_to_abnorm_model._mu_states_prior,
             self.norm_to_abnorm_model._var_states_prior,
         )
@@ -185,7 +223,7 @@ class SKF:
         mu_pred_abnorm, var_pred_abnorm = self.abnorm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.abnorm_model.update_states(
+        self.abnorm_model.set_states(
             self.abnorm_model._mu_states_prior,
             self.abnorm_model._var_states_prior,
         )
@@ -194,7 +232,7 @@ class SKF:
         mu_pred_ab_to_norm, var_pred_ab_to_norm = self.abnorm_to_norm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.abnorm_to_norm_model.update_states(
+        self.abnorm_to_norm_model.set_states(
             self.abnorm_to_norm_model._mu_states_prior,
             self.abnorm_to_norm_model._var_states_prior,
         )
@@ -214,13 +252,13 @@ class SKF:
         )
 
         transition_prob = (
-            self.likelihood * self.transition_prob_matrix * self.prob_model
+            self.likelihood * self.transition_prob_matrix * self._prob_model
         )
         transition_prob = transition_prob / np.sum(transition_prob)
-        self.prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
+        self._prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
 
         epsilon = 1e-10
-        self.coef_model = transition_prob / np.maximum(self.prob_model, epsilon).T
+        self.coef_model = transition_prob / np.maximum(self._prob_model, epsilon).T
 
         # Collapse
         mu_states_normal, var_states_normal = SKF.collapse(
@@ -240,10 +278,10 @@ class SKF:
         mu_states_mixture, var_states_mixture = SKF.gaussian_mixture(
             mu_states_normal,
             var_states_normal,
-            self.prob_model[0],
+            self._prob_model[0],
             mu_states_abnormal,
             var_states_abnormal,
-            self.prob_model[1],
+            self._prob_model[1],
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
@@ -261,9 +299,9 @@ class SKF:
         """
 
         # Normal to normal
-        mu_delta_norm, mu_delta_norm = self.norm_model.backward(obs)
-        self.norm_model.estimate_posterior_states(mu_delta_norm, mu_delta_norm)
-        self.norm_model.update_states(
+        mu_delta_norm, var_delta_norm = self.norm_model.backward(obs)
+        self.norm_model.estimate_posterior_states(mu_delta_norm, var_delta_norm)
+        self.norm_model.set_states(
             self.norm_model._mu_states_posterior, self.norm_model._var_states_posterior
         )
 
@@ -274,7 +312,7 @@ class SKF:
         self.norm_to_abnorm_model.estimate_posterior_states(
             mu_delta_norm_to_ab, var_delta_norm_to_ab
         )
-        self.norm_to_abnorm_model.update_states(
+        self.norm_to_abnorm_model.set_states(
             self.norm_to_abnorm_model._mu_states_posterior,
             self.norm_to_abnorm_model._var_states_posterior,
         )
@@ -284,7 +322,7 @@ class SKF:
             obs,
         )
         self.abnorm_model.estimate_posterior_states(mu_delta_abnorm, var_delta_abnorm)
-        self.abnorm_model.update_states(
+        self.abnorm_model.set_states(
             self.abnorm_model._mu_states_posterior,
             self.abnorm_model._var_states_posterior,
         )
@@ -296,7 +334,7 @@ class SKF:
         self.abnorm_to_norm_model.estimate_posterior_states(
             mu_delta_ab_to_norm, var_delta_ab_to_norm
         )
-        self.abnorm_to_norm_model.update_states(
+        self.abnorm_to_norm_model.set_states(
             self.abnorm_to_norm_model._mu_states_posterior,
             self.abnorm_to_norm_model._var_states_posterior,
         )
@@ -309,7 +347,11 @@ class SKF:
             self.coef_model[1, 0],
         )
         self.norm_model.set_states(mu_states_normal, var_states_normal)
-        self.norm_to_abnorm_model.set_states(mu_states_normal, var_states_normal)
+        self.norm_model.set_posterior_states(mu_states_normal, var_states_normal)
+        self.abnorm_to_norm_model.set_states(mu_states_normal, var_states_normal)
+        self.abnorm_to_norm_model.set_posterior_states(
+            mu_states_normal, var_states_normal
+        )
 
         mu_states_abnormal, var_states_abnormal = SKF.collapse(
             self.norm_to_abnorm_model,
@@ -318,7 +360,67 @@ class SKF:
             self.coef_model[1, 1],
         )
         self.abnorm_model.set_states(mu_states_abnormal, var_states_abnormal)
-        self.abnorm_to_norm_model.set_states(mu_states_abnormal, var_states_abnormal)
+        self.abnorm_model.set_posterior_states(mu_states_abnormal, var_states_abnormal)
+        self.norm_to_abnorm_model.set_states(mu_states_abnormal, var_states_abnormal)
+        self.norm_to_abnorm_model.set_posterior_states(
+            mu_states_abnormal, var_states_abnormal
+        )
+
+    def rts_smoother(self, time_step: int):
+        """
+        RTS smoother for each sub-model
+        """
+
+        self.norm_model.rts_smoother(time_step)
+        self.norm_to_abnorm_model.rts_smoother(time_step)
+        self.abnorm_model.rts_smoother(time_step)
+        self.abnorm_to_norm_model.rts_smoother(time_step)
+
+        epsilon = 1e-10
+        U = self.transition_prob_matrix * self.prob_model[time_step - 1].T
+        U = U / np.maximum(np.sum(U, axis=0), epsilon)
+        M_ = U * self.prob_model[time_step]
+        M = np.sum(M_, axis=1)
+        self.prob_model[time_step - 1] = M
+
+        coeff_norm = M_[0] / np.maximum(M[0], epsilon)
+        coeff_abnorm = M_[1] / np.maximum(M[1], epsilon)
+
+        (mu_states_normal, var_states_normal) = SKF.gaussian_mixture(
+            self.norm_model.smoother_states.mu_smooth[time_step - 1],
+            self.norm_model.smoother_states.var_smooth[time_step - 1],
+            coeff_norm[0],
+            self.norm_to_abnorm_model.smoother_states.mu_posterior[time_step - 1],
+            self.norm_to_abnorm_model.smoother_states.var_posterior[time_step - 1],
+            coeff_norm[1],
+        )
+        self.norm_model.smoother_states.mu_smooth[time_step - 1] = mu_states_normal
+        self.norm_model.smoother_states.var_smooth[time_step - 1] = var_states_normal
+        self.norm_to_abnorm_model.smoother_states.mu_smooth[time_step - 1] = (
+            mu_states_normal
+        )
+        self.norm_to_abnorm_model.smoother_states.var_smooth[time_step - 1] = (
+            var_states_normal
+        )
+
+        (mu_states_abnormal, var_states_abnormal) = SKF.gaussian_mixture(
+            self.abnorm_to_norm_model.smoother_states.mu_posterior[time_step - 1],
+            self.abnorm_to_norm_model.smoother_states.var_posterior[time_step - 1],
+            coeff_abnorm[0],
+            self.abnorm_model.smoother_states.mu_smooth[time_step - 1],
+            self.abnorm_model.smoother_states.var_smooth[time_step - 1],
+            coeff_abnorm[1],
+        )
+        self.abnorm_model.smoother_states.mu_smooth[time_step - 1] = mu_states_abnormal
+        self.abnorm_model.smoother_states.var_smooth[time_step - 1] = (
+            var_states_abnormal
+        )
+        self.abnorm_to_norm_model.smoother_states.mu_smooth[time_step - 1] = (
+            mu_states_abnormal
+        )
+        self.abnorm_to_norm_model.smoother_states.var_smooth[time_step - 1] = (
+            var_states_abnormal
+        )
 
     def filter(
         self,
@@ -329,11 +431,11 @@ class SKF:
         """
 
         num_time_steps = len(data["y"])
-        prob_abnorm = np.zeros((num_time_steps, 1), dtype=np.float32)
         mu_obs_preds = []
         var_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
+        self.prob_model = np.zeros((num_time_steps + 1, 2), dtype=np.float32)
 
         # Initialize hidden states
         self.abnorm_model.set_states(
@@ -356,10 +458,34 @@ class SKF:
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
-            prob_abnorm[time_step] = self.prob_model[1]
+            self.prob_model[time_step + 1] = self._prob_model.flatten()
             self.backward(y)
 
             if self.norm_model.lstm_net:
                 self.norm_model.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
-        return prob_abnorm
+            if self.SKF_smoother:
+                self.save_for_smoother(time_step + 1)
+
+            mu_obs_preds.append(mu_obs_pred)
+            var_obs_preds.append(var_obs_pred)
+
+        return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
+
+    def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Smoother for whole time series
+        """
+
+        num_time_steps = len(data["y"])
+        self.initialize_smoother_states(num_time_steps)
+
+        # Filter
+        mu_obs_preds, var_obs_preds, _ = self.filter(data)
+
+        # Smoother
+        self.initialize_smoother_buffers()
+        for time_step in reversed(range(1, num_time_steps + 1)):
+            self.rts_smoother(time_step)
+
+        return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
