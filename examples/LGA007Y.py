@@ -21,7 +21,7 @@ df_raw = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
 
 # Define parameters
 output_col = [0]
-num_epoch = 100
+num_epoch = 200
 
 data_processor = DataProcess(
     data=df_raw,
@@ -49,8 +49,8 @@ all_data = {"x": combined_x, "y": combined_y}
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=10,
-    num_features=3,
+    look_back_len=26,
+    num_features=5,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
@@ -74,7 +74,7 @@ ab_model = Model(
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
-abnormal_to_normal_prob = 0.1
+abnormal_to_normal_prob = 1e-1
 normal_model_prior_prob = 0.99
 
 skf = SKF(
