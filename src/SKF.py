@@ -1,11 +1,15 @@
 import numpy as np
 import copy
 from typing import Tuple, List, Dict, Optional
+import pytagi.metric as metric
 from src.model import Model
 import src.common as common
-from src.data_struct import SmootherStates
-import pytagi.metric as metric
-from src.data_struct import SmootherStatesSKF
+from src.data_struct import (
+    SmootherStates,
+    SmootherStatesSKF,
+    ModelTransition,
+    ProbabilityModel,
+)
 
 
 class SKF:
@@ -23,18 +27,31 @@ class SKF:
         normal_model_prior_prob: Optional[float] = 0.99,
     ):
         self.initialize_SKF_models(normal_model, abnormal_model, std_transition_error)
+
         #  TODO:  not using a matrix
-        self.transition_prob_matrix = np.array(
-            [
-                [1 - normal_to_abnormal_prob, normal_to_abnormal_prob],
-                [abnormal_to_normal_prob, 1 - abnormal_to_normal_prob],
-            ]
-        )
-        self._prob_model = np.array(
-            [[normal_model_prior_prob], [1 - normal_model_prior_prob]]
-        )
-        self.coef_model = np.zeros((2, 2))
-        self.likelihood = np.zeros((2, 2))
+        # self.transition_prob_matrix = np.array(
+        #     [
+        #         [1 - normal_to_abnormal_prob, normal_to_abnormal_prob],
+        #         [abnormal_to_normal_prob, 1 - abnormal_to_normal_prob],
+        #     ]
+        # )
+        # self._prob_model = np.array(
+        #     [[normal_model_prior_prob], [1 - normal_model_prior_prob]]
+        # )
+        # self.coef_model = np.zeros((2, 2))
+        # self.likelihood = np.zeros((2, 2))
+        #
+
+        self.transition_prob_matrix = ModelTransition()
+        self.transition_prob_matrix.norm_to_norm = 1 - normal_to_abnormal_prob
+        self.transition_prob_matrix.norm_to_abnorm = normal_to_abnormal_prob
+        self.transition_prob_matrix.abnorm_to_norm = abnormal_to_normal_prob
+        self.transition_prob_matrix.abnorm_to_abnorm = 1 - abnormal_to_normal_prob
+        self._prob_model = ProbabilityModel()
+        self._prob_model.normal = normal_model_prior_prob
+        self._prob_model.abnormal = 1 - normal_model_prior_prob
+        self.coef_model = ModelTransition()
+        self.likelihood = ModelTransition()
         #
         self.SKF_smoother = False
         self.prob_model = None
@@ -95,23 +112,6 @@ class SKF:
         m2 = mu2 - mu_mixture
         var_mixture = coeff1 * (var1 + m1 @ m1.T) + coeff2 * (var2 + m2 @ m2.T)
         return mu_mixture, var_mixture
-
-    @staticmethod
-    def collapse(
-        model_1: Model, coef_model_1: float, model_2: Model, coef_model_2: float
-    ):
-        """
-        SKF collapse 2 models into 1
-        """
-        mu_states_mixture, var_states_mixture = SKF.gaussian_mixture(
-            model_1.mu_states,
-            model_1.var_states,
-            coef_model_1,
-            model_2.mu_states,
-            model_2.var_states,
-            coef_model_2,
-        )
-        return mu_states_mixture, var_states_mixture
 
     def initialize_SKF_models(
         self,
@@ -183,6 +183,97 @@ class SKF:
             )
         )
 
+    def estimate_model_coef(
+        self,
+        obs,
+        mu_pred_norm,
+        var_pred_norm,
+        mu_pred_norm_to_ab,
+        var_pred_norm_to_ab,
+        mu_pred_ab_to_norm,
+        var_pred_ab_to_norm,
+        mu_pred_abnorm,
+        var_pred_abnorm,
+    ):
+        epsilon = 1e-10
+        if np.isnan(obs):
+            self.likelihood = ModelTransition()
+        else:
+            self.likelihood.norm_to_norm = np.exp(
+                metric.log_likelihood(mu_pred_norm, obs, var_pred_norm**0.5)
+            )
+            self.likelihood.norm_to_abnorm = np.exp(
+                metric.log_likelihood(mu_pred_norm_to_ab, obs, var_pred_norm_to_ab**0.5)
+            )
+            self.likelihood.abnorm_to_norm = np.exp(
+                metric.log_likelihood(mu_pred_ab_to_norm, obs, var_pred_ab_to_norm**0.5)
+            )
+            self.likelihood.abnorm_to_abnorm = np.exp(
+                metric.log_likelihood(mu_pred_abnorm, obs, var_pred_abnorm**0.5)
+            )
+
+        transition_prob = ModelTransition()
+        transition_prob.norm_to_norm = (
+            self.likelihood.norm_to_norm
+            * self.transition_prob_matrix.norm_to_norm
+            * self._prob_model.normal
+        )
+        transition_prob.norm_to_abnorm = (
+            self.likelihood.norm_to_abnorm
+            * self.transition_prob_matrix.norm_to_abnorm
+            * self._prob_model.normal
+        )
+        transition_prob.abnorm_to_norm = (
+            self.likelihood.abnorm_to_norm
+            * self.transition_prob_matrix.abnorm_to_norm
+            * self._prob_model.abnormal
+        )
+        transition_prob.abnorm_to_abnorm = (
+            self.likelihood.abnorm_to_abnorm
+            * self.transition_prob_matrix.abnorm_to_abnorm
+            * self._prob_model.abnormal
+        )
+
+        total_sum = (
+            transition_prob.norm_to_norm
+            + transition_prob.norm_to_abnorm
+            + transition_prob.abnorm_to_norm
+            + transition_prob.abnorm_to_abnorm
+        )
+        transition_prob.norm_to_norm = transition_prob.norm_to_norm / total_sum
+        transition_prob.norm_to_abnorm = transition_prob.norm_to_abnorm / total_sum
+        transition_prob.abnorm_to_norm = transition_prob.abnorm_to_norm / total_sum
+        transition_prob.abnorm_to_abnorm = transition_prob.abnorm_to_abnorm / total_sum
+
+        self._prob_model.normal = (
+            transition_prob.norm_to_norm + transition_prob.abnorm_to_norm
+        )
+        self._prob_model.abnormal = (
+            transition_prob.norm_to_abnorm + transition_prob.abnorm_to_abnorm
+        )
+
+        self.coef_model.norm_to_norm = transition_prob.norm_to_norm / np.maximum(
+            self._prob_model.normal, epsilon
+        )
+        self.coef_model.norm_to_abnorm = transition_prob.norm_to_abnorm / np.maximum(
+            self._prob_model.abnormal, epsilon
+        )
+        self.coef_model.abnorm_to_norm = transition_prob.abnorm_to_norm / np.maximum(
+            self._prob_model.normal, epsilon
+        )
+        self.coef_model.abnorm_to_abnorm = (
+            transition_prob.abnorm_to_abnorm
+            / np.maximum(self._prob_model.abnormal, epsilon)
+        )
+
+        # transition_prob = (
+        #     self.likelihood * self.transition_prob_matrix * self._prob_model
+        # )
+        # transition_prob = transition_prob / np.sum(transition_prob)
+
+        # self._prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
+        # self.coef_model = transition_prob / np.maximum(self._prob_model, epsilon).T
+
     def lstm_train(
         self,
         train_data: Dict[str, np.ndarray],
@@ -207,123 +298,60 @@ class SKF:
         mu_pred_norm, var_pred_norm = self.norm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.norm_model.set_states(
-            self.norm_model._mu_states_prior, self.norm_model._var_states_prior
-        )
 
         # Normal to abnormal
         mu_pred_norm_to_ab, var_pred_norm_to_ab = self.norm_to_abnorm_model.forward(
             mu_lstm_pred, var_lstm_pred
-        )
-        self.norm_to_abnorm_model.set_states(
-            self.norm_to_abnorm_model._mu_states_prior,
-            self.norm_to_abnorm_model._var_states_prior,
         )
 
         # Abnormal to abnormal
         mu_pred_abnorm, var_pred_abnorm = self.abnorm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.abnorm_model.set_states(
-            self.abnorm_model._mu_states_prior,
-            self.abnorm_model._var_states_prior,
-        )
 
         # Abnormal to normal
         mu_pred_ab_to_norm, var_pred_ab_to_norm = self.abnorm_to_norm_model.forward(
             mu_lstm_pred, var_lstm_pred
         )
-        self.abnorm_to_norm_model.set_states(
-            self.abnorm_to_norm_model._mu_states_prior,
-            self.abnorm_to_norm_model._var_states_prior,
+
+        self.estimate_model_coef(
+            y,
+            mu_pred_norm,
+            var_pred_norm,
+            mu_pred_norm_to_ab,
+            var_pred_norm_to_ab,
+            mu_pred_abnorm,
+            var_pred_abnorm,
+            mu_pred_ab_to_norm,
+            var_pred_ab_to_norm,
         )
-
-        epsilon = 1e-10
-        if not np.isnan(y):
-            self.likelihood[0, 0] = np.exp(
-                metric.log_likelihood(mu_pred_norm, y, var_pred_norm**0.5)
-            )
-            self.likelihood[0, 1] = np.exp(
-                metric.log_likelihood(mu_pred_norm_to_ab, y, var_pred_norm_to_ab**0.5)
-            )
-            self.likelihood[1, 0] = np.exp(
-                metric.log_likelihood(mu_pred_ab_to_norm, y, var_pred_ab_to_norm**0.5)
-            )
-            self.likelihood[1, 1] = np.exp(
-                metric.log_likelihood(mu_pred_abnorm, y, var_pred_abnorm**0.5)
-            )
-
-            # v = np.random.normal(0, self.std_transition_error, (10, 1))
-            # self.likelihood[0, 0] = np.mean(
-            #     np.exp(
-            #         metric.log_likelihood(
-            #             mu_pred_norm + v,
-            #             y,
-            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-            #         )
-            #     )
-            # )
-            # self.likelihood[0, 1] = np.mean(
-            #     np.exp(
-            #         metric.log_likelihood(
-            #             mu_pred_norm_to_ab + v,
-            #             y,
-            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-            #         )
-            #     )
-            # )
-            # self.likelihood[1, 0] = np.mean(
-            #     np.exp(
-            #         metric.log_likelihood(
-            #             mu_pred_ab_to_norm + v,
-            #             y,
-            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-            #         )
-            #     )
-            # )
-            # self.likelihood[1, 1] = np.mean(
-            #     np.exp(
-            #         metric.log_likelihood(
-            #             mu_pred_abnorm + v,
-            #             y,
-            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-            #         )
-            #     )
-            # )
-        else:
-            self.likelihood = np.ones((2, 2))
-
-        transition_prob = (
-            self.likelihood * self.transition_prob_matrix * self._prob_model
-        )
-        # transition_prob = transition_prob / np.maximum(np.sum(transition_prob), epsilon)
-        transition_prob = transition_prob / np.sum(transition_prob)
-        self._prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
-
-        self.coef_model = transition_prob / np.maximum(self._prob_model, epsilon).T
 
         # Collapse
-        mu_states_normal, var_states_normal = SKF.collapse(
-            self.norm_model,
-            self.coef_model[0, 0],
-            self.abnorm_to_norm_model,
-            self.coef_model[1, 0],
+        mu_states_normal, var_states_normal = SKF.gaussian_mixture(
+            self.norm_model.mu_states_prior,
+            self.norm_model.var_states_prior,
+            self.coef_model.norm_to_norm,
+            self.abnorm_to_norm_model.mu_states_prior,
+            self.abnorm_to_norm_model.var_states_prior,
+            self.coef_model.abnorm_to_norm,
         )
 
-        mu_states_abnormal, var_states_abnormal = SKF.collapse(
-            self.norm_to_abnorm_model,
-            self.coef_model[0, 1],
-            self.abnorm_model,
-            self.coef_model[1, 1],
+        mu_states_abnormal, var_states_abnormal = SKF.gaussian_mixture(
+            self.norm_to_abnorm_model.mu_states_prior,
+            self.norm_to_abnorm_model.var_states_prior,
+            self.coef_model.norm_to_abnorm,
+            self.abnorm_model.mu_states_prior,
+            self.abnorm_model.var_states_prior,
+            self.coef_model.abnorm_to_abnorm,
         )
 
         mu_states_mixture, var_states_mixture = SKF.gaussian_mixture(
             mu_states_normal,
             var_states_normal,
-            self._prob_model[0],
+            self._prob_model.normal,
             mu_states_abnormal,
             var_states_abnormal,
-            self._prob_model[1],
+            self._prob_model.abnormal,
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
@@ -343,9 +371,6 @@ class SKF:
         # Normal to normal
         mu_delta_norm, var_delta_norm = self.norm_model.backward(obs)
         self.norm_model.estimate_posterior_states(mu_delta_norm, var_delta_norm)
-        self.norm_model.set_states(
-            self.norm_model._mu_states_posterior, self.norm_model._var_states_posterior
-        )
 
         # Normal to abnormal
         mu_delta_norm_to_ab, var_delta_norm_to_ab = self.norm_to_abnorm_model.backward(
@@ -354,20 +379,12 @@ class SKF:
         self.norm_to_abnorm_model.estimate_posterior_states(
             mu_delta_norm_to_ab, var_delta_norm_to_ab
         )
-        self.norm_to_abnorm_model.set_states(
-            self.norm_to_abnorm_model._mu_states_posterior,
-            self.norm_to_abnorm_model._var_states_posterior,
-        )
 
         # Abnormal to normal
         mu_delta_abnorm, var_delta_abnorm = self.abnorm_model.backward(
             obs,
         )
         self.abnorm_model.estimate_posterior_states(mu_delta_abnorm, var_delta_abnorm)
-        self.abnorm_model.set_states(
-            self.abnorm_model._mu_states_posterior,
-            self.abnorm_model._var_states_posterior,
-        )
 
         # Abnormal to abnormal
         mu_delta_ab_to_norm, var_delta_ab_to_norm = self.abnorm_to_norm_model.backward(
@@ -376,17 +393,15 @@ class SKF:
         self.abnorm_to_norm_model.estimate_posterior_states(
             mu_delta_ab_to_norm, var_delta_ab_to_norm
         )
-        self.abnorm_to_norm_model.set_states(
-            self.abnorm_to_norm_model._mu_states_posterior,
-            self.abnorm_to_norm_model._var_states_posterior,
-        )
 
         # Collapse
-        mu_states_normal, var_states_normal = SKF.collapse(
-            self.norm_model,
-            self.coef_model[0, 0],
-            self.abnorm_to_norm_model,
-            self.coef_model[1, 0],
+        mu_states_normal, var_states_normal = SKF.gaussian_mixture(
+            self.norm_model.mu_states_posterior,
+            self.norm_model.var_states_posterior,
+            self.coef_model.norm_to_norm,
+            self.abnorm_to_norm_model.mu_states_posterior,
+            self.abnorm_to_norm_model.var_states_posterior,
+            self.coef_model.abnorm_to_norm,
         )
         self.norm_model.set_states(mu_states_normal, var_states_normal)
         self.norm_model.set_posterior_states(mu_states_normal, var_states_normal)
@@ -395,11 +410,13 @@ class SKF:
             mu_states_normal, var_states_normal
         )
 
-        mu_states_abnormal, var_states_abnormal = SKF.collapse(
-            self.norm_to_abnorm_model,
-            self.coef_model[0, 1],
-            self.abnorm_model,
-            self.coef_model[1, 1],
+        mu_states_abnormal, var_states_abnormal = SKF.gaussian_mixture(
+            self.norm_to_abnorm_model.mu_states_posterior,
+            self.norm_to_abnorm_model.var_states_posterior,
+            self.coef_model.norm_to_abnorm,
+            self.abnorm_model.mu_states_posterior,
+            self.abnorm_model.var_states_posterior,
+            self.coef_model.abnorm_to_abnorm,
         )
         self.abnorm_model.set_states(mu_states_abnormal, var_states_abnormal)
         self.abnorm_model.set_posterior_states(mu_states_abnormal, var_states_abnormal)
@@ -419,48 +436,46 @@ class SKF:
         self.abnorm_to_norm_model.rts_smoother(time_step)
 
         epsilon = 1e-10
-        U = self.transition_prob_matrix * self.prob_model[time_step - 1].T
+        U = self.transition_prob_matrix * self.prob_model[time_step].T
         U = U / np.maximum(np.sum(U, axis=0), epsilon)
-        M_ = U * self.prob_model[time_step]
+        M_ = U * self.prob_model[time_step + 1]
         M = np.sum(M_, axis=1)
-        self.prob_model[time_step - 1] = M
+        self.prob_model[time_step] = M
 
         coeff_norm = M_[0] / np.maximum(M[0], epsilon)
         coeff_abnorm = M_[1] / np.maximum(M[1], epsilon)
 
         (mu_states_normal, var_states_normal) = SKF.gaussian_mixture(
-            self.norm_model.smoother_states.mu_smooth[time_step - 1],
-            self.norm_model.smoother_states.var_smooth[time_step - 1],
+            self.norm_model.smoother_states.mu_smooth[time_step],
+            self.norm_model.smoother_states.var_smooth[time_step],
             coeff_norm[0],
-            self.norm_to_abnorm_model.smoother_states.mu_posterior[time_step - 1],
-            self.norm_to_abnorm_model.smoother_states.var_posterior[time_step - 1],
+            self.norm_to_abnorm_model.smoother_states.mu_posterior[time_step],
+            self.norm_to_abnorm_model.smoother_states.var_posterior[time_step],
             coeff_norm[1],
         )
-        self.norm_model.smoother_states.mu_smooth[time_step - 1] = mu_states_normal
-        self.norm_model.smoother_states.var_smooth[time_step - 1] = var_states_normal
-        self.norm_to_abnorm_model.smoother_states.mu_smooth[time_step - 1] = (
+        self.norm_model.smoother_states.mu_smooth[time_step] = mu_states_normal
+        self.norm_model.smoother_states.var_smooth[time_step] = var_states_normal
+        self.norm_to_abnorm_model.smoother_states.mu_smooth[time_step] = (
             mu_states_normal
         )
-        self.norm_to_abnorm_model.smoother_states.var_smooth[time_step - 1] = (
+        self.norm_to_abnorm_model.smoother_states.var_smooth[time_step] = (
             var_states_normal
         )
 
         (mu_states_abnormal, var_states_abnormal) = SKF.gaussian_mixture(
-            self.abnorm_to_norm_model.smoother_states.mu_posterior[time_step - 1],
-            self.abnorm_to_norm_model.smoother_states.var_posterior[time_step - 1],
+            self.abnorm_to_norm_model.smoother_states.mu_posterior[time_step],
+            self.abnorm_to_norm_model.smoother_states.var_posterior[time_step],
             coeff_abnorm[0],
-            self.abnorm_model.smoother_states.mu_smooth[time_step - 1],
-            self.abnorm_model.smoother_states.var_smooth[time_step - 1],
+            self.abnorm_model.smoother_states.mu_smooth[time_step],
+            self.abnorm_model.smoother_states.var_smooth[time_step],
             coeff_abnorm[1],
         )
-        self.abnorm_model.smoother_states.mu_smooth[time_step - 1] = mu_states_abnormal
-        self.abnorm_model.smoother_states.var_smooth[time_step - 1] = (
-            var_states_abnormal
-        )
-        self.abnorm_to_norm_model.smoother_states.mu_smooth[time_step - 1] = (
+        self.abnorm_model.smoother_states.mu_smooth[time_step] = mu_states_abnormal
+        self.abnorm_model.smoother_states.var_smooth[time_step] = var_states_abnormal
+        self.abnorm_to_norm_model.smoother_states.mu_smooth[time_step] = (
             mu_states_abnormal
         )
-        self.abnorm_to_norm_model.smoother_states.var_smooth[time_step - 1] = (
+        self.abnorm_to_norm_model.smoother_states.var_smooth[time_step] = (
             var_states_abnormal
         )
 
@@ -500,7 +515,8 @@ class SKF:
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
-            self.prob_model[time_step + 1] = self._prob_model.flatten()
+            self.prob_model[time_step + 1, 0] = self._prob_model.normal
+            self.prob_model[time_step + 1, 1] = self._prob_model.abnormal
             self.backward(y)
 
             if self.norm_model.lstm_net:
@@ -527,7 +543,45 @@ class SKF:
 
         # Smoother
         self.initialize_smoother_buffers()
-        for time_step in reversed(range(1, num_time_steps + 1)):
+        for time_step in reversed(range(0, num_time_steps)):
             self.rts_smoother(time_step)
 
         return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
+
+    # v = np.random.normal(0, self.std_transition_error, (10, 1))
+    # self.likelihood[0, 0] = np.mean(
+    #     np.exp(
+    #         metric.log_likelihood(
+    #             mu_pred_norm + v,
+    #             y,
+    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+    #         )
+    #     )
+    # )
+    # self.likelihood[0, 1] = np.mean(
+    #     np.exp(
+    #         metric.log_likelihood(
+    #             mu_pred_norm_to_ab + v,
+    #             y,
+    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+    #         )
+    #     )
+    # )
+    # self.likelihood[1, 0] = np.mean(
+    #     np.exp(
+    #         metric.log_likelihood(
+    #             mu_pred_ab_to_norm + v,
+    #             y,
+    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+    #         )
+    #     )
+    # )
+    # self.likelihood[1, 1] = np.mean(
+    #     np.exp(
+    #         metric.log_likelihood(
+    #             mu_pred_abnorm + v,
+    #             y,
+    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+    #         )
+    #     )
+    # )

@@ -50,3 +50,17 @@ class SmootherStatesSKF:
         self.var_smooth = np.zeros(
             (num_time_steps, num_states, num_states), dtype=np.float32
         )
+
+
+@dataclass
+class ModelTransition:
+    norm_to_norm: float = 1.0
+    norm_to_abnorm: float = 1.0
+    abnorm_to_norm: float = 1.0
+    abnorm_to_abnorm: float = 1.0
+
+
+@dataclass
+class ProbabilityModel:
+    normal: float = 0.0
+    abnormal: float = 0.0
