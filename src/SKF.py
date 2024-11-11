@@ -38,6 +38,7 @@ class SKF:
         #
         self.SKF_smoother = False
         self.prob_model = None
+        self.std_transition_error = std_transition_error
 
     @staticmethod
     def create_compatible_model(source: Model, target: Model) -> Model:
@@ -237,27 +238,68 @@ class SKF:
             self.abnorm_to_norm_model._var_states_prior,
         )
 
-        #
-        self.likelihood[0, 0] = np.exp(
-            metric.log_likelihood(mu_pred_norm, y, var_pred_norm**0.5)
-        )
-        self.likelihood[0, 1] = np.exp(
-            metric.log_likelihood(mu_pred_norm_to_ab, y, var_pred_norm_to_ab**0.5)
-        )
-        self.likelihood[1, 0] = np.exp(
-            metric.log_likelihood(mu_pred_ab_to_norm, y, var_pred_ab_to_norm**0.5)
-        )
-        self.likelihood[1, 1] = np.exp(
-            metric.log_likelihood(mu_pred_abnorm, y, var_pred_abnorm**0.5)
-        )
+        epsilon = 1e-10
+        if not np.isnan(y):
+            self.likelihood[0, 0] = np.exp(
+                metric.log_likelihood(mu_pred_norm, y, var_pred_norm**0.5)
+            )
+            self.likelihood[0, 1] = np.exp(
+                metric.log_likelihood(mu_pred_norm_to_ab, y, var_pred_norm_to_ab**0.5)
+            )
+            self.likelihood[1, 0] = np.exp(
+                metric.log_likelihood(mu_pred_ab_to_norm, y, var_pred_ab_to_norm**0.5)
+            )
+            self.likelihood[1, 1] = np.exp(
+                metric.log_likelihood(mu_pred_abnorm, y, var_pred_abnorm**0.5)
+            )
+
+            # v = np.random.normal(0, self.std_transition_error, (10, 1))
+            # self.likelihood[0, 0] = np.mean(
+            #     np.exp(
+            #         metric.log_likelihood(
+            #             mu_pred_norm + v,
+            #             y,
+            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+            #         )
+            #     )
+            # )
+            # self.likelihood[0, 1] = np.mean(
+            #     np.exp(
+            #         metric.log_likelihood(
+            #             mu_pred_norm_to_ab + v,
+            #             y,
+            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+            #         )
+            #     )
+            # )
+            # self.likelihood[1, 0] = np.mean(
+            #     np.exp(
+            #         metric.log_likelihood(
+            #             mu_pred_ab_to_norm + v,
+            #             y,
+            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+            #         )
+            #     )
+            # )
+            # self.likelihood[1, 1] = np.mean(
+            #     np.exp(
+            #         metric.log_likelihood(
+            #             mu_pred_abnorm + v,
+            #             y,
+            #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
+            #         )
+            #     )
+            # )
+        else:
+            self.likelihood = np.ones((2, 2))
 
         transition_prob = (
             self.likelihood * self.transition_prob_matrix * self._prob_model
         )
+        # transition_prob = transition_prob / np.maximum(np.sum(transition_prob), epsilon)
         transition_prob = transition_prob / np.sum(transition_prob)
         self._prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
 
-        epsilon = 1e-10
         self.coef_model = transition_prob / np.maximum(self._prob_model, epsilon).T
 
         # Collapse
