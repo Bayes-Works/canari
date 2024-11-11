@@ -119,8 +119,8 @@ class Model:
             var_lstm_pred,
             self.lstm_states_index,
         )
-        self._mu_states_prior = mu_states_prior
-        self._var_states_prior = var_states_prior
+        self.mu_states_prior = mu_states_prior
+        self.var_states_prior = var_states_prior
         self._mu_obs_prior = mu_obs_pred
         self._var_obs_prior = var_obs_pred
         return mu_obs_pred, var_obs_pred
@@ -137,7 +137,7 @@ class Model:
             obs,
             self._mu_obs_prior,
             self._var_obs_prior,
-            self._var_states_prior,
+            self.var_states_prior,
             self.observation_matrix,
         )
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
@@ -151,16 +151,16 @@ class Model:
         """
 
         (
-            self.smoother_states.mu_smooth[time_step - 1],
-            self.smoother_states.var_smooth[time_step - 1],
-        ) = common.rts_smoother(
-            self.smoother_states.mu_prior[time_step],
-            self.smoother_states.var_prior[time_step],
             self.smoother_states.mu_smooth[time_step],
             self.smoother_states.var_smooth[time_step],
-            self.smoother_states.mu_posterior[time_step - 1],
-            self.smoother_states.var_posterior[time_step - 1],
-            self.smoother_states.cov_states[time_step],
+        ) = common.rts_smoother(
+            self.smoother_states.mu_prior[time_step + 1],
+            self.smoother_states.var_prior[time_step + 1],
+            self.smoother_states.mu_smooth[time_step + 1],
+            self.smoother_states.var_smooth[time_step + 1],
+            self.smoother_states.mu_posterior[time_step],
+            self.smoother_states.var_posterior[time_step],
+            self.smoother_states.cov_states[time_step + 1],
         )
 
     def estimate_posterior_states(
@@ -172,8 +172,8 @@ class Model:
         Estimate the posterirors for the states
         """
 
-        self._mu_states_posterior = self._mu_states_prior + delta_mu_states
-        self._var_states_posterior = self._var_states_prior + delta_var_states
+        self.mu_states_posterior = self.mu_states_prior + delta_mu_states
+        self.var_states_posterior = self.var_states_prior + delta_var_states
 
     def set_posterior_states(
         self,
@@ -184,8 +184,8 @@ class Model:
         Set the posterirors for the states
         """
 
-        self._mu_states_posterior = new_mu_states
-        self._var_states_posterior = new_var_states
+        self.mu_states_posterior = new_mu_states
+        self.var_states_posterior = new_var_states
 
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
         self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
@@ -244,14 +244,14 @@ class Model:
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.smoother_states.mu_prior[time_step] = self._mu_states_prior.flatten()
+        self.smoother_states.mu_prior[time_step] = self.mu_states_prior.flatten()
         self.smoother_states.var_prior[time_step] = (
-            self._var_states_prior + self._var_states_prior.T
+            self.var_states_prior + self.var_states_prior.T
         ) * 0.5
         self.smoother_states.mu_posterior[time_step] = (
-            self._mu_states_posterior.flatten()
+            self.mu_states_posterior.flatten()
         )
-        self.smoother_states.var_posterior[time_step] = self._var_states_posterior
+        self.smoother_states.var_posterior[time_step] = self.var_states_posterior
         self.smoother_states.cov_states[time_step] = (
             self.var_states @ self.transition_matrix.T
         )
@@ -327,7 +327,7 @@ class Model:
             if self.lstm_net:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
 
-            self.set_states(self._mu_states_prior, self._var_states_prior)
+            self.set_states(self.mu_states_prior, self.var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
@@ -371,7 +371,7 @@ class Model:
             if self.smoother_states:
                 self.save_for_smoother(time_step + 1)
 
-            self.set_states(self._mu_states_posterior, self._var_states_posterior)
+            self.set_states(self.mu_states_posterior, self.var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
@@ -389,7 +389,7 @@ class Model:
 
         # Smoother
         self.initialize_smoother_buffers()
-        for time_step in reversed(range(1, num_time_steps + 1)):
+        for time_step in reversed(range(0, num_time_steps)):
             self.rts_smoother(time_step)
 
         return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()

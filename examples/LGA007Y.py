@@ -74,7 +74,7 @@ ab_model = Model(
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
-abnormal_to_normal_prob = 1e-1
+abnormal_to_normal_prob = 5e-1
 normal_model_prior_prob = 0.99
 
 skf = SKF(
