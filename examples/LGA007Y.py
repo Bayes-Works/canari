@@ -21,7 +21,7 @@ df_raw = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
 
 # Define parameters
 output_col = [0]
-num_epoch = 200
+num_epoch = 50
 
 data_processor = DataProcess(
     data=df_raw,
@@ -74,7 +74,7 @@ ab_model = Model(
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
-abnormal_to_normal_prob = 5e-1
+abnormal_to_normal_prob = 1e-1
 normal_model_prior_prob = 0.99
 
 skf = SKF(
@@ -92,8 +92,8 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         train_data=train_data, validation_data=validation_data
     )
 
-_, _, prob_abnorm = skf.filter(data=all_data)
-# _, _, prob_abnorm = skf.smoother(data=all_data)
+# _, _, prob_abnorm = skf.filter(data=all_data)
+_, _, prob_abnorm = skf.smoother(data=all_data)
 
 #  Plot
 plt.figure(figsize=(10, 6))

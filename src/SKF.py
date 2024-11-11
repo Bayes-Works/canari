@@ -27,21 +27,6 @@ class SKF:
         normal_model_prior_prob: Optional[float] = 0.99,
     ):
         self.initialize_SKF_models(normal_model, abnormal_model, std_transition_error)
-
-        #  TODO:  not using a matrix
-        # self.transition_prob_matrix = np.array(
-        #     [
-        #         [1 - normal_to_abnormal_prob, normal_to_abnormal_prob],
-        #         [abnormal_to_normal_prob, 1 - abnormal_to_normal_prob],
-        #     ]
-        # )
-        # self._prob_model = np.array(
-        #     [[normal_model_prior_prob], [1 - normal_model_prior_prob]]
-        # )
-        # self.coef_model = np.zeros((2, 2))
-        # self.likelihood = np.zeros((2, 2))
-        #
-
         self.transition_prob_matrix = ModelTransition()
         self.transition_prob_matrix.norm_to_norm = 1 - normal_to_abnormal_prob
         self.transition_prob_matrix.norm_to_abnorm = normal_to_abnormal_prob
@@ -190,10 +175,10 @@ class SKF:
         var_pred_norm,
         mu_pred_norm_to_ab,
         var_pred_norm_to_ab,
-        mu_pred_ab_to_norm,
-        var_pred_ab_to_norm,
         mu_pred_abnorm,
         var_pred_abnorm,
+        mu_pred_ab_to_norm,
+        var_pred_ab_to_norm,
     ):
         epsilon = 1e-10
         if np.isnan(obs):
@@ -265,14 +250,6 @@ class SKF:
             transition_prob.abnorm_to_abnorm
             / np.maximum(self._prob_model.abnormal, epsilon)
         )
-
-        # transition_prob = (
-        #     self.likelihood * self.transition_prob_matrix * self._prob_model
-        # )
-        # transition_prob = transition_prob / np.sum(transition_prob)
-
-        # self._prob_model = np.sum(transition_prob, axis=0).reshape(-1, 1)
-        # self.coef_model = transition_prob / np.maximum(self._prob_model, epsilon).T
 
     def lstm_train(
         self,
@@ -436,46 +413,94 @@ class SKF:
         self.abnorm_to_norm_model.rts_smoother(time_step)
 
         epsilon = 1e-10
-        U = self.transition_prob_matrix * self.prob_model[time_step].T
-        U = U / np.maximum(np.sum(U, axis=0), epsilon)
-        M_ = U * self.prob_model[time_step + 1]
-        M = np.sum(M_, axis=1)
-        self.prob_model[time_step] = M
+        U = ModelTransition()
+        U.norm_to_norm = (
+            self.prob_model[time_step, 0] * self.transition_prob_matrix.norm_to_norm
+        )
+        U.norm_to_abnorm = (
+            self.prob_model[time_step, 0] * self.transition_prob_matrix.norm_to_abnorm
+        )
+        U.abnorm_to_norm = (
+            self.prob_model[time_step, 1] * self.transition_prob_matrix.abnorm_to_norm
+        )
+        U.abnorm_to_abnorm = (
+            self.prob_model[time_step, 1] * self.transition_prob_matrix.abnorm_to_abnorm
+        )
 
-        coeff_norm = M_[0] / np.maximum(M[0], epsilon)
-        coeff_abnorm = M_[1] / np.maximum(M[1], epsilon)
+        U.norm_to_norm = U.norm_to_norm / np.maximum(
+            U.norm_to_norm + U.norm_to_abnorm, epsilon
+        )
+        U.norm_to_abnorm = U.norm_to_abnorm / np.maximum(
+            U.norm_to_norm + U.norm_to_abnorm, epsilon
+        )
+        U.abnorm_to_norm = U.abnorm_to_norm / np.maximum(
+            U.abnorm_to_norm + U.abnorm_to_abnorm, epsilon
+        )
+        U.abnorm_to_abnorm = U.abnorm_to_abnorm / np.maximum(
+            U.abnorm_to_norm + U.abnorm_to_abnorm, epsilon
+        )
+
+        M_ = ModelTransition()
+        M_.norm_to_norm = U.norm_to_norm * self.prob_model[time_step + 1, 0]
+        M_.norm_to_abnorm = U.norm_to_abnorm * self.prob_model[time_step + 1, 1]
+        M_.abnorm_to_norm = U.abnorm_to_norm * self.prob_model[time_step + 1, 0]
+        M_.abnorm_to_abnorm = U.abnorm_to_abnorm * self.prob_model[time_step + 1, 1]
+
+        M = ProbabilityModel()
+        M.normal = M_.norm_to_norm + M_.norm_to_abnorm
+        M.abnormal = M_.abnorm_to_norm + M_.abnorm_to_abnorm
+        self.prob_model[time_step, 0] = M.normal
+        self.prob_model[time_step, 1] = M.abnormal
+
+        coef_model = ModelTransition()
+        coef_model.norm_to_norm = M_.norm_to_norm / np.maximum(M.normal, epsilon)
+        coef_model.norm_to_abnorm = M_.abnorm_to_norm / np.maximum(M.abnormal, epsilon)
+        coef_model.abnorm_to_abnorm = M_.abnorm_to_abnorm / np.maximum(
+            M.abnormal, epsilon
+        )
+        coef_model.abnorm_to_norm = M_.norm_to_abnorm / np.maximum(M.normal, epsilon)
+
+        # epsilon = 1e-10
+        # U = self.transition_prob_matrix * self.prob_model[time_step].T
+        # U = U / np.maximum(np.sum(U, axis=0), epsilon)
+        # M_ = U * self.prob_model[time_step + 1]
+        # M = np.sum(M_, axis=1)
+        # self.prob_model[time_step] = M
+        # coeff_norm = M_[0] / np.maximum(M[0], epsilon)
+        # coeff_abnorm = M_[1] / np.maximum(M[1], epsilon)
 
         (mu_states_normal, var_states_normal) = SKF.gaussian_mixture(
             self.norm_model.smoother_states.mu_smooth[time_step],
             self.norm_model.smoother_states.var_smooth[time_step],
-            coeff_norm[0],
-            self.norm_to_abnorm_model.smoother_states.mu_posterior[time_step],
-            self.norm_to_abnorm_model.smoother_states.var_posterior[time_step],
-            coeff_norm[1],
+            coef_model.norm_to_norm,
+            self.abnorm_to_norm_model.smoother_states.mu_posterior[time_step],
+            self.abnorm_to_norm_model.smoother_states.var_posterior[time_step],
+            coef_model.norm_to_abnorm,
         )
         self.norm_model.smoother_states.mu_smooth[time_step] = mu_states_normal
         self.norm_model.smoother_states.var_smooth[time_step] = var_states_normal
-        self.norm_to_abnorm_model.smoother_states.mu_smooth[time_step] = (
-            mu_states_normal
-        )
-        self.norm_to_abnorm_model.smoother_states.var_smooth[time_step] = (
-            var_states_normal
-        )
 
         (mu_states_abnormal, var_states_abnormal) = SKF.gaussian_mixture(
-            self.abnorm_to_norm_model.smoother_states.mu_posterior[time_step],
-            self.abnorm_to_norm_model.smoother_states.var_posterior[time_step],
-            coeff_abnorm[0],
+            self.norm_to_abnorm_model.smoother_states.mu_posterior[time_step],
+            self.norm_to_abnorm_model.smoother_states.var_posterior[time_step],
+            coef_model.abnorm_to_norm,
             self.abnorm_model.smoother_states.mu_smooth[time_step],
             self.abnorm_model.smoother_states.var_smooth[time_step],
-            coeff_abnorm[1],
+            coef_model.abnorm_to_abnorm,
         )
         self.abnorm_model.smoother_states.mu_smooth[time_step] = mu_states_abnormal
         self.abnorm_model.smoother_states.var_smooth[time_step] = var_states_abnormal
+
         self.abnorm_to_norm_model.smoother_states.mu_smooth[time_step] = (
-            mu_states_abnormal
+            mu_states_normal
         )
         self.abnorm_to_norm_model.smoother_states.var_smooth[time_step] = (
+            var_states_normal
+        )
+        self.norm_to_abnorm_model.smoother_states.mu_smooth[time_step] = (
+            mu_states_abnormal
+        )
+        self.norm_to_abnorm_model.smoother_states.var_smooth[time_step] = (
             var_states_abnormal
         )
 
