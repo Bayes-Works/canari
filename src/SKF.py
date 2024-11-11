@@ -184,17 +184,55 @@ class SKF:
         if np.isnan(obs):
             self.likelihood = ModelTransition()
         else:
-            self.likelihood.norm_to_norm = np.exp(
-                metric.log_likelihood(mu_pred_norm, obs, var_pred_norm**0.5)
+            # self.likelihood.norm_to_norm = np.exp(
+            #     metric.log_likelihood(mu_pred_norm, obs, var_pred_norm**0.5)
+            # )
+            # self.likelihood.norm_to_abnorm = np.exp(
+            #     metric.log_likelihood(mu_pred_norm_to_ab, obs, var_pred_norm_to_ab**0.5)
+            # )
+            # self.likelihood.abnorm_to_norm = np.exp(
+            #     metric.log_likelihood(mu_pred_ab_to_norm, obs, var_pred_ab_to_norm**0.5)
+            # )
+            # self.likelihood.abnorm_to_abnorm = np.exp(
+            #     metric.log_likelihood(mu_pred_abnorm, obs, var_pred_abnorm**0.5)
+            # )
+
+            v = np.random.normal(0, self.std_transition_error, (20, 1))
+            self.likelihood.norm_to_norm = np.mean(
+                np.exp(
+                    metric.log_likelihood(
+                        mu_pred_norm + v,
+                        obs,
+                        (var_pred_norm - self.std_transition_error**2) ** 0.5,
+                    )
+                )
             )
-            self.likelihood.norm_to_abnorm = np.exp(
-                metric.log_likelihood(mu_pred_norm_to_ab, obs, var_pred_norm_to_ab**0.5)
+            self.likelihood.norm_to_abnorm = np.mean(
+                np.exp(
+                    metric.log_likelihood(
+                        mu_pred_norm_to_ab + v,
+                        obs,
+                        (var_pred_norm_to_ab - self.std_transition_error**2) ** 0.5,
+                    )
+                )
             )
-            self.likelihood.abnorm_to_norm = np.exp(
-                metric.log_likelihood(mu_pred_ab_to_norm, obs, var_pred_ab_to_norm**0.5)
+            self.likelihood.abnorm_to_norm = np.mean(
+                np.exp(
+                    metric.log_likelihood(
+                        mu_pred_ab_to_norm + v,
+                        obs,
+                        (var_pred_ab_to_norm - self.std_transition_error**2) ** 0.5,
+                    )
+                )
             )
-            self.likelihood.abnorm_to_abnorm = np.exp(
-                metric.log_likelihood(mu_pred_abnorm, obs, var_pred_abnorm**0.5)
+            self.likelihood.abnorm_to_abnorm = np.mean(
+                np.exp(
+                    metric.log_likelihood(
+                        mu_pred_abnorm + v,
+                        obs,
+                        (var_pred_abnorm - self.std_transition_error**2) ** 0.5,
+                    )
+                )
             )
 
         transition_prob = ModelTransition()
@@ -572,41 +610,3 @@ class SKF:
             self.rts_smoother(time_step)
 
         return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
-
-    # v = np.random.normal(0, self.std_transition_error, (10, 1))
-    # self.likelihood[0, 0] = np.mean(
-    #     np.exp(
-    #         metric.log_likelihood(
-    #             mu_pred_norm + v,
-    #             y,
-    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-    #         )
-    #     )
-    # )
-    # self.likelihood[0, 1] = np.mean(
-    #     np.exp(
-    #         metric.log_likelihood(
-    #             mu_pred_norm_to_ab + v,
-    #             y,
-    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-    #         )
-    #     )
-    # )
-    # self.likelihood[1, 0] = np.mean(
-    #     np.exp(
-    #         metric.log_likelihood(
-    #             mu_pred_ab_to_norm + v,
-    #             y,
-    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-    #         )
-    #     )
-    # )
-    # self.likelihood[1, 1] = np.mean(
-    #     np.exp(
-    #         metric.log_likelihood(
-    #             mu_pred_abnorm + v,
-    #             y,
-    #             (var_pred_norm - self.std_transition_error**2) ** 0.5,
-    #         )
-    #     )
-    # )
