@@ -92,10 +92,15 @@ class Model:
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
                 self.mu_states[i] = coefficients[2]
+                # TODO: fix values
                 self.var_states[i, i] = 1
+                # self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
+                # TODO: fix values
+                # self.var_states[i, i] = 1e-2
                 self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+            # TODO: initialize local acceleration with compatiable model
             # elif _state_name == "local acceleration":
             #     self.mu_states[i] = 2 * coefficients[0]
             #     self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
@@ -365,8 +370,12 @@ class Model:
                     / var_lstm_pred**2
                 )
                 self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
-                # TODO: posterior for lstm
-                self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
+                self.update_lstm_output_history(
+                    self.mu_states_posterior[self.lstm_states_index],
+                    self.var_states_posterior[
+                        self.lstm_states_index, self.lstm_states_index
+                    ],
+                )
 
             if self.smoother_states:
                 self.save_for_smoother(time_step + 1)
