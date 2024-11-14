@@ -309,7 +309,7 @@ class Model:
         """
 
         mu_obs_preds = []
-        var_obs_preds = []
+        std_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
 
@@ -329,8 +329,8 @@ class Model:
 
             self.set_states(self.mu_states_prior, self.var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+            std_obs_preds.append(var_obs_pred**0.5)
+        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def filter(
         self,
@@ -341,7 +341,7 @@ class Model:
         """
 
         mu_obs_preds = []
-        var_obs_preds = []
+        std_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
 
@@ -373,8 +373,8 @@ class Model:
 
             self.set_states(self.mu_states_posterior, self.var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+            std_obs_preds.append(var_obs_pred**0.5)
+        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -385,14 +385,14 @@ class Model:
         self.initialize_smoother_states(num_time_steps)
 
         # Filter
-        mu_obs_preds, var_obs_preds = self.filter(data)
+        mu_obs_preds, std_obs_preds = self.filter(data)
 
         # Smoother
         self.initialize_smoother_buffers()
         for time_step in reversed(range(0, num_time_steps)):
             self.rts_smoother(time_step)
 
-        return np.array(mu_obs_preds).flatten(), np.array(var_obs_preds).flatten()
+        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def lstm_train(
         self,
@@ -407,13 +407,13 @@ class Model:
             self.initialize_lstm_network()
 
         self.smoother(train_data)
-        mu_validation_preds, var_validation_preds = self.forecast(validation_data)
+        mu_validation_preds, std_validation_preds = self.forecast(validation_data)
 
         self.reset_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
 
         return (
             np.array(mu_validation_preds).flatten(),
-            np.array(var_validation_preds).flatten(),
+            np.array(std_validation_preds).flatten(),
             self.smoother_states,
         )

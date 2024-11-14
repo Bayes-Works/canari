@@ -27,19 +27,19 @@ class SKF:
         normal_model_prior_prob: Optional[float] = 0.99,
     ):
         self.initialize_SKF_models(normal_model, abnormal_model, std_transition_error)
-        self.transition_prob_matrix = ModelTransition()
-        self.transition_prob_matrix.norm_to_norm = 1 - normal_to_abnormal_prob
-        self.transition_prob_matrix.norm_to_abnorm = normal_to_abnormal_prob
-        self.transition_prob_matrix.abnorm_to_norm = abnormal_to_normal_prob
-        self.transition_prob_matrix.abnorm_to_abnorm = 1 - abnormal_to_normal_prob
-        self._prob_model = ProbabilityModel()
-        self._prob_model.normal = normal_model_prior_prob
-        self._prob_model.abnormal = 1 - normal_model_prior_prob
+        self.transition_prob = ModelTransition()
+        self.transition_prob.norm_to_norm = 1 - normal_to_abnormal_prob
+        self.transition_prob.norm_to_abnorm = normal_to_abnormal_prob
+        self.transition_prob.abnorm_to_norm = abnormal_to_normal_prob
+        self.transition_prob.abnorm_to_abnorm = 1 - abnormal_to_normal_prob
+        self._model_prob = ProbabilityModel()
+        self._model_prob.normal = normal_model_prior_prob
+        self._model_prob.abnormal = 1 - normal_model_prior_prob
         self.coef_model = ModelTransition()
         self.likelihood = ModelTransition()
         #
         self.SKF_smoother = False
-        self.prob_model = None
+        self.model_prob = None
         self.std_transition_error = std_transition_error
 
     @staticmethod
@@ -161,10 +161,10 @@ class SKF:
             SKF.gaussian_mixture(
                 self.norm_model.smoother_states.mu_posterior[-1],
                 self.norm_model.smoother_states.var_posterior[-1],
-                self.prob_model[-1, 0],
+                self.model_prob[-1, 0],
                 self.abnorm_model.smoother_states.mu_posterior[-1],
                 self.abnorm_model.smoother_states.var_posterior[-1],
-                self.prob_model[-1, 1],
+                self.model_prob[-1, 1],
             )
         )
 
@@ -238,23 +238,23 @@ class SKF:
         transition_prob = ModelTransition()
         transition_prob.norm_to_norm = (
             self.likelihood.norm_to_norm
-            * self.transition_prob_matrix.norm_to_norm
-            * self._prob_model.normal
+            * self.transition_prob.norm_to_norm
+            * self._model_prob.normal
         )
         transition_prob.norm_to_abnorm = (
             self.likelihood.norm_to_abnorm
-            * self.transition_prob_matrix.norm_to_abnorm
-            * self._prob_model.normal
+            * self.transition_prob.norm_to_abnorm
+            * self._model_prob.normal
         )
         transition_prob.abnorm_to_norm = (
             self.likelihood.abnorm_to_norm
-            * self.transition_prob_matrix.abnorm_to_norm
-            * self._prob_model.abnormal
+            * self.transition_prob.abnorm_to_norm
+            * self._model_prob.abnormal
         )
         transition_prob.abnorm_to_abnorm = (
             self.likelihood.abnorm_to_abnorm
-            * self.transition_prob_matrix.abnorm_to_abnorm
-            * self._prob_model.abnormal
+            * self.transition_prob.abnorm_to_abnorm
+            * self._model_prob.abnormal
         )
 
         total_sum = (
@@ -268,25 +268,25 @@ class SKF:
         transition_prob.abnorm_to_norm = transition_prob.abnorm_to_norm / total_sum
         transition_prob.abnorm_to_abnorm = transition_prob.abnorm_to_abnorm / total_sum
 
-        self._prob_model.normal = (
+        self._model_prob.normal = (
             transition_prob.norm_to_norm + transition_prob.abnorm_to_norm
         )
-        self._prob_model.abnormal = (
+        self._model_prob.abnormal = (
             transition_prob.norm_to_abnorm + transition_prob.abnorm_to_abnorm
         )
 
         self.coef_model.norm_to_norm = transition_prob.norm_to_norm / np.maximum(
-            self._prob_model.normal, epsilon
+            self._model_prob.normal, epsilon
         )
         self.coef_model.norm_to_abnorm = transition_prob.norm_to_abnorm / np.maximum(
-            self._prob_model.abnormal, epsilon
+            self._model_prob.abnormal, epsilon
         )
         self.coef_model.abnorm_to_norm = transition_prob.abnorm_to_norm / np.maximum(
-            self._prob_model.normal, epsilon
+            self._model_prob.normal, epsilon
         )
         self.coef_model.abnorm_to_abnorm = (
             transition_prob.abnorm_to_abnorm
-            / np.maximum(self._prob_model.abnormal, epsilon)
+            / np.maximum(self._model_prob.abnormal, epsilon)
         )
 
     def lstm_train(
@@ -363,10 +363,10 @@ class SKF:
         mu_states_mixture, var_states_mixture = SKF.gaussian_mixture(
             mu_states_normal,
             var_states_normal,
-            self._prob_model.normal,
+            self._model_prob.normal,
             mu_states_abnormal,
             var_states_abnormal,
-            self._prob_model.abnormal,
+            self._model_prob.abnormal,
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
@@ -453,16 +453,16 @@ class SKF:
         epsilon = 1e-10
         U = ModelTransition()
         U.norm_to_norm = (
-            self.prob_model[time_step, 0] * self.transition_prob_matrix.norm_to_norm
+            self.model_prob[time_step, 0] * self.transition_prob.norm_to_norm
         )
         U.norm_to_abnorm = (
-            self.prob_model[time_step, 0] * self.transition_prob_matrix.norm_to_abnorm
+            self.model_prob[time_step, 0] * self.transition_prob.norm_to_abnorm
         )
         U.abnorm_to_norm = (
-            self.prob_model[time_step, 1] * self.transition_prob_matrix.abnorm_to_norm
+            self.model_prob[time_step, 1] * self.transition_prob.abnorm_to_norm
         )
         U.abnorm_to_abnorm = (
-            self.prob_model[time_step, 1] * self.transition_prob_matrix.abnorm_to_abnorm
+            self.model_prob[time_step, 1] * self.transition_prob.abnorm_to_abnorm
         )
 
         U.norm_to_norm = U.norm_to_norm / np.maximum(
@@ -479,16 +479,16 @@ class SKF:
         )
 
         M_ = ModelTransition()
-        M_.norm_to_norm = U.norm_to_norm * self.prob_model[time_step + 1, 0]
-        M_.norm_to_abnorm = U.norm_to_abnorm * self.prob_model[time_step + 1, 1]
-        M_.abnorm_to_norm = U.abnorm_to_norm * self.prob_model[time_step + 1, 0]
-        M_.abnorm_to_abnorm = U.abnorm_to_abnorm * self.prob_model[time_step + 1, 1]
+        M_.norm_to_norm = U.norm_to_norm * self.model_prob[time_step + 1, 0]
+        M_.norm_to_abnorm = U.norm_to_abnorm * self.model_prob[time_step + 1, 1]
+        M_.abnorm_to_norm = U.abnorm_to_norm * self.model_prob[time_step + 1, 0]
+        M_.abnorm_to_abnorm = U.abnorm_to_abnorm * self.model_prob[time_step + 1, 1]
 
         M = ProbabilityModel()
         M.normal = M_.norm_to_norm + M_.norm_to_abnorm
         M.abnormal = M_.abnorm_to_norm + M_.abnorm_to_abnorm
-        self.prob_model[time_step, 0] = M.normal
-        self.prob_model[time_step, 1] = M.abnormal
+        self.model_prob[time_step, 0] = M.normal
+        self.model_prob[time_step, 1] = M.abnormal
 
         coef_model = ModelTransition()
         coef_model.norm_to_norm = M_.norm_to_norm / np.maximum(M.normal, epsilon)
@@ -499,11 +499,11 @@ class SKF:
         coef_model.abnorm_to_norm = M_.norm_to_abnorm / np.maximum(M.normal, epsilon)
 
         # epsilon = 1e-10
-        # U = self.transition_prob_matrix * self.prob_model[time_step].T
+        # U = self.transition_prob * self.model_prob[time_step].T
         # U = U / np.maximum(np.sum(U, axis=0), epsilon)
-        # M_ = U * self.prob_model[time_step + 1]
+        # M_ = U * self.model_prob[time_step + 1]
         # M = np.sum(M_, axis=1)
-        # self.prob_model[time_step] = M
+        # self.model_prob[time_step] = M
         # coeff_norm = M_[0] / np.maximum(M[0], epsilon)
         # coeff_abnorm = M_[1] / np.maximum(M[1], epsilon)
 
@@ -555,7 +555,7 @@ class SKF:
         var_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
-        self.prob_model = np.zeros((num_time_steps + 1, 2), dtype=np.float32)
+        self.model_prob = np.zeros((num_time_steps + 1, 2), dtype=np.float32)
 
         # Initialize hidden states
         self.abnorm_model.set_states(
@@ -578,8 +578,8 @@ class SKF:
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
-            self.prob_model[time_step + 1, 0] = self._prob_model.normal
-            self.prob_model[time_step + 1, 1] = self._prob_model.abnormal
+            self.model_prob[time_step + 1, 0] = self._model_prob.normal
+            self.model_prob[time_step + 1, 1] = self._model_prob.abnormal
             self.backward(y)
 
             if self.norm_model.lstm_net:
@@ -591,7 +591,7 @@ class SKF:
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
 
-        return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
+        return mu_obs_preds, var_obs_preds, self.model_prob[1:, 1]
 
     def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -609,4 +609,4 @@ class SKF:
         for time_step in reversed(range(0, num_time_steps)):
             self.rts_smoother(time_step)
 
-        return mu_obs_preds, var_obs_preds, self.prob_model[1:, 1]
+        return mu_obs_preds, var_obs_preds, self.model_prob[1:, 1]

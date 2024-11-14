@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, List, Dict
+import copy
 import numpy as np
 import pandas as pd
 from pytagi import Normalizer
@@ -98,25 +99,25 @@ class DataProcess:
 
         self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
 
-        self.train_data = Normalizer.standardize(
+        train_data_norm = Normalizer.standardize(
             data=self.train_data, mu=self.data_mean, std=self.data_std
         )
-        self.train_y = self.train_data[:, self.output_col]
-        self.train_x = self.train_data[:, covariates_col]
+        self.train_y = train_data_norm[:, self.output_col]
+        self.train_x = train_data_norm[:, covariates_col]
 
         if self.validation_data is not None:
-            self.validation_data = Normalizer.standardize(
+            validation_data_norm = Normalizer.standardize(
                 data=self.validation_data, mu=self.data_mean, std=self.data_std
             )
-            self.validation_x = self.validation_data[:, covariates_col]
-            self.validation_y = self.validation_data[:, self.output_col]
+            self.validation_x = validation_data_norm[:, covariates_col]
+            self.validation_y = validation_data_norm[:, self.output_col]
 
         if self.test_data is not None:
-            self.test_data = Normalizer.standardize(
+            test_data_norm = Normalizer.standardize(
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
-            self.test_x = self.test_data[:, covariates_col]
-            self.test_y = self.test_data[:, self.output_col]
+            self.test_x = test_data_norm[:, covariates_col]
+            self.test_y = test_data_norm[:, self.output_col]
 
     def get_splits(
         self,
@@ -125,8 +126,61 @@ class DataProcess:
         Get the train, valiation, test splits
         """
 
+        x_normalized = np.concatenate(
+            [self.train_x, self.validation_x, self.test_x], axis=0
+        )
+        y_normalized = np.concatenate(
+            [self.train_y, self.validation_y, self.test_y], axis=0
+        )
         return (
             {"x": self.train_x, "y": self.train_y},
             {"x": self.validation_x, "y": self.validation_y},
             {"x": self.test_x, "y": self.test_y},
+            {"x": x_normalized, "y": y_normalized},
         )
+
+    @staticmethod
+    def add_lagged_columns(df, lags_per_column):
+        """
+        Add lagged columns immediately after each original column.
+
+        Parameters:
+        df (pd.DataFrame): The original DataFrame.
+        lags_per_column (list of int): Number of lags for each column, in order.
+
+        Returns:
+        pd.DataFrame: DataFrame with lagged columns added inline.
+        """
+        df_new = pd.DataFrame()
+        current_position = 0  # To keep track of the insertion point
+
+        for col_idx, num_lags in enumerate(lags_per_column):
+            col = df.iloc[:, col_idx]
+            df_new = pd.concat([df_new, col], axis=1)
+            current_position += 1
+
+            # Generate lagged columns
+            for lag in range(1, num_lags + 1):
+                lagged_col = col.shift(lag).fillna(0)
+                df_new = pd.concat([df_new, lagged_col], axis=1)
+                current_position += 1
+
+        # If there are additional columns without specified lags, add them as is
+        if len(lags_per_column) < df.shape[1]:
+            for col_idx in range(len(lags_per_column), df.shape[1]):
+                col = df.iloc[:, col_idx]
+                df_new = pd.concat([df_new, col], axis=1)
+
+        # Assign appropriate column names
+        new_columns = []
+        for col_idx, num_lags in enumerate(lags_per_column):
+            new_columns.append(f"{df.columns[col_idx]}")  # Original column
+            for lag in range(1, num_lags + 1):
+                new_columns.append(f"{df.columns[col_idx]}_lag{lag}")  # Lagged columns
+        # Add remaining columns without lags
+        for col_idx in range(len(lags_per_column), df.shape[1]):
+            new_columns.append(f"{df.columns[col_idx]}")
+
+        df_new.columns = new_columns
+
+        return df_new
