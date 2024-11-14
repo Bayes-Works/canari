@@ -37,7 +37,7 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Define parameters
 num_epoch = 100
-patience = 10
+patience = 50
 log_lik_optimal = -1e100
 mse_optim = 1e100
 epoch_optimal = 0
@@ -54,7 +54,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
 )
-noise = WhiteNoise(std_error=5e-2)
+white_noise = WhiteNoise(std_error=5e-2)
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
@@ -64,12 +64,12 @@ normal_model_prior_prob = 0.99
 model = Model(
     local_trend,
     lstm_network,
-    noise,
+    white_noise,
 )
 ab_model = Model(
     local_acceleration,
     lstm_network,
-    noise,
+    white_noise,
 )
 skf = SKF(
     normal_model=model,
@@ -81,9 +81,7 @@ skf = SKF(
 )
 skf.auto_initialize_baseline_states(train_data["y"])
 
-
 #  Training
-
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, smoother_states) = skf.lstm_train(
@@ -122,8 +120,8 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
 
 # Anomaly Detection
-_, _, prob_abnorm = skf.filter(data=all_data)
-# _, _, prob_abnorm = skf.smoother(data=all_data)
+# _, _, prob_abnorm = skf.filter(data=all_data)
+_, _, prob_abnorm = skf.smoother(data=all_data)
 
 print(f"Optimal epoch: {epoch_optimal}")
 
@@ -154,20 +152,22 @@ plot_with_uncertainty(
     ax=axs[0],
 )
 axs[0].legend()
+axs[0].set_title("Validation predictions")
 
-axs[1].plot(ll, color="r", label="log_likelihood")
+axs[1].plot(ll, color="b")
+axs[1].axvline(x=epoch_optimal, color="k", linestyle="--", label="optimal epoch")
+axs[1].legend()
+axs[1].set_title("Validation log likelihood")
 
 axs[2].plot(t, all_data["y"], color="r", label="obs")
 axs[2].legend()
 axs[2].set_title("Observed Data")
-axs[2].set_xlabel("Time")
-axs[2].set_ylabel("Y")
+axs[2].set_ylabel("y")
 
-axs[3].plot(t, prob_abnorm, color="blue", label="probability")
-axs[3].legend()
-axs[3].set_title("Probability of Abnormality")
+axs[3].plot(t, prob_abnorm, color="blue")
+axs[3].set_title("Probability of Abnormal Model")
 axs[3].set_xlabel("Time")
-axs[3].set_ylabel("Probability")
+axs[3].set_ylabel("Prob abonormal")
 
 plt.tight_layout()
 plt.show()

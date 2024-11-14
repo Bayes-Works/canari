@@ -80,7 +80,6 @@ model = Model(
     noise,
 )
 
-# TODO: model.LstmNetwork, model.WhiteNoise
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
