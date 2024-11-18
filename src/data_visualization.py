@@ -13,8 +13,8 @@ def plot_with_uncertainty(
     ax: Optional[plt.Axes] = None,
 ):
     if index is not None:
-        _mu = mu[:, index]
-        _std = std[:, index, index].flatten()
+        _mu = mu[1:, index]
+        _std = std[1:, index, index].flatten()
     else:
         _mu = mu
         _std = std.flatten()

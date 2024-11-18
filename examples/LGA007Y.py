@@ -42,9 +42,12 @@ log_lik_optimal = -1e100
 mse_optim = 1e100
 epoch_optimal = 0
 lstm_param_optimal = {}
+init_mu_optimal = []
+init_var_optimal = []
 ll = []
 
 # Components
+noise_std = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
@@ -54,7 +57,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
 )
-white_noise = WhiteNoise(std_error=5e-2)
+white_noise = WhiteNoise(std_error=noise_std)
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
@@ -79,12 +82,17 @@ skf = SKF(
     abnormal_to_normal_prob=abnormal_to_normal_prob,
     normal_model_prior_prob=normal_model_prior_prob,
 )
-skf.auto_initialize_baseline_states(train_data["y"])
+skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
 #  Training
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
+    if epoch < 3:
+        skf.norm_model.process_noise_matrix[-1, -1] = 1
+    else:
+        skf.norm_model.process_noise_matrix[-1, -1] = noise_std * 2
+
     # Train the model
-    (mu_validation_preds, std_validation_preds, smoother_states) = skf.lstm_train(
+    (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
@@ -106,29 +114,89 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         std=std_validation_preds,
     )
 
-    # Early stopping
+    # #  Plot hidden states
+    # t = range(len(train_data["y"]))
+    # fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
+    # axs[0].plot(t, train_data["y"], color="r", label="obs")
+    # axs[0].legend()
+    # axs[0].set_title("Observed Data")
+    # axs[0].set_ylabel("y")
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_prior[:-1, 0],
+    #     std=train_states.var_prior[:-1, 0, 0] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[0],
+    # )
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[:-1, 0],
+    #     std=train_states.var_smooth[:-1, 0, 0] ** 0.5,
+    #     color="r",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[0],
+    # )
+    # axs[0].set_title("local level")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 1],
+    #     std=train_states.var_smooth[1:, 1, 1] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[1],
+    # )
+    # axs[1].set_title("local trend")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 3],
+    #     std=train_states.var_smooth[1:, 3, 3] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[2],
+    # )
+    # axs[2].set_title("lstm")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 4],
+    #     std=train_states.var_smooth[1:, 4, 4] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[3],
+    # )
+    # axs[3].set_title("white noise")
+
+    # plt.tight_layout()
+    # plt.show()
+
+    # # Early stopping
     if log_lik > log_lik_optimal:
         log_lik_optimal = copy.copy(log_lik)
         epoch_optimal = copy.copy(epoch)
         lstm_param_optimal = copy.copy(skf.norm_model.lstm_net.get_state_dict())
+        init_mu_optimal = copy.copy(skf.norm_model.mu_states)
+        init_var_optimal = copy.copy(skf.norm_model.var_states)
     ll.append(log_lik)
     if (epoch - epoch_optimal) > patience:
         break
 
 
-# Load back the LSTM's optimal parameters
+# # Load back the LSTM's optimal parameters
 skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
+skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
 
 # Anomaly Detection
-# _, _, prob_abnorm = skf.filter(data=all_data)
-_, _, prob_abnorm = skf.smoother(data=all_data)
+_, _, prob_abnorm, states = skf.filter(data=all_data)
+# _, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 print(f"Optimal epoch: {epoch_optimal}")
 
 #  Plot
 t = range(len(all_data["y"]))
 fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
-
 axs[0].plot(
     data_processor.train_time,
     data_processor.train_data[:, output_col].flatten(),
@@ -168,6 +236,61 @@ axs[3].plot(t, prob_abnorm, color="blue")
 axs[3].set_title("Probability of Abnormal Model")
 axs[3].set_xlabel("Time")
 axs[3].set_ylabel("Prob abonormal")
+
+plt.tight_layout()
+plt.show()
+
+#  Plot hidden states
+fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
+axs[0].plot(t, all_data["y"], color="r", label="obs")
+axs[0].legend()
+axs[0].set_title("Observed Data")
+axs[0].set_ylabel("y")
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 0],
+    std=states.var[1:, 0, 0] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[0],
+)
+axs[0].set_title("local level")
+
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 1],
+    std=states.var[1:, 1, 1] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[1],
+)
+axs[1].set_title("local trend")
+
+
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 3],
+    std=states.var[1:, 3, 3] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[2],
+)
+axs[2].set_title("lstm")
+
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 4],
+    std=states.var[1:, 4, 4] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[3],
+)
+axs[3].set_title("white noise")
+
+axs[4].plot(t, prob_abnorm, color="r")
+axs[4].set_title("Probability of Abnormal Model")
+axs[4].set_xlabel("Time")
+axs[4].set_ylabel("Prob abonormal")
 
 plt.tight_layout()
 plt.show()
