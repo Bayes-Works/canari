@@ -91,15 +91,17 @@ class Model:
         coefficients = np.polyfit(t_no_nan, y_no_nan, 2)
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
-                self.mu_states[i] = coefficients[2]
+                self.mu_states[i] = np.nanmean(y_no_nan)
                 # TODO: fix values
-                self.var_states[i, i] = 1
-                # self.var_states[i, i] = 1e-2
+                # self.var_states[i, i] = 1
+                self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
                 # TODO: fix values
-                # self.var_states[i, i] = 1e-2
-                self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
+                # self.mu_states[i] = 0
+                # self.var_states[i, i] = 0
+                self.var_states[i, i] = 1e-2
+                # self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
             # TODO: initialize local acceleration with compatiable model
             # elif _state_name == "local acceleration":
             #     self.mu_states[i] = 2 * coefficients[0]

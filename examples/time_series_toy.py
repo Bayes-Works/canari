@@ -38,12 +38,12 @@ data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-07 21:00:00",
-    validation_start="2000-01-07 22:00:00",
-    validation_end="2000-01-09 23:00:00",
+    train_end="2000-01-09 23:00:00",
+    validation_start="2000-01-10 00:00:00",
+    validation_end="2000-01-11 23:00:00",
     output_col=output_col,
 )
-train_data, validation_data, test_data = data_processor.get_splits()
+train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Model
 model = Model(

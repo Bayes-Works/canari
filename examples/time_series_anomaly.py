@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from examples import DataProcess
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+import copy
 from src import (
     LocalTrend,
     LocalAcceleration,
@@ -11,15 +15,12 @@ from src import (
     plot_with_uncertainty,
     SKF,
 )
-from examples import DataProcess
-import time
-
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 0, num=len(df_raw))
-point_anomaly = 140
+linear_space = np.linspace(0, 2, num=len(df_raw))
+point_anomaly = 195
 trend = np.linspace(0, 2, num=len(df_raw) - point_anomaly)
 linear_space[point_anomaly:] = linear_space[point_anomaly:] + trend
 df_raw = df_raw.add(linear_space, axis=0)
@@ -39,29 +40,38 @@ output_col = [0]
 num_epoch = 100
 
 data_processor = DataProcess(
+    # data=df,
+    # time_covariates=["hour_of_day", "day_of_week"],
+    # train_start="2000-01-01 00:00:00",
+    # train_end="2000-01-06 20:00:00",
+    # validation_start="2000-01-06 21:00:00",
+    # validation_end="2000-01-07 22:00:00",
+    # test_start="2000-01-07 23:00:00",
+    # output_col=output_col,
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-06 20:00:00",
-    validation_start="2000-01-06 21:00:00",
-    validation_end="2000-01-07 22:00:00",
-    test_start="2000-01-07 23:00:00",
+    train_end="2000-01-09 23:00:00",
+    validation_start="2000-01-10 00:00:00",
+    validation_end="2000-01-10 23:00:00",
+    test_start="2000-01-11 00:00:00",
     output_col=output_col,
 )
-train_data, validation_data, test_data = data_processor.get_splits()
+train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-combined_x = np.concatenate(
-    [train_data["x"], validation_data["x"], test_data["x"]],
-    axis=0,
-)
-combined_y = np.concatenate(
-    [train_data["y"], validation_data["y"], test_data["y"]],
-    axis=0,
-)
-all_data = {"x": combined_x, "y": combined_y}
-
+# Define parameters
+num_epoch = 100
+patience = 10
+log_lik_optimal = -1e100
+mse_optim = 1e100
+epoch_optimal = 0
+lstm_param_optimal = {}
+init_mu_optimal = []
+init_var_optimal = []
+ll = []
 
 # Components
+noise_std = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
@@ -71,7 +81,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
 )
-noise = WhiteNoise(std_error=1e-1)
+noise = WhiteNoise(std_error=noise_std)
 
 # Normal model
 model = Model(
@@ -88,64 +98,229 @@ ab_model = Model(
 )
 
 # Switching Kalman filter
-normal_to_abnormal_prob = 1e-7
+normal_to_abnormal_prob = 1e-4
 abnormal_to_normal_prob = 0.1
 normal_model_prior_prob = 0.99
 
 skf = SKF(
     normal_model=model,
     abnormal_model=ab_model,
-    std_transition_error=1e-6,
+    std_transition_error=1e-4,
     normal_to_abnormal_prob=normal_to_abnormal_prob,
     abnormal_to_normal_prob=abnormal_to_normal_prob,
     normal_model_prior_prob=normal_model_prior_prob,
 )
-skf.auto_initialize_baseline_states(train_data["y"])
+skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
+
+#  Training
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
-    (mu_validation_preds, var_validation_preds, smoother_states) = skf.lstm_train(
+    if epoch < 3:
+        skf.norm_model.process_noise_matrix[-1, -1] = 1
+        # skf.norm_model.process_noise_matrix[-1, -1] = noise_std * 2
+    else:
+        skf.norm_model.process_noise_matrix[-1, -1] = noise_std * 2
+
+    # Train the model
+    (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
-_, _, prob_abnorm = skf.filter(data=all_data)
-# _, _, prob_abnorm = skf.smoother(data=all_data)
+    # Unstandardize the predictions
+    mu_validation_preds = normalizer.unstandardize(
+        mu_validation_preds,
+        data_processor.data_mean[output_col],
+        data_processor.data_std[output_col],
+    )
+    std_validation_preds = normalizer.unstandardize_std(
+        std_validation_preds,
+        data_processor.data_std[output_col],
+    )
+
+    # Calculate the log-likelihood metric
+    log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=data_processor.validation_data[:, output_col].flatten(),
+        std=std_validation_preds,
+    )
+
+    # #  Plot hidden states
+    t = range(len(train_data["y"]))
+    # fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
+    # axs[0].plot(t, train_data["y"], color="r", label="obs")
+    # axs[0].legend()
+    # axs[0].set_title("Observed Data")
+    # axs[0].set_ylabel("y")
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_prior[:-1, 0],
+    #     std=train_states.var_prior[:-1, 0, 0] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[0],
+    # )
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[:-1, 0],
+    #     std=train_states.var_smooth[:-1, 0, 0] ** 0.5,
+    #     color="k",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[0],
+    # )
+    # axs[0].set_title("local level")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 1],
+    #     std=train_states.var_smooth[1:, 1, 1] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[1],
+    # )
+    # axs[1].set_title("local trend")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 3],
+    #     std=train_states.var_smooth[1:, 3, 3] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[2],
+    # )
+    # axs[2].set_title("lstm")
+
+    # plot_with_uncertainty(
+    #     time=t,
+    #     mu=train_states.mu_smooth[1:, 4],
+    #     std=train_states.var_smooth[1:, 4, 4] ** 0.5,
+    #     color="b",
+    #     label=["mu_val_pred", "±1σ"],
+    #     ax=axs[3],
+    # )
+    # axs[3].set_title("white noise")
+
+    # plt.tight_layout()
+    # plt.show()
+
+    # Early stopping
+    if log_lik > log_lik_optimal:
+        log_lik_optimal = copy.copy(log_lik)
+        epoch_optimal = copy.copy(epoch)
+        lstm_param_optimal = copy.copy(skf.norm_model.lstm_net.get_state_dict())
+        init_mu_optimal = copy.copy(skf.norm_model.mu_states)
+        init_var_optimal = copy.copy(skf.norm_model.var_states)
+    ll.append(log_lik)
+    if (epoch - epoch_optimal) > patience:
+        break
+
+
+# # Load back the LSTM's optimal parameters
+skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
+skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
+
+# Anomaly Detection
+# _, _, prob_abnorm, states = skf.filter(data=all_data)
+_, _, prob_abnorm, states = skf.smoother(data=all_data)
+
+print(f"Optimal epoch: {epoch_optimal}")
 
 #  Plot
-plt.figure(figsize=(10, 6))
-plt.plot(data_processor.train_time, train_data["y"], color="r", label="train_obs")
-plt.plot(
+t = range(len(all_data["y"]))
+fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
+axs[0].plot(
+    data_processor.train_time,
+    data_processor.train_data[:, output_col].flatten(),
+    color="r",
+    label="train_obs",
+)
+axs[0].plot(
     data_processor.validation_time,
-    validation_data["y"],
+    data_processor.validation_data[:, output_col].flatten(),
     color="r",
     linestyle="--",
     label="validation_obs",
 )
+
 plot_with_uncertainty(
     time=data_processor.validation_time,
     mu=mu_validation_preds,
-    var=var_validation_preds,
+    std=std_validation_preds,
     color="b",
     label=["mu_val_pred", "±1σ"],
+    ax=axs[0],
 )
-plt.legend()
+axs[0].legend()
+axs[0].set_title("Validation predictions")
+
+axs[1].plot(ll, color="b")
+axs[1].axvline(x=epoch_optimal, color="k", linestyle="--", label="optimal epoch")
+axs[1].legend()
+axs[1].set_title("Validation log likelihood")
+
+axs[2].plot(t, all_data["y"], color="r", label="obs")
+axs[2].legend()
+axs[2].set_title("Observed Data")
+axs[2].set_ylabel("y")
+
+axs[3].plot(t, prob_abnorm, color="blue")
+axs[3].set_title("Probability of Abnormal Model")
+axs[3].set_xlabel("Time")
+axs[3].set_ylabel("Prob abonormal")
+
+plt.tight_layout()
 plt.show()
 
-
-t = range(len(all_data["y"]))
-fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=False)
+#  Plot hidden states
+fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(t, all_data["y"], color="r", label="obs")
-axs[0].axvline(x=point_anomaly, color="k", linestyle="--")
 axs[0].legend()
 axs[0].set_title("Observed Data")
-axs[0].set_xlabel("Time")
-axs[0].set_ylabel("Y")
+axs[0].set_ylabel("y")
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 0],
+    std=states.var[1:, 0, 0] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[0],
+)
+axs[0].set_title("local level")
 
-axs[1].plot(t, prob_abnorm, color="blue", label="probability")
-axs[1].axvline(x=point_anomaly, color="k", linestyle="--")
-axs[1].legend()
-axs[1].set_title("Probability of Abnormality")
-axs[1].set_xlabel("Time")
-axs[1].set_ylabel("Probability")
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 1],
+    std=states.var[1:, 1, 1] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[1],
+)
+axs[1].set_title("local trend")
+
+
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 3],
+    std=states.var[1:, 3, 3] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[2],
+)
+axs[2].set_title("lstm")
+
+plot_with_uncertainty(
+    time=t,
+    mu=states.mu[1:, 4],
+    std=states.var[1:, 4, 4] ** 0.5,
+    color="b",
+    label=["mu_val_pred", "±1σ"],
+    ax=axs[3],
+)
+axs[3].set_title("white noise")
+
+axs[4].plot(t, prob_abnorm, color="r")
+axs[4].set_title("Probability of Abnormal Model")
+axs[4].set_xlabel("Time")
+axs[4].set_ylabel("Prob abonormal")
 
 plt.tight_layout()
 plt.show()
