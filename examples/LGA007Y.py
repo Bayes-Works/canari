@@ -36,8 +36,8 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Define parameters
-num_epoch = 100
-patience = 50
+num_epoch = 10
+patience = 5
 log_lik_optimal = -1e100
 mse_optim = 1e100
 epoch_optimal = 0
@@ -189,8 +189,8 @@ skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
 skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
 
 # Anomaly Detection
-_, _, prob_abnorm, states = skf.filter(data=all_data)
-# _, _, prob_abnorm, states = skf.smoother(data=all_data)
+# _, _, prob_abnorm, states = skf.filter(data=all_data)
+_, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 print(f"Optimal epoch: {epoch_optimal}")
 
