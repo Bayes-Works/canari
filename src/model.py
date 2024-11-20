@@ -92,17 +92,10 @@ class Model:
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
                 self.mu_states[i] = np.nanmean(y_no_nan)
-                # TODO: fix values
-                # self.var_states[i, i] = 1
                 self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
-                # TODO: fix values
-                # self.mu_states[i] = 0
-                # self.var_states[i, i] = 0
                 self.var_states[i, i] = 1e-2
-                # self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
-            # TODO: initialize local acceleration with compatiable model
             # elif _state_name == "local acceleration":
             #     self.mu_states[i] = 2 * coefficients[0]
             #     self.var_states[i, i] = (0.2 * abs(coefficients[1])) ** 2
@@ -191,14 +184,14 @@ class Model:
         Set the posterirors for the states
         """
 
-        self.mu_states_posterior = new_mu_states
-        self.var_states_posterior = new_var_states
+        self.mu_states_posterior = copy.copy(new_mu_states)
+        self.var_states_posterior = copy.copy(new_var_states)
 
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
         self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
         self.lstm_output_history.var = np.roll(self.lstm_output_history.var, -1)
-        self.lstm_output_history.mu[-1] = mu_lstm_pred
-        self.lstm_output_history.var[-1] = var_lstm_pred
+        self.lstm_output_history.mu[-1] = copy.copy(mu_lstm_pred)
+        self.lstm_output_history.var[-1] = copy.copy(var_lstm_pred)
 
     def update_lstm_param(
         self,
@@ -223,16 +216,18 @@ class Model:
         Assign new states
         """
 
-        self.mu_states = new_mu_states
-        self.var_states = new_var_states
+        self.mu_states = copy.copy(new_mu_states)
+        self.var_states = copy.copy(new_var_states)
 
     def initialize_states_with_smoother_estimates(self):
         """
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = np.atleast_2d(self.smoother_states.mu_smooth[0]).T
-        self.var_states = np.diag(np.diag(self.smoother_states.var_smooth[0]))
+        self.mu_states = copy.copy(np.atleast_2d(self.smoother_states.mu_smooth[0]).T)
+        self.var_states = copy.copy(
+            np.diag(np.diag(self.smoother_states.var_smooth[0]))
+        )
 
     def reset_lstm_output_history(self):
         self.lstm_output_history = LstmOutputHistory()
@@ -241,24 +236,28 @@ class Model:
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
         self.smoother_states.initialize(num_time_steps + 1, self.num_states)
-        self.smoother_states.mu_prior[0] = self.mu_states.flatten()
-        self.smoother_states.var_prior[0] = self.var_states
-        self.smoother_states.mu_posterior[0] = self.mu_states.flatten()
-        self.smoother_states.var_posterior[0] = self.var_states
+        self.smoother_states.mu_prior[0] = copy.copy(self.mu_states.flatten())
+        self.smoother_states.var_prior[0] = copy.copy(self.var_states)
+        self.smoother_states.mu_posterior[0] = copy.copy(self.mu_states.flatten())
+        self.smoother_states.var_posterior[0] = copy.copy(self.var_states)
 
     def save_for_smoother(self, time_step):
         """
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.smoother_states.mu_prior[time_step] = self.mu_states_prior.flatten()
+        self.smoother_states.mu_prior[time_step] = copy.copy(
+            self.mu_states_prior.flatten()
+        )
         self.smoother_states.var_prior[time_step] = (
             self.var_states_prior + self.var_states_prior.T
         ) * 0.5
-        self.smoother_states.mu_posterior[time_step] = (
-            self.mu_states_posterior.flatten()
+        self.smoother_states.mu_posterior[time_step] = copy.copy(
+            (self.mu_states_posterior.flatten())
         )
-        self.smoother_states.var_posterior[time_step] = self.var_states_posterior
+        self.smoother_states.var_posterior[time_step] = copy.copy(
+            self.var_states_posterior
+        )
         self.smoother_states.cov_states[time_step] = (
             self.var_states @ self.transition_matrix.T
         )
@@ -298,16 +297,16 @@ class Model:
         """
 
         model_copy = Model()
-        model_copy.transition_matrix = self.transition_matrix
-        model_copy.process_noise_matrix = self.process_noise_matrix
-        model_copy.observation_matrix = self.observation_matrix
-        model_copy.mu_states = self.mu_states
-        model_copy.var_states = self.var_states
-        model_copy.states_name = self.states_name
-        model_copy.num_states = self.num_states
+        model_copy.transition_matrix = copy.copy(self.transition_matrix)
+        model_copy.process_noise_matrix = copy.copy(self.process_noise_matrix)
+        model_copy.observation_matrix = copy.copy(self.observation_matrix)
+        model_copy.mu_states = copy.copy(self.mu_states)
+        model_copy.var_states = copy.copy(self.var_states)
+        model_copy.states_name = copy.copy(self.states_name)
+        model_copy.num_states = copy.copy(self.num_states)
         model_copy.lstm_net = None
-        model_copy.lstm_states_index = self.lstm_states_index
-        model_copy.states_name = self.states_name
+        model_copy.lstm_states_index = copy.copy(self.lstm_states_index)
+        model_copy.states_name = copy.copy(self.states_name)
         return model_copy
 
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:

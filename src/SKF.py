@@ -122,6 +122,7 @@ class SKF:
 
         # Abnormal to abnormal
         self.abnorm_model = abnormal_model
+        self.abnorm_model.lstm_states_index = self.norm_model.lstm_states_index
 
         # Abnormal to abnormal
         self.abnorm_to_norm_model = self.norm_model.duplicate_model()
@@ -181,6 +182,11 @@ class SKF:
         self.abnorm_to_norm_model.set_states(
             self.norm_model.mu_states, self.norm_model.var_states
         )
+
+        self.abnorm_model.mu_states[2] = 1e-10
+        self.abnorm_model.var_states[2, 2] = 1e-10
+        self.abnorm_to_norm_model.mu_states[2] = 1e-10
+        self.abnorm_to_norm_model.var_states[2, 2] = 1e-10
 
     def set_states(self):
         self.norm_model.set_states(
@@ -537,8 +543,8 @@ class SKF:
         M = ProbabilityModel()
         M.normal = M_.norm_to_norm + M_.norm_to_abnorm
         M.abnormal = M_.abnorm_to_norm + M_.abnorm_to_abnorm
-        self.model_prob[time_step, 0] = M.normal
-        self.model_prob[time_step, 1] = M.abnormal
+        self.model_prob[time_step, 0] = copy.copy(M.normal)
+        self.model_prob[time_step, 1] = copy.copy(M.abnormal)
 
         coef_model = ModelTransition()
         coef_model.norm_to_norm = M_.norm_to_norm / np.maximum(M.normal, epsilon)
@@ -645,8 +651,8 @@ class SKF:
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.model_prob[time_step + 1, 0] = self._model_prob.normal
-            self.model_prob[time_step + 1, 1] = self._model_prob.abnormal
+            self.model_prob[time_step + 1, 0] = copy.copy(self._model_prob.normal)
+            self.model_prob[time_step + 1, 1] = copy.copy(self._model_prob.abnormal)
 
         return mu_obs_preds, var_obs_preds, self.model_prob[1:, 1], self.states
 
@@ -656,6 +662,7 @@ class SKF:
         """
 
         num_time_steps = len(data["y"])
+        self.initialize_model_states()
         self.initialize_smoother_states(num_time_steps)
 
         # Filter
