@@ -99,16 +99,16 @@ ab_model = Model(
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-4
-abnormal_to_normal_prob = 0.1
+abnormal_to_normal_prob = 1e-1
 normal_model_prior_prob = 0.99
 
 skf = SKF(
-    normal_model=model,
-    abnormal_model=ab_model,
-    std_transition_error=1e-4,
-    normal_to_abnormal_prob=normal_to_abnormal_prob,
-    abnormal_to_normal_prob=abnormal_to_normal_prob,
-    normal_model_prior_prob=normal_model_prior_prob,
+    norm_model=model,
+    abnorm_model=ab_model,
+    std_transition_error=1,
+    norm_to_abnorm_prob=normal_to_abnormal_prob,
+    abnorm_to_norm_prob=abnormal_to_normal_prob,
+    norm_model_prior_prob=normal_model_prior_prob,
 )
 skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
@@ -116,10 +116,9 @@ skf.auto_initialize_baseline_states(train_data["y"][1:24])
 #  Training
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     if epoch < 3:
-        skf.norm_model.process_noise_matrix[-1, -1] = 1
-        # skf.norm_model.process_noise_matrix[-1, -1] = noise_std * 2
+        skf.model["norm_norm"].process_noise_matrix[-1, -1] = 1
     else:
-        skf.norm_model.process_noise_matrix[-1, -1] = noise_std * 2
+        skf.model["norm_norm"].process_noise_matrix[-1, -1] = noise_std**2
 
     # Train the model
     (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
@@ -203,24 +202,24 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # plt.show()
 
     # Early stopping
-    if log_lik > log_lik_optimal:
-        log_lik_optimal = copy.copy(log_lik)
-        epoch_optimal = copy.copy(epoch)
-        lstm_param_optimal = copy.copy(skf.norm_model.lstm_net.get_state_dict())
-        init_mu_optimal = copy.copy(skf.norm_model.mu_states)
-        init_var_optimal = copy.copy(skf.norm_model.var_states)
-    ll.append(log_lik)
-    if (epoch - epoch_optimal) > patience:
-        break
+    # if log_lik > log_lik_optimal:
+    #     log_lik_optimal = copy.copy(log_lik)
+    #     epoch_optimal = copy.copy(epoch)
+    #     lstm_param_optimal = copy.copy(skf.norm_model.lstm_net.get_state_dict())
+    #     init_mu_optimal = copy.copy(skf.norm_model.mu_states)
+    #     init_var_optimal = copy.copy(skf.norm_model.var_states)
+    # ll.append(log_lik)
+    # if (epoch - epoch_optimal) > patience:
+    #     break
 
 
 # # Load back the LSTM's optimal parameters
-skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
-skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
+# skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
+# skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
 
 # Anomaly Detection
-# _, _, prob_abnorm, states = skf.filter(data=all_data)
-_, _, prob_abnorm, states = skf.smoother(data=all_data)
+_, _, prob_abnorm, states = skf.filter(data=all_data)
+# _, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 print(f"Optimal epoch: {epoch_optimal}")
 

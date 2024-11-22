@@ -13,16 +13,6 @@ class LstmOutputHistory:
 
 
 @dataclass
-class StatesInTime:
-    mu: np.ndarray = field(init=False)
-    var: np.ndarray = field(init=False)
-
-    def initialize(self, num_time_steps: int, num_states: int) -> None:
-        self.mu = np.zeros((num_time_steps, num_states), dtype=np.float32)
-        self.var = np.zeros((num_time_steps, num_states, num_states), dtype=np.float32)
-
-
-@dataclass
 class SmootherStates:
     mu_prior: np.ndarray = field(init=False)
     var_prior: np.ndarray = field(init=False)
@@ -51,14 +41,10 @@ class SmootherStates:
 
 
 @dataclass
-class ModelTransition:
-    norm_to_norm: float = 1.0
-    norm_to_abnorm: float = 1.0
-    abnorm_to_norm: float = 1.0
-    abnorm_to_abnorm: float = 1.0
+class ModelProbability:
+    norm: np.ndarray = field(init=False)
+    abnorm: np.ndarray = field(init=False)
 
-
-@dataclass
-class ProbabilityModel:
-    normal: float = 0.0
-    abnormal: float = 0.0
+    def initialize(self, look_back_len: int):
+        self.norm = 0 * np.ones(look_back_len, dtype=np.float32)
+        self.abnorm = 0 * np.ones(look_back_len, dtype=np.float32)
