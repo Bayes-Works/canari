@@ -23,6 +23,7 @@ class Model:
             self.components = list(components)
             self.define_model()
             self.lstm_net = None
+            self.lstm_states_index = None
             self.smoother_states = None
 
     def define_model(self):
@@ -77,10 +78,6 @@ class Model:
             state for component in self.components for state in component.states_name
         ]
         self.num_states = sum(component.num_states for component in self.components)
-        if "lstm" in self.states_name:
-            self.lstm_states_index = self.states_name.index("lstm")
-        else:
-            self.lstm_states_index = None
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -124,8 +121,8 @@ class Model:
         )
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
-        self.mu_obs_prior = mu_obs_pred
-        self.var_obs_prior = var_obs_pred
+        self._mu_obs_prior = mu_obs_pred
+        self._var_obs_prior = var_obs_pred
         return mu_obs_pred, var_obs_pred
 
     def backward(
@@ -138,8 +135,8 @@ class Model:
 
         delta_mu_states, delta_var_states = common.backward(
             obs,
-            self.mu_obs_prior,
-            self.var_obs_prior,
+            self._mu_obs_prior,
+            self._var_obs_prior,
             self.var_states_prior,
             self.observation_matrix,
         )
@@ -293,6 +290,24 @@ class Model:
             self.reset_lstm_output_history()
         else:
             raise ValueError(f"No LstmNetwork component found")
+
+    def duplicate_model(self):
+        """
+        Duplicate models
+        """
+
+        model_copy = Model()
+        model_copy.transition_matrix = copy.copy(self.transition_matrix)
+        model_copy.process_noise_matrix = copy.copy(self.process_noise_matrix)
+        model_copy.observation_matrix = copy.copy(self.observation_matrix)
+        model_copy.mu_states = copy.copy(self.mu_states)
+        model_copy.var_states = copy.copy(self.var_states)
+        model_copy.states_name = copy.copy(self.states_name)
+        model_copy.num_states = copy.copy(self.num_states)
+        model_copy.lstm_net = None
+        model_copy.lstm_states_index = copy.copy(self.lstm_states_index)
+        model_copy.states_name = copy.copy(self.states_name)
+        return model_copy
 
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
