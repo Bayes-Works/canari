@@ -144,7 +144,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # #  Plot hidden states
-    t = range(len(train_data["y"]))
+    # t = range(len(train_data["y"]))
     # fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
     # axs[0].plot(t, train_data["y"], color="r", label="obs")
     # axs[0].legend()
@@ -162,7 +162,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     #     time=t,
     #     mu=train_states.mu_smooth[:-1, 0],
     #     std=train_states.var_smooth[:-1, 0, 0] ** 0.5,
-    #     color="k",
+    #     color="r",
     #     label=["mu_val_pred", "±1σ"],
     #     ax=axs[0],
     # )
@@ -190,8 +190,10 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
     # plot_with_uncertainty(
     #     time=t,
-    #     mu=train_states.mu_smooth[1:, 4],
-    #     std=train_states.var_smooth[1:, 4, 4] ** 0.5,
+    #     # mu=train_states.mu_smooth[1:, 4],
+    #     # std=train_states.var_smooth[1:, 4, 4] ** 0.5,
+    #     mu=train_states.mu_posterior[1:, 4],
+    #     std=train_states.var_posterior[1:, 4, 4] ** 0.5,
     #     color="b",
     #     label=["mu_val_pred", "±1σ"],
     #     ax=axs[3],
@@ -202,24 +204,24 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # plt.show()
 
     # Early stopping
-    # if log_lik > log_lik_optimal:
-    #     log_lik_optimal = copy.copy(log_lik)
-    #     epoch_optimal = copy.copy(epoch)
-    #     lstm_param_optimal = copy.copy(skf.norm_model.lstm_net.get_state_dict())
-    #     init_mu_optimal = copy.copy(skf.norm_model.mu_states)
-    #     init_var_optimal = copy.copy(skf.norm_model.var_states)
-    # ll.append(log_lik)
-    # if (epoch - epoch_optimal) > patience:
-    #     break
+    if log_lik > log_lik_optimal:
+        log_lik_optimal = copy.copy(log_lik)
+        epoch_optimal = copy.copy(epoch)
+        lstm_param_optimal = copy.copy(skf.model["norm_norm"].lstm_net.get_state_dict())
+        init_mu_optimal = copy.copy(skf.model["norm_norm"].mu_states)
+        init_var_optimal = copy.copy(skf.model["norm_norm"].var_states)
+    ll.append(log_lik)
+    if (epoch - epoch_optimal) > patience:
+        break
 
 
 # # Load back the LSTM's optimal parameters
-# skf.norm_model.lstm_net.load_state_dict(lstm_param_optimal)
-# skf.norm_model.set_states(init_mu_optimal, init_var_optimal)
+skf.model["norm_norm"].lstm_net.load_state_dict(lstm_param_optimal)
+skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 
 # Anomaly Detection
-_, _, prob_abnorm, states = skf.filter(data=all_data)
-# _, _, prob_abnorm, states = skf.smoother(data=all_data)
+# _, _, prob_abnorm, states = skf.filter(data=all_data)
+_, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 print(f"Optimal epoch: {epoch_optimal}")
 
@@ -269,6 +271,7 @@ axs[3].set_ylabel("Prob abonormal")
 plt.tight_layout()
 plt.show()
 
+
 #  Plot hidden states
 fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(t, all_data["y"], color="r", label="obs")
@@ -277,8 +280,10 @@ axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
 plot_with_uncertainty(
     time=t,
-    mu=states.mu[1:, 0],
-    std=states.var[1:, 0, 0] ** 0.5,
+    mu=states.mu_smooth[1:, 0],
+    std=states.var_smooth[1:, 0, 0] ** 0.5,
+    # mu=states.mu_posterior[1:, 0],
+    # std=states.var_posterior[1:, 0, 0] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[0],
@@ -287,8 +292,10 @@ axs[0].set_title("local level")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu[1:, 1],
-    std=states.var[1:, 1, 1] ** 0.5,
+    mu=states.mu_smooth[1:, 1],
+    std=states.var_smooth[1:, 1, 1] ** 0.5,
+    # mu=states.mu_posterior[1:, 1],
+    # std=states.var_posterior[1:, 1, 1] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[1],
@@ -298,8 +305,10 @@ axs[1].set_title("local trend")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu[1:, 3],
-    std=states.var[1:, 3, 3] ** 0.5,
+    mu=states.mu_smooth[1:, 3],
+    std=states.var_smooth[1:, 3, 3] ** 0.5,
+    # mu=states.mu_posterior[1:, 3],
+    # std=states.var_posterior[1:, 3, 3] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[2],
@@ -308,8 +317,10 @@ axs[2].set_title("lstm")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu[1:, 4],
-    std=states.var[1:, 4, 4] ** 0.5,
+    mu=states.mu_smooth[1:, 4],
+    std=states.var_smooth[1:, 4, 4] ** 0.5,
+    # mu=states.mu_posterior[1:, 4],
+    # std=states.var_posterior[1:, 4, 4] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[3],
