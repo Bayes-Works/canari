@@ -126,7 +126,7 @@ class Model:
         self.var_states_prior = var_states_prior
         self.mu_obs_prior = mu_obs_pred
         self.var_obs_prior = var_obs_pred
-        return mu_obs_pred, var_obs_pred
+        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
 
     def backward(
         self,
@@ -238,7 +238,7 @@ class Model:
 
     def initialize_smoother_states(self, num_time_steps: int):
         self.smoother_states = SmootherStates()
-        self.smoother_states.initialize(num_time_steps + 1, self.num_states)
+        self.smoother_states.initialize(num_time_steps, self.num_states)
         self.smoother_states.mu_prior[0] = copy.copy(self.mu_states.flatten())
         self.smoother_states.var_prior[0] = copy.copy(self.var_states)
         self.smoother_states.mu_posterior[0] = copy.copy(self.mu_states.flatten())
@@ -313,7 +313,7 @@ class Model:
                     mu_x=mu_lstm_input, var_x=var_lstm_input
                 )
 
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred, _, _ = self.forward(mu_lstm_pred, var_lstm_pred)
 
             if self.lstm_net:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
@@ -345,7 +345,7 @@ class Model:
                     mu_x=mu_lstm_input, var_x=var_lstm_input
                 )
 
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred, _, _ = self.forward(mu_lstm_pred, var_lstm_pred)
             delta_mu_states, delta_var_states = self.backward(y)
             self.estimate_posterior_states(delta_mu_states, delta_var_states)
 
@@ -377,7 +377,7 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
-        self.initialize_smoother_states(num_time_steps)
+        self.initialize_smoother_states(num_time_steps + 1)
 
         # Filter
         mu_obs_preds, std_obs_preds = self.filter(data)
