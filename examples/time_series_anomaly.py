@@ -75,7 +75,7 @@ noise_std = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=10,
+    look_back_len=24,
     num_features=3,
     num_layer=1,
     num_hidden_unit=50,
@@ -105,14 +105,14 @@ normal_model_prior_prob = 0.99
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=normal_to_abnormal_prob,
     abnorm_to_norm_prob=abnormal_to_normal_prob,
     norm_model_prior_prob=normal_model_prior_prob,
 )
 skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
-
+noise_std = 0.05
 #  Training
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     if epoch < 3:
@@ -223,6 +223,12 @@ skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 # _, _, prob_abnorm, states = skf.filter(data=all_data)
 _, _, prob_abnorm, states = skf.smoother(data=all_data)
 
+mu_plot = states.mu_posterior
+var_plot = states.var_posterior
+
+# mu_plot = states.mu_smooth
+# var_plot = states.var_smooth
+
 print(f"Optimal epoch: {epoch_optimal}")
 
 #  Plot
@@ -271,7 +277,6 @@ axs[3].set_ylabel("Prob abonormal")
 plt.tight_layout()
 plt.show()
 
-
 #  Plot hidden states
 fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(t, all_data["y"], color="r", label="obs")
@@ -280,8 +285,8 @@ axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
 plot_with_uncertainty(
     time=t,
-    mu=states.mu_smooth[1:, 0],
-    std=states.var_smooth[1:, 0, 0] ** 0.5,
+    mu=mu_plot[1:, 0],
+    std=var_plot[1:, 0, 0] ** 0.5,
     # mu=states.mu_posterior[1:, 0],
     # std=states.var_posterior[1:, 0, 0] ** 0.5,
     color="b",
@@ -292,8 +297,8 @@ axs[0].set_title("local level")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu_smooth[1:, 1],
-    std=states.var_smooth[1:, 1, 1] ** 0.5,
+    mu=mu_plot[1:, 1],
+    std=var_plot[1:, 1, 1] ** 0.5,
     # mu=states.mu_posterior[1:, 1],
     # std=states.var_posterior[1:, 1, 1] ** 0.5,
     color="b",
@@ -305,8 +310,8 @@ axs[1].set_title("local trend")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu_smooth[1:, 3],
-    std=states.var_smooth[1:, 3, 3] ** 0.5,
+    mu=mu_plot[1:, 3],
+    std=var_plot[1:, 3, 3] ** 0.5,
     # mu=states.mu_posterior[1:, 3],
     # std=states.var_posterior[1:, 3, 3] ** 0.5,
     color="b",
@@ -317,8 +322,8 @@ axs[2].set_title("lstm")
 
 plot_with_uncertainty(
     time=t,
-    mu=states.mu_smooth[1:, 4],
-    std=states.var_smooth[1:, 4, 4] ** 0.5,
+    mu=mu_plot[1:, 4],
+    std=var_plot[1:, 4, 4] ** 0.5,
     # mu=states.mu_posterior[1:, 4],
     # std=states.var_posterior[1:, 4, 4] ** 0.5,
     color="b",

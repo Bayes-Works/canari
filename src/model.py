@@ -126,7 +126,7 @@ class Model:
         self.var_states_prior = var_states_prior
         self.mu_obs_prior = mu_obs_pred
         self.var_obs_prior = var_obs_pred
-        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
+        return mu_obs_pred, var_obs_pred
 
     def backward(
         self,
@@ -227,9 +227,9 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = copy.copy(np.atleast_2d(self.smoother_states.mu_smooth[0]).T)
+        self.mu_states = copy.copy(np.atleast_2d(self.smoother_states.mu_smooth[1]).T)
         self.var_states = copy.copy(
-            np.diag(np.diag(self.smoother_states.var_smooth[0]))
+            np.diag(np.diag(self.smoother_states.var_smooth[1]))
         )
 
     def reset_lstm_output_history(self):
@@ -294,6 +294,53 @@ class Model:
         else:
             raise ValueError(f"No LstmNetwork component found")
 
+    def duplicate(self):
+        """
+        Duplicate models
+        """
+
+        model_copy = Model()
+        model_copy.transition_matrix = copy.copy(self.transition_matrix)
+        model_copy.process_noise_matrix = copy.copy(self.process_noise_matrix)
+        model_copy.observation_matrix = copy.copy(self.observation_matrix)
+        model_copy.mu_states = copy.copy(self.mu_states)
+        model_copy.var_states = copy.copy(self.var_states)
+        model_copy.states_name = copy.copy(self.states_name)
+        model_copy.num_states = copy.copy(self.num_states)
+        model_copy.lstm_net = None
+        model_copy.lstm_states_index = copy.copy(self.lstm_states_index)
+        model_copy.states_name = copy.copy(self.states_name)
+        return model_copy
+
+    def create_compatible_model(self, target_model):
+        """
+        Create compatiable model by padding zero to states and matrices
+        """
+
+        pad_row = np.zeros((self.num_states)).flatten()
+        pad_col = np.zeros((target_model.num_states)).flatten()
+        for i, state in enumerate(target_model.states_name):
+            if state not in self.states_name:
+                self.mu_states = common.pad_matrix(
+                    self.mu_states, i, pad_row=np.zeros(1)
+                )
+                self.var_states = common.pad_matrix(
+                    self.var_states, i, pad_row, pad_col
+                )
+                self.transition_matrix = common.pad_matrix(
+                    self.transition_matrix, i, pad_row, pad_col
+                )
+                self.process_noise_matrix = common.pad_matrix(
+                    self.process_noise_matrix, i, pad_row, pad_col
+                )
+                self.observation_matrix = common.pad_matrix(
+                    self.observation_matrix, i, pad_col=np.zeros(1)
+                )
+                self.num_states += 1
+                self.states_name.insert(i, state)
+                self.index_pad_state = i
+        self.lstm_states_index = target_model.states_name.index("lstm")
+
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Forecast for whole time series data
@@ -313,7 +360,7 @@ class Model:
                     mu_x=mu_lstm_input, var_x=var_lstm_input
                 )
 
-            mu_obs_pred, var_obs_pred, _, _ = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
 
             if self.lstm_net:
                 self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
@@ -345,7 +392,7 @@ class Model:
                     mu_x=mu_lstm_input, var_x=var_lstm_input
                 )
 
-            mu_obs_pred, var_obs_pred, _, _ = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
             delta_mu_states, delta_var_states = self.backward(y)
             self.estimate_posterior_states(delta_mu_states, delta_var_states)
 

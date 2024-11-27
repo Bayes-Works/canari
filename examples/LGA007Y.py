@@ -62,7 +62,7 @@ white_noise = WhiteNoise(std_error=noise_std)
 
 # Switching Kalman filter
 normal_to_abnormal_prob = 1e-5
-abnormal_to_normal_prob = 1e-1
+abnormal_to_normal_prob = 1e-2
 normal_model_prior_prob = 0.99
 
 model = Model(

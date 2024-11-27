@@ -115,3 +115,39 @@ def prepare_lstm_input(
         )
     )
     return mu_lstm_input, var_lstm_input
+
+
+def pad_matrix(
+    matrix: np.ndarray,
+    pad_index: int,
+    pad_row: Optional[np.ndarray] = None,
+    pad_col: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray]:
+    """
+    Add padding for a matrix
+    """
+
+    if pad_row is not None:
+        matrix = np.insert(matrix, pad_index, pad_row, axis=0)
+    if pad_col is not None:
+        matrix = np.insert(matrix, pad_index, pad_col, axis=1)
+    return matrix
+
+
+def gaussian_mixture(
+    mu1: np.ndarray,
+    var1: np.ndarray,
+    coef1: float,
+    mu2: np.ndarray,
+    var2: np.ndarray,
+    coef2: float,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Gaussian reduction mixture
+    """
+
+    mu_mixture = mu1 * coef1 + mu2 * coef2
+    m1 = mu1 - mu_mixture
+    m2 = mu2 - mu_mixture
+    var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
+    return mu_mixture, var_mixture
