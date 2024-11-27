@@ -41,7 +41,7 @@ class SmootherStates:
 
 
 @dataclass
-class ModelProbability:
+class MarginalProbability:
     norm: np.ndarray = field(init=False)
     abnorm: np.ndarray = field(init=False)
 

@@ -73,7 +73,7 @@ class LstmNetwork(BaseComponent):
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
     def initialize_lstm_network(self) -> Sequential:
-        pytagi.manual_seed(2)
+        pytagi.manual_seed(1)
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer

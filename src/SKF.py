@@ -6,7 +6,7 @@ from src.model import Model
 import src.common as common
 from src.data_struct import (
     SmootherStates,
-    ModelProbability,
+    MarginalProbability,
 )
 
 
@@ -25,7 +25,9 @@ class SKF:
         norm_model_prior_prob: Optional[float] = 0.99,
         conditional_likelihood: Optional[bool] = True,
     ):
-        self.initialize_SKF_models(
+        self.std_transition_error = std_transition_error
+        self.conditional_likelihood = conditional_likelihood
+        self.initialize_transition_model(
             norm_model,
             abnorm_model,
             std_transition_error,
@@ -33,106 +35,33 @@ class SKF:
             abnorm_to_norm_prob,
             norm_model_prior_prob,
         )
-
-        self.conditional_likelihood = conditional_likelihood
         self.smoother_states = SmootherStates()
-        self.model_prob = None
-        self.SKF_smoother = False
+        self.marginal_prob = MarginalProbability()
+        self.marginal_states = {"norm", "abnorm"}
 
     @staticmethod
-    def create_compatible_model(source: Model, target: Model) -> Model:
+    def initialize_transitions():
         """
-        Create compatiable model by padding zero to states and matrices
+        Create a dictionary for model transition
         """
-
-        pad_row = np.zeros((source.num_states)).flatten()
-        pad_col = np.zeros((target.num_states)).flatten()
-        for i, state in enumerate(target.states_name):
-            if state not in source.states_name:
-                source.mu_states = SKF.pad_matrix(
-                    source.mu_states, i, pad_row=np.zeros(1)
-                )
-                source.var_states = SKF.pad_matrix(
-                    source.var_states, i, pad_row, pad_col
-                )
-                source.transition_matrix = SKF.pad_matrix(
-                    source.transition_matrix, i, pad_row, pad_col
-                )
-                source.process_noise_matrix = SKF.pad_matrix(
-                    source.process_noise_matrix, i, pad_row, pad_col
-                )
-                source.observation_matrix = SKF.pad_matrix(
-                    source.observation_matrix, i, pad_col=np.zeros(1)
-                )
-                source.num_states += 1
-                source.states_name.insert(i, state)
-                source.index_pad_state = i
-        source.lstm_states_index = target.states_name.index("lstm")
-        return source
-
-    @staticmethod
-    def pad_matrix(
-        x: np.ndarray,
-        idx,
-        pad_row: Optional[np.ndarray] = None,
-        pad_col: Optional[np.ndarray] = None,
-    ):
-        """
-        Add padding for states
-        """
-
-        if pad_row is not None:
-            x = np.insert(x, idx, pad_row, axis=0)
-        if pad_col is not None:
-            x = np.insert(x, idx, pad_col, axis=1)
-        return x
-
-    @staticmethod
-    def duplicate_model(model):
-        """
-        Duplicate models
-        """
-
-        model_copy = Model()
-        model_copy.transition_matrix = copy.copy(model.transition_matrix)
-        model_copy.process_noise_matrix = copy.copy(model.process_noise_matrix)
-        model_copy.observation_matrix = copy.copy(model.observation_matrix)
-        model_copy.mu_states = copy.copy(model.mu_states)
-        model_copy.var_states = copy.copy(model.var_states)
-        model_copy.states_name = copy.copy(model.states_name)
-        model_copy.num_states = copy.copy(model.num_states)
-        model_copy.lstm_net = None
-        model_copy.lstm_states_index = copy.copy(model.lstm_states_index)
-        model_copy.states_name = copy.copy(model.states_name)
-        return model_copy
-
-    @staticmethod
-    def gaussian_mixture(mu1, var1, coeff1, mu2, var2, coeff2):
-        mu_mixture = mu1 * coeff1 + mu2 * coeff2
-        m1 = mu1 - mu_mixture
-        m2 = mu2 - mu_mixture
-        var_mixture = coeff1 * (var1 + m1 @ m1.T) + coeff2 * (var2 + m2 @ m2.T)
-        return mu_mixture, var_mixture
-
-    @staticmethod
-    # TODO: input for dimension
-    def create_transition_dict():
         return {
-            "norm_norm": 0,
-            "abnorm_abnorm": 0,
-            "norm_abnorm": 0,
-            "abnorm_norm": 0,
+            "norm_norm": None,
+            "abnorm_abnorm": None,
+            "norm_abnorm": None,
+            "abnorm_norm": None,
         }
 
     @staticmethod
-    # TODO: input for dimension
-    def create_model_dict():
+    def initialize_marginal():
+        """
+        Create a dictionary for models
+        """
         return {
-            "norm": 0,
-            "abnorm": 0,
+            "norm": None,
+            "abnorm": None,
         }
 
-    def initialize_SKF_models(
+    def initialize_transition_model(
         self,
         norm_model: Model,
         abnorm_model: Model,
@@ -142,55 +71,44 @@ class SKF:
         norm_model_prior_prob,
     ):
         """
-        Create sub-models
+        Create transitional models
         """
 
-        # Normal to normal
-        norm = SKF.create_compatible_model(
-            source=norm_model,
-            target=abnorm_model,
-        )
+        # Create transitional model
+        norm_model.create_compatible_model(abnorm_model)
+        abnorm_norm = norm_model.duplicate()
+        norm_abnorm = abnorm_model.duplicate()
 
-        # Abnormal to normal
-        abnorm_norm = SKF.duplicate_model(norm)
-
-        #  Abnormal to abnormal
-        abnorm = abnorm_model
-
-        # Normal to abnormal
-        norm_abnorm = SKF.duplicate_model(abnorm)
+        # Add transition noise to norm_abnorm.process_noise_matrix
         index_pad_state = norm_model.index_pad_state
         norm_abnorm.process_noise_matrix[index_pad_state, index_pad_state] = (
             std_transition_error**2
         )
 
-        # Store in dictionary
-        self.model = {
-            "norm_norm": norm,
-            "abnorm_abnorm": abnorm,
-            "norm_abnorm": norm_abnorm,
-            "abnorm_norm": abnorm_norm,
-        }
+        # Store transitional models in a dictionary
+        self.model = SKF.initialize_transitions()
+        self.model["norm_norm"] = norm_model
+        self.model["abnorm_abnorm"] = abnorm_model
+        self.model["norm_abnorm"] = norm_abnorm
+        self.model["abnorm_norm"] = abnorm_norm
 
-        # Others
-        self.index_pad_state = self.model["norm_norm"].index_pad_state
-        self.lstm_states_index = self.model["norm_norm"].lstm_states_index
-        self.num_states = self.model["norm_norm"].num_states
-        self.std_transition_error = std_transition_error
+        self.transition_prob_matrix = SKF.initialize_transitions()
+        self.transition_prob_matrix["norm_norm"] = 1 - norm_to_abnorm_prob
+        self.transition_prob_matrix["norm_abnorm"] = norm_to_abnorm_prob
+        self.transition_prob_matrix["abnorm_norm"] = abnorm_to_norm_prob
+        self.transition_prob_matrix["abnorm_abnorm"] = 1 - abnorm_to_norm_prob
 
-        self.transition_prob = SKF.create_transition_dict()
-        self.transition_prob["norm_norm"] = 1 - norm_to_abnorm_prob
-        self.transition_prob["norm_abnorm"] = norm_to_abnorm_prob
-        self.transition_prob["abnorm_norm"] = abnorm_to_norm_prob
-        self.transition_prob["abnorm_abnorm"] = 1 - abnorm_to_norm_prob
-
-        self.prob_model = SKF.create_model_dict()
+        self.prob_model = SKF.initialize_marginal()
         self.prob_model["norm"] = norm_model_prior_prob
         self.prob_model["abnorm"] = 1 - norm_model_prior_prob
 
-        self.coef_model = SKF.create_transition_dict()
-        self.likelihood = SKF.create_transition_dict()
-        self.states = {"norm", "abnorm"}
+        self.coef_transition_model = SKF.initialize_transitions()
+        self.likelihood = SKF.initialize_transitions()
+
+        self.index_pad_state = self.model["norm_norm"].index_pad_state
+        self.lstm_states_index = self.model["norm_norm"].lstm_states_index
+        self.num_states = self.model["norm_norm"].num_states
+        self.states_name = self.model["norm_norm"].states_name
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -203,20 +121,22 @@ class SKF:
         # TODO: clean: set mean var for acceleration
         mean = 0
         var = 0
-        for model in self.model.values():
-            model.set_states(
+        for transition_model in self.model.values():
+            transition_model.set_states(
                 self.model["norm_norm"].mu_states, self.model["norm_norm"].var_states
             )
-            model.mu_states[self.index_pad_state] = mean
-            model.var_states[self.index_pad_state, self.index_pad_state] = var
+            transition_model.mu_states[self.index_pad_state] = mean
+            transition_model.var_states[self.index_pad_state, self.index_pad_state] = (
+                var
+            )
 
     def save_for_smoother(self, time_step: int):
         """
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        for model in self.model.values():
-            model.save_for_smoother(time_step)
+        for transition_model in self.model.values():
+            transition_model.save_for_smoother(time_step)
 
         self.smoother_states.mu_prior[time_step] = copy.copy(
             self.mu_states_prior.flatten()
@@ -230,27 +150,31 @@ class SKF:
         )
 
     def initialize_smoother_states(self, num_time_steps: int):
-        for model in self.model.values():
-            model.initialize_smoother_states(num_time_steps)
+        for transition_model in self.model.values():
+            transition_model.initialize_smoother_states(num_time_steps)
+        self.smoother_states.initialize(num_time_steps, self.num_states)
 
     def initialize_smoother_buffers(self):
-        for model in self.model.values():
-            model.initialize_smoother_buffers()
+        for transition_model in self.model.values():
+            transition_model.initialize_smoother_buffers()
         # TODO
         self.smoother_states.mu_smooth[-1], self.smoother_states.var_smooth[-1] = (
-            SKF.gaussian_mixture(
+            common.gaussian_mixture(
                 self.model["norm_norm"].smoother_states.mu_posterior[-1],
                 self.model["norm_norm"].smoother_states.var_posterior[-1],
-                self.model_prob.norm[-1],
+                self.marginal_prob.norm[-1],
                 self.model["abnorm_abnorm"].smoother_states.mu_posterior[-1],
                 self.model["abnorm_abnorm"].smoother_states.var_posterior[-1],
-                self.model_prob.abnorm[-1],
+                self.marginal_prob.abnorm[-1],
             )
         )
 
     def set_states(self):
-        for model in self.model.values():
-            model.set_states(model.mu_states_posterior, model.var_states_posterior)
+        for transition_model in self.model.values():
+            transition_model.set_states(
+                transition_model.mu_states_posterior,
+                transition_model.var_states_posterior,
+            )
 
     def estimate_model_coef(
         self,
@@ -265,7 +189,11 @@ class SKF:
         else:
             if self.conditional_likelihood:
                 num_noise_realization = 10
-                var_obs_error = self.model["norm_norm"].process_noise_matrix[-1, -1]
+                white_noise_index = self.states_name.index("white noise")
+                var_obs_error = self.model["norm_norm"].process_noise_matrix[
+                    white_noise_index, white_noise_index
+                ]
+                # var_obs_error = self.obs_noise**2
                 noise = np.random.normal(
                     0, var_obs_error**0.5, (num_noise_realization, 1)
                 )
@@ -291,14 +219,14 @@ class SKF:
                     )
 
         #
-        trans_prob = SKF.create_transition_dict()
+        trans_prob = SKF.initialize_transitions()
         sum_trans_prob = 0
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
                 trans_prob[transit] = (
                     self.likelihood[transit]
-                    * self.transition_prob[transit]
+                    * self.transition_prob_matrix[transit]
                     * self.prob_model[origin_state]
                 )
                 sum_trans_prob += trans_prob[transit]
@@ -311,10 +239,10 @@ class SKF:
             trans_prob["abnorm_abnorm"] + trans_prob["norm_abnorm"]
         )
         #
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
-                self.coef_model[transit] = (
+                self.coef_transition_model[transit] = (
                     trans_prob[transit] / self.prob_model[arrival_state]
                 )
 
@@ -338,18 +266,14 @@ class SKF:
         Forward pass for 4 sub-models
         """
 
-        mu_pred_transit = SKF.create_transition_dict()
-        var_pred_transit = SKF.create_transition_dict()
-        mu_states = SKF.create_transition_dict()
-        var_states = SKF.create_transition_dict()
+        mu_pred_transit = SKF.initialize_transitions()
+        var_pred_transit = SKF.initialize_transitions()
 
-        for transit, model in self.model.items():
+        for transit, transition_model in self.model.items():
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
-                mu_states[transit],
-                var_states[transit],
-            ) = model.forward(mu_lstm_pred, var_lstm_pred)
+            ) = transition_model.forward(mu_lstm_pred, var_lstm_pred)
 
         self.estimate_model_coef(
             y,
@@ -357,34 +281,34 @@ class SKF:
             var_pred_transit,
         )
 
-        mu_pred = SKF.create_model_dict()
-        var_pred = SKF.create_model_dict()
+        mu_states = SKF.initialize_marginal()
+        var_states = SKF.initialize_marginal()
 
         # Collapse
-        mu_pred["norm"], var_pred["norm"] = SKF.gaussian_mixture(
+        mu_states["norm"], var_states["norm"] = common.gaussian_mixture(
             self.model["norm_norm"].mu_states_prior,
             self.model["norm_norm"].var_states_prior,
-            self.coef_model["norm_norm"],
+            self.coef_transition_model["norm_norm"],
             self.model["abnorm_norm"].mu_states_prior,
             self.model["abnorm_norm"].var_states_prior,
-            self.coef_model["abnorm_norm"],
+            self.coef_transition_model["abnorm_norm"],
         )
 
-        mu_pred["abnorm"], var_pred["abnorm"] = SKF.gaussian_mixture(
+        mu_states["abnorm"], var_states["abnorm"] = common.gaussian_mixture(
             self.model["norm_abnorm"].mu_states_prior,
             self.model["norm_abnorm"].var_states_prior,
-            self.coef_model["norm_abnorm"],
+            self.coef_transition_model["norm_abnorm"],
             self.model["abnorm_abnorm"].mu_states_prior,
             self.model["abnorm_abnorm"].var_states_prior,
-            self.coef_model["abnorm_abnorm"],
+            self.coef_transition_model["abnorm_abnorm"],
         )
 
-        self.mu_states_prior, self.var_states_prior = SKF.gaussian_mixture(
-            mu_pred["norm"],
-            var_pred["norm"],
+        self.mu_states_prior, self.var_states_prior = common.gaussian_mixture(
+            mu_states["norm"],
+            var_states["norm"],
             self.prob_model["norm"],
-            mu_pred["abnorm"],
-            var_pred["abnorm"],
+            mu_states["abnorm"],
+            var_states["abnorm"],
             self.prob_model["abnorm"],
         )
 
@@ -394,6 +318,7 @@ class SKF:
             self.model["norm_norm"].observation_matrix,
         )
 
+        # TODO: better names for transition_pred, collapse_pred, obs_pred
         return mu_obs_pred, var_obs_pred
 
     def backward(
@@ -404,47 +329,46 @@ class SKF:
         Update step in states-space model
         """
 
-        for model in self.model.values():
-            mu_delta, var_delta = model.backward(obs)
-            model.estimate_posterior_states(mu_delta, var_delta)
+        for transition_model in self.model.values():
+            mu_delta, var_delta = transition_model.backward(obs)
+            transition_model.estimate_posterior_states(mu_delta, var_delta)
 
-        mu_pred = SKF.create_model_dict()
-        var_pred = SKF.create_model_dict()
+        mu_states = SKF.initialize_marginal()
+        var_states = SKF.initialize_marginal()
 
-        # Collapse 11, 21
-        mu_pred["norm"], var_pred["norm"] = SKF.gaussian_mixture(
+        # Collapse
+        mu_states["norm"], var_states["norm"] = common.gaussian_mixture(
             self.model["norm_norm"].mu_states_posterior,
             self.model["norm_norm"].var_states_posterior,
-            self.coef_model["norm_norm"],
+            self.coef_transition_model["norm_norm"],
             self.model["abnorm_norm"].mu_states_posterior,
             self.model["abnorm_norm"].var_states_posterior,
-            self.coef_model["abnorm_norm"],
+            self.coef_transition_model["abnorm_norm"],
         )
-
-        # Collapse 21, 22
-        mu_pred["abnorm"], var_pred["abnorm"] = SKF.gaussian_mixture(
+        mu_states["abnorm"], var_states["abnorm"] = common.gaussian_mixture(
             self.model["norm_abnorm"].mu_states_posterior,
             self.model["norm_abnorm"].var_states_posterior,
-            self.coef_model["norm_abnorm"],
+            self.coef_transition_model["norm_abnorm"],
             self.model["abnorm_abnorm"].mu_states_posterior,
             self.model["abnorm_abnorm"].var_states_posterior,
-            self.coef_model["abnorm_abnorm"],
+            self.coef_transition_model["abnorm_abnorm"],
         )
 
-        self.mu_states_posterior, self.var_states_posterior = SKF.gaussian_mixture(
-            mu_pred["norm"],
-            var_pred["norm"],
+        self.mu_states_posterior, self.var_states_posterior = common.gaussian_mixture(
+            mu_states["norm"],
+            var_states["norm"],
             self.prob_model["norm"],
-            mu_pred["abnorm"],
-            var_pred["abnorm"],
+            mu_states["abnorm"],
+            var_states["abnorm"],
             self.prob_model["abnorm"],
         )
 
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        # Reassign posterior states
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
                 self.model[transit].set_posterior_states(
-                    mu_pred[arrival_state], var_pred[arrival_state]
+                    mu_states[arrival_state], var_states[arrival_state]
                 )
 
     def rts_smoother(self, time_step: int):
@@ -452,93 +376,109 @@ class SKF:
         RTS smoother for each sub-model
         """
 
-        for model in self.model.values():
-            model.rts_smoother(time_step)
+        for transition_model in self.model.values():
+            transition_model.rts_smoother(time_step)
 
+        # TODO: if epsilon is needed
         epsilon = 1e-10
 
-        U = SKF.create_transition_dict()
-        temp_U = SKF.create_model_dict()
+        joint_transition_prob = SKF.initialize_transitions()
+        arrival_state_marginal = SKF.initialize_marginal()
 
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_origin_model = getattr(self.model_prob, origin_state)
-                U[transit] = (
-                    prob_origin_model[time_step] * self.transition_prob[transit]
+                prob_origin_model = getattr(self.marginal_prob, origin_state)
+                joint_transition_prob[transit] = (
+                    prob_origin_model[time_step] * self.transition_prob_matrix[transit]
                 )
 
-        temp_U["norm"] = U["norm_norm"] + U["abnorm_norm"]
-        temp_U["abnorm"] = U["norm_abnorm"] + U["abnorm_abnorm"]
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        arrival_state_marginal["norm"] = (
+            joint_transition_prob["norm_norm"] + joint_transition_prob["abnorm_norm"]
+        )
+        arrival_state_marginal["abnorm"] = (
+            joint_transition_prob["norm_abnorm"]
+            + joint_transition_prob["abnorm_abnorm"]
+        )
+
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
-                U[transit] = U[transit] / temp_U[arrival_state]
+                joint_transition_prob[transit] = joint_transition_prob[
+                    transit
+                ] / np.maximum(arrival_state_marginal[arrival_state], epsilon)
 
-        _M = SKF.create_transition_dict()
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        joint_future_prob = SKF.initialize_transitions()
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_arrival_model = getattr(self.model_prob, arrival_state)
-                _M[transit] = U[transit] * prob_arrival_model[time_step + 1]
+                prob_arrival_model = getattr(self.marginal_prob, arrival_state)
+                joint_future_prob[transit] = (
+                    joint_transition_prob[transit] * prob_arrival_model[time_step + 1]
+                )
 
-        M = SKF.create_model_dict()
-        M["norm"] = _M["norm_norm"] + _M["norm_abnorm"]
-        M["abnorm"] = _M["abnorm_norm"] + _M["abnorm_abnorm"]
+        smoother_state_prob = SKF.initialize_marginal()
+        smoother_state_prob["norm"] = (
+            joint_future_prob["norm_norm"] + joint_future_prob["norm_abnorm"]
+        )
+        smoother_state_prob["abnorm"] = (
+            joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
+        )
 
-        self.model_prob.norm[time_step] = copy.copy(M["norm"])
-        self.model_prob.abnorm[time_step] = copy.copy(M["abnorm"])
+        self.marginal_prob.norm[time_step] = copy.copy(smoother_state_prob["norm"])
+        self.marginal_prob.abnorm[time_step] = copy.copy(smoother_state_prob["abnorm"])
 
-        coef_model = SKF.create_transition_dict()
-        for origin_state in self.states:
-            for arrival_state in self.states:
+        coef_transition_model = SKF.initialize_transitions()
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_arrival_model = getattr(self.model_prob, arrival_state)
-                coef_model[transit] = _M[transit] / M[origin_state]
+                prob_arrival_model = getattr(self.marginal_prob, arrival_state)
+                coef_transition_model[transit] = joint_future_prob[
+                    transit
+                ] / np.maximum(smoother_state_prob[origin_state], epsilon)
 
-        mu_states = SKF.create_model_dict()
-        var_states = SKF.create_model_dict()
-        # Collapse 11, 12
-        (mu_states["norm"], var_states["norm"]) = SKF.gaussian_mixture(
+        mu_states = SKF.initialize_marginal()
+        var_states = SKF.initialize_marginal()
+        # Collapse
+        (mu_states["norm"], var_states["norm"]) = common.gaussian_mixture(
             self.model["norm_norm"].smoother_states.mu_smooth[time_step],
             self.model["norm_norm"].smoother_states.var_smooth[time_step],
-            coef_model["norm_norm"],
+            coef_transition_model["norm_norm"],
             self.model["norm_abnorm"].smoother_states.mu_smooth[time_step],
             self.model["norm_abnorm"].smoother_states.var_smooth[time_step],
-            coef_model["norm_abnorm"],
+            coef_transition_model["norm_abnorm"],
         )
 
-        # Collapse 21, 22
-        (mu_states["abnorm"], var_states["abnorm"]) = SKF.gaussian_mixture(
+        (mu_states["abnorm"], var_states["abnorm"]) = common.gaussian_mixture(
             self.model["abnorm_norm"].smoother_states.mu_smooth[time_step],
             self.model["abnorm_norm"].smoother_states.var_smooth[time_step],
-            coef_model["abnorm_norm"],
+            coef_transition_model["abnorm_norm"],
             self.model["abnorm_abnorm"].smoother_states.mu_smooth[time_step],
             self.model["abnorm_abnorm"].smoother_states.var_smooth[time_step],
-            coef_model["abnorm_norm"],
+            coef_transition_model["abnorm_norm"],
         )
-
-        for origin_state in self.states:
-            for arrival_state in self.states:
-                transit = f"{origin_state}_{arrival_state}"
-                self.model[transit].smoother_states.mu_smooth[time_step] = mu_states[
-                    origin_state
-                ]
-                self.model[transit].smoother_states.var_smooth[time_step] = var_states[
-                    origin_state
-                ]
 
         (
             self.smoother_states.mu_smooth[time_step],
             self.smoother_states.var_smooth[time_step],
-        ) = SKF.gaussian_mixture(
+        ) = common.gaussian_mixture(
             mu_states["norm"],
             var_states["norm"],
-            M["norm"],
+            smoother_state_prob["norm"],
             mu_states["abnorm"],
             var_states["abnorm"],
-            M["abnorm"],
+            smoother_state_prob["abnorm"],
         )
+
+        for origin_state in self.marginal_states:
+            for arrival_state in self.marginal_states:
+                transit = f"{origin_state}_{arrival_state}"
+                self.model[transit].smoother_states.mu_smooth[time_step] = mu_states[
+                    arrival_state
+                ]
+                self.model[transit].smoother_states.var_smooth[time_step] = var_states[
+                    arrival_state
+                ]
 
     def filter(
         self,
@@ -553,13 +493,11 @@ class SKF:
         var_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
-        self.model_prob = ModelProbability()
-        self.model_prob.initialize(num_time_steps + 1)
+        self.marginal_prob.initialize(num_time_steps + 1)
 
         # Initialize hidden states
         self.initialize_model_states()
         self.initialize_smoother_states(num_time_steps + 1)
-        self.smoother_states.initialize(num_time_steps + 1, self.num_states)
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             if self.model["norm_norm"].lstm_net:
@@ -573,7 +511,7 @@ class SKF:
             mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
             self.backward(y)
 
-            if self.model["norm_norm"].lstm_net:
+            if self.lstm_states_index:
                 self.model["norm_norm"].update_lstm_output_history(
                     self.mu_states_posterior[self.lstm_states_index],
                     self.var_states_posterior[
@@ -583,17 +521,18 @@ class SKF:
                 )
 
             self.save_for_smoother(time_step + 1)
-
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.model_prob.norm[time_step + 1] = copy.copy(self.prob_model["norm"])
-            self.model_prob.abnorm[time_step + 1] = copy.copy(self.prob_model["abnorm"])
+            self.marginal_prob.norm[time_step + 1] = copy.copy(self.prob_model["norm"])
+            self.marginal_prob.abnorm[time_step + 1] = copy.copy(
+                self.prob_model["abnorm"]
+            )
 
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.model_prob.abnorm[1:],
+            self.marginal_prob.abnorm[1:],
             self.smoother_states,
         )
 
@@ -617,6 +556,6 @@ class SKF:
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.model_prob.abnorm[1:],
+            self.marginal_prob.abnorm[1:],
             self.smoother_states,
         )
