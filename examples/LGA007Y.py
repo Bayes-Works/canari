@@ -8,6 +8,7 @@ from src import (
     LstmNetwork,
     WhiteNoise,
     Model,
+    Autoregression,
     plot_with_uncertainty,
     SKF,
 )
@@ -22,6 +23,9 @@ df_raw = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
 lags = [0, 4, 4, 4]
 df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
+data_file_lstm = "./data/lstm_pred.csv"
+pred_lstm = pd.read_csv(data_file_lstm, skiprows=0, delimiter=",", header=None)
+pred_lstm = pred_lstm.values
 # Data processing
 output_col = [0]
 data_processor = DataProcess(
@@ -36,8 +40,8 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Define parameters
-num_epoch = 50
-patience = 5
+num_epoch = 100
+patience = 30
 log_lik_optimal = -1e100
 mse_optim = 1e100
 epoch_optimal = 0
@@ -61,8 +65,8 @@ lstm_network = LstmNetwork(
 white_noise = WhiteNoise(std_error=noise_std)
 
 # Switching Kalman filter
-normal_to_abnormal_prob = 1e-5
-abnormal_to_normal_prob = 1e-2
+normal_to_abnormal_prob = 1e-4
+abnormal_to_normal_prob = 1e-1
 normal_model_prior_prob = 0.99
 
 model = Model(
@@ -78,10 +82,12 @@ ab_model = Model(
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-5,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=normal_to_abnormal_prob,
     abnorm_to_norm_prob=abnormal_to_normal_prob,
     norm_model_prior_prob=normal_model_prior_prob,
+    conditional_likelihood=True,
+    lstm_pred=pred_lstm,
 )
 skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
@@ -189,11 +195,18 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
 # # Load back the LSTM's optimal parameters
 skf.model["norm_norm"].lstm_net.load_state_dict(lstm_param_optimal)
+# init_mu_optimal = np.array(
+#     [[0.0503111884606580], [7.25816051377179e-05], [0], [0], [0]]
+# )
+# init_var_optimal = np.diag(
+#     np.array([7.30442055517709e-06, 5.92517193703484e-10, 0, 0, 0])
+# )
 skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 
+
 # Anomaly Detection
-# _, _, prob_abnorm, states = skf.filter(data=all_data)
-_, _, prob_abnorm, states = skf.smoother(data=all_data)
+_, _, prob_abnorm, states = skf.filter(data=all_data)
+# _, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 mu_plot = states.mu_posterior
 var_plot = states.var_posterior

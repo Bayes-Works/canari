@@ -148,7 +148,11 @@ class Model:
 
         return delta_mu_states, delta_var_states
 
-    def rts_smoother(self, time_step):
+    def rts_smoother(
+        self,
+        time_step: int,
+        rcond: Optional[float] = 1e-12,
+    ):
         """
         RTS smoother
         """
@@ -164,6 +168,7 @@ class Model:
             self.smoother_states.mu_posterior[time_step],
             self.smoother_states.var_posterior[time_step],
             self.smoother_states.cov_states[time_step + 1],
+            rcond,
         )
 
     def estimate_posterior_states(
@@ -357,7 +362,7 @@ class Model:
                     self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=mu_lstm_input, var_x=var_lstm_input
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
@@ -389,7 +394,7 @@ class Model:
                     self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=mu_lstm_input, var_x=var_lstm_input
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
@@ -402,7 +407,9 @@ class Model:
                     delta_var_states[self.lstm_states_index, self.lstm_states_index]
                     / var_lstm_pred**2
                 )
-                self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
+                self.lstm_net.update_param(
+                    np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                )
                 self.update_lstm_output_history(
                     self.mu_states_posterior[self.lstm_states_index],
                     self.var_states_posterior[
