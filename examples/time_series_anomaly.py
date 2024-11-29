@@ -75,7 +75,7 @@ noise_std = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=24,
+    look_back_len=5,
     num_features=3,
     num_layer=1,
     num_hidden_unit=50,
@@ -105,7 +105,7 @@ normal_model_prior_prob = 0.99
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-4,
+    std_transition_error=1e-3,
     norm_to_abnorm_prob=normal_to_abnormal_prob,
     abnorm_to_norm_prob=abnormal_to_normal_prob,
     norm_model_prior_prob=normal_model_prior_prob,
@@ -220,8 +220,8 @@ skf.model["norm_norm"].lstm_net.load_state_dict(lstm_param_optimal)
 skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 
 # Anomaly Detection
-# _, _, prob_abnorm, states = skf.filter(data=all_data)
-_, _, prob_abnorm, states = skf.smoother(data=all_data)
+_, _, prob_abnorm, states = skf.filter(data=all_data)
+# _, _, prob_abnorm, states = skf.smoother(data=all_data)
 
 mu_plot = states.mu_posterior
 var_plot = states.var_posterior

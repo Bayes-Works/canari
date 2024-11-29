@@ -91,9 +91,10 @@ def rts_smoother(
     mu_states_posterior: np.ndarray,
     var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
+    rcond: Optional[float] = 1e-12,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-12)
+    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=rcond)
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
@@ -145,9 +146,12 @@ def gaussian_mixture(
     """
     Gaussian reduction mixture
     """
-
+    if mu1.ndim == 1:
+        mu1 = np.atleast_2d(mu1).T
+    if mu2.ndim == 1:
+        mu2 = np.atleast_2d(mu2).T
     mu_mixture = mu1 * coef1 + mu2 * coef2
     m1 = mu1 - mu_mixture
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
-    return mu_mixture, var_mixture
+    return mu_mixture.flatten(), var_mixture
