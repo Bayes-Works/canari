@@ -91,10 +91,12 @@ def rts_smoother(
     mu_states_posterior: np.ndarray,
     var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
-    rcond: Optional[float] = 1e-12,
+    matrix_inversion_tol: Optional[float] = 1e-12,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=rcond)
+    jcb = cross_cov_states @ np.linalg.pinv(
+        var_states_prior, rcond=matrix_inversion_tol
+    )
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
