@@ -46,8 +46,8 @@ class MarginalProbability:
     abnorm: np.ndarray = field(init=False)
 
     def initialize(self, look_back_len: int):
-        self.norm = 0 * np.ones(look_back_len, dtype=np.float64)
-        self.abnorm = 0 * np.ones(look_back_len, dtype=np.float64)
+        self.norm = 0 * np.ones(look_back_len, dtype=np.float32)
+        self.abnorm = 0 * np.ones(look_back_len, dtype=np.float32)
 
 
 def initialize_transition():
