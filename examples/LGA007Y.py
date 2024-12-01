@@ -213,8 +213,8 @@ axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
 plot_with_uncertainty(
     time=t,
-    mu=mu_plot[1:, 0],
-    std=var_plot[1:, 0, 0] ** 0.5,
+    mu=mu_plot[:, 0],
+    std=var_plot[:, 0, 0] ** 0.5,
     # mu=states.mu_posterior[1:, 0],
     # std=states.var_posterior[1:, 0, 0] ** 0.5,
     color="b",
@@ -225,8 +225,8 @@ axs[0].set_title("local level")
 
 plot_with_uncertainty(
     time=t,
-    mu=mu_plot[1:, 1],
-    std=var_plot[1:, 1, 1] ** 0.5,
+    mu=mu_plot[:, 1],
+    std=var_plot[:, 1, 1] ** 0.5,
     # mu=states.mu_posterior[1:, 1],
     # std=states.var_posterior[1:, 1, 1] ** 0.5,
     color="b",
@@ -238,8 +238,8 @@ axs[1].set_title("local trend")
 
 plot_with_uncertainty(
     time=t,
-    mu=mu_plot[1:, 3],
-    std=var_plot[1:, 3, 3] ** 0.5,
+    mu=mu_plot[:, 3],
+    std=var_plot[:, 3, 3] ** 0.5,
     # mu=states.mu_posterior[1:, 3],
     # std=states.var_posterior[1:, 3, 3] ** 0.5,
     color="b",
@@ -250,8 +250,8 @@ axs[2].set_title("lstm")
 
 plot_with_uncertainty(
     time=t,
-    mu=mu_plot[1:, 4],
-    std=var_plot[1:, 4, 4] ** 0.5,
+    mu=mu_plot[:, 4],
+    std=var_plot[:, 4, 4] ** 0.5,
     # mu=states.mu_posterior[1:, 4],
     # std=states.var_posterior[1:, 4, 4] ** 0.5,
     color="b",

@@ -157,7 +157,7 @@ class SKF:
                 transition_model.var_states_posterior,
             )
 
-    def estimate_model_coef(
+    def estimate_transition_coef(
         self,
         obs,
         mu_pred_transit,
@@ -256,7 +256,7 @@ class SKF:
                 var_pred_transit[transit],
             ) = transition_model.forward(mu_lstm_pred, var_lstm_pred)
 
-        self.estimate_model_coef(
+        self.estimate_transition_coef(
             y,
             mu_pred_transit,
             var_pred_transit,
@@ -478,11 +478,11 @@ class SKF:
         var_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
-        self.marginal_prob_history.initialize(num_time_steps + 1)
+        self.marginal_prob_history.initialize(num_time_steps)
 
         # Initialize hidden states
         self.set_same_states_transition_model()
-        self.initialize_states_history(num_time_steps + 1)
+        self.initialize_states_history(num_time_steps)
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             if self.lstm_net:
@@ -505,19 +505,17 @@ class SKF:
                     ],
                 )
 
-            self.save_states_history(time_step + 1)
+            self.save_states_history(time_step)
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.marginal_prob_history.norm[time_step + 1] = self.marginal_prob["norm"]
-            self.marginal_prob_history.abnorm[time_step + 1] = self.marginal_prob[
-                "abnorm"
-            ]
+            self.marginal_prob_history.norm[time_step] = self.marginal_prob["norm"]
+            self.marginal_prob_history.abnorm[time_step] = self.marginal_prob["abnorm"]
 
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.marginal_prob_history.abnorm[1:],
+            self.marginal_prob_history.abnorm,
             self.states,
         )
 
@@ -528,19 +526,19 @@ class SKF:
 
         num_time_steps = len(data["y"])
         self.set_same_states_transition_model()
-        self.initialize_states_history(num_time_steps + 1)
+        self.initialize_states_history(num_time_steps)
 
         # Filter
         mu_obs_preds, var_obs_preds, _, _ = self.filter(data)
 
         # Smoother
         self.initialize_smoother_buffers()
-        for time_step in reversed(range(0, num_time_steps)):
+        for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
 
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.marginal_prob_history.abnorm[1:],
+            self.marginal_prob_history.abnorm,
             self.states,
         )

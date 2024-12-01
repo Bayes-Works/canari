@@ -14,8 +14,8 @@ def plot_with_uncertainty(
 ):
 
     if index is not None:
-        mu_plot = mu[1:, index]
-        std_plot = std[1:, index, index].flatten()
+        mu_plot = mu[:, index]
+        std_plot = std[:, index, index].flatten()
     else:
         mu_plot = mu
         std_plot = std.flatten()
