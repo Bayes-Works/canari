@@ -253,8 +253,8 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = copy.copy(np.atleast_2d(self.states.mu_smooth[1]).T)
-        self.var_states = copy.copy(np.diag(np.diag(self.states.var_smooth[1])))
+        self.mu_states = copy.copy(np.atleast_2d(self.states.mu_smooth[0]).T)
+        self.var_states = copy.copy(np.diag(np.diag(self.states.var_smooth[0])))
 
     def initialize_lstm_output_history(self):
         self.lstm_output_history.initialize(self._lstm_look_back_len)
@@ -262,10 +262,10 @@ class Model:
     def initialize_states_history(self, num_time_steps: int):
         self.states = StatesHistory()
         self.states.initialize(num_time_steps, self.num_states)
-        self.states.mu_prior[0] = copy.copy(self.mu_states.flatten())
-        self.states.var_prior[0] = copy.copy(self.var_states)
-        self.states.mu_posterior[0] = copy.copy(self.mu_states.flatten())
-        self.states.var_posterior[0] = copy.copy(self.var_states)
+        # self.states.mu_prior[0] = copy.copy(self.mu_states.flatten())
+        # self.states.var_prior[0] = copy.copy(self.var_states)
+        # self.states.mu_posterior[0] = copy.copy(self.mu_states.flatten())
+        # self.states.var_posterior[0] = copy.copy(self.var_states)
 
     def save_states_history(self, time_step):
         """
@@ -407,7 +407,7 @@ class Model:
                     ],
                 )
 
-            self.save_states_history(time_step + 1)
+            self.save_states_history(time_step)
 
             self.set_states(self.mu_states_posterior, self.var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
@@ -420,14 +420,14 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
-        self.initialize_states_history(num_time_steps + 1)
+        self.initialize_states_history(num_time_steps)
 
         # Filter
         mu_obs_preds, std_obs_preds = self.filter(data)
 
         # Smoother
         self.initialize_smoother_buffers()
-        for time_step in reversed(range(0, num_time_steps)):
+        for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
