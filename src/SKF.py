@@ -490,7 +490,7 @@ class SKF:
                     self.lstm_output_history, x
                 )
                 mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=mu_lstm_input, var_x=var_lstm_input
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
                 )
 
             mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
