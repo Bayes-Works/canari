@@ -24,7 +24,6 @@ class SKF:
         abnorm_to_norm_prob: Optional[float] = 0.1,
         norm_model_prior_prob: Optional[float] = 0.99,
         conditional_likelihood: Optional[bool] = True,
-        lstm_pred: Optional[np.ndarray] = None,
     ):
         self.std_transition_error = std_transition_error
         self.conditional_likelihood = conditional_likelihood
@@ -39,7 +38,6 @@ class SKF:
         self.smoother_states = SmootherStates()
         self.marginal_prob = MarginalProbability()
         self.marginal_states = {"norm", "abnorm"}
-        self.lstm_pred = lstm_pred
 
     @staticmethod
     def initialize_transitions():

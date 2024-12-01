@@ -151,7 +151,7 @@ class Model:
     def rts_smoother(
         self,
         time_step: int,
-        rcond: Optional[float] = 1e-12,
+        matrix_inversion_tol: Optional[float] = 1e-12,
     ):
         """
         RTS smoother
@@ -168,7 +168,7 @@ class Model:
             self.smoother_states.mu_posterior[time_step],
             self.smoother_states.var_posterior[time_step],
             self.smoother_states.cov_states[time_step + 1],
-            rcond,
+            matrix_inversion_tol,
         )
 
     def estimate_posterior_states(

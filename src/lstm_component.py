@@ -24,6 +24,7 @@ class LstmNetwork(BaseComponent):
         var_states: Optional[np.ndarray] = None,
         device: Optional[str] = "cpu",
         num_thread: Optional[int] = 1,
+        manual_seed: Optional[int] = None,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -36,6 +37,7 @@ class LstmNetwork(BaseComponent):
         self.var_states = var_states
         self.device = device
         self.num_thread = num_thread
+        self.manual_seed = manual_seed
         super().__init__()
 
     def initialize_component_name(self):
@@ -73,7 +75,9 @@ class LstmNetwork(BaseComponent):
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
     def initialize_lstm_network(self) -> Sequential:
-        pytagi.manual_seed(2)
+        if self.manual_seed:
+            pytagi.manual_seed(self.manual_seed)
+
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
