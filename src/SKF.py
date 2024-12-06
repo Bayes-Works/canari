@@ -6,9 +6,10 @@ from src.model import Model
 import src.common as common
 from src.data_struct import (
     StatesHistory,
-    MarginalProbability,
+    # MarginalProbability,
     initialize_transition,
     initialize_marginal,
+    initialize_marginal_prob_history,
 )
 
 
@@ -45,8 +46,12 @@ class SKF:
         self.marginal_prob = initialize_marginal()
         self.marginal_prob["norm"] = norm_model_prior_prob
         self.marginal_prob["abnorm"] = 1 - norm_model_prior_prob
-        self.marginal_prob_history = MarginalProbability()
         self.states = StatesHistory()
+        self.marginal_prob_history = None
+        self.mu_states_prior = None
+        self.var_states_prior = None
+        self.mu_states_posterior = None
+        self.var_states_posterior = None
 
     def create_transition_model(
         self,
@@ -144,10 +149,10 @@ class SKF:
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
             self.model["norm_norm"].states.var_posterior[-1],
-            self.marginal_prob_history.norm[-1],
+            self.marginal_prob_history["norm"][-1],
             self.model["abnorm_abnorm"].states.mu_posterior[-1],
             self.model["abnorm_abnorm"].states.var_posterior[-1],
-            self.marginal_prob_history.abnorm[-1],
+            self.marginal_prob_history["abnorm"][-1],
         )
 
     def set_states(self):
@@ -163,7 +168,7 @@ class SKF:
         mu_pred_transit,
         var_pred_transit,
     ):
-        # epsilon = 1e-10
+
         if np.isnan(obs):
             for transit in self.transition_likelihood:
                 self.transition_likelihood[transit] = 1
@@ -299,7 +304,6 @@ class SKF:
             self.model["norm_norm"].observation_matrix,
         )
 
-        # TODO: better names for transition_pred, collapse_pred, obs_pred
         return mu_obs_pred, var_obs_pred
 
     def backward(
@@ -360,18 +364,15 @@ class SKF:
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, rcond=1e-3)
 
-        # TODO: if epsilon is needed
-        epsilon = 1e-10
-
         joint_transition_prob = initialize_transition()
         arrival_state_marginal = initialize_marginal()
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_origin_model = getattr(self.marginal_prob_history, origin_state)
                 joint_transition_prob[transit] = (
-                    prob_origin_model[time_step] * self.transition_prob[transit]
+                    self.marginal_prob_history[origin_state][time_step]
+                    * self.transition_prob[transit]
                 )
 
         arrival_state_marginal["norm"] = (
@@ -385,17 +386,18 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                joint_transition_prob[transit] = joint_transition_prob[
-                    transit
-                ] / np.maximum(arrival_state_marginal[arrival_state], epsilon)
+                joint_transition_prob[transit] = (
+                    joint_transition_prob[transit]
+                    / arrival_state_marginal[arrival_state]
+                )
 
         joint_future_prob = initialize_transition()
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_arrival_model = getattr(self.marginal_prob_history, arrival_state)
                 joint_future_prob[transit] = (
-                    joint_transition_prob[transit] * prob_arrival_model[time_step + 1]
+                    joint_transition_prob[transit]
+                    * self.marginal_prob_history["arrival_state"][time_step + 1]
                 )
 
         smoother_state_prob = initialize_marginal()
@@ -406,10 +408,10 @@ class SKF:
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.marginal_prob_history.norm[time_step] = copy.copy(
+        self.marginal_prob_history["norm"][time_step] = copy.copy(
             smoother_state_prob["norm"]
         )
-        self.marginal_prob_history.abnorm[time_step] = copy.copy(
+        self.marginal_prob_history["abnorm"][time_step] = copy.copy(
             smoother_state_prob["abnorm"]
         )
 
@@ -417,9 +419,8 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                prob_arrival_model = getattr(self.marginal_prob_history, arrival_state)
-                transition_coef[transit] = joint_future_prob[transit] / np.maximum(
-                    smoother_state_prob[origin_state], epsilon
+                transition_coef[transit] = (
+                    joint_future_prob[transit] / smoother_state_prob[origin_state]
                 )
 
         mu_states = initialize_marginal()
@@ -478,7 +479,7 @@ class SKF:
         var_obs_preds = []
         mu_lstm_pred = None
         var_lstm_pred = None
-        self.marginal_prob_history.initialize(num_time_steps)
+        self.marginal_prob_history = initialize_marginal_prob_history(num_time_steps)
 
         # Initialize hidden states
         self.set_same_states_transition_model()
@@ -509,13 +510,15 @@ class SKF:
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.marginal_prob_history.norm[time_step] = self.marginal_prob["norm"]
-            self.marginal_prob_history.abnorm[time_step] = self.marginal_prob["abnorm"]
+            self.marginal_prob_history["norm"][time_step] = self.marginal_prob["norm"]
+            self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
+                "abnorm"
+            ]
 
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.marginal_prob_history.abnorm,
+            self.marginal_prob_history["abnorm"],
             self.states,
         )
 
@@ -539,6 +542,6 @@ class SKF:
         return (
             mu_obs_preds,
             var_obs_preds,
-            self.marginal_prob_history.abnorm,
+            self.marginal_prob_history["abnorm"],
             self.states,
         )
