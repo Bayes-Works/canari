@@ -102,6 +102,8 @@ class Model:
             self.lstm_net.update_param = self.update_lstm_param
             self.lstm_output_history = LstmOutputHistory()
             self.lstm_output_history.initialize(self._lstm_look_back_len)
+        else:
+            self.lstm_net = None
 
     def update_lstm_param(
         self,
@@ -262,10 +264,6 @@ class Model:
     def initialize_states_history(self, num_time_steps: int):
         self.states = StatesHistory()
         self.states.initialize(num_time_steps, self.num_states)
-        # self.states.mu_prior[0] = copy.copy(self.mu_states.flatten())
-        # self.states.var_prior[0] = copy.copy(self.var_states)
-        # self.states.mu_posterior[0] = copy.copy(self.mu_states.flatten())
-        # self.states.var_posterior[0] = copy.copy(self.var_states)
 
     def save_states_history(self, time_step):
         """
@@ -372,6 +370,8 @@ class Model:
         """
         Filter for whole time series data
         """
+        num_time_steps = len(data["y"])
+        self.initialize_states_history(num_time_steps)
 
         mu_obs_preds = []
         std_obs_preds = []
@@ -420,7 +420,6 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
-        self.initialize_states_history(num_time_steps)
 
         # Filter
         mu_obs_preds, std_obs_preds = self.filter(data)
