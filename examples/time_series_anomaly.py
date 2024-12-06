@@ -3,9 +3,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from examples import DataProcess
-import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-import copy
+from pytagi import exponential_scheduler
 from src import (
     LocalTrend,
     LocalAcceleration,
@@ -15,7 +14,7 @@ from src import (
     plot_with_uncertainty,
     SKF,
 )
-from pytagi import exponential_scheduler
+
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
