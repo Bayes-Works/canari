@@ -30,10 +30,10 @@ class Model:
         Assemble components
         """
 
-        self.assemble_matrices()
-        self.assemble_states()
+        self._assemble_matrices()
+        self._assemble_states()
 
-    def assemble_matrices(self):
+    def _assemble_matrices(self):
         """
         Assemble_matrices
         """
@@ -58,7 +58,7 @@ class Model:
             )
         self.observation_matrix = np.atleast_2d(global_observation_matrix)
 
-    def assemble_states(self):
+    def _assemble_states(self):
         """
         Assemble_states
         """
@@ -229,14 +229,14 @@ class Model:
         Set the posterirors for the states
         """
 
-        self.mu_states_posterior = copy.copy(new_mu_states)
-        self.var_states_posterior = copy.copy(new_var_states)
+        self.mu_states_posterior = new_mu_states.copy()
+        self.var_states_posterior = new_var_states.copy()
 
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
         self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
         self.lstm_output_history.var = np.roll(self.lstm_output_history.var, -1)
-        self.lstm_output_history.mu[-1] = copy.copy(mu_lstm_pred)
-        self.lstm_output_history.var[-1] = copy.copy(var_lstm_pred)
+        self.lstm_output_history.mu[-1] = mu_lstm_pred.copy()
+        self.lstm_output_history.var[-1] = var_lstm_pred.copy()
 
     def set_states(
         self,
@@ -247,16 +247,16 @@ class Model:
         Assign new states
         """
 
-        self.mu_states = copy.copy(new_mu_states)
-        self.var_states = copy.copy(new_var_states)
+        self.mu_states = new_mu_states.copy()
+        self.var_states = new_var_states.copy()
 
     def initialize_states_history_with_smoother_estimates(self):
         """
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = copy.copy(np.atleast_2d(self.states.mu_smooth[0]).T)
-        self.var_states = copy.copy(np.diag(np.diag(self.states.var_smooth[0])))
+        self.mu_states = np.atleast_2d(self.states.mu_smooth[0]).copy().T
+        self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
 
     def initialize_lstm_output_history(self):
         self.lstm_output_history.initialize(self._lstm_look_back_len)
@@ -270,14 +270,12 @@ class Model:
         Save states' priors, posteriors and cross-covariances for smoother
         """
 
-        self.states.mu_prior[time_step] = copy.copy(self.mu_states_prior.flatten())
+        self.states.mu_prior[time_step] = self.mu_states_prior.copy().flatten()
         self.states.var_prior[time_step] = (
             self.var_states_prior + self.var_states_prior.T
         ) * 0.5
-        self.states.mu_posterior[time_step] = copy.copy(
-            (self.mu_states_posterior.flatten())
-        )
-        self.states.var_posterior[time_step] = copy.copy(self.var_states_posterior)
+        self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
+        self.states.var_posterior[time_step] = self.var_states_posterior.copy()
         self.states.cov_states[time_step] = self.var_states @ self.transition_matrix.T
 
     def initialize_smoother_buffers(self):
@@ -293,16 +291,16 @@ class Model:
         """
 
         model_copy = Model()
-        model_copy.transition_matrix = copy.copy(self.transition_matrix)
-        model_copy.process_noise_matrix = copy.copy(self.process_noise_matrix)
-        model_copy.observation_matrix = copy.copy(self.observation_matrix)
-        model_copy.mu_states = copy.copy(self.mu_states)
-        model_copy.var_states = copy.copy(self.var_states)
-        model_copy.states_name = copy.copy(self.states_name)
+        model_copy.transition_matrix = self.transition_matrix.copy()
+        model_copy.process_noise_matrix = self.process_noise_matrix.copy()
+        model_copy.observation_matrix = self.observation_matrix.copy()
+        model_copy.mu_states = self.mu_states.copy()
+        model_copy.var_states = self.var_states.copy()
+        model_copy.states_name = self.states_name.copy()
         model_copy.num_states = copy.copy(self.num_states)
         model_copy.lstm_net = None
         model_copy.lstm_states_index = copy.copy(self.lstm_states_index)
-        model_copy.states_name = copy.copy(self.states_name)
+        model_copy.states_name = self.states_name.copy()
         return model_copy
 
     def create_compatible_model(self, target_model):
@@ -370,6 +368,7 @@ class Model:
         """
         Filter for whole time series data
         """
+
         num_time_steps = len(data["y"])
         self.initialize_states_history(num_time_steps)
 
