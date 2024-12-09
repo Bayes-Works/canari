@@ -419,16 +419,10 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
-
-        # Filter
-        mu_obs_preds, std_obs_preds = self.filter(data)
-
         # Smoother
         self.initialize_smoother_buffers()
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
-
-        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def lstm_train(
         self,
@@ -442,6 +436,7 @@ class Model:
         if self.lstm_net is None:
             self.initialize_lstm_network()
 
+        self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
 
