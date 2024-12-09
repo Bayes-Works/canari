@@ -126,13 +126,7 @@ class SKF:
         self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
         self.states.var_posterior[time_step] = self.var_states_posterior.copy()
 
-    def save_marginal_prob_history(self, time_step: int):
-        self.marginal_prob_history["norm"][time_step] = self.marginal_prob[
-            "norm"
-        ].copy()
-        self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
-            "abnorm"
-        ].copy()
+    # def save_marginal_prob_history(self, time_step: int):
 
     def initialize_states_history(self, num_time_steps: int):
         for transition_model in self.model.values():
@@ -408,7 +402,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model.rts_smoother(time_step, rcond=1e-3)
+            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
         joint_transition_prob = initialize_transition()
         arrival_state_marginal = initialize_marginal()
@@ -443,7 +437,7 @@ class SKF:
                 transit = f"{origin_state}_{arrival_state}"
                 joint_future_prob[transit] = (
                     joint_transition_prob[transit]
-                    * self.marginal_prob_history["arrival_state"][time_step + 1]
+                    * self.marginal_prob_history[arrival_state][time_step + 1]
                 )
 
         self.marginal_prob["norm"] = (
@@ -453,7 +447,12 @@ class SKF:
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.save_marginal_prob_history(time_step)
+        self.marginal_prob_history["norm"][time_step] = self.marginal_prob[
+            "norm"
+        ].copy()
+        self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
+            "abnorm"
+        ].copy()
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -520,10 +519,15 @@ class SKF:
                 )
 
             self.save_states_history(time_step)
-            self.save_marginal_prob_history(time_step)
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
+            self.marginal_prob_history["norm"][time_step] = self.marginal_prob[
+                "norm"
+            ].copy()
+            self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
+                "abnorm"
+            ].copy()
 
         return (
             mu_obs_preds,
@@ -538,11 +542,7 @@ class SKF:
         """
 
         num_time_steps = len(data["y"])
-        self.set_same_states_transition_model()
-        self.initialize_states_history(num_time_steps)
-
-        # Filter
-        mu_obs_preds, var_obs_preds, _, _ = self.filter(data)
+        self.marginal_prob_history = initialize_marginal_prob_history(num_time_steps)
 
         # Smoother
         self.initialize_smoother_buffers()
@@ -550,8 +550,6 @@ class SKF:
             self.rts_smoother(time_step)
 
         return (
-            mu_obs_preds,
-            var_obs_preds,
             self.marginal_prob_history["abnorm"],
             self.states,
         )
