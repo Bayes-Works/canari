@@ -1,18 +1,18 @@
 import pandas as pd
+from pytagi import Normalizer as normalizer
+from pytagi import exponential_scheduler
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from examples import DataProcess
-from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 from src import (
     LocalTrend,
     LocalAcceleration,
     LstmNetwork,
     WhiteNoise,
     Model,
-    plot_with_uncertainty,
     SKF,
+    plot_with_uncertainty,
 )
 
 
@@ -37,7 +37,6 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 100
 
 data_processor = DataProcess(
     data=df,
@@ -97,7 +96,7 @@ skf = SKF(
 skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
 #  Training
-scheduled_sigma_v = 2
+scheduled_sigma_v = 1
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(
@@ -122,76 +121,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         data_processor.data_std[output_col],
     )
 
-    # #  Plot hidden states
-    # t = range(len(train_data["y"]))
-    # fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
-    # axs[0].plot(t, train_data["y"], color="r", label="obs")
-    # axs[0].legend()
-    # axs[0].set_title("Observed Data")
-    # axs[0].set_ylabel("y")
-    # plot_with_uncertainty(
-    #     time=t,
-    #     mu=train_states.mu_prior[:-1, 0],
-    #     std=train_states.var_prior[:-1, 0, 0] ** 0.5,
-    #     color="b",
-    #     label=["mu_val_pred", "±1σ"],
-    #     ax=axs[0],
-    # )
-    # plot_with_uncertainty(
-    #     time=t,
-    #     mu=train_states.mu_smooth[:-1, 0],
-    #     std=train_states.var_smooth[:-1, 0, 0] ** 0.5,
-    #     color="r",
-    #     label=["mu_val_pred", "±1σ"],
-    #     ax=axs[0],
-    # )
-    # axs[0].set_title("local level")
-
-    # plot_with_uncertainty(
-    #     time=t,
-    #     mu=train_states.mu_smooth[1:, 1],
-    #     std=train_states.var_smooth[1:, 1, 1] ** 0.5,
-    #     color="b",
-    #     label=["mu_val_pred", "±1σ"],
-    #     ax=axs[1],
-    # )
-    # axs[1].set_title("local trend")
-
-    # plot_with_uncertainty(
-    #     time=t,
-    #     mu=train_states.mu_smooth[1:, 3],
-    #     std=train_states.var_smooth[1:, 3, 3] ** 0.5,
-    #     color="b",
-    #     label=["mu_val_pred", "±1σ"],
-    #     ax=axs[2],
-    # )
-    # axs[2].set_title("lstm")
-
-    # plot_with_uncertainty(
-    #     time=t,
-    #     # mu=train_states.mu_smooth[1:, 4],
-    #     # std=train_states.var_smooth[1:, 4, 4] ** 0.5,
-    #     mu=train_states.mu_posterior[1:, 4],
-    #     std=train_states.var_posterior[1:, 4, 4] ** 0.5,
-    #     color="b",
-    #     label=["mu_val_pred", "±1σ"],
-    #     ax=axs[3],
-    # )
-    # axs[3].set_title("white noise")
-
-    # plt.tight_layout()
-    # plt.show()
-
-
 # Anomaly Detection
-prob_abnorm, states = skf.filter(data=all_data)
-_, _ = skf.smoother(data=all_data)
+filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 mu_plot = states.mu_posterior
 var_plot = states.var_posterior
-
-# mu_plot = states.mu_smooth
-# var_plot = states.var_smooth
+marginal_abnorm_prob_plot = smooth_marginal_abnorm_prob
 
 #  Plot
 t = range(len(all_data["y"]))
@@ -226,7 +162,7 @@ axs[1].legend()
 axs[1].set_title("Observed Data")
 axs[1].set_ylabel("y")
 
-axs[2].plot(t, prob_abnorm, color="blue")
+axs[2].plot(t, marginal_abnorm_prob_plot, color="blue")
 axs[2].set_title("Probability of Abnormal Model")
 axs[2].set_xlabel("Time")
 axs[2].set_ylabel("Prob abonormal")
@@ -281,7 +217,7 @@ plot_with_uncertainty(
 )
 axs[3].set_title("white noise")
 
-axs[4].plot(t, prob_abnorm, color="r")
+axs[4].plot(t, marginal_abnorm_prob_plot, color="b")
 axs[4].set_title("Probability of Abnormal Model")
 axs[4].set_xlabel("Time")
 axs[4].set_ylabel("Prob abonormal")

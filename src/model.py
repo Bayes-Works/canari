@@ -132,13 +132,17 @@ class Model:
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
                 self.mu_states[i] = np.nanmean(y_no_nan)
-                self.var_states[i, i] = 1e-2
+                self._mu_local_level = np.nanmean(y_no_nan)
+                if self.var_states[i, i] == 0:
+                    self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
                 self.mu_states[i] = coefficients[1]
-                self.var_states[i, i] = 1e-2
+                if self.var_states[i, i] == 0:
+                    self.var_states[i, i] = 1e-2
             elif _state_name == "local acceleration":
                 self.mu_states[i] = coefficients[0]
-                self.var_states[i, i] = 1e-3
+                if self.var_states[i, i] == 0:
+                    self.var_states[i, i] = 1e-3
 
     def forward(
         self,
@@ -257,6 +261,8 @@ class Model:
 
         self.mu_states = np.atleast_2d(self.states.mu_smooth[0]).copy().T
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
+        local_level_index = self.states_name.index("local level")
+        self.mu_states[local_level_index] = self._mu_local_level
 
     def initialize_lstm_output_history(self):
         self.lstm_output_history.initialize(self._lstm_look_back_len)
@@ -282,12 +288,13 @@ class Model:
         """
         Set the smoothed estimates at the last time step = posterior
         """
+
         self.states.mu_smooth[-1] = self.states.mu_posterior[-1]
         self.states.var_smooth[-1] = self.states.var_posterior[-1]
 
-    def duplicate(self):
+    def duplicate(self) -> "Model":
         """
-        Duplicate models
+        Duplicate models for using in SKF
         """
 
         model_copy = Model()
@@ -303,9 +310,10 @@ class Model:
         model_copy.states_name = self.states_name.copy()
         return model_copy
 
-    def create_compatible_model(self, target_model):
+    def create_compatible_model(self, target_model) -> None:
         """
         Create compatiable model by padding zero to states and matrices
+        Using in SKF
         """
 
         pad_row = np.zeros((self.num_states)).flatten()
@@ -407,13 +415,12 @@ class Model:
                 )
 
             self.save_states_history(time_step)
-
             self.set_states(self.mu_states_posterior, self.var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
-    def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+    def smoother(self, data: Dict[str, np.ndarray]) -> None:
         """
         Smoother for whole time series
         """
