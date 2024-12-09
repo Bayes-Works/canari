@@ -48,7 +48,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 5e-2
+sigma_v = 1e-2
 model = Model(
     LocalTrend(),
     LstmNetwork(
@@ -57,7 +57,7 @@ model = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        manual_seed=1,
+        # manual_seed=1,
     ),
     Autoregression(),
     WhiteNoise(std_error=sigma_v),
@@ -65,7 +65,7 @@ model = Model(
 model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 # Training
-scheduled_sigma_v = 2
+scheduled_sigma_v = 1
 for epoch in range(num_epoch):
     # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(

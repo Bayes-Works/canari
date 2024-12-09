@@ -1,9 +1,8 @@
+from typing import Tuple, Dict, Optional
 import numpy as np
-import copy
-from typing import Tuple, List, Dict, Optional
-import pytagi.metric as metric
+from pytagi import metric
 from src.model import Model
-import src.common as common
+from src import common
 from src.data_struct import (
     StatesHistory,
     initialize_transition,
@@ -226,7 +225,7 @@ class SKF:
         return transition_likelihood
 
     def _get_states(
-        self, category: str, state_type: str, time_step: int = None
+        self, transit: str, state_type: str, time_step: int = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get states values for collapse step
@@ -234,18 +233,18 @@ class SKF:
 
         if state_type == "prior":
             return (
-                self.model[category].mu_states_prior,
-                self.model[category].var_states_prior,
+                self.model[transit].mu_states_prior,
+                self.model[transit].var_states_prior,
             )
         elif state_type == "posterior":
             return (
-                self.model[category].mu_states_posterior,
-                self.model[category].var_states_posterior,
+                self.model[transit].mu_states_posterior,
+                self.model[transit].var_states_posterior,
             )
         elif state_type == "smooth":
             return (
-                self.model[category].states.mu_smooth[time_step],
-                self.model[category].states.var_smooth[time_step],
+                self.model[transit].states.mu_smooth[time_step],
+                self.model[transit].states.var_smooth[time_step],
             )
 
     def _collapse_states(
@@ -258,41 +257,44 @@ class SKF:
         mu_states_marginal = initialize_marginal()
         var_states_marginal = initialize_marginal()
 
+        if state_type == "smooth":
+            norm_keys = ("norm_norm", "norm_abnorm")
+            abnorm_keys = ("abnorm_norm", "abnorm_abnorm")
+        else:
+            norm_keys = ("norm_norm", "abnorm_norm")
+            abnorm_keys = ("norm_abnorm", "abnorm_abnorm")
+
         # Retrieve states for norm mixture
-        mu_norm_norm, var_norm_norm = self._get_states(
-            "norm_norm", state_type, time_step
-        )
-        mu_abnorm_norm, var_abnorm_norm = self._get_states(
-            "abnorm_norm", state_type, time_step
-        )
+        mu_norm_1, var_norm_1 = self._get_states(norm_keys[0], state_type, time_step)
+        mu_norm_2, var_norm_2 = self._get_states(norm_keys[1], state_type, time_step)
 
         mu_states_marginal["norm"], var_states_marginal["norm"] = (
             common.gaussian_mixture(
-                mu_norm_norm,
-                var_norm_norm,
-                self.transition_coef["norm_norm"],
-                mu_abnorm_norm,
-                var_abnorm_norm,
-                self.transition_coef["abnorm_norm"],
+                mu_norm_1,
+                var_norm_1,
+                self.transition_coef[norm_keys[0]],
+                mu_norm_2,
+                var_norm_2,
+                self.transition_coef[norm_keys[1]],
             )
         )
 
         # Retrieve states for abnorm mixture
-        mu_norm_abnorm, var_norm_abnorm = self._get_states(
-            "norm_abnorm", state_type, time_step
+        mu_abnorm_1, var_abnorm_1 = self._get_states(
+            abnorm_keys[0], state_type, time_step
         )
-        mu_abnorm_abnorm, var_abnorm_abnorm = self._get_states(
-            "abnorm_abnorm", state_type, time_step
+        mu_abnorm_2, var_abnorm_2 = self._get_states(
+            abnorm_keys[1], state_type, time_step
         )
 
         mu_states_marginal["abnorm"], var_states_marginal["abnorm"] = (
             common.gaussian_mixture(
-                mu_norm_abnorm,
-                var_norm_abnorm,
-                self.transition_coef["norm_abnorm"],
-                mu_abnorm_abnorm,
-                var_abnorm_abnorm,
-                self.transition_coef["abnorm_abnorm"],
+                mu_abnorm_1,
+                var_abnorm_1,
+                self.transition_coef[abnorm_keys[0]],
+                mu_abnorm_2,
+                var_abnorm_2,
+                self.transition_coef[abnorm_keys[1]],
             )
         )
 
