@@ -126,6 +126,14 @@ class SKF:
         self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
         self.states.var_posterior[time_step] = self.var_states_posterior.copy()
 
+    def save_marginal_prob_history(self, time_step: int):
+        self.marginal_prob_history["norm"][time_step] = self.marginal_prob[
+            "norm"
+        ].copy()
+        self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
+            "abnorm"
+        ].copy()
+
     def initialize_states_history(self, num_time_steps: int):
         for transition_model in self.model.values():
             transition_model.initialize_states_history(num_time_steps)
@@ -205,39 +213,66 @@ class SKF:
                     )
         return transition_likelihood
 
-    def _collapse_prior_states(
-        self,
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """
-        Collapse prior states from different transitions into two classes: 'norm' and 'abnorm'.
-        """
+    def _get_states(self, category: str, state_type: str, time_step: int = None):
+        if state_type == "prior":
+            return (
+                self.model[category].mu_states_prior,
+                self.model[category].var_states_prior,
+            )
+        elif state_type == "posterior":
+            return (
+                self.model[category].mu_states_posterior,
+                self.model[category].var_states_posterior,
+            )
+        elif state_type == "smooth":
+            return (
+                self.model[category].states.mu_smooth[time_step],
+                self.model[category].states.var_smooth[time_step],
+            )
 
+    def _collapse_states(self, state_type: str, time_step: int = None):
         mu_states_marginal = initialize_marginal()
         var_states_marginal = initialize_marginal()
 
-        # Collapse
+        # Retrieve states for norm mixture
+        norm_norm_mu, norm_norm_var = self._get_states(
+            "norm_norm", state_type, time_step
+        )
+        abnorm_norm_mu, abnorm_norm_var = self._get_states(
+            "abnorm_norm", state_type, time_step
+        )
+
         mu_states_marginal["norm"], var_states_marginal["norm"] = (
             common.gaussian_mixture(
-                self.model["norm_norm"].mu_states_prior,
-                self.model["norm_norm"].var_states_prior,
+                norm_norm_mu,
+                norm_norm_var,
                 self.transition_coef["norm_norm"],
-                self.model["abnorm_norm"].mu_states_prior,
-                self.model["abnorm_norm"].var_states_prior,
+                abnorm_norm_mu,
+                abnorm_norm_var,
                 self.transition_coef["abnorm_norm"],
             )
         )
 
+        # Retrieve states for abnorm mixture
+        norm_abnorm_mu, norm_abnorm_var = self._get_states(
+            "norm_abnorm", state_type, time_step
+        )
+        abnorm_abnorm_mu, abnorm_abnorm_var = self._get_states(
+            "abnorm_abnorm", state_type, time_step
+        )
+
         mu_states_marginal["abnorm"], var_states_marginal["abnorm"] = (
             common.gaussian_mixture(
-                self.model["norm_abnorm"].mu_states_prior,
-                self.model["norm_abnorm"].var_states_prior,
+                norm_abnorm_mu,
+                norm_abnorm_var,
                 self.transition_coef["norm_abnorm"],
-                self.model["abnorm_abnorm"].mu_states_prior,
-                self.model["abnorm_abnorm"].var_states_prior,
+                abnorm_abnorm_mu,
+                abnorm_abnorm_var,
                 self.transition_coef["abnorm_abnorm"],
             )
         )
 
+        # Combine the two final distributions
         mu_states_combined, var_states_combined = common.gaussian_mixture(
             mu_states_marginal["norm"],
             var_states_marginal["norm"],
@@ -247,98 +282,6 @@ class SKF:
             self.marginal_prob["abnorm"],
         )
 
-        return (
-            mu_states_combined,
-            var_states_combined,
-            mu_states_marginal,
-            var_states_marginal,
-        )
-
-    def _collapse_posterior_states(
-        self,
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """
-        Collapse posterior states from different transitions into 'norm' and 'abnorm'.
-        """
-
-        mu_states_marginal = initialize_marginal()
-        var_states_marginal = initialize_marginal()
-
-        # Collapse
-        mu_states_marginal["norm"], var_states_marginal["norm"] = (
-            common.gaussian_mixture(
-                self.model["norm_norm"].mu_states_posterior,
-                self.model["norm_norm"].var_states_posterior,
-                self.transition_coef["norm_norm"],
-                self.model["abnorm_norm"].mu_states_posterior,
-                self.model["abnorm_norm"].var_states_posterior,
-                self.transition_coef["abnorm_norm"],
-            )
-        )
-        mu_states_marginal["abnorm"], var_states_marginal["abnorm"] = (
-            common.gaussian_mixture(
-                self.model["norm_abnorm"].mu_states_posterior,
-                self.model["norm_abnorm"].var_states_posterior,
-                self.transition_coef["norm_abnorm"],
-                self.model["abnorm_abnorm"].mu_states_posterior,
-                self.model["abnorm_abnorm"].var_states_posterior,
-                self.transition_coef["abnorm_abnorm"],
-            )
-        )
-        mu_states_combined, var_states_combined = common.gaussian_mixture(
-            mu_states_marginal["norm"],
-            var_states_marginal["norm"],
-            self.marginal_prob["norm"],
-            mu_states_marginal["abnorm"],
-            var_states_marginal["abnorm"],
-            self.marginal_prob["abnorm"],
-        )
-
-        return (
-            mu_states_combined,
-            var_states_combined,
-            mu_states_marginal,
-            var_states_marginal,
-        )
-
-    def _collapse_smoothed_states(
-        self,
-        time_step: int,
-    ) -> None:
-
-        mu_states_marginal = initialize_marginal()
-        var_states_marginal = initialize_marginal()
-        # Collapse
-        (mu_states_marginal["norm"], var_states_marginal["norm"]) = (
-            common.gaussian_mixture(
-                self.model["norm_norm"].states.mu_smooth[time_step],
-                self.model["norm_norm"].states.var_smooth[time_step],
-                self.transition_coef["norm_norm"],
-                self.model["norm_abnorm"].states.mu_smooth[time_step],
-                self.model["norm_abnorm"].states.var_smooth[time_step],
-                self.transition_coef["norm_abnorm"],
-            )
-        )
-
-        (mu_states_marginal["abnorm"], var_states_marginal["abnorm"]) = (
-            common.gaussian_mixture(
-                self.model["abnorm_norm"].states.mu_smooth[time_step],
-                self.model["abnorm_norm"].states.var_smooth[time_step],
-                self.transition_coef["abnorm_norm"],
-                self.model["abnorm_abnorm"].states.mu_smooth[time_step],
-                self.model["abnorm_abnorm"].states.var_smooth[time_step],
-                self.transition_coef["abnorm_abnorm"],
-            )
-        )
-
-        (mu_states_combined, var_states_combined) = common.gaussian_mixture(
-            mu_states_marginal["norm"],
-            var_states_marginal["norm"],
-            self.marginal_prob["norm"],
-            mu_states_marginal["abnorm"],
-            var_states_marginal["abnorm"],
-            self.marginal_prob["abnorm"],
-        )
         return (
             mu_states_combined,
             var_states_combined,
@@ -420,8 +363,8 @@ class SKF:
             var_pred_transit,
         )
 
-        self.mu_states_prior, self.var_states_prior, _, _ = (
-            self._collapse_prior_states()
+        self.mu_states_prior, self.var_states_prior, _, _ = self._collapse_states(
+            state_type="prior"
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
@@ -449,7 +392,7 @@ class SKF:
             self.var_states_posterior,
             mu_states_marginal,
             var_states_marginal,
-        ) = self._collapse_posterior_states()
+        ) = self._collapse_states(state_type="posterior")
 
         # Reassign posterior states
         for origin_state in self.marginal_list:
@@ -510,12 +453,7 @@ class SKF:
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.marginal_prob_history["norm"][time_step] = self.marginal_prob[
-            "norm"
-        ].copy()
-        self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
-            "abnorm"
-        ].copy()
+        self.save_marginal_prob_history(time_step)
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -529,7 +467,7 @@ class SKF:
             self.states.var_smooth[time_step],
             mu_states_marginal,
             var_states_marginal,
-        ) = self._collapse_smoothed_states(time_step)
+        ) = self._collapse_states(state_type="smooth", time_step=time_step)
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -582,13 +520,10 @@ class SKF:
                 )
 
             self.save_states_history(time_step)
+            self.save_marginal_prob_history(time_step)
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.marginal_prob_history["norm"][time_step] = self.marginal_prob["norm"]
-            self.marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
-                "abnorm"
-            ]
 
         return (
             mu_obs_preds,
