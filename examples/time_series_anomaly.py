@@ -184,8 +184,8 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
 
 # Anomaly Detection
-_, _, prob_abnorm, states = skf.filter(data=all_data)
-# _, _, prob_abnorm, states = skf.smoother(data=all_data)
+prob_abnorm, states = skf.filter(data=all_data)
+_, _ = skf.smoother(data=all_data)
 
 mu_plot = states.mu_posterior
 var_plot = states.var_posterior

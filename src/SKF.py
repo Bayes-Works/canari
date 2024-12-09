@@ -6,7 +6,6 @@ from src.model import Model
 import src.common as common
 from src.data_struct import (
     StatesHistory,
-    # MarginalProbability,
     initialize_transition,
     initialize_marginal,
     initialize_marginal_prob_history,
@@ -454,13 +453,6 @@ class SKF:
         self.marginal_prob["abnorm"] = (
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
-
-        # self.filter_marginal_prob_history["norm"][time_step] = self.marginal_prob[
-        #     "norm"
-        # ].copy()
-        # self.filter_marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
-        #     "abnorm"
-        # ].copy()
 
         self.smooth_marginal_prob_history["norm"][time_step] = self.marginal_prob[
             "norm"
