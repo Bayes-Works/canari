@@ -26,7 +26,7 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
-# Add trend to data
+# Add synthetic anomaly to data
 trend = np.linspace(0, 0, num=len(df_raw))
 time_anomaly = 160
 new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
@@ -47,15 +47,12 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-# Define parameters
-num_epoch = 50
-
 # Components
-sigma_v = 5e-2
+sigma_v = 1e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=5,
+    look_back_len=10,
     num_features=3,
     num_layer=1,
     num_hidden_unit=50,
@@ -78,21 +75,18 @@ ab_model = Model(
 )
 
 # Switching Kalman filter
-normal_to_abnormal_prob = 1e-4
-abnormal_to_normal_prob = 1e-1
-normal_model_prior_prob = 0.99
-
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-4,
-    norm_to_abnorm_prob=normal_to_abnormal_prob,
-    abnorm_to_norm_prob=abnormal_to_normal_prob,
-    norm_model_prior_prob=normal_model_prior_prob,
+    std_transition_error=1e-3,
+    norm_to_abnorm_prob=1e-3,
+    abnorm_to_norm_prob=1e-1,
+    norm_model_prior_prob=0.99,
 )
 skf.auto_initialize_baseline_states(train_data["y"][1:24])
 
 #  Training
+num_epoch = 50
 scheduled_sigma_v = 1
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Decaying observation's variance
@@ -127,14 +121,14 @@ mu_plot = states.mu_smooth
 var_plot = states.var_smooth
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 
-fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=False)
-axs[0].plot(
+plt.figure(figsize=(10, 6))
+plt.plot(
     data_processor.train_time,
     data_processor.train_data[:, output_col].flatten(),
     color="r",
     label="train_obs",
 )
-axs[0].plot(
+plt.plot(
     data_processor.validation_time,
     data_processor.validation_data[:, output_col].flatten(),
     color="r",
@@ -148,47 +142,25 @@ plot_with_uncertainty(
     std=std_validation_preds,
     color="b",
     label=["mu_val_pred", "±1σ"],
-    ax=axs[0],
 )
-axs[0].legend()
-axs[0].set_title("Validation predictions")
-
-axs[1].plot(data_processor.time, all_data["y"], color="r", label="obs")
-axs[1].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[1].axvline(
-    x=data_processor.validation_time[-1],
-    color="b",
-    linestyle="-",
-    linewidth=0.5,
-    label="validation end",
-)
-axs[1].legend()
-axs[1].set_title("Observed Data")
-axs[1].set_ylabel("y")
-
-axs[2].plot(data_processor.time, marginal_abnorm_prob_plot, color="blue")
-axs[2].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[2].legend()
-axs[2].set_title("Probability of Abnormal Model")
-axs[2].set_xlabel("Time")
-axs[2].set_ylabel("Prob abonormal")
-
-plt.tight_layout()
+plt.legend()
+plt.title("Validation predictions")
 plt.show()
 
 #  Plot hidden states
+local_level_index = skf.states_name.index("local level")
+local_trend_index = skf.states_name.index("local trend")
+lstm_index = skf.states_name.index("local trend")
+white_noise_index = skf.states_name.index("white noise")
+
 fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(data_processor.time, all_data["y"], color="r", label="obs")
 axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
 plot_with_uncertainty(
     time=data_processor.time,
-    mu=mu_plot[:, 0],
-    std=var_plot[:, 0, 0] ** 0.5,
+    mu=mu_plot[:, local_level_index],
+    std=var_plot[:, local_level_index, local_level_index] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[0],
@@ -201,8 +173,8 @@ axs[0].set_title("local level")
 
 plot_with_uncertainty(
     time=data_processor.time,
-    mu=mu_plot[:, 1],
-    std=var_plot[:, 1, 1] ** 0.5,
+    mu=mu_plot[:, local_trend_index],
+    std=var_plot[:, local_trend_index, local_trend_index] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[1],
@@ -215,8 +187,8 @@ axs[1].set_title("local trend")
 
 plot_with_uncertainty(
     time=data_processor.time,
-    mu=mu_plot[:, 3],
-    std=var_plot[:, 3, 3] ** 0.5,
+    mu=mu_plot[:, lstm_index],
+    std=var_plot[:, lstm_index, lstm_index] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[2],
@@ -228,8 +200,8 @@ axs[2].set_title("lstm")
 
 plot_with_uncertainty(
     time=data_processor.time,
-    mu=mu_plot[:, 4],
-    std=var_plot[:, 4, 4] ** 0.5,
+    mu=mu_plot[:, white_noise_index],
+    std=var_plot[:, white_noise_index, white_noise_index] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[3],
