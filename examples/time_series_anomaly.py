@@ -19,12 +19,6 @@ from src import (
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
-point_anomaly = 195
-trend = np.linspace(0, 2, num=len(df_raw) - point_anomaly)
-linear_space[point_anomaly:] = linear_space[point_anomaly:] + trend
-df_raw = df_raw.add(linear_space, axis=0)
-
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(time_series[0])
@@ -32,26 +26,29 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
-# Resampling data
-df = df_raw.resample("H").mean()
+# Add trend to data
+trend = np.linspace(0, 0, num=len(df_raw))
+time_anomaly = 160
+new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
+trend[time_anomaly:] = trend[time_anomaly:] + new_trend
+df_raw = df_raw.add(trend, axis=0)
 
-# Define parameters
+# Data pre-processing
 output_col = [0]
-
 data_processor = DataProcess(
-    data=df,
+    data=df_raw,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-09 23:00:00",
-    validation_start="2000-01-10 00:00:00",
-    validation_end="2000-01-10 23:00:00",
-    test_start="2000-01-11 00:00:00",
+    train_end="2000-01-07 23:00:00",
+    validation_start="2000-01-08 00:00:00",
+    validation_end="2000-01-08 23:00:00",
+    test_start="2000-01-09 00:00:00",
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Define parameters
-num_epoch = 30
+num_epoch = 50
 
 # Components
 sigma_v = 5e-2
@@ -88,7 +85,7 @@ normal_model_prior_prob = 0.99
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-3,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=normal_to_abnormal_prob,
     abnorm_to_norm_prob=abnormal_to_normal_prob,
     norm_model_prior_prob=normal_model_prior_prob,
@@ -125,12 +122,11 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
-mu_plot = states.mu_posterior
-var_plot = states.var_posterior
-marginal_abnorm_prob_plot = smooth_marginal_abnorm_prob
-
 #  Plot
-t = range(len(all_data["y"]))
+mu_plot = states.mu_smooth
+var_plot = states.var_smooth
+marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
+
 fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(
     data_processor.train_time,
@@ -157,12 +153,26 @@ plot_with_uncertainty(
 axs[0].legend()
 axs[0].set_title("Validation predictions")
 
-axs[1].plot(t, all_data["y"], color="r", label="obs")
+axs[1].plot(data_processor.time, all_data["y"], color="r", label="obs")
+axs[1].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
+axs[1].axvline(
+    x=data_processor.validation_time[-1],
+    color="b",
+    linestyle="-",
+    linewidth=0.5,
+    label="validation end",
+)
 axs[1].legend()
 axs[1].set_title("Observed Data")
 axs[1].set_ylabel("y")
 
-axs[2].plot(t, marginal_abnorm_prob_plot, color="blue")
+axs[2].plot(data_processor.time, marginal_abnorm_prob_plot, color="blue")
+axs[2].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
+axs[2].legend()
 axs[2].set_title("Probability of Abnormal Model")
 axs[2].set_xlabel("Time")
 axs[2].set_ylabel("Prob abonormal")
@@ -172,52 +182,67 @@ plt.show()
 
 #  Plot hidden states
 fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
-axs[0].plot(t, all_data["y"], color="r", label="obs")
-axs[0].legend()
+axs[0].plot(data_processor.time, all_data["y"], color="r", label="obs")
 axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
 plot_with_uncertainty(
-    time=t,
+    time=data_processor.time,
     mu=mu_plot[:, 0],
     std=var_plot[:, 0, 0] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[0],
 )
+axs[0].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
+axs[0].legend()
 axs[0].set_title("local level")
 
 plot_with_uncertainty(
-    time=t,
+    time=data_processor.time,
     mu=mu_plot[:, 1],
     std=var_plot[:, 1, 1] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[1],
 )
+axs[1].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
 axs[1].set_title("local trend")
 
 
 plot_with_uncertainty(
-    time=t,
+    time=data_processor.time,
     mu=mu_plot[:, 3],
     std=var_plot[:, 3, 3] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[2],
 )
+axs[2].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
 axs[2].set_title("lstm")
 
 plot_with_uncertainty(
-    time=t,
+    time=data_processor.time,
     mu=mu_plot[:, 4],
     std=var_plot[:, 4, 4] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[3],
 )
+axs[3].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
 axs[3].set_title("white noise")
 
-axs[4].plot(t, marginal_abnorm_prob_plot, color="b")
+axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="b")
+axs[4].axvline(
+    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
+)
 axs[4].set_title("Probability of Abnormal Model")
 axs[4].set_xlabel("Time")
 axs[4].set_ylabel("Prob abonormal")

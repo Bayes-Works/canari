@@ -89,6 +89,7 @@ class DataProcess:
         if self._test_start is not None:
             self.test_data = np.float32(self.data.loc[self._test_start :].values)
             self.test_time = self.data.loc[self._test_start :].index
+        self.time = self.data.loc[self._train_start :].index
 
     def normalize_data(self):
         """

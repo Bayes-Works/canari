@@ -145,11 +145,11 @@ skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 prob_abnorm, states = skf.filter(data=all_data)
 _, _ = skf.smoother(data=all_data)
 
-mu_plot = states.mu_posterior
-var_plot = states.var_posterior
+# mu_plot = states.mu_posterior
+# var_plot = states.var_posterior
 
-# mu_plot = states.mu_smooth
-# var_plot = states.var_smooth
+mu_plot = states.mu_smooth
+var_plot = states.var_smooth
 
 #  Plot
 t = range(len(all_data["y"]))

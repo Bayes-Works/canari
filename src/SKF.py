@@ -438,7 +438,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
+            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-2)
 
         joint_transition_prob = initialize_transition()
         arrival_state_marginal = initialize_marginal()
