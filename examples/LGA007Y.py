@@ -59,7 +59,7 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    manual_seed=2,
+    # manual_seed=2,
 )
 white_noise = WhiteNoise(std_error=sigma_v)
 
@@ -105,6 +105,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
+    # skf.initialize_states_history_with_smoother_estimates(epoch)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -138,18 +139,11 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
 # # Load back the LSTM's optimal parameters
 skf.model["norm_norm"].lstm_net.load_state_dict(lstm_param_optimal)
-# init_mu_optimal = np.array(
-#     [[0.0503111884606580], [7.25816051377179e-05], [0], [0], [0]]
-# )
-# init_var_optimal = np.diag(
-#     np.array([7.30442055517709e-06, 5.92517193703484e-10, 0, 0, 0])
-# )
 skf.model["norm_norm"].set_states(init_mu_optimal, init_var_optimal)
 
-
 # Anomaly Detection
-_, _, prob_abnorm, states = skf.filter(data=all_data)
-# _, _, prob_abnorm, states = skf.smoother(data=all_data)
+prob_abnorm, states = skf.filter(data=all_data)
+_, _ = skf.smoother(data=all_data)
 
 mu_plot = states.mu_posterior
 var_plot = states.var_posterior
@@ -157,11 +151,9 @@ var_plot = states.var_posterior
 # mu_plot = states.mu_smooth
 # var_plot = states.var_smooth
 
-print(f"Optimal epoch: {epoch_optimal}")
-
 #  Plot
 t = range(len(all_data["y"]))
-fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
+fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(
     data_processor.train_time,
     data_processor.train_data[:, output_col].flatten(),
@@ -187,20 +179,15 @@ plot_with_uncertainty(
 axs[0].legend()
 axs[0].set_title("Validation predictions")
 
-axs[1].plot(ll, color="b")
-axs[1].axvline(x=epoch_optimal, color="k", linestyle="--", label="optimal epoch")
+axs[1].plot(t, all_data["y"], color="r", label="obs")
 axs[1].legend()
-axs[1].set_title("Validation log likelihood")
+axs[1].set_title("Observed Data")
+axs[1].set_ylabel("y")
 
-axs[2].plot(t, all_data["y"], color="r", label="obs")
-axs[2].legend()
-axs[2].set_title("Observed Data")
-axs[2].set_ylabel("y")
-
-axs[3].plot(t, prob_abnorm, color="blue")
-axs[3].set_title("Probability of Abnormal Model")
-axs[3].set_xlabel("Time")
-axs[3].set_ylabel("Prob abonormal")
+axs[2].plot(t, prob_abnorm, color="blue")
+axs[2].set_title("Probability of Abnormal Model")
+axs[2].set_xlabel("Time")
+axs[2].set_ylabel("Prob abonormal")
 
 plt.tight_layout()
 plt.show()
@@ -215,8 +202,6 @@ plot_with_uncertainty(
     time=t,
     mu=mu_plot[:, 0],
     std=var_plot[:, 0, 0] ** 0.5,
-    # mu=states.mu_posterior[1:, 0],
-    # std=states.var_posterior[1:, 0, 0] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[0],
@@ -227,8 +212,6 @@ plot_with_uncertainty(
     time=t,
     mu=mu_plot[:, 1],
     std=var_plot[:, 1, 1] ** 0.5,
-    # mu=states.mu_posterior[1:, 1],
-    # std=states.var_posterior[1:, 1, 1] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[1],
@@ -240,8 +223,6 @@ plot_with_uncertainty(
     time=t,
     mu=mu_plot[:, 3],
     std=var_plot[:, 3, 3] ** 0.5,
-    # mu=states.mu_posterior[1:, 3],
-    # std=states.var_posterior[1:, 3, 3] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[2],
@@ -252,8 +233,6 @@ plot_with_uncertainty(
     time=t,
     mu=mu_plot[:, 4],
     std=var_plot[:, 4, 4] ** 0.5,
-    # mu=states.mu_posterior[1:, 4],
-    # std=states.var_posterior[1:, 4, 4] ** 0.5,
     color="b",
     label=["mu_val_pred", "±1σ"],
     ax=axs[3],
