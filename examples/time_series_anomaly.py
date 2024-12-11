@@ -209,7 +209,7 @@ plot_with_uncertainty(
 axs[3].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
 )
-axs[3].set_title("white noise")
+axs[3].set_title("white noise residual")
 
 axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="b")
 axs[4].axvline(
@@ -217,7 +217,7 @@ axs[4].axvline(
 )
 axs[4].set_title("Probability of Abnormal Model")
 axs[4].set_xlabel("Time")
-axs[4].set_ylabel("Prob abonormal")
+axs[4].set_ylabel("Pr(Abnormal)")
 
 plt.tight_layout()
 plt.show()
