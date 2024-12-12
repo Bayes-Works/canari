@@ -123,7 +123,7 @@ class SKF:
 
         self.states.mu_prior[time_step] = self.mu_states_prior.copy().flatten()
         self.states.var_prior[time_step] = self.var_states_prior.copy()
-        self.states.mu_posterior[time_step] = self._mu_states_posterior.copy().flatten()
+        self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
         self.states.var_posterior[time_step] = self.var_states_posterior.copy()
 
     def initialize_states_history(self, num_time_steps: int):
@@ -359,6 +359,9 @@ class SKF:
                     trans_prob[transit] / self._marginal_prob[arrival_state]
                 )
 
+    def initialize_states_with_smoother_estimates(self, epoch):
+        self.model["norm_norm"].initialize_states_with_smoother_estimates_v1(epoch)
+
     def lstm_train(
         self,
         train_data: Dict[str, np.ndarray],
@@ -420,7 +423,7 @@ class SKF:
             transition_model.estimate_posterior_states(mu_delta, var_delta)
 
         (
-            self._mu_states_posterior,
+            self.mu_states_posterior,
             self.var_states_posterior,
             mu_states_marginal,
             var_states_marginal,
@@ -440,7 +443,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-2)
+            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
         joint_transition_prob = initialize_transition()
         arrival_state_marginal = initialize_marginal()
@@ -551,7 +554,7 @@ class SKF:
 
             if self.lstm_states_index:
                 self.update_lstm_output_history(
-                    self._mu_states_posterior[self.lstm_states_index],
+                    self.mu_states_posterior[self.lstm_states_index],
                     self.var_states_posterior[
                         self.lstm_states_index,
                         self.lstm_states_index,

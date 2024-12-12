@@ -77,6 +77,7 @@ def backward(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
+    # var_obs_predicted = var_obs_predicted + 1e-20
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
     delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states

@@ -132,7 +132,6 @@ class Model:
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
                 self.mu_states[i] = np.nanmean(y_no_nan)
-                self._mu_local_level = np.nanmean(y_no_nan)
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
@@ -141,8 +140,10 @@ class Model:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local acceleration":
                 self.mu_states[i] = coefficients[0]
-                if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-3
+            if self.var_states[i, i] == 0:
+                self.var_states[i, i] = 1e-5
+
+        self._mu_local_level = np.nanmean(y_no_nan)
 
     def forward(
         self,
@@ -163,10 +164,11 @@ class Model:
             var_lstm_pred,
             self.lstm_states_index,
         )
-        self.mu_states_prior = mu_states_prior
-        self.var_states_prior = var_states_prior
-        self.mu_obs_prior = mu_obs_pred
-        self.var_obs_prior = var_obs_pred
+        self.mu_states_prior = mu_states_prior.copy()
+        self.var_states_prior = var_states_prior.copy()
+        self.mu_obs_prior = mu_obs_pred.copy()
+        self.var_obs_prior = var_obs_pred.copy()
+
         return mu_obs_pred, var_obs_pred
 
     def backward(
@@ -254,7 +256,7 @@ class Model:
         self.mu_states = new_mu_states.copy()
         self.var_states = new_var_states.copy()
 
-    def initialize_states_history_with_smoother_estimates(self):
+    def initialize_states_with_smoother_estimates(self):
         """
         Set the model initial hidden states = the smoothed estimates
         """
@@ -289,8 +291,8 @@ class Model:
         Set the smoothed estimates at the last time step = posterior
         """
 
-        self.states.mu_smooth[-1] = self.states.mu_posterior[-1]
-        self.states.var_smooth[-1] = self.states.var_posterior[-1]
+        self.states.mu_smooth[-1] = self.states.mu_posterior[-1].copy()
+        self.states.var_smooth[-1] = self.states.var_posterior[-1].copy()
 
     def duplicate(self) -> "Model":
         """
@@ -448,7 +450,7 @@ class Model:
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
 
         self.initialize_lstm_output_history()
-        self.initialize_states_history_with_smoother_estimates()
+        self.initialize_states_with_smoother_estimates()
 
         return (
             np.array(mu_validation_preds).flatten(),
