@@ -1,7 +1,8 @@
 from typing import Optional
 import numpy as np
-from pytagi.nn import LSTM, Linear
 from src.base_component import BaseComponent
+import pytagi
+from pytagi.nn import LSTM, Linear
 from pytagi.nn import Sequential
 
 
@@ -23,6 +24,9 @@ class LstmNetwork(BaseComponent):
         var_states: Optional[np.ndarray] = None,
         device: Optional[str] = "cpu",
         num_thread: Optional[int] = 1,
+        manual_seed: Optional[int] = None,
+        gain_weight: Optional[int] = 1,
+        gain_bias: Optional[int] = 1,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -35,6 +39,9 @@ class LstmNetwork(BaseComponent):
         self.var_states = var_states
         self.device = device
         self.num_thread = num_thread
+        self.manual_seed = manual_seed
+        self.gain_weight = gain_weight
+        self.gain_bias = gain_bias
         super().__init__()
 
     def initialize_component_name(self):
@@ -72,17 +79,33 @@ class LstmNetwork(BaseComponent):
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
     def initialize_lstm_network(self) -> Sequential:
+        if self.manual_seed:
+            pytagi.manual_seed(self.manual_seed)
+
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
-        # First layer
         layers.append(
-            LSTM(self.num_features + self.look_back_len - 1, self.num_hidden_unit[0], 1)
+            LSTM(
+                self.num_features + self.look_back_len - 1,
+                self.num_hidden_unit[0],
+                1,
+                gain_weight=self.gain_weight,
+                gain_bias=self.gain_bias,
+            )
         )
         for i in range(1, self.num_layer):
             layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
         # Last layer
-        layers.append(Linear(self.num_hidden_unit[-1], self.num_output, 1))
+        layers.append(
+            Linear(
+                self.num_hidden_unit[-1],
+                self.num_output,
+                1,
+                gain_weight=self.gain_weight,
+                gain_bias=self.gain_bias,
+            )
+        )
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         if self.device == "cpu":
