@@ -8,12 +8,12 @@ class LstmOutputHistory:
     var: np.ndarray = field(init=False)
 
     def initialize(self, look_back_len: int):
-        self.mu = 0.1 * np.ones(look_back_len, dtype=np.float32)
+        self.mu = 0 * np.ones(look_back_len, dtype=np.float32)
         self.var = 1 * np.ones(look_back_len, dtype=np.float32)
 
 
 @dataclass
-class SmootherStates:
+class StatesHistory:
     mu_prior: np.ndarray = field(init=False)
     var_prior: np.ndarray = field(init=False)
     mu_posterior: np.ndarray = field(init=False)
@@ -38,3 +38,35 @@ class SmootherStates:
         self.cov_states = np.zeros(
             (num_time_steps, num_states, num_states), dtype=np.float32
         )
+
+
+def initialize_marginal_prob_history(num_time_steps):
+    """
+    Create a dictionary saving marginal probability
+    """
+    return {
+        "norm": np.zeros(num_time_steps, dtype=np.float32),
+        "abnorm": np.zeros(num_time_steps, dtype=np.float32),
+    }
+
+
+def initialize_transition():
+    """
+    Create a dictionary for model transition
+    """
+    return {
+        "norm_norm": None,
+        "abnorm_abnorm": None,
+        "norm_abnorm": None,
+        "abnorm_norm": None,
+    }
+
+
+def initialize_marginal():
+    """
+    Create a dictionary for models
+    """
+    return {
+        "norm": None,
+        "abnorm": None,
+    }

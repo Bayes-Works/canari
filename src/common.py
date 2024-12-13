@@ -1,5 +1,6 @@
 from typing import Tuple, Optional
 import numpy as np
+from src.data_struct import LstmOutputHistory
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -76,6 +77,7 @@ def backward(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
+    # var_obs_predicted = var_obs_predicted + 1e-20
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
     delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
@@ -90,11 +92,69 @@ def rts_smoother(
     mu_states_posterior: np.ndarray,
     var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
+    matrix_inversion_tol: Optional[float] = 1e-12,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    jcb = cross_cov_states @ np.linalg.pinv(var_states_prior, rcond=1e-10)
+    jcb = cross_cov_states @ np.linalg.pinv(
+        var_states_prior, rcond=matrix_inversion_tol
+    )
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
     return mu_states_smooth, var_states_smooth
+
+
+def prepare_lstm_input(
+    lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Prepare input for lstm network, concatenate lstm output history and the input covariates
+    """
+    mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
+    var_lstm_input = np.concatenate(
+        (
+            lstm_output_history.var,
+            np.zeros(len(input_covariates), dtype=np.float32),
+        )
+    )
+    return mu_lstm_input, var_lstm_input
+
+
+def pad_matrix(
+    matrix: np.ndarray,
+    pad_index: int,
+    pad_row: Optional[np.ndarray] = None,
+    pad_col: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray]:
+    """
+    Add padding for a matrix
+    """
+
+    if pad_row is not None:
+        matrix = np.insert(matrix, pad_index, pad_row, axis=0)
+    if pad_col is not None:
+        matrix = np.insert(matrix, pad_index, pad_col, axis=1)
+    return matrix
+
+
+def gaussian_mixture(
+    mu1: np.ndarray,
+    var1: np.ndarray,
+    coef1: float,
+    mu2: np.ndarray,
+    var2: np.ndarray,
+    coef2: float,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Gaussian reduction mixture
+    """
+    if mu1.ndim == 1:
+        mu1 = np.atleast_2d(mu1).T
+    if mu2.ndim == 1:
+        mu2 = np.atleast_2d(mu2).T
+    mu_mixture = mu1 * coef1 + mu2 * coef2
+    m1 = mu1 - mu_mixture
+    m2 = mu2 - mu_mixture
+    var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
+    return mu_mixture.flatten(), var_mixture

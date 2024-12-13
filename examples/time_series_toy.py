@@ -12,6 +12,7 @@ from src import (
     plot_with_uncertainty,
 )
 from examples import DataProcess
+from pytagi import exponential_scheduler
 
 
 # # Read data
@@ -38,36 +39,46 @@ data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
-    train_end="2000-01-07 21:00:00",
-    validation_start="2000-01-07 22:00:00",
-    validation_end="2000-01-09 23:00:00",
+    train_end="2000-01-09 23:00:00",
+    validation_start="2000-01-10 00:00:00",
+    validation_end="2000-01-11 23:00:00",
+    test_start="2000-01-11 23:00:00",
     output_col=output_col,
 )
-train_data, validation_data, test_data = data_processor.get_splits()
+train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
+sigma_v = 1e-2
 model = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=10,
         num_features=3,
-        num_layer=2,
+        num_layer=1,
         num_hidden_unit=50,
         device="cpu",
+        # manual_seed=1,
     ),
     Autoregression(),
-    WhiteNoise(std_error=1e-3),
+    WhiteNoise(std_error=sigma_v),
 )
-model.auto_initialize_baseline_states(train_data["y"])
+model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 # Training
+scheduled_sigma_v = 1
 for epoch in range(num_epoch):
-    (mu_validation_preds, var_validation_preds, smoother_states) = model.lstm_train(
+    # Decaying observation's variance
+    scheduled_sigma_v = exponential_scheduler(
+        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.99, curr_iter=epoch
+    )
+    noise_index = model.states_name.index("white noise")
+    model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
+    (mu_validation_preds, std_validation_preds, smoother_states) = model.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
-# #  Plot
-plt.figure(figsize=(10, 6))
+#  Plot
 plt.plot(data_processor.train_time, train_data["y"], color="r", label="train_obs")
 plt.plot(
     data_processor.validation_time,
@@ -79,7 +90,7 @@ plt.plot(
 plot_with_uncertainty(
     time=data_processor.validation_time,
     mu=mu_validation_preds,
-    var=var_validation_preds,
+    std=std_validation_preds,
     color="b",
     label=["mu_val_pred", "±1σ"],
 )

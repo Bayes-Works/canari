@@ -6,22 +6,28 @@ from typing import Optional
 def plot_with_uncertainty(
     time,
     mu,
-    var,
+    std,
     color,
     label: Optional[list[str]] = ["", ""],
     index: Optional[int] = None,
+    ax: Optional[plt.Axes] = None,
 ):
+
     if index is not None:
-        _mu = mu[:, index]
-        _std = var[:, index, index].flatten() ** 0.5
+        mu_plot = mu[:, index]
+        std_plot = std[:, index, index].flatten()
     else:
-        _mu = mu
-        _std = var.flatten() ** 0.5
-    plt.plot(time, _mu, color=color, label=label[0])
-    plt.fill_between(
+        mu_plot = mu
+        std_plot = std.flatten()
+
+    if ax is None:
+        ax = plt.gca()
+
+    ax.plot(time, mu_plot, color=color, label=label[0])
+    ax.fill_between(
         time,
-        _mu - _std,
-        _mu + _std,
+        mu_plot - std_plot,
+        mu_plot + std_plot,
         color=color,
         alpha=0.2,
         label=label[1],
