@@ -397,11 +397,10 @@ class SKF:
             var_lstm_pred = None
 
         for transit, transition_model in self.model.items():
-            (
-                mu_pred_transit[transit],
-                var_pred_transit[transit],
-            ) = transition_model.forward(
-                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
+            (mu_pred_transit[transit], var_pred_transit[transit], _, _) = (
+                transition_model.forward(
+                    mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
+                )
             )
 
         self.estimate_transition_coef(
@@ -410,15 +409,18 @@ class SKF:
             var_pred_transit,
         )
 
-        self.mu_states_prior, self.var_states_prior, _, _ = self._collapse_states(
+        mu_states_prior, var_states_prior, _, _ = self._collapse_states(
             state_type="prior"
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
-            self.mu_states_prior,
-            self.var_states_prior,
+            mu_states_prior,
+            var_states_prior,
             self.model["norm_norm"].observation_matrix,
         )
+
+        self.mu_states_prior = mu_states_prior
+        self.var_states_prior = var_states_prior
 
         return mu_obs_pred, var_obs_pred
 
@@ -431,12 +433,11 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            mu_delta, var_delta = transition_model.backward(obs)
-            transition_model.estimate_posterior_states(mu_delta, var_delta)
+            transition_model.backward(obs)
 
         (
-            self.mu_states_posterior,
-            self.var_states_posterior,
+            mu_states_posterior,
+            var_states_posterior,
             mu_states_marginal,
             var_states_marginal,
         ) = self._collapse_states(state_type="posterior")
@@ -448,6 +449,11 @@ class SKF:
                 self.model[transit].set_posterior_states(
                     mu_states_marginal[origin_state], var_states_marginal[origin_state]
                 )
+
+        self.mu_states_posterior = mu_states_posterior
+        self.var_states_posterior = var_states_posterior
+
+        return mu_states_posterior, var_states_posterior
 
     def rts_smoother(self, time_step: int):
         """
@@ -553,12 +559,12 @@ class SKF:
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
-            self.backward(y)
+            mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
                 self.update_lstm_output_history(
-                    self.mu_states_posterior[lstm_index],
-                    self.var_states_posterior[
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[
                         lstm_index,
                         lstm_index,
                     ],
