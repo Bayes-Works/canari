@@ -37,7 +37,6 @@ num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
-    time_covariates=["hour_of_day", "day_of_week"],
     train_start="2000-01-01 00:00:00",
     train_end="2000-01-09 23:00:00",
     validation_start="2000-01-10 00:00:00",
@@ -52,12 +51,12 @@ sigma_v = 1e-2
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=10,
-        num_features=3,
+        look_back_len=12,
+        num_features=1,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        # manual_seed=1,
+        # manual_seed=3,
     ),
     Autoregression(),
     WhiteNoise(std_error=sigma_v),

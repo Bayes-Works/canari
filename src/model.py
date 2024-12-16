@@ -115,7 +115,7 @@ class Model:
         """
 
         self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
-        self.lstm_net.input_delta_z_buffer.delta_var = delta_var_lstm
+        self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
         self.lstm_net.backward()
         self.lstm_net.step()
 
@@ -140,13 +140,14 @@ class Model:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local acceleration":
                 self.mu_states[i] = coefficients[0]
-            if self.var_states[i, i] == 0:
-                self.var_states[i, i] = 1e-5
+                if self.var_states[i, i] == 0:
+                    self.var_states[i, i] = 1e-5
 
         self._mu_local_level = np.nanmean(y_no_nan)
 
     def forward(
         self,
+        input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -154,6 +155,16 @@ class Model:
         One step prediction in states-space model
         """
 
+        # LSTM prediction:
+        if self.lstm_net and input_covariates is not None:
+            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                self.lstm_output_history, input_covariates
+            )
+            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+            )
+
+        # State-spaces model's prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
@@ -188,6 +199,7 @@ class Model:
         )
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
+        self.estimate_posterior_states(delta_mu_states, delta_var_states)
 
         return delta_mu_states, delta_var_states
 
@@ -350,22 +362,16 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
-        mu_lstm_pred = None
-        var_lstm_pred = None
+        lstm_index = self.lstm_states_index
 
         for x in data["x"]:
-            if self.lstm_net:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, x
-                )
-                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-                )
-
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred = self.forward(x)
 
             if self.lstm_net:
-                self.update_lstm_output_history(mu_lstm_pred, var_lstm_pred)
+                self.update_lstm_output_history(
+                    self.mu_states_prior[lstm_index],
+                    self.var_states_prior[lstm_index, lstm_index],
+                )
 
             self.set_states(self.mu_states_prior, self.var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
@@ -381,31 +387,23 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
+        lstm_index = self.lstm_states_index
         self.initialize_states_history(num_time_steps)
-
         mu_obs_preds = []
         std_obs_preds = []
-        mu_lstm_pred = None
-        var_lstm_pred = None
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
-            if self.lstm_net:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, x
-                )
-                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-                )
-
-            mu_obs_pred, var_obs_pred = self.forward(mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred = self.forward(x)
             delta_mu_states, delta_var_states = self.backward(y)
-            self.estimate_posterior_states(delta_mu_states, delta_var_states)
 
             if self.lstm_net:
-                delta_mu_lstm = delta_mu_states[self.lstm_states_index] / var_lstm_pred
-                delta_var_lstm = (
-                    delta_var_states[self.lstm_states_index, self.lstm_states_index]
-                    / var_lstm_pred**2
+                delta_mu_lstm = np.array(
+                    delta_mu_states[lstm_index]
+                    / self.var_states_prior[lstm_index, lstm_index]
+                )
+                delta_var_lstm = np.array(
+                    delta_var_states[lstm_index, lstm_index]
+                    / self.var_states_prior[lstm_index, lstm_index] ** 2
                 )
                 self.lstm_net.update_param(
                     np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
@@ -421,6 +419,7 @@ class Model:
             self.set_states(self.mu_states_posterior, self.var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
+
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def smoother(self, data: Dict[str, np.ndarray]) -> None:
