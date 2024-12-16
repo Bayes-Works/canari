@@ -263,8 +263,9 @@ class Model:
 
         self.mu_states = np.atleast_2d(self.states.mu_smooth[0]).copy().T
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
-        local_level_index = self.states_name.index("local level")
-        self.mu_states[local_level_index] = self._mu_local_level
+        if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
+            local_level_index = self.states_name.index("local level")
+            self.mu_states[local_level_index] = self._mu_local_level
 
     def initialize_lstm_output_history(self):
         self.lstm_output_history.initialize(self._lstm_look_back_len)
