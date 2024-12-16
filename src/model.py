@@ -145,96 +145,6 @@ class Model:
 
         self._mu_local_level = np.nanmean(y_no_nan)
 
-    def forward(
-        self,
-        input_covariates: Optional[np.ndarray] = None,
-        mu_lstm_pred: Optional[np.ndarray] = None,
-        var_lstm_pred: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        One step prediction in states-space model
-        """
-
-        # LSTM prediction:
-        if self.lstm_net and input_covariates is not None:
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
-            )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-            )
-
-        # State-spaces model's prediction:
-        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
-            self.mu_states,
-            self.var_states,
-            self.transition_matrix,
-            self.process_noise_matrix,
-            self.observation_matrix,
-            mu_lstm_pred,
-            var_lstm_pred,
-            self.lstm_states_index,
-        )
-        self.mu_states_prior = mu_states_prior.copy()
-        self.var_states_prior = var_states_prior.copy()
-        self.mu_obs_prior = mu_obs_pred.copy()
-        self.var_obs_prior = var_obs_pred.copy()
-
-        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
-
-    def backward(
-        self,
-        obs: float,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Update step in states-space model
-        """
-
-        delta_mu_states, delta_var_states = common.backward(
-            obs,
-            self.mu_obs_prior,
-            self.var_obs_prior,
-            self.var_states_prior,
-            self.observation_matrix,
-        )
-        delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
-        delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
-        mu_states_posterior, var_states_posterior = self.estimate_posterior_states(
-            delta_mu_states, delta_var_states
-        )
-        self.mu_states_posterior = mu_states_posterior.copy()
-        self.var_states_posterior = var_states_posterior.copy()
-
-        return (
-            delta_mu_states,
-            delta_var_states,
-            mu_states_posterior,
-            var_states_posterior,
-        )
-
-    def rts_smoother(
-        self,
-        time_step: int,
-        matrix_inversion_tol: Optional[float] = 1e-12,
-    ):
-        """
-        RTS smoother
-        """
-
-        (
-            self.states.mu_smooth[time_step],
-            self.states.var_smooth[time_step],
-        ) = common.rts_smoother(
-            self.states.mu_prior[time_step + 1],
-            self.states.var_prior[time_step + 1],
-            self.states.mu_smooth[time_step + 1],
-            self.states.var_smooth[time_step + 1],
-            self.states.mu_posterior[time_step],
-            self.states.var_posterior[time_step],
-            self.states.cov_states[time_step + 1],
-            matrix_inversion_tol,
-        )
-
     def estimate_posterior_states(
         self,
         delta_mu_states: np.ndarray,
@@ -363,6 +273,96 @@ class Model:
                 self.states_name.insert(i, state)
                 self.index_pad_state = i
         self.lstm_states_index = target_model.states_name.index("lstm")
+
+    def forward(
+        self,
+        input_covariates: Optional[np.ndarray] = None,
+        mu_lstm_pred: Optional[np.ndarray] = None,
+        var_lstm_pred: Optional[np.ndarray] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        One step prediction in states-space model
+        """
+
+        # LSTM prediction:
+        if self.lstm_net and input_covariates is not None:
+            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                self.lstm_output_history, input_covariates
+            )
+            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+            )
+
+        # State-spaces model's prediction:
+        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
+            self.mu_states,
+            self.var_states,
+            self.transition_matrix,
+            self.process_noise_matrix,
+            self.observation_matrix,
+            mu_lstm_pred,
+            var_lstm_pred,
+            self.lstm_states_index,
+        )
+        self.mu_states_prior = mu_states_prior
+        self.var_states_prior = var_states_prior
+        self.mu_obs_prior = mu_obs_pred
+        self.var_obs_prior = var_obs_pred
+
+        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
+
+    def backward(
+        self,
+        obs: float,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Update step in states-space model
+        """
+
+        delta_mu_states, delta_var_states = common.backward(
+            obs,
+            self.mu_obs_prior,
+            self.var_obs_prior,
+            self.var_states_prior,
+            self.observation_matrix,
+        )
+        delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
+        delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
+        mu_states_posterior, var_states_posterior = self.estimate_posterior_states(
+            delta_mu_states, delta_var_states
+        )
+        self.mu_states_posterior = mu_states_posterior
+        self.var_states_posterior = var_states_posterior
+
+        return (
+            delta_mu_states,
+            delta_var_states,
+            mu_states_posterior,
+            var_states_posterior,
+        )
+
+    def rts_smoother(
+        self,
+        time_step: int,
+        matrix_inversion_tol: Optional[float] = 1e-12,
+    ):
+        """
+        RTS smoother
+        """
+
+        (
+            self.states.mu_smooth[time_step],
+            self.states.var_smooth[time_step],
+        ) = common.rts_smoother(
+            self.states.mu_prior[time_step + 1],
+            self.states.var_prior[time_step + 1],
+            self.states.mu_smooth[time_step + 1],
+            self.states.var_smooth[time_step + 1],
+            self.states.mu_posterior[time_step],
+            self.states.var_posterior[time_step],
+            self.states.cov_states[time_step + 1],
+            matrix_inversion_tol,
+        )
 
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """
