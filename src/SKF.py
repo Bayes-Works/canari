@@ -375,9 +375,8 @@ class SKF:
 
     def forward(
         self,
-        y,
-        mu_lstm_pred: Optional[np.ndarray] = None,
-        var_lstm_pred: Optional[np.ndarray] = None,
+        obs: float,
+        input_covariates: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Forward pass for 4 transition models
@@ -386,14 +385,27 @@ class SKF:
         mu_pred_transit = initialize_transition()
         var_pred_transit = initialize_transition()
 
+        if self.lstm_net:
+            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                self.lstm_output_history, input_covariates
+            )
+            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+            )
+        else:
+            mu_lstm_pred = None
+            var_lstm_pred = None
+
         for transit, transition_model in self.model.items():
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
-            ) = transition_model.forward(mu_lstm_pred, var_lstm_pred)
+            ) = transition_model.forward(
+                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
+            )
 
         self.estimate_transition_coef(
-            y,
+            obs,
             mu_pred_transit,
             var_pred_transit,
         )
@@ -530,34 +542,25 @@ class SKF:
         num_time_steps = len(data["y"])
         mu_obs_preds = []
         var_obs_preds = []
-        mu_lstm_pred = None
-        var_lstm_pred = None
         self.filter_marginal_prob_history = initialize_marginal_prob_history(
             num_time_steps
         )
+        lstm_index = self.lstm_states_index
 
         # Initialize hidden states
         self.set_same_states_transition_model()
         self.initialize_states_history(num_time_steps)
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
-            if self.lstm_net:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, x
-                )
-                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-                )
-
-            mu_obs_pred, var_obs_pred = self.forward(y, mu_lstm_pred, var_lstm_pred)
+            mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             self.backward(y)
 
-            if self.lstm_states_index:
+            if self.lstm_net:
                 self.update_lstm_output_history(
-                    self.mu_states_posterior[self.lstm_states_index],
+                    self.mu_states_posterior[lstm_index],
                     self.var_states_posterior[
-                        self.lstm_states_index,
-                        self.lstm_states_index,
+                        lstm_index,
+                        lstm_index,
                     ],
                 )
 
