@@ -224,31 +224,30 @@ class SKF:
                     )
         return transition_likelihood
 
-    def _get_states(
-        self, transit: str, state_type: str, time_step: int = None
+    def _get_smooth_states_transition(
+        self,
+        time_step: int,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get states values for collapse step
         """
+        mu_states_transit = initialize_transition()
+        var_states_transit = initialize_transition()
 
-        if state_type == "prior":
-            return (
-                self.model[transit].mu_states_prior,
-                self.model[transit].var_states_prior,
-            )
-        elif state_type == "posterior":
-            return (
-                self.model[transit].mu_states_posterior,
-                self.model[transit].var_states_posterior,
-            )
-        elif state_type == "smooth":
-            return (
-                self.model[transit].states.mu_smooth[time_step],
-                self.model[transit].states.var_smooth[time_step],
-            )
+        for transit, transition_model in self.model.items():
+            mu_states_transit[transit] = transition_model.states.mu_smooth[time_step]
+            var_states_transit[transit] = transition_model.states.var_smooth[time_step]
+
+        return (
+            mu_states_transit,
+            var_states_transit,
+        )
 
     def _collapse_states(
-        self, state_type: str, time_step: int = None
+        self,
+        mu_states_transit: np.ndarray,
+        var_states_transit: np.ndarray,
+        state_type: str,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Collapse step
@@ -265,8 +264,10 @@ class SKF:
             abnorm_keys = ("norm_abnorm", "abnorm_abnorm")
 
         # Retrieve states for norm mixture
-        mu_norm_1, var_norm_1 = self._get_states(norm_keys[0], state_type, time_step)
-        mu_norm_2, var_norm_2 = self._get_states(norm_keys[1], state_type, time_step)
+        mu_norm_1 = mu_states_transit[norm_keys[0]]
+        var_norm_1 = var_states_transit[norm_keys[0]]
+        mu_norm_2 = mu_states_transit[norm_keys[1]]
+        var_norm_2 = var_states_transit[norm_keys[1]]
 
         mu_states_marginal["norm"], var_states_marginal["norm"] = (
             common.gaussian_mixture(
@@ -280,12 +281,10 @@ class SKF:
         )
 
         # Retrieve states for abnorm mixture
-        mu_abnorm_1, var_abnorm_1 = self._get_states(
-            abnorm_keys[0], state_type, time_step
-        )
-        mu_abnorm_2, var_abnorm_2 = self._get_states(
-            abnorm_keys[1], state_type, time_step
-        )
+        mu_abnorm_1 = mu_states_transit[abnorm_keys[0]]
+        var_abnorm_1 = var_states_transit[abnorm_keys[0]]
+        mu_abnorm_2 = mu_states_transit[abnorm_keys[1]]
+        var_abnorm_2 = var_states_transit[abnorm_keys[1]]
 
         mu_states_marginal["abnorm"], var_states_marginal["abnorm"] = (
             common.gaussian_mixture(
@@ -325,6 +324,7 @@ class SKF:
         Estimate coefficients for each transition model
         """
 
+        transition_coef = initialize_transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
         )
@@ -355,9 +355,11 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                self.transition_coef[transit] = (
+                transition_coef[transit] = (
                     trans_prob[transit] / self._marginal_prob[arrival_state]
                 )
+
+        return transition_coef
 
     def initialize_states_with_smoother_estimates(self, epoch):
         self.model["norm_norm"].initialize_states_with_smoother_estimates_v1(epoch)
@@ -384,6 +386,8 @@ class SKF:
 
         mu_pred_transit = initialize_transition()
         var_pred_transit = initialize_transition()
+        mu_states_transit = initialize_transition()
+        var_states_transit = initialize_transition()
 
         if self.lstm_net:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -397,20 +401,23 @@ class SKF:
             var_lstm_pred = None
 
         for transit, transition_model in self.model.items():
-            (mu_pred_transit[transit], var_pred_transit[transit], _, _) = (
-                transition_model.forward(
-                    mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
-                )
+            (
+                mu_pred_transit[transit],
+                var_pred_transit[transit],
+                mu_states_transit[transit],
+                var_states_transit[transit],
+            ) = transition_model.forward(
+                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
 
-        self.estimate_transition_coef(
+        self.transition_coef = self.estimate_transition_coef(
             obs,
             mu_pred_transit,
             var_pred_transit,
         )
 
         mu_states_prior, var_states_prior, _, _ = self._collapse_states(
-            state_type="prior"
+            mu_states_transit, var_states_transit, state_type="prior"
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
@@ -431,16 +438,22 @@ class SKF:
         """
         Update step in states-space model
         """
+        mu_states_transit = initialize_transition()
+        var_states_transit = initialize_transition()
 
-        for transition_model in self.model.values():
-            transition_model.backward(obs)
+        for transit, transition_model in self.model.items():
+            _, _, mu_states_transit[transit], var_states_transit[transit] = (
+                transition_model.backward(obs)
+            )
 
         (
             mu_states_posterior,
             var_states_posterior,
             mu_states_marginal,
             var_states_marginal,
-        ) = self._collapse_states(state_type="posterior")
+        ) = self._collapse_states(
+            mu_states_transit, var_states_transit, state_type="posterior"
+        )
 
         # Reassign posterior states
         for origin_state in self.marginal_list:
@@ -520,12 +533,19 @@ class SKF:
                     joint_future_prob[transit] / self._marginal_prob[origin_state]
                 )
 
+        mu_states_transit, var_states_transit = self._get_smooth_states_transition(
+            time_step
+        )
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
             mu_states_marginal,
             var_states_marginal,
-        ) = self._collapse_states(state_type="smooth", time_step=time_step)
+        ) = self._collapse_states(
+            mu_states_transit,
+            var_states_transit,
+            state_type="smooth",
+        )
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
