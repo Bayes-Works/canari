@@ -16,6 +16,7 @@ from src import (
     plot_with_uncertainty,
 )
 import pytagi.metric as metric
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 
 # # Read data
@@ -29,26 +30,50 @@ df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
-trend = np.linspace(0, 0, num=len(df_raw))
+trend = np.linspace(0, 2, num=len(df_raw))
 noise = np.random.normal(loc=0, scale=0.1, size=len(df_raw))
 time_anomaly = 200
 new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
 trend[time_anomaly:] = trend[time_anomaly:] + new_trend
 df_raw = df_raw.add(trend, axis=0)
 
-# Data pre-processing
+# Detrending data
+df_detrend = df_raw.copy()
+df_detrend = df_detrend.interpolate()
+decomposition = seasonal_decompose(
+    df_detrend["values"], model="additive", period=24
+)  # model='additive' or 'multiplicative'
+trend = decomposition.trend
+seasonal = decomposition.seasonal
+residual = decomposition.resid
+residual = residual.fillna(0)
+df_detrend.values = seasonal + residual + np.mean(trend)
+# decomposition.plot()
+# plt.plot(seasonal + residual)
+# fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=False)
+# axs[0].plot(df_detrend["values"])
+# axs[1].plot(seasonal)
+# axs[2].plot(residual)
+# plt.show()
+
+# # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
-    data=df_raw,
-    time_covariates=["hour_of_day", "day_of_week"],
+    data=df_detrend,
     train_start="2000-01-01 00:00:00",
     train_end="2000-01-09 23:00:00",
     validation_start="2000-01-10 00:00:00",
     validation_end="2000-01-10 23:00:00",
-    test_start="2000-01-11 00:00:00",
     output_col=output_col,
 )
-train_data, validation_data, test_data, all_data = data_processor.get_splits()
+train_data, validation_data, _, _ = data_processor.get_splits()
+
+all_data_norm = normalizer.standardize(
+    data=df_raw.values, mu=data_processor.data_mean, std=data_processor.data_std
+)
+all_data = {}
+all_data["x"] = all_data_norm[:, data_processor.covariates_col]
+all_data["y"] = all_data_norm[:, data_processor.output_col]
 
 # Components
 sigma_v = 5e-2
@@ -56,7 +81,7 @@ local_trend = LocalTrend(var_states=[1e-2, 1e-2])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=12,
-    num_features=3,
+    num_features=1,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
@@ -64,21 +89,22 @@ lstm_network = LstmNetwork(
 )
 noise = WhiteNoise(std_error=sigma_v)
 
+# Model for training lstm
+model_lstm = Model(lstm_network, noise)
+
+# Switching Kalman filter
 # Normal model
 model = Model(
     local_trend,
     lstm_network,
     noise,
 )
-
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
     lstm_network,
     noise,
 )
-
-# Switching Kalman filter
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
@@ -87,23 +113,22 @@ skf = SKF(
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
-skf.auto_initialize_baseline_states(train_data["y"][0:23])
+skf.auto_initialize_baseline_states(all_data["y"][0:23])
+
 
 #  Training
-num_epoch = 20
+num_epoch = 50
 scheduled_sigma_v = 1
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
-    # # Decaying observation's variance
+    # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(
         curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
     )
-    noise_index = model.states_name.index("white noise")
-    skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
-        scheduled_sigma_v**2
-    )
+    noise_index = model_lstm.states_name.index("white noise")
+    model_lstm.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
     # Train the model
-    (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
+    (mu_validation_preds, std_validation_preds, _) = model_lstm.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
@@ -124,18 +149,7 @@ mse = metric.mse(
 )
 print(f"MSE           : {mse: 0.4f}")
 
-# # # Anomaly Detection
-skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
-
-#  Plot
-mu_plot = states.mu_posterior
-var_plot = states.var_posterior
-marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-
 fig, ax = plt.subplots(figsize=(10, 6))
-
 ax.plot(
     data_processor.train_time,
     data_processor.train_data[:, output_col].flatten(),
@@ -168,6 +182,19 @@ plt.legend()
 plt.title("Validation predictions")
 plt.tight_layout()
 plt.show()
+
+
+# # # # Anomaly Detection
+skf.lstm_net = model_lstm.lstm_net
+noise_index = model.states_name.index("white noise")
+skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+
+#  Plot
+mu_plot = states.mu_posterior
+var_plot = states.var_posterior
+marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 
 
 #  Plot hidden states

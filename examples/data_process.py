@@ -95,8 +95,8 @@ class DataProcess:
         """
         Nomalize data
         """
-        covariates_col = np.ones(self.train_data.shape[1], dtype=bool)
-        covariates_col[self.output_col] = False
+        self.covariates_col = np.ones(self.train_data.shape[1], dtype=bool)
+        self.covariates_col[self.output_col] = False
 
         self.data_mean, self.data_std = Normalizer.compute_mean_std(self.train_data)
 
@@ -104,21 +104,31 @@ class DataProcess:
             data=self.train_data, mu=self.data_mean, std=self.data_std
         )
         self.train_y = train_data_norm[:, self.output_col]
-        self.train_x = train_data_norm[:, covariates_col]
+        self.train_x = train_data_norm[:, self.covariates_col]
+        self.x_normalized = self.train_x.copy()
+        self.y_normalized = self.train_y.copy()
 
         if self.validation_data is not None:
             validation_data_norm = Normalizer.standardize(
                 data=self.validation_data, mu=self.data_mean, std=self.data_std
             )
-            self.validation_x = validation_data_norm[:, covariates_col]
+            self.validation_x = validation_data_norm[:, self.covariates_col]
             self.validation_y = validation_data_norm[:, self.output_col]
+            self.x_normalized = np.concatenate(
+                [self.x_normalized, self.validation_x], axis=0
+            )
+            self.y_normalized = np.concatenate(
+                [self.y_normalized, self.validation_y], axis=0
+            )
 
         if self.test_data is not None:
             test_data_norm = Normalizer.standardize(
                 data=self.test_data, mu=self.data_mean, std=self.data_std
             )
-            self.test_x = test_data_norm[:, covariates_col]
+            self.test_x = test_data_norm[:, self.covariates_col]
             self.test_y = test_data_norm[:, self.output_col]
+            self.x_normalized = np.concatenate([self.x_normalized, self.test_x], axis=0)
+            self.y_normalized = np.concatenate([self.y_normalized, self.test_y], axis=0)
 
     def get_splits(
         self,
@@ -127,17 +137,11 @@ class DataProcess:
         Get the train, valiation, test splits
         """
 
-        x_normalized = np.concatenate(
-            [self.train_x, self.validation_x, self.test_x], axis=0
-        )
-        y_normalized = np.concatenate(
-            [self.train_y, self.validation_y, self.test_y], axis=0
-        )
         return (
             {"x": self.train_x, "y": self.train_y},
             {"x": self.validation_x, "y": self.validation_y},
             {"x": self.test_x, "y": self.test_y},
-            {"x": x_normalized, "y": y_normalized},
+            {"x": self.x_normalized, "y": self.y_normalized},
         )
 
     @staticmethod
