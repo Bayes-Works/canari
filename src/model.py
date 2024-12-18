@@ -172,8 +172,8 @@ class Model:
     def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
         self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
         self.lstm_output_history.var = np.roll(self.lstm_output_history.var, -1)
-        self.lstm_output_history.mu[-1] = mu_lstm_pred.copy()
-        self.lstm_output_history.var[-1] = var_lstm_pred.copy()
+        self.lstm_output_history.mu[-1] = mu_lstm_pred.item()
+        self.lstm_output_history.var[-1] = var_lstm_pred.item()
 
     def set_states(
         self,
