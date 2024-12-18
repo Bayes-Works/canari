@@ -60,8 +60,8 @@ def forward(
     )
 
     if mu_lstm_pred:
-        mu_states_prior[lstm_indice] = mu_lstm_pred
-        var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred
+        mu_states_prior[lstm_indice] = mu_lstm_pred.item()
+        var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
 
     mu_obs_predicted, var_obs_predicted = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix
