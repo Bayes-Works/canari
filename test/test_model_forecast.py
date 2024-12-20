@@ -1,13 +1,11 @@
-import sys
 import os
-import unittest
 import pandas as pd
 import numpy as np
-from pytagi import Normalizer as normalizer
-import pytagi.metric as metric
+import pytest
 import matplotlib.pyplot as plt
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from pytagi import Normalizer as normalizer
+import pytagi.metric as metric
 
 from src import (
     LocalTrend,
@@ -19,27 +17,12 @@ from src import (
 )
 from examples import DataProcess
 
-# Run and plot mode
-run_mode = None
-plot_mode = False
 
-# Parse custom arguments and remove them from sys.argv
-for arg in sys.argv[1:]:
-    if arg.startswith("mode="):
-        run_mode = arg.split("=")[1]
-        sys.argv.remove(arg)
-    elif arg.startswith("plot=True"):
-        plot_mode = True
-        sys.argv.remove(arg)
+def model_test_runner(model: Model, plot: bool) -> float:
+    """
+    Run training and forecasting for time-series forecasting model
+    """
 
-
-def model_test_runner(
-    model: Model,
-    plot: bool,
-) -> float:
-    """Run training for time-series forecasting model"""
-
-    # Define parameters
     output_col = [0]
 
     # Read data
@@ -64,8 +47,7 @@ def model_test_runner(
     )
     train_data, validation_data, _, _ = data_processor.get_splits()
 
-    # -------------------------------------------------------------------------#
-    # Training:
+    # Initialize model
     model.auto_initialize_baseline_states(train_data["y"][0:23])
 
     for _ in range(2):
@@ -73,7 +55,7 @@ def model_test_runner(
             train_data=train_data, validation_data=validation_data
         )
 
-        # Unstandardize the predictions
+        # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
             data_processor.data_mean[output_col],
@@ -89,7 +71,6 @@ def model_test_runner(
         mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
     )
 
-    #  Plot
     if plot:
         plt.plot(
             data_processor.train_time,
@@ -117,48 +98,51 @@ def model_test_runner(
     return mse
 
 
-class SineSignalWithTrendTest(unittest.TestCase):
+@pytest.fixture(scope="module")
+def threshold_setup(run_mode):
+    """
+    Fixture to handle threshold loading or saving based on run_mode.
+    """
 
-    def setUp(self):
-        self.run_mode = run_mode
-        self.plot_mode = plot_mode
+    path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+    threshold = None
 
-        # Mode 2: Load the threshold from CSV
-        path_metric = "test/saved_metric/test_model_forecast_metric.csv"
-        if self.run_mode != "save_threshold":
-            if os.path.exists(path_metric):
-                df = pd.read_csv(path_metric)
-                self.threshold = float(df["mse"].iloc[0])
-
-    def test_model(self):
-        # Model
-        model = Model(
-            LocalTrend(var_states=[1e-4, 1e-4]),
-            LstmNetwork(
-                look_back_len=12,
-                num_features=1,
-                num_layer=1,
-                num_hidden_unit=50,
-                device="cpu",
-                manual_seed=1,
-            ),
-            Autoregression(),
-            WhiteNoise(std_error=1e-3),
-        )
-        mse = model_test_runner(model, plot=self.plot_mode)
-
-        if self.run_mode == "save_threshold":
-            pd.DataFrame({"mse": [mse]}).to_csv(
-                "test/saved_metric/test_model_forecast_metric.csv", index=False
-            )
-            self.threshold = mse
-            print(
-                f"Saved MSE to test/saved_metric/test_model_forecast_metric.csv: {mse}"
-            )
-
-        # Run the assertion
-        self.assertAlmostEqual(mse, self.threshold, delta=1e-12)
+    if run_mode == "save_threshold":
+        yield threshold
+    else:
+        # load_threshold mode
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+            threshold = float(df["mse"].iloc[0])
+        yield threshold
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_model_forecast(run_mode, plot_mode, threshold_setup):
+    # Model
+    model = Model(
+        LocalTrend(var_states=[1e-4, 1e-4]),
+        LstmNetwork(
+            look_back_len=12,
+            num_features=1,
+            num_layer=1,
+            num_hidden_unit=50,
+            device="cpu",
+            manual_seed=1,
+        ),
+        Autoregression(),
+        WhiteNoise(std_error=1e-3),
+    )
+    mse = model_test_runner(model, plot=plot_mode)
+
+    path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+    if run_mode == "save_threshold":
+        pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
+        print(f"Saved MSE to {path_metric}: {mse}")
+    else:
+        threshold = threshold_setup
+        assert (
+            threshold is not None
+        ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
+        assert (
+            abs(mse - threshold) < 1e-6
+        ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
