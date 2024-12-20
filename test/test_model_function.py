@@ -14,6 +14,7 @@ from src import (
     Model,
     forward,
     backward,
+    common,
 )
 
 
@@ -46,7 +47,7 @@ def model_forward_backward(
     """Function to be tested: model forward and backward"""
 
     model = Model(*components)
-    mu_obs_pred, var_obs_pred, _, var_states_prior = forward(
+    mu_obs_pred, var_obs_pred, _, var_states_prior = common.forward(
         model.mu_states,
         model.var_states,
         model.transition_matrix,
@@ -54,7 +55,7 @@ def model_forward_backward(
         model.observation_matrix,
     )
     obs = 0.5
-    delta_mu_states_pred, delta_var_states_pred = backward(
+    delta_mu_states_pred, delta_var_states_pred = common.backward(
         obs,
         mu_obs_pred,
         var_obs_pred,
