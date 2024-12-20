@@ -30,7 +30,6 @@ df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
 trend = np.linspace(0, 0, num=len(df_raw))
-noise = np.random.normal(loc=0, scale=0.1, size=len(df_raw))
 time_anomaly = 200
 new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
 trend[time_anomaly:] = trend[time_anomaly:] + new_trend

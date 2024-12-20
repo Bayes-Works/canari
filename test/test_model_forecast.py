@@ -1,0 +1,148 @@
+import os
+import pandas as pd
+import numpy as np
+import pytest
+import matplotlib.pyplot as plt
+
+from pytagi import Normalizer as normalizer
+import pytagi.metric as metric
+
+from src import (
+    LocalTrend,
+    LstmNetwork,
+    Autoregression,
+    WhiteNoise,
+    Model,
+    plot_with_uncertainty,
+)
+from examples import DataProcess
+
+
+def model_test_runner(model: Model, plot: bool) -> float:
+    """
+    Run training and forecasting for time-series forecasting model
+    """
+
+    output_col = [0]
+
+    # Read data
+    data_file = "./data/toy_time_series/sine.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    linear_space = np.linspace(0, 2, num=len(df_raw))
+    df_raw = df_raw.add(linear_space, axis=0)
+    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(time_series[0])
+    df_raw.index = time_series
+
+    # Data processing
+    data_processor = DataProcess(
+        data=df_raw,
+        train_start="2000-01-01 00:00:00",
+        train_end="2000-01-09 23:00:00",
+        validation_start="2000-01-10 00:00:00",
+        validation_end="2000-01-11 23:00:00",
+        test_start="2000-01-11 23:00:00",
+        output_col=output_col,
+    )
+    train_data, validation_data, _, _ = data_processor.get_splits()
+
+    # Initialize model
+    model.auto_initialize_baseline_states(train_data["y"][0:23])
+
+    for _ in range(2):
+        (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
+            train_data=train_data, validation_data=validation_data
+        )
+
+        # Unstandardize
+        mu_validation_preds = normalizer.unstandardize(
+            mu_validation_preds,
+            data_processor.data_mean[output_col],
+            data_processor.data_std[output_col],
+        )
+        std_validation_preds = normalizer.unstandardize_std(
+            std_validation_preds,
+            data_processor.data_std[output_col],
+        )
+
+    # Validation metric
+    mse = metric.mse(
+        mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
+    )
+
+    if plot:
+        plt.plot(
+            data_processor.train_time,
+            data_processor.train_data,
+            color="r",
+            label="train_obs",
+        )
+        plt.plot(
+            data_processor.validation_time,
+            data_processor.validation_data,
+            color="r",
+            linestyle="--",
+            label="validation_obs",
+        )
+        plot_with_uncertainty(
+            time=data_processor.validation_time,
+            mu=mu_validation_preds,
+            std=std_validation_preds,
+            color="b",
+            label=["mu_val_pred", "±1σ"],
+        )
+        plt.legend()
+        plt.show()
+
+    return mse
+
+
+@pytest.fixture(scope="module")
+def threshold_setup(run_mode):
+    """
+    Fixture to handle threshold loading or saving based on run_mode.
+    """
+
+    path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+    threshold = None
+
+    if run_mode == "save_threshold":
+        yield threshold
+    else:
+        # load_threshold mode
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+            threshold = float(df["mse"].iloc[0])
+        yield threshold
+
+
+def test_model_forecast(run_mode, plot_mode, threshold_setup):
+    # Model
+    model = Model(
+        LocalTrend(var_states=[1e-4, 1e-4]),
+        LstmNetwork(
+            look_back_len=12,
+            num_features=1,
+            num_layer=1,
+            num_hidden_unit=50,
+            device="cpu",
+            manual_seed=1,
+        ),
+        Autoregression(),
+        WhiteNoise(std_error=1e-3),
+    )
+    mse = model_test_runner(model, plot=plot_mode)
+
+    path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+    if run_mode == "save_threshold":
+        pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
+        print(f"Saved MSE to {path_metric}: {mse}")
+    else:
+        threshold = threshold_setup
+        assert (
+            threshold is not None
+        ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
+        assert (
+            abs(mse - threshold) < 1e-6
+        ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
