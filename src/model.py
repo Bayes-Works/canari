@@ -272,7 +272,10 @@ class Model:
                 self.num_states += 1
                 self.states_name.insert(i, state)
                 self.index_pad_state = i
-        self.lstm_states_index = target_model.states_name.index("lstm")
+        if "lstm" in self.states_name:
+            self.lstm_states_index = target_model.states_name.index("lstm")
+        else:
+            self.lstm_states_index = None
 
     def forward(
         self,
