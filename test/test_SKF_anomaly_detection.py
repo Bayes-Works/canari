@@ -1,14 +1,12 @@
-import sys
 import os
-import unittest
 import pandas as pd
 import numpy as np
-from pytagi import Normalizer as normalizer
-import pytagi.metric as metric
+import pytest
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from pytagi import Normalizer as normalizer
+import pytagi.metric as metric
 
 from src import (
     LocalTrend,
@@ -20,16 +18,6 @@ from src import (
     plot_with_uncertainty,
 )
 from examples import DataProcess
-
-# Plot mode
-plot_mode = False
-
-# Parse custom arguments and remove them from sys.argv
-for arg in sys.argv[1:]:
-    if arg.startswith("plot=True"):
-        plot_mode = True
-        sys.argv.remove(arg)
-
 
 # Components
 local_trend = LocalTrend(var_states=[1e-4, 1e-4])
@@ -62,9 +50,8 @@ def SKF_anomaly_detection_runner(
     anomaly_threshold: float,
     plot: bool,
 ) -> bool:
-    """Run training for time-series forecasting model"""
+    """Run anomaly detection"""
 
-    # Define parameters
     output_col = [0]
 
     # Read data
@@ -75,7 +62,7 @@ def SKF_anomaly_detection_runner(
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
 
-    # Add synthetic anomaly to data
+    # Add synthetic anomaly
     trend = np.linspace(0, 2, num=len(df_raw))
     anomaly_trend = np.linspace(0, slope_anomaly, num=len(df_raw) - time_step_anomaly)
     trend[time_step_anomaly:] = trend[time_step_anomaly:] + anomaly_trend
@@ -93,16 +80,13 @@ def SKF_anomaly_detection_runner(
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
 
-    # -------------------------------------------------------------------------#
-    # Training:
+    # Training
     test_model.auto_initialize_baseline_states(train_data["y"][0:23])
-
     for _ in range(2):
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )
-
-        # Unstandardize the predictions
+        # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
             data_processor.data_mean[output_col],
@@ -113,27 +97,20 @@ def SKF_anomaly_detection_runner(
             data_processor.data_std[output_col],
         )
 
-    # Anomaly Detection
+    # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
-    # Check if any probability after time_step_anomaly exceeds the threshold
+    # Check anomalies
     condition1 = np.any(
         smooth_marginal_abnorm_prob[time_step_anomaly:] > anomaly_threshold
     )
-
-    # Check if any probability before time_step_anomaly is smaller than the threshold
     condition2 = np.any(
         smooth_marginal_abnorm_prob[:time_step_anomaly] < anomaly_threshold
     )
+    detection = condition1 and condition2
 
-    # Combine conditions
-    if condition1 and condition2:
-        detection = True
-    else:
-        detection = False
-
-    # Plot
+    # Plot if requested
     if plot:
         mu_plot = states.mu_posterior
         var_plot = states.var_posterior
@@ -254,24 +231,12 @@ def SKF_anomaly_detection_runner(
     return detection
 
 
-class AnomalyDetectionTest(unittest.TestCase):
-
-    def setUp(self):
-        self.plot_mode = plot_mode
-
-    def test_model(self):
-        # Model
-        detection = SKF_anomaly_detection_runner(
-            skf,
-            time_step_anomaly=200,
-            slope_anomaly=2,
-            anomaly_threshold=0.5,
-            plot=self.plot_mode,
-        )
-
-        # Run the assertion
-        self.assertEqual(detection, True)
-
-
-if __name__ == "__main__":
-    unittest.main()
+def test_anomaly_detection(plot_mode):
+    detection = SKF_anomaly_detection_runner(
+        skf,
+        time_step_anomaly=200,
+        slope_anomaly=2,
+        anomaly_threshold=0.5,
+        plot=plot_mode,
+    )
+    assert detection == True, "Anomaly detection failed to detect anomaly."
