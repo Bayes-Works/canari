@@ -5,18 +5,37 @@ import pandas as pd
 import numpy as np
 from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
+import matplotlib.pyplot as plt
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src import (
     LocalTrend,
     LstmNetwork,
     Autoregression,
     WhiteNoise,
     Model,
+    plot_with_uncertainty,
 )
 from examples import DataProcess
+
+# Run and plot mode
+run_mode = None
+plot_mode = False
+
+# Parse custom arguments and remove them from sys.argv
+for arg in sys.argv[1:]:
+    if arg.startswith("mode="):
+        run_mode = arg.split("=")[1]
+        sys.argv.remove(arg)
+    elif arg.startswith("plot=True"):
+        plot_mode = True
+        sys.argv.remove(arg)
 
 
 def model_test_runner(
     model: Model,
+    plot: bool,
 ) -> float:
     """Run training for time-series forecasting model"""
 
@@ -47,14 +66,14 @@ def model_test_runner(
 
     # -------------------------------------------------------------------------#
     # Training:
-    model.auto_initialize_baseline_states(train_data["y"][1:24])
+    model.auto_initialize_baseline_states(train_data["y"][0:23])
 
     for _ in range(2):
         (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )
 
-        # Validation metric
+        # Unstandardize the predictions
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
             data_processor.data_mean[output_col],
@@ -65,9 +84,35 @@ def model_test_runner(
             data_processor.data_std[output_col],
         )
 
+    # Validation metric
     mse = metric.mse(
         mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
     )
+
+    #  Plot
+    if plot:
+        plt.plot(
+            data_processor.train_time,
+            data_processor.train_data,
+            color="r",
+            label="train_obs",
+        )
+        plt.plot(
+            data_processor.validation_time,
+            data_processor.validation_data,
+            color="r",
+            linestyle="--",
+            label="validation_obs",
+        )
+        plot_with_uncertainty(
+            time=data_processor.validation_time,
+            mu=mu_validation_preds,
+            std=std_validation_preds,
+            color="b",
+            label=["mu_val_pred", "±1σ"],
+        )
+        plt.legend()
+        plt.show()
 
     return mse
 
@@ -75,26 +120,20 @@ def model_test_runner(
 class SineSignalWithTrendTest(unittest.TestCase):
 
     def setUp(self):
-        # Mode 1: Save the threshold
-        self.mode = None
-        # self.mode = "save_threshold"
-        for arg in sys.argv:
-            if arg.startswith("mode="):
-                self.mode = arg.split("=")[1]
-                break
+        self.run_mode = run_mode
+        self.plot_mode = plot_mode
 
         # Mode 2: Load the threshold from CSV
-        path_metric = "test/saved_metric/test_model_forescast_metric.csv"
-        if self.mode != "save_threshold":
+        path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+        if self.run_mode != "save_threshold":
             if os.path.exists(path_metric):
                 df = pd.read_csv(path_metric)
                 self.threshold = float(df["mse"].iloc[0])
 
     def test_model(self):
         # Model
-        std_observation_noise = 1e-1
         model = Model(
-            LocalTrend(),
+            LocalTrend(var_states=[1e-4, 1e-4]),
             LstmNetwork(
                 look_back_len=12,
                 num_features=1,
@@ -104,17 +143,17 @@ class SineSignalWithTrendTest(unittest.TestCase):
                 manual_seed=1,
             ),
             Autoregression(),
-            WhiteNoise(std_error=std_observation_noise),
+            WhiteNoise(std_error=1e-3),
         )
-        mse = model_test_runner(model)
+        mse = model_test_runner(model, plot=self.plot_mode)
 
-        if self.mode == "save_threshold":
+        if self.run_mode == "save_threshold":
             pd.DataFrame({"mse": [mse]}).to_csv(
-                "test/saved_metric/test_model_forescast_metric.csv", index=False
+                "test/saved_metric/test_model_forecast_metric.csv", index=False
             )
             self.threshold = mse
             print(
-                f"Saved MSE to test/saved_metric/test_model_forescast_metric.csv: {mse}"
+                f"Saved MSE to test/saved_metric/test_model_forecast_metric.csv: {mse}"
             )
 
         # Run the assertion
