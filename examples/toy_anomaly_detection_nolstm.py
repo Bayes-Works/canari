@@ -24,22 +24,23 @@ df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
 time_anomaly = 400
-AR_stationary_var = 5 ** 2/ (1 - 0.9 ** 2)
-anm_mag = - (np.sqrt(AR_stationary_var)*1) / 50
+AR_stationary_var = 5**2 / (1 - 0.9**2)
+anm_mag = -(np.sqrt(AR_stationary_var) * 1) / 50
 for i in range(time_anomaly, len(df_raw)):
     df_raw.values[i] += anm_mag * (i - time_anomaly)
 
 # Data pre-processing
 all_data = {}
-all_data['y'] = df_raw.values
-all_data['x'] = df_raw.values * 0
+all_data["y"] = df_raw.values
 
 # Components
 sigma_v = np.sqrt(1e-6)
-local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1E-12], std_error=0)
-local_acceleration = LocalAcceleration(mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1E-4, 1e-4], std_error=1e-3)
-periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1E-12])
-AR = Autoregression(std_error = 5, phi = 0.9, mu_states = [-0.0621], var_states = [6.36E-05])
+local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
+local_acceleration = LocalAcceleration(
+    mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-4, 1e-4], std_error=1e-3
+)
+periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
+AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
 noise = WhiteNoise(std_error=sigma_v)
 
 # Normal model

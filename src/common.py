@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 import numpy as np
 from src.data_struct import LstmOutputHistory
 
@@ -159,3 +159,15 @@ def gaussian_mixture(
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
     return mu_mixture.flatten(), var_mixture
+
+
+def set_default_input_covariates(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    """
+    Ensure that 'x' is initialized in the data dictionary.
+    If 'x' is missing, initialize it with NaNs.
+    """
+
+    num_time_steps = len(data["y"])
+    if "x" not in data:
+        data["x"] = np.full(num_time_steps, np.nan)
+    return data
