@@ -566,7 +566,7 @@ class SKF:
         """
         Filtering
         """
-
+        data = common.set_default_input_covariates(data)
         num_time_steps = len(data["y"])
         mu_obs_preds = []
         var_obs_preds = []

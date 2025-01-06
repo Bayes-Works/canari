@@ -43,7 +43,11 @@ data_processor = DataProcess(
     validation_end="2000-01-11 23:00:00",
     test_start="2000-01-11 23:00:00",
     output_col=output_col,
+    # train_data_split = 0.8,
+    # test_split = 0.2,
+    # normalize_data = False,
 )
+
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model

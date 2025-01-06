@@ -372,6 +372,7 @@ class Model:
         Forecast for whole time series data
         """
 
+        data = common.set_default_input_covariates(data)
         mu_obs_preds = []
         std_obs_preds = []
         lstm_index = self.lstm_states_index
@@ -400,6 +401,7 @@ class Model:
         Filter for whole time series data
         """
 
+        data = common.set_default_input_covariates(data)
         num_time_steps = len(data["y"])
         lstm_index = self.lstm_states_index
         self.initialize_states_history(num_time_steps)
