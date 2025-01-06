@@ -192,8 +192,8 @@ filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 #  Plot
-mu_plot = states.mu_posterior
-var_plot = states.var_posterior
+mu_plot = np.array(states.mu_posterior)
+var_plot = np.array(states.var_posterior)
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 
 

@@ -112,8 +112,8 @@ def SKF_anomaly_detection_runner(
 
     # Plot if requested
     if plot:
-        mu_plot = states.mu_posterior
-        var_plot = states.var_posterior
+        mu_plot = np.array(states.mu_posterior)
+        var_plot = np.array(states.var_posterior)
         marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
         local_level_index = skf.states_name.index("local level")
         local_trend_index = skf.states_name.index("local trend")
