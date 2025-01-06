@@ -115,27 +115,29 @@ class SKF:
                 self.model["norm_norm"].mu_states, self.model["norm_norm"].var_states
             )
 
-    def save_states_history(self, time_step: int):
+    def save_states_history(self):
         """
         Save states' priors, posteriors and cross-covariances at one time step
         """
 
         for transition_model in self.model.values():
-            transition_model.save_states_history(time_step)
+            transition_model.save_states_history()
 
-        self.states.mu_prior[time_step] = self.mu_states_prior.copy().flatten()
-        self.states.var_prior[time_step] = self.var_states_prior.copy()
-        self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
-        self.states.var_posterior[time_step] = self.var_states_posterior.copy()
+        self.states.mu_prior.append(self.mu_states_prior.flatten())
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior.flatten())
+        self.states.var_posterior.append(self.var_states_posterior)
+        self.states.mu_smooth.append([])
+        self.states.var_smooth.append([])
 
-    def initialize_states_history(self, num_time_steps: int):
+    def initialize_states_history(self):
         """
         Initialize history for all time steps for the combined states and each transition model
         """
 
         for transition_model in self.model.values():
-            transition_model.initialize_states_history(num_time_steps)
-        self.states.initialize(num_time_steps, self.num_states)
+            transition_model.initialize_states_history()
+        self.states.initialize()
 
     def initialize_smoother_buffers(self):
         """
@@ -578,7 +580,7 @@ class SKF:
 
         # Initialize hidden states
         self.set_same_states_transition_model()
-        self.initialize_states_history(num_time_steps)
+        self.initialize_states_history()
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
@@ -593,7 +595,7 @@ class SKF:
                     ],
                 )
 
-            self.save_states_history(time_step)
+            self.save_states_history()
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
