@@ -137,7 +137,7 @@ class SKF:
 
         for transition_model in self.model.values():
             transition_model.initialize_states_history()
-        self.states.initialize()
+        self.states.initialize(self.states_name)
 
     def initialize_smoother_buffers(self):
         """

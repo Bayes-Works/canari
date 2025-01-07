@@ -14,6 +14,9 @@ from src import (
     Model,
     SKF,
     plot_with_uncertainty,
+    plot_data,
+    plot_prediction,
+    plot_states,
 )
 import pytagi.metric as metric
 
@@ -109,12 +112,12 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.data_mean[output_col],
-        data_processor.data_std[output_col],
+        data_processor.norm_const_mean[output_col],
+        data_processor.norm_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.data_std[output_col],
+        data_processor.norm_const_std[output_col],
     )
 
 
@@ -134,29 +137,15 @@ var_plot = np.array(states.var_posterior)
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 
 fig, ax = plt.subplots(figsize=(10, 6))
-
-ax.plot(
-    data_processor.train_time,
-    data_processor.train_data[:, output_col].flatten(),
-    color="r",
-    label="train_obs",
+plot_data(
+    data_processor=data_processor,
+    plot_column=output_col,
 )
-ax.plot(
-    data_processor.validation_time,
-    data_processor.validation_data[:, output_col].flatten(),
-    color="r",
-    linestyle="--",
-    label="validation_obs",
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=mu_validation_preds,
+    std_validation_pred=std_validation_preds,
 )
-
-plot_with_uncertainty(
-    time=data_processor.validation_time,
-    mu=mu_validation_preds,
-    std=std_validation_preds,
-    color="b",
-    label=["mu_val_pred", "±1σ"],
-)
-
 ax.xaxis.set_major_locator(mdates.DayLocator())
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
 ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
@@ -170,23 +159,20 @@ plt.show()
 
 
 #  Plot hidden states
-local_level_index = skf.states_name.index("local level")
-local_trend_index = skf.states_name.index("local trend")
-lstm_index = skf.states_name.index("lstm")
-white_noise_index = skf.states_name.index("white noise")
-
 fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
-axs[0].plot(data_processor.time, all_data["y"], color="r", label="obs")
+plot_data(
+    data_processor=data_processor,
+    plot_column=output_col,
+    sub_plot=axs[0],
+)
+plot_states(
+    data_processor=data_processor,
+    states=states,
+    plot_states="local level",
+    sub_plot=axs[0],
+)
 axs[0].set_title("Observed Data")
 axs[0].set_ylabel("y")
-plot_with_uncertainty(
-    time=data_processor.time,
-    mu=mu_plot[:, local_level_index],
-    std=var_plot[:, local_level_index, local_level_index] ** 0.5,
-    color="b",
-    label=["mu_val_pred", "±1σ"],
-    ax=axs[0],
-)
 axs[0].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
 )
@@ -198,13 +184,11 @@ axs[0].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
 axs[0].set_ylabel("Local level")
 
 
-plot_with_uncertainty(
-    time=data_processor.time,
-    mu=mu_plot[:, local_trend_index],
-    std=var_plot[:, local_trend_index, local_trend_index] ** 0.5,
-    color="b",
-    label=["mu_val_pred", "±1σ"],
-    ax=axs[1],
+plot_states(
+    data_processor=data_processor,
+    states=states,
+    plot_states="local trend",
+    sub_plot=axs[1],
 )
 axs[1].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
@@ -218,13 +202,11 @@ axs[1].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
 axs[1].legend()
 axs[1].set_ylabel("Local trend")
 
-plot_with_uncertainty(
-    time=data_processor.time,
-    mu=mu_plot[:, lstm_index],
-    std=var_plot[:, lstm_index, lstm_index] ** 0.5,
-    color="b",
-    label=["mu_val_pred", "±1σ"],
-    ax=axs[2],
+plot_states(
+    data_processor=data_processor,
+    states=states,
+    plot_states="lstm",
+    sub_plot=axs[2],
 )
 axs[2].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
@@ -236,13 +218,11 @@ axs[2].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
 axs[2].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
 axs[2].set_ylabel("LSTM")
 
-plot_with_uncertainty(
-    time=data_processor.time,
-    mu=mu_plot[:, white_noise_index],
-    std=var_plot[:, white_noise_index, white_noise_index] ** 0.5,
-    color="b",
-    label=["mu_val_pred", "±1σ"],
-    ax=axs[3],
+plot_states(
+    data_processor=data_processor,
+    states=states,
+    plot_states="white noise",
+    sub_plot=axs[3],
 )
 axs[3].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
@@ -254,7 +234,7 @@ axs[3].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
 axs[3].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
 axs[3].set_ylabel("White noise residual")
 
-axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="b")
+axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="k")
 axs[4].axvline(
     x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
 )
