@@ -13,9 +13,9 @@ from src import (
 )
 
 # Read data
-data_file = "./data/toy_time_series/syn_ar_pd.csv"
+data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-data_file_time = "./data/toy_time_series/syn_ar_pd_datetime.csv"
+data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
@@ -25,9 +25,9 @@ df_raw.columns = ["values"]
 # Add synthetic anomaly to data
 time_anomaly = 400
 AR_stationary_var = 5**2 / (1 - 0.9**2)
-anm_mag = -(np.sqrt(AR_stationary_var) * 1) / 50
+anomaly_magnitude = -(np.sqrt(AR_stationary_var) * 1) / 50
 for i in range(time_anomaly, len(df_raw)):
-    df_raw.values[i] += anm_mag * (i - time_anomaly)
+    df_raw.values[i] += anomaly_magnitude * (i - time_anomaly)
 
 # Data pre-processing
 all_data = {}
