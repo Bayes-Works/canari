@@ -22,8 +22,9 @@ class StatesHistory:
     mu_smooth: List[np.ndarray] = field(init=False)
     var_smooth: List[np.ndarray] = field(init=False)
     cov_states: List[np.ndarray] = field(init=False)
+    states_name: List[str] = field(init=False)
 
-    def initialize(self) -> None:
+    def initialize(self, states_name: List[str]) -> None:
         self.mu_prior = []
         self.var_prior = []
         self.mu_posterior = []
@@ -31,6 +32,7 @@ class StatesHistory:
         self.mu_smooth = []
         self.var_smooth = []
         self.cov_states = []
+        self.states_name = states_name
 
 
 def initialize_marginal_prob_history(num_time_steps):

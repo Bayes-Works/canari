@@ -202,7 +202,7 @@ class Model:
         self.lstm_output_history.initialize(self._lstm_look_back_len)
 
     def initialize_states_history(self):
-        self.states.initialize()
+        self.states.initialize(self.states_name)
 
     def save_states_history(self):
         """
