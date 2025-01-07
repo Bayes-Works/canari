@@ -272,7 +272,10 @@ class Model:
                 self.num_states += 1
                 self.states_name.insert(i, state)
                 self.index_pad_state = i
-        self.lstm_states_index = target_model.states_name.index("lstm")
+        if "lstm" in self.states_name:
+            self.lstm_states_index = target_model.states_name.index("lstm")
+        else:
+            self.lstm_states_index = None
 
     def forward(
         self,
@@ -369,6 +372,7 @@ class Model:
         Forecast for whole time series data
         """
 
+        data = common.set_default_input_covariates(data)
         mu_obs_preds = []
         std_obs_preds = []
         lstm_index = self.lstm_states_index
@@ -397,6 +401,7 @@ class Model:
         Filter for whole time series data
         """
 
+        data = common.set_default_input_covariates(data)
         num_time_steps = len(data["y"])
         lstm_index = self.lstm_states_index
         self.initialize_states_history(num_time_steps)

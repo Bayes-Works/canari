@@ -39,6 +39,7 @@ df_raw = df_raw.add(trend, axis=0)
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
+    time_covariates=["hour_of_day"],
     train_start="2000-01-01 00:00:00",
     train_end="2000-01-09 23:00:00",
     validation_start="2000-01-10 00:00:00",
@@ -54,7 +55,7 @@ local_trend = LocalTrend(var_states=[1e-2, 1e-2])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=12,
-    num_features=1,
+    num_features=2,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
