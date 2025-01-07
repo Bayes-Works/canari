@@ -88,13 +88,15 @@ class SKF:
         """
         Assign self.lstm_net using self.model["norm_norm"].lstm_net
         """
-
-        self.lstm_net = self.model["norm_norm"].lstm_net
-        self.lstm_states_index = self.model["norm_norm"].lstm_states_index
-        self.lstm_output_history = self.model["norm_norm"].lstm_output_history
-        self.update_lstm_output_history = self.model[
-            "norm_norm"
-        ].update_lstm_output_history
+        if self.model["norm_norm"].lstm_net is not None:
+            self.lstm_net = self.model["norm_norm"].lstm_net
+            self.lstm_states_index = self.model["norm_norm"].lstm_states_index
+            self.lstm_output_history = self.model["norm_norm"].lstm_output_history
+            self.update_lstm_output_history = self.model[
+                "norm_norm"
+            ].update_lstm_output_history
+        else:
+            self.lstm_net = None
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -564,14 +566,15 @@ class SKF:
         """
         Filtering
         """
-
+        data = common.set_default_input_covariates(data)
         num_time_steps = len(data["y"])
         mu_obs_preds = []
         var_obs_preds = []
         self.filter_marginal_prob_history = initialize_marginal_prob_history(
             num_time_steps
         )
-        lstm_index = self.lstm_states_index
+        if self.lstm_net:
+            lstm_index = self.lstm_states_index
 
         # Initialize hidden states
         self.set_same_states_transition_model()
