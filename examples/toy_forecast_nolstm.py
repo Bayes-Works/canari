@@ -13,9 +13,9 @@ from src import (
 
 
 # # Read data
-data_file = "./data/toy_time_series/syn_ar_pd.csv"
+data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-data_file_time = "./data/toy_time_series/syn_ar_pd_datetime.csv"
+data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
@@ -27,12 +27,14 @@ all_data = {}
 all_data["y"] = df_raw.values
 
 # Split into train and test
+train_split = 0.8
+
 train_data = {}
-train_data["y"] = df_raw.values[: int(len(df_raw) * 0.8)]
-train_time = df_raw.index[: int(len(df_raw) * 0.8)]
+train_data["y"] = df_raw.values[: int(len(df_raw) * train_split)]
+train_time = df_raw.index[: int(len(df_raw) * train_split)]
 test_data = {}
-test_data["y"] = df_raw.values[int(len(df_raw) * 0.8) :]
-test_time = df_raw.index[int(len(df_raw) * 0.8) :]
+test_data["y"] = df_raw.values[int(len(df_raw) * train_split) :]
+test_time = df_raw.index[int(len(df_raw) * train_split) :]
 
 # Components
 sigma_v = np.sqrt(1e-6)
