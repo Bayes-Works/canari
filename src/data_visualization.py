@@ -29,7 +29,7 @@ def add_dynamic_grids(ax, time):
 
     if time_range > np.timedelta64(365, "D"):  # More than a year
         major_locator = YearLocator()
-        minor_locator = MonthLocator()
+        minor_locator = MonthLocator(bymonth=[1, 4, 7, 10])
         major_formatter = DateFormatter("%Y")
     elif time_range > np.timedelta64(30, "D"):  # More than a month
         major_locator = MonthLocator()
