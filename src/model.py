@@ -404,10 +404,10 @@ class Model:
         """
 
         data = common.set_default_input_covariates(data)
-        num_time_steps = len(data["y"])
         lstm_index = self.lstm_states_index
         mu_obs_preds = []
         std_obs_preds = []
+        self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)

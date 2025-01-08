@@ -9,7 +9,6 @@ from src import (
     Autoregression,
     WhiteNoise,
     Model,
-    plot_with_uncertainty,
     plot_data,
     plot_prediction,
 )
@@ -42,9 +41,6 @@ data_processor = DataProcess(
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
-    # train_data_split = 0.8,
-    # test_split = 0.2,
-    # normalize_data = False,
 )
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
