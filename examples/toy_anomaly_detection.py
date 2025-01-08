@@ -13,10 +13,9 @@ from src import (
     WhiteNoise,
     Model,
     SKF,
-    plot_with_uncertainty,
     plot_data,
     plot_prediction,
-    plot_states,
+    plot_skf_states,
 )
 import pytagi.metric as metric
 
@@ -126,16 +125,13 @@ mse = metric.mse(
 )
 print(f"MSE           : {mse: 0.4f}")
 
-# # # Anomaly Detection
+# # Anomaly Detection
 skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
-#  Plot
-mu_plot = np.array(states.mu_posterior)
-var_plot = np.array(states.var_posterior)
+# # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
@@ -146,105 +142,16 @@ plot_prediction(
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
 )
-ax.xaxis.set_major_locator(mdates.DayLocator())
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-ax.grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-ax.grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
 ax.set_xlabel("Time")
-plt.legend()
 plt.title("Validation predictions")
 plt.tight_layout()
 plt.show()
 
 
-#  Plot hidden states
-fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
-plot_data(
-    data_processor=data_processor,
-    plot_column=output_col,
-    sub_plot=axs[0],
-)
-plot_states(
+fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    plot_states="local level",
-    sub_plot=axs[0],
+    model_prob=filter_marginal_abnorm_prob,
 )
-axs[0].set_title("Observed Data")
-axs[0].set_ylabel("y")
-axs[0].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[0].xaxis.set_major_locator(mdates.DayLocator())
-axs[0].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-axs[0].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-axs[0].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-axs[0].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-axs[0].set_ylabel("Local level")
-
-
-plot_states(
-    data_processor=data_processor,
-    states=states,
-    plot_states="local trend",
-    sub_plot=axs[1],
-)
-axs[1].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[1].axhline(y=0, color="black", linestyle="--", label="zero speed")
-axs[1].xaxis.set_major_locator(mdates.DayLocator())
-axs[1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-axs[1].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-axs[1].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-axs[1].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-axs[1].legend()
-axs[1].set_ylabel("Local trend")
-
-plot_states(
-    data_processor=data_processor,
-    states=states,
-    plot_states="lstm",
-    sub_plot=axs[2],
-)
-axs[2].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[2].xaxis.set_major_locator(mdates.DayLocator())
-axs[2].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-axs[2].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-axs[2].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-axs[2].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-axs[2].set_ylabel("LSTM")
-
-plot_states(
-    data_processor=data_processor,
-    states=states,
-    plot_states="white noise",
-    sub_plot=axs[3],
-)
-axs[3].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[3].xaxis.set_major_locator(mdates.DayLocator())
-axs[3].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-axs[3].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-axs[3].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-axs[3].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-axs[3].set_ylabel("White noise residual")
-
-axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="k")
-axs[4].axvline(
-    x=data_processor.time[time_anomaly], color="b", linestyle="--", label="anomaly"
-)
-axs[4].xaxis.set_major_locator(mdates.DayLocator())
-axs[4].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-axs[4].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-axs[4].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-axs[4].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-axs[4].set_xlabel("Time")
-axs[4].set_ylabel("Pr(Abnormal)")
-
-plt.tight_layout()
+fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.show()

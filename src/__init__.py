@@ -11,5 +11,6 @@ from src.data_visualization import (
     plot_data,
     plot_prediction,
     plot_states,
+    plot_skf_states,
 )
 from src.SKF import SKF

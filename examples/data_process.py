@@ -23,127 +23,158 @@ class DataProcess:
         test_split: Optional[float] = 0.0,
         time_covariates: Optional[List[str]] = None,
         output_col: list[int] = [0],
-        normalize_data: Optional[bool] = False,
+        normalization: Optional[bool] = True,
     ) -> None:
         self._train_start = train_start
         self._train_end = train_end
         self._validation_start = validation_start
         self._validation_end = validation_end
         self._test_start = test_start
-        self._normalize_data = normalize_data
+        self._normalization = normalization
         self.train_split = train_split
         self.validation_split = validation_split
         self.test_split = test_split
+        self.time_covariates = time_covariates
+        self.output_col = output_col
 
         self.data = data
         self.data_norm = None
-        self.norm_const_mean = None
-        self.norm_const_std = None
-
-        self.time_covariates = time_covariates
-        self.output_col = output_col
         self.train_data = None
         self.validation_data = None
         self.test_data = None
+        self.train_data_norm = None
+        self.validation_data_norm = None
+        self.test_data_norm = None
+        self.norm_const_mean = None
+        self.norm_const_std = None
 
+        # Add time covariates if needed
+        self.add_time_covariates()
+
+        # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
-
-        # # Add time covariates if needed
-        if self.time_covariates is not None:
-            self.add_time_covariates()
 
         # Split data
         self.split_data()
 
-        #  Normalize data
-        self.normalize_data()
+        #  Normalize data if needed
+        self.normalization()
 
     def add_time_covariates(self):
         """
         Add time covariates to the data
         """
 
-        for time_cov in self.time_covariates:
-            if time_cov == "hour_of_day":
-                self.data["hour_of_day"] = self.data.index.hour
-            elif time_cov == "day_of_week":
-                self.data["day_of_week"] = self.data.index.dayofweek
-            elif time_cov == "day_of_year":
-                self.data["day_of_year"] = self.data.index.dayofyear
-            elif time_cov == "week_of_year":
-                self.data["week_of_year"] = self.data.index.isocalendar().week
-            elif time_cov == "month_of_year":
-                self.data["month"] = self.data.index.month
-            elif time_cov == "quarter_of_year":
-                self.data["quarter"] = self.data.index.quarter
+        if self.time_covariates is not None:
+            for time_cov in self.time_covariates:
+                if time_cov == "hour_of_day":
+                    self.data["hour_of_day"] = self.data.index.hour
+                elif time_cov == "day_of_week":
+                    self.data["day_of_week"] = self.data.index.dayofweek
+                elif time_cov == "day_of_year":
+                    self.data["day_of_year"] = self.data.index.dayofyear
+                elif time_cov == "week_of_year":
+                    self.data["week_of_year"] = self.data.index.isocalendar().week
+                elif time_cov == "month_of_year":
+                    self.data["month"] = self.data.index.month
+                elif time_cov == "quarter_of_year":
+                    self.data["quarter"] = self.data.index.quarter
 
     def split_data(self):
-        """ "
-        Split data into train, validation and test sets
+        """
+        Split data into train, validation, and test sets.
         """
         num_data = len(self.data)
+
+        # Case 1: Splits are defined using ratios
         if self.train_split:
             self._train_end = int(np.floor(self.train_split * num_data))
-            self._validation_end = self._train_end + int(
-                np.floor(self.validation_split * num_data)
-            )
+
+            # Determine validation and test split indices
+            if self.test_split == 0:
+                self._validation_end = num_data
+            else:
+                self._validation_end = self._train_end + int(
+                    np.floor(self.validation_split * num_data)
+                )
+
+            # Extract train, validation, and test data and corresponding times
             self.train_data = self.data.iloc[: self._train_end].values
             self.train_time = self.data.iloc[: self._train_end].index
+
             self.validation_data = self.data.iloc[
                 self._train_end : self._validation_end
             ].values
             self.validation_time = self.data.iloc[
                 self._train_end : self._validation_end
             ].index
-            self.test_data = self.data.iloc[self._validation_end : num_data].values
-            self.test_time = self.data.iloc[self._validation_end : num_data].index
 
-        if self._train_start is not None:
-            self.train_data = np.float32(
-                self.data.loc[self._train_start : self._train_end].values
-            )
-            self.train_time = self.data.loc[self._train_start : self._train_end].index
+            self.test_data = self.data.iloc[self._validation_end :].values
+            self.test_time = self.data.iloc[self._validation_end :].index
 
-        if self._validation_start is not None:
-            self.validation_data = np.float32(
-                self.data.loc[self._validation_start : self._validation_end].values
-            )
-            self.validation_time = self.data.loc[
-                self._validation_start : self._validation_end
-            ].index
+        # Case 2: Splits are explicitly defined using indices
+        else:
+            if self._train_start is not None and self._train_end is not None:
+                self.train_data = self.data.loc[
+                    self._train_start : self._train_end
+                ].values.astype(np.float32)
+                self.train_time = self.data.loc[
+                    self._train_start : self._train_end
+                ].index
 
-        if self._test_start is not None:
-            self.test_data = np.float32(self.data.loc[self._test_start :].values)
-            self.test_time = self.data.loc[self._test_start :].index
-        self.time = self.data.loc[self._train_start :].index
+            if self._validation_start is not None and self._validation_end is not None:
+                self.validation_data = self.data.loc[
+                    self._validation_start : self._validation_end
+                ].values.astype(np.float32)
+                self.validation_time = self.data.loc[
+                    self._validation_start : self._validation_end
+                ].index
 
-    def normalize_data(self):
+            if self._test_start is not None:
+                self.test_data = self.data.loc[self._test_start :].values.astype(
+                    np.float32
+                )
+                self.test_time = self.data.loc[self._test_start :].index
+
+        # Store the overall time index
+        self.time = self.data.index
+
+    def normalization(self):
         """
         Nomalize data
         """
 
-        self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
-            self.train_data
-        )
-        self.data_norm = Normalizer.standardize(
-            data=self.data.values, mu=self.norm_const_mean, std=self.norm_const_std
-        )
-        self.train_data_norm = Normalizer.standardize(
-            data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
-        )
-
-        if self.validation_data is not None:
-            self.validation_data_norm = Normalizer.standardize(
-                data=self.validation_data,
-                mu=self.norm_const_mean,
-                std=self.norm_const_std,
+        if self._normalization:
+            self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
+                self.train_data
+            )
+            self.data_norm = Normalizer.standardize(
+                data=self.data.values, mu=self.norm_const_mean, std=self.norm_const_std
+            )
+            self.train_data_norm = Normalizer.standardize(
+                data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
             )
 
-        if self.test_data is not None:
-            self.test_data_norm = Normalizer.standardize(
-                data=self.test_data, mu=self.norm_const_mean, std=self.norm_const_std
-            )
+            if self.validation_data is not None:
+                self.validation_data_norm = Normalizer.standardize(
+                    data=self.validation_data,
+                    mu=self.norm_const_mean,
+                    std=self.norm_const_std,
+                )
+
+            if self.test_data is not None:
+                self.test_data_norm = Normalizer.standardize(
+                    data=self.test_data,
+                    mu=self.norm_const_mean,
+                    std=self.norm_const_std,
+                )
+
+        else:
+            self.train_data_norm = self.train_data
+            self.validation_data_norm = self.validation_data
+            self.test_data_norm = self.test_data
+            self.data_norm = self.data.values
 
     def get_splits(
         self,

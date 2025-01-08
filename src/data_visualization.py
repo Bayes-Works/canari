@@ -3,6 +3,89 @@ import numpy as np
 from typing import Optional
 from examples import DataProcess
 from src.data_struct import StatesHistory
+import matplotlib.dates as mdates
+from matplotlib.dates import (
+    YearLocator,
+    MonthLocator,
+    WeekdayLocator,
+    DayLocator,
+    HourLocator,
+    DateFormatter,
+)
+
+
+def add_dynamic_grids(ax, time):
+    """
+    Add dynamic major and minor grids to the x-axis of the plot based on the time range.
+
+    Parameters:
+        ax (plt.Axes): The axis to add the grid to.
+        time (np.ndarray): Array of time values.
+    """
+    # Calculate the time range
+    start_date = time[0]
+    end_date = time[-1]
+    time_range = end_date - start_date
+
+    if time_range > np.timedelta64(365, "D"):  # More than a year
+        major_locator = YearLocator()
+        minor_locator = MonthLocator()
+        major_formatter = DateFormatter("%Y")
+    elif time_range > np.timedelta64(30, "D"):  # More than a month
+        major_locator = MonthLocator()
+        minor_locator = WeekdayLocator(byweekday=mdates.MONDAY)  # Weekly on Mondays
+        major_formatter = DateFormatter("%b %Y")
+    else:  # Less than a month
+        major_locator = DayLocator()
+        minor_locator = HourLocator(byhour=[0, 6, 12, 18])  # 4 times a day
+        major_formatter = DateFormatter("%m-%d")
+
+    # Apply locators and formatters
+    ax.xaxis.set_major_locator(major_locator)
+    ax.xaxis.set_minor_locator(minor_locator)
+    ax.xaxis.set_major_formatter(major_formatter)
+
+    # Enable vertical grid only
+    ax.grid(
+        visible=True, which="major", axis="x", linestyle="-", linewidth=0.8, alpha=0.8
+    )
+    ax.grid(
+        visible=True, which="minor", axis="x", linestyle="--", linewidth=0.5, alpha=0.5
+    )
+
+    # Disable horizontal grid
+    ax.grid(visible=False, which="major", axis="y")
+    ax.grid(visible=False, which="minor", axis="y")
+
+
+def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
+    """
+    Determine the appropriate time array based on the length of states.
+    """
+    if len_states == len(data_processor.time):
+        return data_processor.time
+    elif len_states == len(data_processor.train_time):
+        return data_processor.train_time
+    else:
+        return np.concatenate(
+            [data_processor.train_time, data_processor.validation_time], axis=0
+        )
+
+
+def get_mu_and_variance(
+    states: StatesHistory, states_type: str
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Get the mean and variance arrays based on the states type.
+    """
+    if states_type == "posterior":
+        return np.array(states.mu_posterior), np.array(states.var_posterior)
+    elif states_type == "prior":
+        return np.array(states.mu_prior), np.array(states.var_prior)
+    elif states_type == "smooth":
+        return np.array(states.mu_smooth), np.array(states.var_smooth)
+    else:
+        raise ValueError(f"Invalid states_type: {states_type}")
 
 
 def plot_data(
@@ -32,6 +115,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
         else:
             ax.plot(
                 data_processor.train_time,
@@ -39,6 +123,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
 
     if plot_validation_data:
         if normalization:
@@ -48,6 +133,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
         else:
             ax.plot(
                 data_processor.validation_time,
@@ -55,6 +141,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
 
     if plot_test_data:
         if normalization:
@@ -64,6 +151,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
         else:
             ax.plot(
                 data_processor.test_time,
@@ -71,6 +159,7 @@ def plot_data(
                 color=color,
                 linestyle=linestyle,
             )
+            add_dynamic_grids(ax, data_processor.train_time)
 
 
 def plot_prediction(
@@ -128,53 +217,135 @@ def plot_prediction(
 def plot_states(
     data_processor: DataProcess,
     states: StatesHistory,
-    plot_states: str,
+    states_to_plot: Optional[list[str]] = ["all"],
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "k",
     linestyle: Optional[str] = "-",
 ):
-    # Subplot
-    if sub_plot is None:
-        ax = plt.gca()
-    else:
-        ax = sub_plot
-
-    # Time
+    # Time determination
     len_states = len(states.mu_prior)
-    if len_states == len(data_processor.time):
-        time = data_processor.time
-    elif len_states == len(data_processor.train_time):
-        time = data_processor.train_time
+    time = determine_time(data_processor, len_states)
+    time_range = time[-1] - time[0]
+    padding = time_range * 0.1  # 2% padding at both ends
+
+    # Mean and variance selection based on states_type
+    mu_plot, var_plot = get_mu_and_variance(states, states_type)
+
+    if states_to_plot == ["all"]:
+        states_to_plot = states.states_name
+
+    # Create new figure or use predefined subplot
+    if sub_plot is None:
+        fig, axes = plt.subplots(len(states_to_plot), 1, figsize=(10, 8))
+        if len(states_to_plot) == 1:
+            axes = [axes]
     else:
-        time = np.concatenate(
-            [data_processor.train_time, data_processor.validation_time], axis=0
+        fig = None
+        axes = [sub_plot]
+
+    for idx, plot_state in enumerate(states_to_plot):
+        ax = axes[idx] if sub_plot is None else sub_plot
+        plot_index = states.states_name.index(plot_state)
+
+        # Plot with uncertainty
+        plot_with_uncertainty(
+            time=time,
+            mu=mu_plot[:, plot_index],
+            std=var_plot[:, plot_index, plot_index] ** 0.5,
+            num_std=num_std,
+            color=color,
+            linestyle=linestyle,
+            ax=ax,
         )
 
-    # Mean and var for plotted hidden states
-    if states_type == "posterior":
-        mu_plot = np.array(states.mu_posterior)
-        var_plot = np.array(states.var_posterior)
-    elif states_type == "prior":
-        mu_plot = np.array(states.mu_prior)
-        var_plot = np.array(states.var_prior)
-    elif states_type == "smooth":
-        mu_plot = np.array(states.mu_smooth)
-        var_plot = np.array(states.var_smooth)
+        # Plot horizontal line at y=0.0 for specific states
+        if plot_state in ["local trend", "local acceleration"]:
+            ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
-    # Index
-    plot_index = states.states_name.index(plot_states)
+        # Set x-axis limits with padding
+        ax.set_xlim(time[0] - padding, time[-1] + padding)
 
-    plot_with_uncertainty(
-        time=time,
-        mu=mu_plot[:, plot_index],
-        std=var_plot[:, plot_index, plot_index] ** 0.5,
-        num_std=num_std,
-        color=color,
-        linestyle=linestyle,
-        ax=ax,
+        # Set ylabel to the name of the current state
+        ax.set_ylabel(plot_state)
+        add_dynamic_grids(ax, time)
+
+        if sub_plot is not None:
+            break
+
+    if sub_plot is None:
+        plt.tight_layout()
+
+    return fig, axes
+
+
+def plot_skf_states(
+    data_processor: DataProcess,
+    states: StatesHistory,
+    model_prob: np.ndarray,
+    states_type: Optional[str] = "posterior",
+    num_std: Optional[int] = 1,
+    color: Optional[str] = "k",
+    linestyle: Optional[str] = "-",
+):
+    # Time determination
+    len_states = len(states.mu_prior)
+    time = determine_time(data_processor, len_states)
+    time_range = time[-1] - time[0]
+    padding = time_range * 0.02  # 2% padding at both ends
+
+    # Mean and variance selection based on states_type
+    mu_plot, var_plot = get_mu_and_variance(states, states_type)
+
+    states_to_plot = states.states_name
+    fig, axes = plt.subplots(len(states_to_plot) + 1, 1, figsize=(10, 8))
+    if len(states_to_plot) == 1:
+        axes = [axes]
+
+    for idx, plot_state in enumerate(states_to_plot):
+        ax = axes[idx]
+        plot_index = states.states_name.index(plot_state)
+
+        # Plot with uncertainty
+        plot_with_uncertainty(
+            time=time,
+            mu=mu_plot[:, plot_index],
+            std=var_plot[:, plot_index, plot_index] ** 0.5,
+            num_std=num_std,
+            color=color,
+            linestyle=linestyle,
+            ax=ax,
+        )
+
+        # Plot horizontal line at y=0.0 for specific states
+        if plot_state in ["local trend", "local acceleration"]:
+            ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
+
+        # Set x-axis limits with padding
+        ax.set_xlim(time[0] - padding, time[-1] + padding)
+
+        # Set ylabel to the name of the current state
+        ax.set_ylabel(plot_state)
+        add_dynamic_grids(ax, time)
+
+    plot_data(
+        data_processor=data_processor,
+        plot_column=data_processor.output_col,
+        normalization=True,
+        sub_plot=axes[0],
     )
+
+    # Plot abnormal model probability
+    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color=color)
+    axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
+    axes[len(states_to_plot)].set_xlim(time[0] - padding, time[-1] + padding)
+    add_dynamic_grids(axes[len(states_to_plot)], time)
+    axes[len(states_to_plot)].set_xlabel("Time")
+
+    plt.tight_layout()
+
+    return fig, axes
 
 
 def plot_with_uncertainty(
