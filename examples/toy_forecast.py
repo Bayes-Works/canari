@@ -39,11 +39,6 @@ num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
-    # train_start="2000-01-01 00:00:00",
-    # train_end="2000-01-09 23:00:00",
-    # validation_start="2000-01-10 00:00:00",
-    # validation_end="2000-01-11 23:00:00",
-    # test_start="2000-01-11 23:00:00",
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -86,8 +81,6 @@ for epoch in range(num_epoch):
     )
 
 #  Plot
-
-# fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=False)
 plot_data(
     data_processor=data_processor,
     normalization=True,
@@ -98,5 +91,4 @@ plot_prediction(
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
 )
-
 plt.show()
