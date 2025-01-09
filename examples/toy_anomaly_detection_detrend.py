@@ -191,6 +191,7 @@ fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
     model_prob=marginal_abnorm_prob_plot,
+    color="b",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.show()

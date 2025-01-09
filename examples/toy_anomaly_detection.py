@@ -16,6 +16,7 @@ from src import (
     plot_data,
     plot_prediction,
     plot_skf_states,
+    plot_states,
 )
 import pytagi.metric as metric
 
@@ -136,11 +137,13 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
+    sub_plot=ax,
 )
 plot_prediction(
     data_processor=data_processor,
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
+    sub_plot=ax,
 )
 ax.set_xlabel("Time")
 plt.title("Validation predictions")
@@ -152,6 +155,7 @@ fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
     model_prob=marginal_abnorm_prob_plot,
+    color="b",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.show()
