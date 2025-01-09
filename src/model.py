@@ -201,22 +201,22 @@ class Model:
     def initialize_lstm_output_history(self):
         self.lstm_output_history.initialize(self._lstm_look_back_len)
 
-    def initialize_states_history(self, num_time_steps: int):
-        self.states = StatesHistory()
-        self.states.initialize(num_time_steps, self.num_states)
+    def initialize_states_history(self):
+        self.states.initialize(self.states_name)
 
-    def save_states_history(self, time_step):
+    def save_states_history(self):
         """
         Save states' priors, posteriors and cross-covariances for smoother
         """
-
-        self.states.mu_prior[time_step] = self.mu_states_prior.copy().flatten()
-        self.states.var_prior[time_step] = (
-            self.var_states_prior + self.var_states_prior.T
-        ) * 0.5
-        self.states.mu_posterior[time_step] = self.mu_states_posterior.copy().flatten()
-        self.states.var_posterior[time_step] = self.var_states_posterior.copy()
-        self.states.cov_states[time_step] = self.var_states @ self.transition_matrix.T
+        self.states.mu_prior.append(self.mu_states_prior.flatten())
+        self.states.var_prior.append(
+            (self.var_states_prior + self.var_states_prior.T) * 0.5
+        )
+        self.states.mu_posterior.append(self.mu_states_posterior.flatten())
+        self.states.var_posterior.append(self.var_states_posterior)
+        self.states.cov_states.append(self.var_states @ self.transition_matrix.T)
+        self.states.mu_smooth.append([])
+        self.states.var_smooth.append([])
 
     def initialize_smoother_buffers(self):
         """
@@ -237,6 +237,7 @@ class Model:
         model_copy.observation_matrix = self.observation_matrix.copy()
         model_copy.mu_states = self.mu_states.copy()
         model_copy.var_states = self.var_states.copy()
+        model_copy.states = StatesHistory()
         model_copy.states_name = self.states_name.copy()
         model_copy.num_states = copy.copy(self.num_states)
         model_copy.lstm_net = None
@@ -388,6 +389,7 @@ class Model:
                     var_states_prior[lstm_index, lstm_index],
                 )
 
+            self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
@@ -402,13 +404,12 @@ class Model:
         """
 
         data = common.set_default_input_covariates(data)
-        num_time_steps = len(data["y"])
         lstm_index = self.lstm_states_index
-        self.initialize_states_history(num_time_steps)
         mu_obs_preds = []
         std_obs_preds = []
+        self.initialize_states_history()
 
-        for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
+        for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
                 delta_mu_states,
@@ -434,7 +435,7 @@ class Model:
                     var_states_posterior[lstm_index, lstm_index],
                 )
 
-            self.save_states_history(time_step)
+            self.save_states_history()
             self.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)

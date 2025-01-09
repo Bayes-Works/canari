@@ -15,7 +15,9 @@ from src import (
     WhiteNoise,
     Model,
     SKF,
-    plot_with_uncertainty,
+    plot_data,
+    plot_prediction,
+    plot_skf_states,
 )
 from examples import DataProcess
 
@@ -89,12 +91,12 @@ def SKF_anomaly_detection_runner(
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.data_mean[output_col],
-            data_processor.data_std[output_col],
+            data_processor.norm_const_mean[output_col],
+            data_processor.norm_const_std[output_col],
         )
         std_validation_preds = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.data_std[output_col],
+            data_processor.norm_const_std[output_col],
         )
 
     # Anomaly detection
@@ -112,120 +114,12 @@ def SKF_anomaly_detection_runner(
 
     # Plot if requested
     if plot:
-        mu_plot = states.mu_posterior
-        var_plot = states.var_posterior
-        marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-        local_level_index = skf.states_name.index("local level")
-        local_trend_index = skf.states_name.index("local trend")
-        lstm_index = skf.states_name.index("lstm")
-        white_noise_index = skf.states_name.index("white noise")
-
-        fig, axs = plt.subplots(5, 1, figsize=(10, 8), sharex=False)
-        axs[0].plot(data_processor.time, all_data["y"], color="r", label="obs")
-        axs[0].set_title("Observed Data")
-        axs[0].set_ylabel("y")
-        plot_with_uncertainty(
-            time=data_processor.time,
-            mu=mu_plot[:, local_level_index],
-            std=var_plot[:, local_level_index, local_level_index] ** 0.5,
-            color="b",
-            label=["mu_val_pred", "±1σ"],
-            ax=axs[0],
+        fig, ax = plot_skf_states(
+            data_processor=data_processor,
+            states=states,
+            model_prob=filter_marginal_abnorm_prob,
         )
-        axs[0].axvline(
-            x=data_processor.time[time_step_anomaly],
-            color="b",
-            linestyle="--",
-            label="anomaly",
-        )
-        axs[0].xaxis.set_major_locator(mdates.DayLocator())
-        axs[0].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        axs[0].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-        axs[0].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-        axs[0].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-        axs[0].set_ylabel("Local level")
-
-        plot_with_uncertainty(
-            time=data_processor.time,
-            mu=mu_plot[:, local_trend_index],
-            std=var_plot[:, local_trend_index, local_trend_index] ** 0.5,
-            color="b",
-            label=["mu_val_pred", "±1σ"],
-            ax=axs[1],
-        )
-        axs[1].axvline(
-            x=data_processor.time[time_step_anomaly],
-            color="b",
-            linestyle="--",
-            label="anomaly",
-        )
-        axs[1].axhline(y=0, color="black", linestyle="--", label="zero speed")
-        axs[1].xaxis.set_major_locator(mdates.DayLocator())
-        axs[1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        axs[1].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-        axs[1].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-        axs[1].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-        axs[1].legend()
-        axs[1].set_ylabel("Local trend")
-
-        plot_with_uncertainty(
-            time=data_processor.time,
-            mu=mu_plot[:, lstm_index],
-            std=var_plot[:, lstm_index, lstm_index] ** 0.5,
-            color="b",
-            label=["mu_val_pred", "±1σ"],
-            ax=axs[2],
-        )
-        axs[2].axvline(
-            x=data_processor.time[time_step_anomaly],
-            color="b",
-            linestyle="--",
-            label="anomaly",
-        )
-        axs[2].xaxis.set_major_locator(mdates.DayLocator())
-        axs[2].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        axs[2].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-        axs[2].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-        axs[2].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-        axs[2].set_ylabel("LSTM")
-
-        plot_with_uncertainty(
-            time=data_processor.time,
-            mu=mu_plot[:, white_noise_index],
-            std=var_plot[:, white_noise_index, white_noise_index] ** 0.5,
-            color="b",
-            label=["mu_val_pred", "±1σ"],
-            ax=axs[3],
-        )
-        axs[3].axvline(
-            x=data_processor.time[time_step_anomaly],
-            color="b",
-            linestyle="--",
-            label="anomaly",
-        )
-        axs[3].xaxis.set_major_locator(mdates.DayLocator())
-        axs[3].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        axs[3].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-        axs[3].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-        axs[3].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-        axs[3].set_ylabel("White noise residual")
-
-        axs[4].plot(data_processor.time, marginal_abnorm_prob_plot, color="b")
-        axs[4].axvline(
-            x=data_processor.time[time_step_anomaly],
-            color="b",
-            linestyle="--",
-            label="anomaly",
-        )
-        axs[4].xaxis.set_major_locator(mdates.DayLocator())
-        axs[4].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        axs[4].xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
-        axs[4].grid(True, which="major", axis="x", linewidth=1.0, linestyle="-")
-        axs[4].grid(True, which="minor", axis="x", linewidth=0.5, linestyle="--")
-        axs[4].set_xlabel("Time")
-        axs[4].set_ylabel("Pr(Abnormal)")
-
-        plt.tight_layout()
+        fig.suptitle("SKF hidden states", fontsize=10, y=1)
         plt.show()
 
     return detection
