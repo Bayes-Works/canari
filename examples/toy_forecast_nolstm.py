@@ -8,8 +8,10 @@ from src import (
     Autoregression,
     WhiteNoise,
     Model,
-    plot_with_uncertainty,
+    plot_data,
+    plot_prediction,
 )
+from examples import DataProcess
 
 
 # # Read data
@@ -27,14 +29,15 @@ all_data = {}
 all_data["y"] = df_raw.values
 
 # Split into train and test
-train_split = 0.8
-
-train_data = {}
-train_data["y"] = df_raw.values[: int(len(df_raw) * train_split)]
-train_time = df_raw.index[: int(len(df_raw) * train_split)]
-test_data = {}
-test_data["y"] = df_raw.values[int(len(df_raw) * train_split) :]
-test_time = df_raw.index[int(len(df_raw) * train_split) :]
+output_col = [0]
+data_processor = DataProcess(
+    data=df_raw,
+    train_split=0.8,
+    validation_split=0.2,
+    output_col=output_col,
+    normalization=False,
+)
+train_data, validation_data, _, _ = data_processor.get_splits()
 
 # Components
 sigma_v = np.sqrt(1e-6)
@@ -57,21 +60,20 @@ model = Model(
 # # #
 model.filter(data=train_data)
 model.smoother(data=train_data)
-mu_test_preds, std_test_preds = model.forecast(test_data)
+mu_validation_preds, std_validation_preds = model.forecast(validation_data)
 
 #  Plot
-mu_plot = model.states.mu_posterior
-var_plot = model.states.var_posterior
 
-
-plt.plot(df_raw.index, all_data["y"], color="r", label="obs")
-plt.ylabel("y")
-plot_with_uncertainty(
-    time=test_time,
-    mu=mu_test_preds,
-    std=std_test_preds,
-    color="g",
-    label=["mu_test_pred", "±1σ"],
+plot_data(
+    data_processor=data_processor,
+    plot_column=output_col,
+    validation_label="y",
 )
-plt.legend()
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=mu_validation_preds,
+    std_validation_pred=std_validation_preds,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
+)
+plt.legend(loc="upper left")  # Change "upper right" to your desired location
 plt.show()

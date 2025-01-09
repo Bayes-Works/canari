@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import List
 import numpy as np
 
 
@@ -14,30 +15,24 @@ class LstmOutputHistory:
 
 @dataclass
 class StatesHistory:
-    mu_prior: np.ndarray = field(init=False)
-    var_prior: np.ndarray = field(init=False)
-    mu_posterior: np.ndarray = field(init=False)
-    var_posterior: np.ndarray = field(init=False)
-    mu_smooth: np.ndarray = field(init=False)
-    var_smooth: np.ndarray = field(init=False)
-    cov_states: np.ndarray = field(init=False)
+    mu_prior: List[np.ndarray] = field(init=False)
+    var_prior: List[np.ndarray] = field(init=False)
+    mu_posterior: List[np.ndarray] = field(init=False)
+    var_posterior: List[np.ndarray] = field(init=False)
+    mu_smooth: List[np.ndarray] = field(init=False)
+    var_smooth: List[np.ndarray] = field(init=False)
+    cov_states: List[np.ndarray] = field(init=False)
+    states_name: List[str] = field(init=False)
 
-    def initialize(self, num_time_steps: int, num_states: int) -> None:
-        self.mu_prior = np.zeros((num_time_steps, num_states), dtype=np.float32)
-        self.var_prior = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
-        )
-        self.mu_posterior = np.zeros((num_time_steps, num_states), dtype=np.float32)
-        self.var_posterior = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
-        )
-        self.mu_smooth = np.zeros((num_time_steps, num_states), dtype=np.float32)
-        self.var_smooth = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
-        )
-        self.cov_states = np.zeros(
-            (num_time_steps, num_states, num_states), dtype=np.float32
-        )
+    def initialize(self, states_name: List[str]) -> None:
+        self.mu_prior = []
+        self.var_prior = []
+        self.mu_posterior = []
+        self.var_posterior = []
+        self.mu_smooth = []
+        self.var_smooth = []
+        self.cov_states = []
+        self.states_name = states_name
 
 
 def initialize_marginal_prob_history(num_time_steps):
