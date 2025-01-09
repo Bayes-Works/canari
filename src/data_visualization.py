@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Optional
+from typing import Optional, List
 from examples import DataProcess
 from src.data_struct import StatesHistory
 import matplotlib.dates as mdates
@@ -91,13 +91,16 @@ def get_mu_and_variance(
 def plot_data(
     data_processor: DataProcess,
     normalization: Optional[bool] = False,
-    plot_training_data: Optional[bool] = True,
+    plot_train_data: Optional[bool] = True,
     plot_validation_data: Optional[bool] = True,
     plot_test_data: Optional[bool] = True,
     plot_column: list[int] = None,
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "r",
     linestyle: Optional[str] = "-",
+    train_label: Optional[str] = None,
+    validation_label: Optional[str] = None,
+    test_label: Optional[str] = None,
 ):
     if sub_plot is None:
         ax = plt.gca()
@@ -107,13 +110,14 @@ def plot_data(
     if plot_column is None:
         plot_column = data_processor.output_col
 
-    if plot_training_data:
+    if plot_train_data and len(data_processor.train_time) > 0:
         if normalization:
             ax.plot(
                 data_processor.train_time,
                 data_processor.train_data_norm[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=train_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
         else:
@@ -122,16 +126,18 @@ def plot_data(
                 data_processor.train_data[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=train_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
 
-    if plot_validation_data:
+    if plot_validation_data and len(data_processor.validation_time) > 0:
         if normalization:
             ax.plot(
                 data_processor.validation_time,
                 data_processor.validation_data_norm[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=validation_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
         else:
@@ -140,16 +146,25 @@ def plot_data(
                 data_processor.validation_data[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=validation_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
+        ax.axvspan(
+            data_processor.validation_time[0],
+            data_processor.validation_time[-1],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
-    if plot_test_data:
+    if plot_test_data and len(data_processor.test_time) > 0:
         if normalization:
             ax.plot(
                 data_processor.test_time,
                 data_processor.test_data_norm[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=test_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
         else:
@@ -158,8 +173,16 @@ def plot_data(
                 data_processor.test_data[:, plot_column],
                 color=color,
                 linestyle=linestyle,
+                label=test_label,
             )
             add_dynamic_grids(ax, data_processor.train_time)
+        ax.axvspan(
+            data_processor.test_time[0],
+            data_processor.test_time[-1],
+            color="k",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 
 def plot_prediction(
@@ -174,6 +197,9 @@ def plot_prediction(
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "blue",
     linestyle: Optional[str] = "-",
+    train_label: Optional[List[str]] = ["", ""],
+    validation_label: Optional[List[str]] = ["", ""],
+    test_label: Optional[List[str]] = ["", ""],
 ):
     if sub_plot is None:
         ax = plt.gca()
@@ -189,6 +215,7 @@ def plot_prediction(
             color=color,
             linestyle=linestyle,
             ax=ax,
+            label=train_label,
         )
 
     if mean_validation_pred is not None:
@@ -200,6 +227,7 @@ def plot_prediction(
             color=color,
             linestyle=linestyle,
             ax=ax,
+            label=validation_label,
         )
 
     if mean_test_pred is not None:
@@ -211,6 +239,7 @@ def plot_prediction(
             color=color,
             linestyle=linestyle,
             ax=ax,
+            label=test_label,
         )
 
 
@@ -263,7 +292,7 @@ def plot_states(
         if legend_location:
             if idx == 0:
                 ax.legend(
-                    [r"$\mu$", f"{num_std}$\pm\sigma$"], loc=legend_location, ncol=2
+                    [r"$\mu$", f"$\pm{num_std}\sigma$"], loc=legend_location, ncol=2
                 )
 
         # Plot horizontal line at y=0.0 for specific states
@@ -338,7 +367,7 @@ def plot_skf_states(
     # Add legends for the first subplot
     if legend_location:
         axes[0].legend(
-            [r"$\mu$", f"{num_std}$\pm\sigma$", r"$y$"],
+            [r"$\mu$", f"$\pm{num_std}\sigma$", r"$y$"],
             loc=legend_location,
             ncol=3,
         )
@@ -347,6 +376,7 @@ def plot_skf_states(
     axes[len(states_to_plot)].plot(data_processor.time, model_prob, color="b")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
     add_dynamic_grids(axes[len(states_to_plot)], time)
+    axes[len(states_to_plot)].set_ylim(-0.02, 1)
     axes[len(states_to_plot)].set_xlabel("Time")
     if legend_location:
         axes[len(states_to_plot)].legend(["Pr(Abnormal)"], loc="upper left")

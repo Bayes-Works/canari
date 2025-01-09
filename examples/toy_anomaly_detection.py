@@ -139,16 +139,19 @@ plot_data(
     plot_column=output_col,
     plot_test_data=False,
     sub_plot=ax,
+    validation_label="y",
 )
 plot_prediction(
     data_processor=data_processor,
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
     sub_plot=ax,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 ax.set_xlabel("Time")
 plt.title("Validation predictions")
 plt.tight_layout()
+plt.legend()
 plt.show()
 
 
