@@ -137,6 +137,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
+    plot_test_data=False,
     sub_plot=ax,
 )
 plot_prediction(
@@ -156,6 +157,15 @@ fig, ax = plot_skf_states(
     states=states,
     model_prob=marginal_abnorm_prob_plot,
     color="b",
+    legend_location="upper left",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
+plt.show()
+
+fig, ax = plot_states(
+    data_processor=data_processor,
+    states=states,
+    color="b",
+    legend_location="upper left",
+)
 plt.show()

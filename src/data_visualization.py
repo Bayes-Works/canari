@@ -223,6 +223,7 @@ def plot_states(
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "k",
     linestyle: Optional[str] = "-",
+    legend_location: Optional[str] = None,
 ):
     # Time determination
     len_states = len(states.mu_prior)
@@ -259,8 +260,11 @@ def plot_states(
         )
 
         # Add legends for the first subplot
-        if idx == 0:
-            ax.legend([r"$\mu$", r"$\pm\sigma$"], loc="upper left", ncol=2)
+        if legend_location:
+            if idx == 0:
+                ax.legend(
+                    [r"$\mu$", f"{num_std}$\pm\sigma$"], loc=legend_location, ncol=2
+                )
 
         # Plot horizontal line at y=0.0 for specific states
         if plot_state in ["local trend", "local acceleration"]:
@@ -287,6 +291,7 @@ def plot_skf_states(
     num_std: Optional[int] = 1,
     color: Optional[str] = "k",
     linestyle: Optional[str] = "-",
+    legend_location: Optional[str] = None,
 ):
     # Time determination
     len_states = len(states.mu_prior)
@@ -331,14 +336,20 @@ def plot_skf_states(
     )
 
     # Add legends for the first subplot
-    axes[0].legend([r"$\mu$", r"$\pm\sigma$", r"$y$"], loc="upper left", ncol=3)
+    if legend_location:
+        axes[0].legend(
+            [r"$\mu$", f"{num_std}$\pm\sigma$", r"$y$"],
+            loc=legend_location,
+            ncol=3,
+        )
 
     # Plot abnormal model probability
-    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color="r")
+    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color="b")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
     add_dynamic_grids(axes[len(states_to_plot)], time)
     axes[len(states_to_plot)].set_xlabel("Time")
-    axes[len(states_to_plot)].legend(["Pr(Abnormal)"], loc="upper left")
+    if legend_location:
+        axes[len(states_to_plot)].legend(["Pr(Abnormal)"], loc="upper left")
 
     plt.tight_layout()
 
