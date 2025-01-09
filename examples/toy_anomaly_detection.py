@@ -161,11 +161,3 @@ fig, ax = plot_skf_states(
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.show()
-
-fig, ax = plot_states(
-    data_processor=data_processor,
-    states=states,
-    color="b",
-    legend_location="upper left",
-)
-plt.show()
