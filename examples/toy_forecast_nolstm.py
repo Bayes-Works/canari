@@ -67,10 +67,13 @@ mu_validation_preds, std_validation_preds = model.forecast(validation_data)
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
+    validation_label="y",
 )
 plot_prediction(
     data_processor=data_processor,
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
+plt.legend(loc="upper left")  # Change "upper right" to your desired location
 plt.show()

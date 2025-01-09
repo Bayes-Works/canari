@@ -176,13 +176,17 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor_detrend,
     plot_column=output_col,
+    plot_test_data=False,
+    validation_label="y",
 )
 plot_prediction(
     data_processor=data_processor_detrend,
     mean_validation_pred=mu_validation_preds,
     std_validation_pred=std_validation_preds,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 ax.set_xlabel("Time")
+plt.legend()
 plt.title("Validation predictions")
 plt.tight_layout()
 plt.show()
