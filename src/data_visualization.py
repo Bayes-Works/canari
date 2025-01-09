@@ -227,8 +227,6 @@ def plot_states(
     # Time determination
     len_states = len(states.mu_prior)
     time = determine_time(data_processor, len_states)
-    time_range = time[-1] - time[0]
-    padding = time_range * 0.1  # 2% padding at both ends
 
     # Mean and variance selection based on states_type
     mu_plot, var_plot = get_mu_and_variance(states, states_type)
@@ -260,12 +258,13 @@ def plot_states(
             ax=ax,
         )
 
+        # Add legends for the first subplot
+        if idx == 0:
+            ax.legend([r"$\mu$", r"$\pm\sigma$"], loc="upper left", ncol=2)
+
         # Plot horizontal line at y=0.0 for specific states
         if plot_state in ["local trend", "local acceleration"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
-
-        # Set x-axis limits with padding
-        ax.set_xlim(time[0] - padding, time[-1] + padding)
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
@@ -292,8 +291,6 @@ def plot_skf_states(
     # Time determination
     len_states = len(states.mu_prior)
     time = determine_time(data_processor, len_states)
-    time_range = time[-1] - time[0]
-    padding = time_range * 0.02  # 2% padding at both ends
 
     # Mean and variance selection based on states_type
     mu_plot, var_plot = get_mu_and_variance(states, states_type)
@@ -322,9 +319,6 @@ def plot_skf_states(
         if plot_state in ["local trend", "local acceleration"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
-        # Set x-axis limits with padding
-        ax.set_xlim(time[0] - padding, time[-1] + padding)
-
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
         add_dynamic_grids(ax, time)
@@ -336,12 +330,15 @@ def plot_skf_states(
         sub_plot=axes[0],
     )
 
+    # Add legends for the first subplot
+    axes[0].legend([r"$\mu$", r"$\pm\sigma$", r"$y$"], loc="upper left", ncol=3)
+
     # Plot abnormal model probability
-    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color=color)
+    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color="r")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
-    axes[len(states_to_plot)].set_xlim(time[0] - padding, time[-1] + padding)
     add_dynamic_grids(axes[len(states_to_plot)], time)
     axes[len(states_to_plot)].set_xlabel("Time")
+    axes[len(states_to_plot)].legend(["Pr(Abnormal)"], loc="upper left")
 
     plt.tight_layout()
 
