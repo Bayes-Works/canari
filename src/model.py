@@ -495,7 +495,7 @@ class Model:
     def early_stopping(
         self,
         mode: Optional[str] = "max",
-        patience: Optional[int] = 10,
+        patience: Optional[int] = 20,
         metric: Optional[float] = None,
     ):
 

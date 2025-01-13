@@ -47,11 +47,11 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = 3e-1
-local_trend = LocalTrend(var_states=[1e-2, 1e-2])
+# local_trend = LocalTrend(var_states=[1e-2, 1e-2])
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
+    look_back_len=10,
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
@@ -78,20 +78,21 @@ ab_model = Model(
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-4,
-    norm_to_abnorm_prob=1e-4,
+    std_transition_error=1e-3,
+    norm_to_abnorm_prob=1e-5,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
+    conditional_likelihood=False,
 )
 skf.auto_initialize_baseline_states(train_data["y"][0:51])
 
 #  Training
-num_epoch = 50
+num_epoch = 100
 scheduled_sigma_v = 1
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(
-        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
+        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.7, curr_iter=epoch
     )
     noise_index = model.states_name.index("white noise")
     skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
@@ -114,6 +115,17 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         data_processor.norm_const_std[output_col],
     )
 
+    # Calculate the log-likelihood metric
+    validation_log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=data_processor.validation_data[:, output_col].flatten(),
+        std=std_validation_preds,
+    )
+
+    skf.early_stopping(metric=validation_log_lik, mode="max", patience=20)
+    if skf.stop_training:
+        break
+
 
 mse = metric.mse(
     mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
@@ -127,7 +139,11 @@ filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
-marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
+print(f"Optimal epoch           : {skf.optimal_epoch}")
+fig, ax = plt.subplots(figsize=(10, 6))
+plt.plot(skf.early_stop_metric_history)
+plt.show()
+
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
@@ -152,7 +168,7 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    model_prob=marginal_abnorm_prob_plot,
+    model_prob=filter_marginal_abnorm_prob,
     color="b",
     legend_location="upper left",
 )
