@@ -387,9 +387,13 @@ class SKF:
         mode: Optional[str] = "max",
         patience: Optional[int] = 20,
         metric: Optional[float] = None,
+        skip_epoch: Optional[int] = 5,
     ):
         self.model["norm_norm"].early_stopping(
-            mode=mode, patience=patience, metric=metric
+            mode=mode,
+            patience=patience,
+            metric=metric,
+            skip_epoch=skip_epoch,
         )
         self.stop_training = self.model["norm_norm"].stop_training
         self.optimal_epoch = self.model["norm_norm"].optimal_epoch

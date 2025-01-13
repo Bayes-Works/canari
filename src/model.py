@@ -497,13 +497,18 @@ class Model:
         mode: Optional[str] = "max",
         patience: Optional[int] = 20,
         metric: Optional[float] = None,
+        skip_epoch: Optional[int] = 5,
     ):
 
         self.early_stop_metric_history.append(metric)
 
         # Check for improvement
         improved = False
-        if mode == "max" and metric > self.early_stop_metric:
+        if (
+            mode == "max"
+            and metric > self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
             improved = True
         elif mode == "min" and metric < self.early_stop_metric:
             improved = True
