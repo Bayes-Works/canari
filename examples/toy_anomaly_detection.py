@@ -158,6 +158,7 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
+    states_to_plot=["local level", "local trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
     color="b",
     legend_location="upper left",
