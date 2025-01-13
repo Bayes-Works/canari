@@ -43,6 +43,9 @@ class SKF:
         self._marginal_prob = initialize_marginal()
         self._marginal_prob["norm"] = norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - norm_model_prior_prob
+        self.stop_training = False
+        self.optimal_epoch = 0
+        self.early_stop_metric_history = []
 
     def create_transition_model(
         self,
@@ -378,6 +381,21 @@ class SKF:
         """
 
         return self.model["norm_norm"].lstm_train(train_data, validation_data)
+
+    def early_stopping(
+        self,
+        mode: Optional[str] = "max",
+        patience: Optional[int] = 20,
+        metric: Optional[float] = None,
+    ):
+        self.model["norm_norm"].early_stopping(
+            mode=mode, patience=patience, metric=metric
+        )
+        self.stop_training = self.model["norm_norm"].stop_training
+        self.optimal_epoch = self.model["norm_norm"].optimal_epoch
+        self.early_stop_metric_history = self.model[
+            "norm_norm"
+        ].early_stop_metric_history
 
     def forward(
         self,
