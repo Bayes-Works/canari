@@ -150,7 +150,9 @@ class DataProcess:
                 self.train_data
             )
             self.data_norm = Normalizer.standardize(
-                data=self.data.values, mu=self.norm_const_mean, std=self.norm_const_std
+                data=self.data.values.astype(np.float32),
+                mu=self.norm_const_mean,
+                std=self.norm_const_std,
             )
             self.train_data_norm = Normalizer.standardize(
                 data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
