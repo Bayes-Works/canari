@@ -32,7 +32,7 @@ class Model:
         Initialize for early stopping
         """
 
-        self.early_stop_metric = -1e100
+        self.early_stop_metric = None
         self.early_stop_metric_history = []
         self.early_stop_lstm_param = None
         self.early_stop_init_mu_states = None
@@ -498,7 +498,13 @@ class Model:
         patience: Optional[int] = 20,
         metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
-    ):
+    ) -> Tuple[bool, int, float, list]:
+
+        if self._current_epoch == 0:
+            if mode == "max":
+                self.early_stop_metric = -np.inf
+            elif mode == "min":
+                self.early_stop_metric = np.inf
 
         self.early_stop_metric_history.append(metric)
 
@@ -510,10 +516,14 @@ class Model:
             and self._current_epoch > skip_epoch
         ):
             improved = True
-        elif mode == "min" and metric < self.early_stop_metric:
+        elif (
+            mode == "min"
+            and metric < self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
             improved = True
 
-        # Update best metric and parameters if there's an improvement
+        # Update metric and parameters if there's an improvement
         if improved:
             self.early_stop_metric = copy.copy(metric)
             self.early_stop_lstm_param = copy.copy(self.lstm_net.get_state_dict())
@@ -530,3 +540,10 @@ class Model:
             self.set_states(
                 self.early_stop_init_mu_states, self.early_stop_init_var_states
             )
+
+        return (
+            self.stop_training,
+            self.optimal_epoch,
+            self.early_stop_metric,
+            self.early_stop_metric_history,
+        )
