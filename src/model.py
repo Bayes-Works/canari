@@ -496,7 +496,7 @@ class Model:
         self,
         mode: Optional[str] = "max",
         patience: Optional[int] = 20,
-        metric: Optional[float] = None,
+        evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
 
@@ -506,26 +506,26 @@ class Model:
             elif mode == "min":
                 self.early_stop_metric = np.inf
 
-        self.early_stop_metric_history.append(metric)
+        self.early_stop_metric_history.append(evaluate_metric)
 
         # Check for improvement
         improved = False
         if (
             mode == "max"
-            and metric > self.early_stop_metric
+            and evaluate_metric > self.early_stop_metric
             and self._current_epoch > skip_epoch
         ):
             improved = True
         elif (
             mode == "min"
-            and metric < self.early_stop_metric
+            and evaluate_metric < self.early_stop_metric
             and self._current_epoch > skip_epoch
         ):
             improved = True
 
         # Update metric and parameters if there's an improvement
         if improved:
-            self.early_stop_metric = copy.copy(metric)
+            self.early_stop_metric = copy.copy(evaluate_metric)
             self.early_stop_lstm_param = copy.copy(self.lstm_net.get_state_dict())
             self.early_stop_init_mu_states = copy.copy(self.mu_states)
             self.early_stop_init_var_states = copy.copy(self.var_states)
