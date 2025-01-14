@@ -14,6 +14,8 @@ from src import (
 )
 from examples import DataProcess
 from pytagi import exponential_scheduler
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
 
 
 # # Read data
@@ -73,14 +75,39 @@ for epoch in range(num_epoch):
     model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
     (mu_validation_preds, std_validation_preds, smoother_states) = model.lstm_train(
-        train_data=train_data, validation_data=validation_data
+        train_data=train_data,
+        validation_data=validation_data,
     )
+
+    # Unstandardize the predictions
+    mu_validation_preds = normalizer.unstandardize(
+        mu_validation_preds,
+        data_processor.norm_const_mean[output_col],
+        data_processor.norm_const_std[output_col],
+    )
+    std_validation_preds = normalizer.unstandardize_std(
+        std_validation_preds,
+        data_processor.norm_const_std[output_col],
+    )
+
+    # Calculate the log-likelihood metric
+    mse = metric.mse(
+        mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
+    )
+
+    # Early-stopping
+    model.early_stopping(evaluate_metric=mse, mode="min")
+    if model.stop_training:
+        break
+
+print(f"Optimal epoch       : {model.optimal_epoch}")
+print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    normalization=False,
     plot_column=output_col,
     validation_label="y",
 )

@@ -99,7 +99,7 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    manual_seed=1,
+    # manual_seed=1,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -146,7 +146,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         train_data=train_data, validation_data=validation_data
     )
 
-    # # Unstandardize the predictions
+    # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
         data_processor_detrend.norm_const_mean[output_col],
@@ -156,12 +156,20 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         std_validation_preds,
         data_processor_detrend.norm_const_std[output_col],
     )
+    # Calculate the log-likelihood metric
+    validation_log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=data_processor.validation_data[:, output_col].flatten(),
+        std=std_validation_preds,
+    )
 
+    # Early-stopping
+    skf.early_stopping(evaluate_metric=validation_log_lik, mode="max")
+    if skf.stop_training:
+        break
 
-mse = metric.mse(
-    mu_validation_preds, data_processor_detrend.validation_data[:, output_col].flatten()
-)
-print(f"MSE           : {mse: 0.4f}")
+print(f"Optimal epoch       : {skf.optimal_epoch}")
+print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 skf.lstm_net = model_lstm.lstm_net
