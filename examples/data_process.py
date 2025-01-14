@@ -89,12 +89,8 @@ class DataProcess:
 
         # Case 1: Splits are defined using ratios
         if self.train_split:
+            self.test_split = 1 - self.train_split - self.validation_split
             self._train_end = int(np.floor(self.train_split * num_data))
-
-            # # Determine validation and test split indices
-            # if self.test_split == 0:
-            #     self._validation_end = num_data
-            # else:
             self._validation_end = self._train_end + int(
                 np.ceil(self.validation_split * num_data)
             )

@@ -4,7 +4,6 @@ from pytagi import exponential_scheduler
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from examples import DataProcess
 from src import (
     LocalTrend,
@@ -16,7 +15,6 @@ from src import (
     plot_data,
     plot_prediction,
     plot_skf_states,
-    plot_states,
 )
 import pytagi.metric as metric
 
@@ -120,11 +118,20 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         data_processor.norm_const_std[output_col],
     )
 
+    # Calculate the log-likelihood metric
+    validation_log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=data_processor.validation_data[:, output_col].flatten(),
+        std=std_validation_preds,
+    )
 
-mse = metric.mse(
-    mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
-)
-print(f"MSE           : {mse: 0.4f}")
+    # Early-stopping
+    skf.early_stopping(metric=validation_log_lik, mode="max")
+    if skf.stop_training:
+        break
+
+print(f"Optimal epoch       : {skf.optimal_epoch}")
+print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
