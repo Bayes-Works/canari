@@ -394,13 +394,13 @@ class SKF:
         self,
         mode: Optional[str] = "max",
         patience: Optional[int] = 20,
-        metric: Optional[float] = None,
+        evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
         self.model["norm_norm"].early_stopping(
             mode=mode,
             patience=patience,
-            metric=metric,
+            evaluate_metric=evaluate_metric,
             skip_epoch=skip_epoch,
         )
         self.stop_training = self.model["norm_norm"].stop_training

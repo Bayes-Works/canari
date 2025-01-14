@@ -126,7 +126,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    skf.early_stopping(metric=validation_log_lik, mode="max")
+    skf.early_stopping(evaluate_metric=validation_log_lik, mode="max")
     if skf.stop_training:
         break
 

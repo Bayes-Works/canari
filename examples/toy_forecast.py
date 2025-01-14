@@ -96,7 +96,7 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(metric=mse, mode="min")
+    model.early_stopping(evaluate_metric=mse, mode="min")
     if model.stop_training:
         break
 
