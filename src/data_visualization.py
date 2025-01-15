@@ -316,6 +316,7 @@ def plot_skf_states(
     data_processor: DataProcess,
     states: StatesHistory,
     model_prob: np.ndarray,
+    states_to_plot: Optional[list[str]] = ["all"],
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     color: Optional[str] = "k",
@@ -329,7 +330,9 @@ def plot_skf_states(
     # Mean and variance selection based on states_type
     mu_plot, var_plot = get_mu_and_variance(states, states_type)
 
-    states_to_plot = states.states_name
+    if states_to_plot == ["all"]:
+        states_to_plot = states.states_name
+
     fig, axes = plt.subplots(len(states_to_plot) + 1, 1, figsize=(10, 8))
     if len(states_to_plot) == 1:
         axes = [axes]
