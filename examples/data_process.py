@@ -89,28 +89,28 @@ class DataProcess:
 
         # Case 1: Splits are defined using ratios
         if self.train_split:
+            self.test_split = 1 - self.train_split - self.validation_split
             self._train_end = int(np.floor(self.train_split * num_data))
-
-            # Determine validation and test split indices
-            if self.test_split == 0:
-                self._validation_end = num_data
-            else:
-                self._validation_end = self._train_end + int(
-                    np.floor(self.validation_split * num_data)
-                )
+            self._validation_end = self._train_end + int(
+                np.ceil(self.validation_split * num_data)
+            )
 
             # Extract train, validation, and test data and corresponding times
-            self.train_data = self.data.iloc[: self._train_end].values
+            self.train_data = self.data.iloc[: self._train_end].values.astype(
+                np.float32
+            )
             self.train_time = self.data.iloc[: self._train_end].index
 
             self.validation_data = self.data.iloc[
                 self._train_end : self._validation_end
-            ].values
+            ].values.astype(np.float32)
             self.validation_time = self.data.iloc[
                 self._train_end : self._validation_end
             ].index
 
-            self.test_data = self.data.iloc[self._validation_end :].values
+            self.test_data = self.data.iloc[self._validation_end :].values.astype(
+                np.float32
+            )
             self.test_time = self.data.iloc[self._validation_end :].index
 
         # Case 2: Splits are explicitly defined using indices
@@ -150,7 +150,9 @@ class DataProcess:
                 self.train_data
             )
             self.data_norm = Normalizer.standardize(
-                data=self.data.values, mu=self.norm_const_mean, std=self.norm_const_std
+                data=self.data.values.astype(np.float32),
+                mu=self.norm_const_mean,
+                std=self.norm_const_std,
             )
             self.train_data_norm = Normalizer.standardize(
                 data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
