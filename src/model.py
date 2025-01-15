@@ -3,6 +3,7 @@ import copy
 from typing import Optional, List, Tuple, Dict
 from collections import deque
 from pytagi.nn import Sequential
+import pytagi.metric as metric
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
@@ -23,7 +24,22 @@ class Model:
             self.components = list(components)
             self.define_model()
             self.initialize_lstm_network()
+            self.initialize_early_stop()
             self.states = StatesHistory()
+
+    def initialize_early_stop(self):
+        """
+        Initialize for early stopping
+        """
+
+        self.early_stop_metric = None
+        self.early_stop_metric_history = []
+        self.early_stop_lstm_param = None
+        self.early_stop_init_mu_states = None
+        self.early_stop_init_var_states = None
+        self.optimal_epoch = 0
+        self._current_epoch = 0
+        self.stop_training = False
 
     def define_model(self):
         """
@@ -468,12 +484,66 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
-
         self.initialize_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
-
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),
             self.states,
+        )
+
+    def early_stopping(
+        self,
+        mode: Optional[str] = "max",
+        patience: Optional[int] = 20,
+        evaluate_metric: Optional[float] = None,
+        skip_epoch: Optional[int] = 5,
+    ) -> Tuple[bool, int, float, list]:
+
+        if self._current_epoch == 0:
+            if mode == "max":
+                self.early_stop_metric = -np.inf
+            elif mode == "min":
+                self.early_stop_metric = np.inf
+
+        self.early_stop_metric_history.append(evaluate_metric)
+
+        # Check for improvement
+        improved = False
+        if (
+            mode == "max"
+            and evaluate_metric > self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
+            improved = True
+        elif (
+            mode == "min"
+            and evaluate_metric < self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
+            improved = True
+
+        # Update metric and parameters if there's an improvement
+        if improved:
+            self.early_stop_metric = copy.copy(evaluate_metric)
+            self.early_stop_lstm_param = copy.copy(self.lstm_net.get_state_dict())
+            self.early_stop_init_mu_states = copy.copy(self.mu_states)
+            self.early_stop_init_var_states = copy.copy(self.var_states)
+            self.optimal_epoch = copy.copy(self._current_epoch)
+
+        self._current_epoch += 1
+
+        # Check stop condition and assign optimal values
+        if (self._current_epoch - self.optimal_epoch) >= patience:
+            self.stop_training = True
+            self.lstm_net.load_state_dict(self.early_stop_lstm_param)
+            self.set_states(
+                self.early_stop_init_mu_states, self.early_stop_init_var_states
+            )
+
+        return (
+            self.stop_training,
+            self.optimal_epoch,
+            self.early_stop_metric,
+            self.early_stop_metric_history,
         )
