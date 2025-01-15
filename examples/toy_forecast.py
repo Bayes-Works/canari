@@ -48,16 +48,17 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 1e-2
+# sigma_v = 1e-2
+sigma_v = 0.0032322250444898116
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=12,
+        look_back_len=19,
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        # manual_seed=3,
+        manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),
 )
