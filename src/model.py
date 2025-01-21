@@ -24,6 +24,7 @@ class Model:
             self.components = list(components)
             self.define_model()
             self.initialize_lstm_network()
+            self.initialize_autoregression_component()
             self.initialize_early_stop()
             self.states = StatesHistory()
 
@@ -97,6 +98,29 @@ class Model:
             self.lstm_states_index = self.states_name.index("lstm")
         else:
             self.lstm_states_index = None
+
+    def initialize_autoregression_component(self):
+        """
+        Initialize autoregression component
+        """
+
+        autoregression_component = next(
+            (
+                component
+                for component in self.components
+                if component.component_name == "autoregression"
+            ),
+            None,
+        )
+        if autoregression_component:
+            if autoregression_component.phi is None:
+                self.learn_phi_online = True
+                self.autoregression_index = self.states_name.index("autoregression")
+                self.phi_index = self.states_name.index("phi")
+            else:
+                self.learn_phi_online = False
+        else:
+            self.learn_phi_online = False
 
     def initialize_lstm_network(self):
         """
@@ -395,6 +419,10 @@ class Model:
         lstm_index = self.lstm_states_index
 
         for x in data["x"]:
+            if self.learn_phi_online:
+                ar_index, phi_index = self.autoregression_index, self.phi_index
+                self.mu_states[ar_index] = self.mu_states[phi_index] * self.mu_states[ar_index]
+                self.var_states[ar_index, ar_index] = self.mu_states[phi_index] ** 2 * self.var_states[ar_index, ar_index]
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
