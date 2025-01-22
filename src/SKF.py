@@ -722,3 +722,27 @@ def load_SKF_dict(save_dict: dict) -> SKF:
         skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
 
     return skf
+    def detect_synthetic_anomaly(
+        self,
+        data: list[Dict[str, np.ndarray]],
+        threshold: Optional[float] = 0.5,
+        max_timestep_to_detect: Optional[int] = None,
+    ) -> float:
+        num_synthetic_ts = len(data)
+        num_train_timesteps = len(data[0]["y"])
+        num_anomaly_detected = 0
+
+        for i in range(0, num_synthetic_ts):
+            filter_marginal_abnorm_prob, _ = self.filter(data=data[i])
+            window_start = data[i]["anomaly_timestep"]
+
+            if max_timestep_to_detect is None:
+                window_end = num_train_timesteps
+            else:
+                window_end = window_start + max_timestep_to_detect
+            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
+                num_anomaly_detected += 1
+
+        detection_rate = num_anomaly_detected / num_synthetic_ts
+
+        return detection_rate

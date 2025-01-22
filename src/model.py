@@ -635,15 +635,13 @@ class Model:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
-        max_epoch: Optional[int] = 1,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train LstmNetwork
         """
 
-        for epoch in range(max_epoch):
-            if self.lstm_net is None:
-                self.initialize_lstm_network()
+        if self.lstm_net is None:
+            self.initialize_lstm_network()
 
         self.filter(train_data)
         self.smoother(train_data)
