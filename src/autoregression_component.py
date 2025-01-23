@@ -14,7 +14,7 @@ class Autoregression(BaseComponent):
         phi: Optional[float] = None,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
-        var_W2bar: Optional[np.ndarray] = 5,
+        var_W2bar: Optional[np.ndarray] = 20,
     ):
         self.std_error = std_error  # When std_error is None, use AGVI to learn the process error
         self.phi = phi              # When phi is None, use GMA to learn

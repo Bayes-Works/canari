@@ -49,8 +49,8 @@ local_acceleration = LocalAcceleration(
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
 # AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
 # AR = Autoregression(std_error=5, mu_states=[0.5, -0.0621], var_states=[0.25, 6.36e-05])
-# AR = Autoregression(phi=0.9, mu_states=[-0.0621, 0], var_states=[6.36e-05, 5])
-AR = Autoregression(mu_states=[0.5, -0.0621, 0], var_states=[0.25, 6.36e-05, 5])
+# AR = Autoregression(phi=0.9, mu_states=[-0.0621, 0], var_states=[6.36e-05, 1000], var_W2bar=5000)
+AR = Autoregression(mu_states=[0.5, -0.0621, 0], var_states=[0.25, 6.36e-05, 100], var_W2bar=100)
 noise = WhiteNoise(std_error=sigma_v)
 
 # Normal model
@@ -80,6 +80,8 @@ plot_prediction(
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend(loc="upper left")  # Change "upper right" to your desired location
+for i in range(len(model.states.var_prior)):
+    print(model.states.var_prior[i][model.ar_error_index, model.ar_error_index])
 plot_states(data_processor=data_processor,
             states=model.states,
             states_type='prior',

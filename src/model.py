@@ -347,7 +347,19 @@ class Model:
                 self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
             if "AR_error" in self.states_name:
                 ar_error_index = self.ar_error_index
-                self.process_noise_matrix[ar_index, ar_index] = self.var_states[ar_error_index, ar_error_index]
+                # Forward path to compute the moments of W
+                # # From W2bar to W2
+                self.mu_W2_prior = self.mu_W2bar
+                self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar ** 2
+                # # From W2 to W
+                self.mu_states[ar_error_index] = 0
+                # self.var_states[ar_error_index, :] = np.zeros_like(self.var_states[ar_error_index, :])
+                # self.var_states[:, ar_error_index] = np.zeros_like(self.var_states[:, ar_error_index])
+                self.var_states[ar_error_index, ar_error_index] = self.mu_W2bar
+                self.var_states[ar_error_index, ar_index] = self.mu_W2bar
+                self.var_states[ar_index, ar_error_index] = self.mu_W2bar
+                # Replace the process error variance in self.process_noise_matrix
+                self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
@@ -385,6 +397,16 @@ class Model:
         mu_states_posterior, var_states_posterior = self.estimate_posterior_states(
             delta_mu_states, delta_var_states
         )
+        if "AR_error" in self.states_name:
+            # Backward path to update W2 and W2bar
+            # # From W to W2
+            mu_W2_posterior = mu_states_posterior[self.ar_error_index] ** 2 + var_states_posterior[self.ar_error_index, self.ar_error_index]
+            var_W2_posterior = 2 * var_states_posterior[self.ar_error_index, self.ar_error_index] ** 2 + 4 * var_states_posterior[self.ar_error_index, self.ar_error_index] * mu_states_posterior[self.ar_error_index] ** 2
+            # # From W2 to W2bar
+            K = self.var_W2bar / self.var_W2_prior
+            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
+            self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
