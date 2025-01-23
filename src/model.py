@@ -29,6 +29,17 @@ class Model:
             self.initialize_early_stop()
             self.states = StatesHistory()
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k in ['lstm_net']:
+                v = None
+            setattr(obj, k, copy.deepcopy(v, memo))
+            pass
+        return obj
+
     def initialize_early_stop(self):
         """
         Initialize for early stopping
@@ -104,24 +115,10 @@ class Model:
         """
         Initialize autoregression component
         """
-
-        autoregression_component = next(
-            (
-                component
-                for component in self.components
-                if component.component_name == "autoregression"
-            ),
-            None,
-        )
-        if autoregression_component:
-            if autoregression_component.phi is None:
-                self.learn_phi_online = True
-                self.autoregression_index = self.states_name.index("autoregression")
+        if "autoregression" in self.states_name:
+            self.autoregression_index = self.states_name.index("autoregression")
+            if "phi" in self.states_name:
                 self.phi_index = self.states_name.index("phi")
-            else:
-                self.learn_phi_online = False
-        else:
-            self.learn_phi_online = False
 
     def initialize_lstm_network(self):
         """
@@ -318,9 +315,10 @@ class Model:
             self.lstm_states_index = target_model.states_name.index("lstm")
         else:
             self.lstm_states_index = None
-        if self.learn_phi_online:
-            self.autoregression_index = self.states_name.index("autoregression")
-            self.phi_index = self.states_name.index("phi")
+        if "autoregression" in self.states_name:
+            if "phi" in self.states_name:
+                self.autoregression_index = self.states_name.index("autoregression")
+                self.phi_index = self.states_name.index("phi")
 
     def forward(
         self,
@@ -342,19 +340,14 @@ class Model:
             )
 
         # State-spaces model's prediction:
-        print(self.mu_states)
-        print(self.var_states)
-        print(self.states_name)
-        if self.learn_phi_online:
-            phi_index, ar_index = self.phi_index, self.autoregression_index
-            # GMA operations
-            print(phi_index)
-            print(ar_index)
-            print('-----------------')
-            self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
-                                                  index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
-            # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
-            self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
+        if "autoregression" in self.states_name:
+            if "phi" in self.states_name:
+                phi_index, ar_index = self.phi_index, self.autoregression_index
+                # GMA operations
+                self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
+                                                    index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
+                # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
+                self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,

@@ -59,12 +59,8 @@ class SKF:
 
         # Create transitional model
         norm_model.create_compatible_model(abnorm_model)
-        if norm_model.lstm_net is None:
-            abnorm_norm = copy.deepcopy(norm_model)
-            norm_abnorm = copy.deepcopy(abnorm_model)
-        else:
-            abnorm_norm = norm_model.duplicate()
-            norm_abnorm = abnorm_model.duplicate()
+        abnorm_norm = copy.deepcopy(norm_model)
+        norm_abnorm = copy.deepcopy(abnorm_model)
 
         # Add transition noise to norm_abnorm.process_noise_matrix
         index_pad_state = norm_model.index_pad_state
