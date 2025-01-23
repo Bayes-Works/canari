@@ -99,6 +99,9 @@ class SKF:
             self.update_lstm_output_history = self.model[
                 "norm_norm"
             ].update_lstm_output_history
+            self.initialize_lstm_output_history = self.model[
+                "norm_norm"
+            ].initialize_lstm_output_history
         else:
             self.lstm_net = None
 
@@ -342,6 +345,7 @@ class SKF:
         Estimate coefficients for each transition model
         """
 
+        epsilon = 0
         transition_coef = initialize_transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
@@ -360,7 +364,9 @@ class SKF:
                 )
                 sum_trans_prob += trans_prob[transit]
         for transit in trans_prob:
-            trans_prob[transit] = trans_prob[transit] / sum_trans_prob
+            trans_prob[transit] = trans_prob[transit] / np.maximum(
+                sum_trans_prob, epsilon
+            )
 
         #
         self._marginal_prob["norm"] = (
@@ -373,8 +379,8 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                transition_coef[transit] = (
-                    trans_prob[transit] / self._marginal_prob[arrival_state]
+                transition_coef[transit] = trans_prob[transit] / np.maximum(
+                    self._marginal_prob[arrival_state], epsilon
                 )
 
         return transition_coef
@@ -518,6 +524,7 @@ class SKF:
         RTS smoother
         """
 
+        epsilon = 0
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
@@ -543,10 +550,9 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                joint_transition_prob[transit] = (
-                    joint_transition_prob[transit]
-                    / arrival_state_marginal[arrival_state]
-                )
+                joint_transition_prob[transit] = joint_transition_prob[
+                    transit
+                ] / np.maximum(arrival_state_marginal[arrival_state], epsilon)
 
         joint_future_prob = initialize_transition()
         for origin_state in self.marginal_list:
@@ -574,8 +580,8 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                self.transition_coef[transit] = (
-                    joint_future_prob[transit] / self._marginal_prob[origin_state]
+                self.transition_coef[transit] = joint_future_prob[transit] / np.maximum(
+                    self._marginal_prob[origin_state], epsilon
                 )
 
         mu_states_transit, var_states_transit = self._get_smooth_states_transition(
@@ -624,6 +630,8 @@ class SKF:
         self.initialize_states_history()
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
+            if time_step == 205:
+                check = 1
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
 

@@ -127,7 +127,7 @@ def objective(trial):
     # Sample parameters from the search space
     std_transition_error = trial.suggest_loguniform("std_transition_error", 1e-6, 1e-3)
     norm_to_abnorm_prob = trial.suggest_loguniform("norm_to_abnorm_prob", 1e-6, 1e-3)
-    slope = trial.suggest_uniform("slope", 0.005, 0.1)
+    slope = trial.suggest_uniform("slope", 0.01, 0.1)
 
     # Initialize SKF with sampled parameters
     skf = SKF(
@@ -140,7 +140,7 @@ def objective(trial):
     )
 
     # Generate synthetic training data
-    num_synthetic_anomaly = 50
+    num_synthetic_anomaly = 5
     synthetic_train_data, _ = DataProcess.add_synthetic_anomaly(
         train_data, num_samples=num_synthetic_anomaly, slope=slope
     )
@@ -148,16 +148,16 @@ def objective(trial):
     # Compute detection rate
     detection_rate = skf.detect_synthetic_anomaly(data=synthetic_train_data)
 
-    if detection_rate < 0.5:
-        detection_rate = 1
+    if detection_rate > 0.6:
+        detection_rate = 0
 
     # Define objective: minimize detection rate and slope
-    score = detection_rate + slope * 10  # Add slope to detection rate
+    score = detection_rate - slope  # Add slope to detection rate
 
     return score  # Lower scores are better
 
 
-study = optuna.create_study(direction="minimize")  # Minimizing the combined score
+study = optuna.create_study(direction="maximize")  # Minimizing the combined score
 study.optimize(objective, n_trials=5)
 # Print the best parameters
 print("Best parameters:", study.best_params)
@@ -171,8 +171,10 @@ skf_optimal = SKF(
     norm_to_abnorm_prob=study.best_params["norm_to_abnorm_prob"],
     # std_transition_error=0.00041951244650633985,
     # norm_to_abnorm_prob=1.5082032194417e-06,
-    # std_transition_error=4.262031787807925e-06,
-    # norm_to_abnorm_prob=2.176525809554084e-06,
+    # std_transition_error=1e-4,
+    # norm_to_abnorm_prob=1e-4,
+    # std_transition_error=3.0478629661685305e-06,
+    # norm_to_abnorm_prob=5.484594028583117e-05,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
