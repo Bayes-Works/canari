@@ -115,10 +115,23 @@ class Model:
         """
         Initialize autoregression component
         """
+        autoregression_component = next(
+            (
+                component
+                for component in self.components
+                if component.component_name == "autoregression"
+            ),
+            None,
+        )
+
         if "autoregression" in self.states_name:
             self.autoregression_index = self.states_name.index("autoregression")
             if "phi" in self.states_name:
                 self.phi_index = self.states_name.index("phi")
+            if "AR_error" in self.states_name:
+                self.ar_error_index = self.states_name.index("AR_error")
+                self.mu_W2bar = autoregression_component.var_states[-1]
+                self.var_W2bar = autoregression_component.var_W2bar
 
     def initialize_lstm_network(self):
         """
@@ -297,9 +310,11 @@ class Model:
         else:
             self.lstm_states_index = None
         if "autoregression" in self.states_name:
+            self.autoregression_index = self.states_name.index("autoregression")
             if "phi" in self.states_name:
-                self.autoregression_index = self.states_name.index("autoregression")
                 self.phi_index = self.states_name.index("phi")
+            if "AR_error" in self.states_name:
+                self.ar_error_index = self.states_name.index("AR_error")
 
     def forward(
         self,
@@ -322,19 +337,17 @@ class Model:
 
         # Autoregression
         if "autoregression" in self.states_name:
+            ar_index = self.autoregression_index
             if "phi" in self.states_name:
-                phi_index, ar_index = self.phi_index, self.autoregression_index
-                self.mu_states, self.var_states = GMA(
-                    self.mu_states,
-                    self.var_states,
-                    index1=phi_index,
-                    index2=ar_index,
-                    replace_index=ar_index,
-                ).get_results()
+                phi_index = self.phi_index
+                # GMA operations
+                self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
+                                                    index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
                 # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
-                self.mu_states[phi_index] = min(self.mu_states[phi_index], 0.9999)
-
-        # State-spaces model's prediction:
+                self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
+            if "AR_error" in self.states_name:
+                ar_error_index = self.ar_error_index
+                self.process_noise_matrix[ar_index, ar_index] = self.var_states[ar_error_index, ar_error_index]
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
