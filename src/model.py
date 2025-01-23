@@ -7,6 +7,7 @@ import pytagi.metric as metric
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
+from src.utils import GMA
 
 
 class Model:
@@ -317,6 +318,9 @@ class Model:
             self.lstm_states_index = target_model.states_name.index("lstm")
         else:
             self.lstm_states_index = None
+        if self.learn_phi_online:
+            self.autoregression_index = self.states_name.index("autoregression")
+            self.phi_index = self.states_name.index("phi")
 
     def forward(
         self,
@@ -338,6 +342,19 @@ class Model:
             )
 
         # State-spaces model's prediction:
+        print(self.mu_states)
+        print(self.var_states)
+        print(self.states_name)
+        if self.learn_phi_online:
+            phi_index, ar_index = self.phi_index, self.autoregression_index
+            # GMA operations
+            print(phi_index)
+            print(ar_index)
+            print('-----------------')
+            self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
+                                                  index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
+            # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
+            self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
@@ -419,10 +436,6 @@ class Model:
         lstm_index = self.lstm_states_index
 
         for x in data["x"]:
-            if self.learn_phi_online:
-                ar_index, phi_index = self.autoregression_index, self.phi_index
-                self.mu_states[ar_index] = self.mu_states[phi_index] * self.mu_states[ar_index]
-                self.var_states[ar_index, ar_index] = self.mu_states[phi_index] ** 2 * self.var_states[ar_index, ar_index]
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
