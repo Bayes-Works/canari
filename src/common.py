@@ -158,7 +158,7 @@ def gaussian_mixture(
     m1 = mu1 - mu_mixture
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
-    return mu_mixture.flatten(), var_mixture
+    return mu_mixture, var_mixture
 
 
 def set_default_input_covariates(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
