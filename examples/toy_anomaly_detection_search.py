@@ -61,7 +61,7 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    manual_seed=1,
+    # manual_seed=1,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -123,56 +123,56 @@ ab_model = Model(
 )
 
 
-def objective(trial):
-    # Sample parameters from the search space
-    std_transition_error = trial.suggest_loguniform("std_transition_error", 1e-6, 1e-3)
-    norm_to_abnorm_prob = trial.suggest_loguniform("norm_to_abnorm_prob", 1e-6, 1e-3)
-    slope = trial.suggest_uniform("slope", 0.01, 0.1)
+# def objective(trial):
+#     # Sample parameters from the search space
+#     std_transition_error = trial.suggest_loguniform("std_transition_error", 1e-6, 1e-3)
+#     norm_to_abnorm_prob = trial.suggest_loguniform("norm_to_abnorm_prob", 1e-6, 1e-3)
+#     slope = trial.suggest_uniform("slope", 0.01, 0.1)
 
-    # Initialize SKF with sampled parameters
-    model.lstm_net.reset_lstm_states()
-    skf = SKF(
-        norm_model=model,
-        abnorm_model=ab_model,
-        std_transition_error=std_transition_error,
-        norm_to_abnorm_prob=norm_to_abnorm_prob,
-        abnorm_to_norm_prob=1e-1,  # Fixed value
-        norm_model_prior_prob=0.99,  # Fixed value
-    )
+#     # Initialize SKF with sampled parameters
+#     model.lstm_net.reset_lstm_states()
+#     skf = SKF(
+#         norm_model=model,
+#         abnorm_model=ab_model,
+#         std_transition_error=std_transition_error,
+#         norm_to_abnorm_prob=norm_to_abnorm_prob,
+#         abnorm_to_norm_prob=1e-1,  # Fixed value
+#         norm_model_prior_prob=0.99,  # Fixed value
+#     )
 
-    # Generate synthetic training data
-    num_synthetic_anomaly = 50
-    synthetic_train_data, _ = DataProcess.add_synthetic_anomaly(
-        train_data, num_samples=num_synthetic_anomaly, slope=slope
-    )
+#     # Generate synthetic training data
+#     num_synthetic_anomaly = 50
+#     synthetic_train_data, _ = DataProcess.add_synthetic_anomaly(
+#         train_data, num_samples=num_synthetic_anomaly, slope=slope
+#     )
 
-    # Compute detection rate
-    detection_rate = skf.detect_synthetic_anomaly(data=synthetic_train_data)
+#     # Compute detection rate
+#     detection_rate = skf.detect_synthetic_anomaly(data=synthetic_train_data)
 
-    if detection_rate > 0.5:
-        detection_rate = 0
+#     if detection_rate > 0.5:
+#         detection_rate = 0
 
-    # Define objective: minimize detection rate and slope
-    score = detection_rate - slope  # Add slope to detection rate
+#     # Define objective: minimize detection rate and slope
+#     score = detection_rate - slope  # Add slope to detection rate
 
-    return score  # Lower scores are better
+#     return score  # Lower scores are better
 
 
-study = optuna.create_study(direction="maximize")  # Minimizing the combined score
-study.optimize(objective, n_trials=50)
-# Print the best parameters
-print("Best parameters:", study.best_params)
-print("Best combined score:", study.best_value)
+# study = optuna.create_study(direction="maximize")  # Minimizing the combined score
+# study.optimize(objective, n_trials=50)
+# # Print the best parameters
+# print("Best parameters:", study.best_params)
+# print("Best combined score:", study.best_value)
 
 # # # Switching Kalman filter
 model.lstm_net.reset_lstm_states()
 skf_optimal = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=study.best_params["std_transition_error"],
-    norm_to_abnorm_prob=study.best_params["norm_to_abnorm_prob"],
-    # std_transition_error=0.00041951244650633985,
-    # norm_to_abnorm_prob=1.5082032194417e-06,
+    # std_transition_error=study.best_params["std_transition_error"],
+    # norm_to_abnorm_prob=study.best_params["norm_to_abnorm_prob"],
+    std_transition_error=0.00041951244650633985,
+    norm_to_abnorm_prob=1.5082032194417e-06,
     # std_transition_error=1e-4,
     # norm_to_abnorm_prob=1e-4,
     # std_transition_error=3.0478629661685305e-06,
