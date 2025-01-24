@@ -250,7 +250,7 @@ def plot_states(
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
-    color: Optional[str] = "k",
+    color: Optional[str] = "b",
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
 ):

@@ -59,7 +59,6 @@ model = Model(
         device="cpu",
         # manual_seed=3,
     ),
-    Autoregression(),
     WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][1:24])
