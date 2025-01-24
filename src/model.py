@@ -7,7 +7,7 @@ import pytagi.metric as metric
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
-from src.utils import GMA
+from src.common import GMA
 
 
 class Model:
@@ -34,7 +34,7 @@ class Model:
         obj = cls.__new__(cls)
         memo[id(self)] = obj
         for k, v in self.__dict__.items():
-            if k in ['lstm_net']:
+            if k in ["lstm_net"]:
                 v = None
             setattr(obj, k, copy.deepcopy(v, memo))
             pass
@@ -339,15 +339,21 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
-        # State-spaces model's prediction:
+        # Autoregression
         if "autoregression" in self.states_name:
             if "phi" in self.states_name:
                 phi_index, ar_index = self.phi_index, self.autoregression_index
-                # GMA operations
-                self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
-                                                    index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
+                self.mu_states, self.var_states = GMA(
+                    self.mu_states,
+                    self.var_states,
+                    index1=phi_index,
+                    index2=ar_index,
+                    replace_index=ar_index,
+                ).get_results()
                 # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
-                self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
+                self.mu_states[phi_index] = min(self.mu_states[phi_index], 0.9999)
+
+        # State-spaces model's prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
