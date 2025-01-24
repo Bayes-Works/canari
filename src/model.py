@@ -7,6 +7,7 @@ import pytagi.metric as metric
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
+from src.utils import GMA
 
 
 class Model:
@@ -24,8 +25,20 @@ class Model:
             self.components = list(components)
             self.define_model()
             self.initialize_lstm_network()
+            self.initialize_autoregression_component()
             self.initialize_early_stop()
             self.states = StatesHistory()
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k in ['lstm_net']:
+                v = None
+            setattr(obj, k, copy.deepcopy(v, memo))
+            pass
+        return obj
 
     def initialize_early_stop(self):
         """
@@ -97,6 +110,15 @@ class Model:
             self.lstm_states_index = self.states_name.index("lstm")
         else:
             self.lstm_states_index = None
+
+    def initialize_autoregression_component(self):
+        """
+        Initialize autoregression component
+        """
+        if "autoregression" in self.states_name:
+            self.autoregression_index = self.states_name.index("autoregression")
+            if "phi" in self.states_name:
+                self.phi_index = self.states_name.index("phi")
 
     def initialize_lstm_network(self):
         """
@@ -293,6 +315,10 @@ class Model:
             self.lstm_states_index = target_model.states_name.index("lstm")
         else:
             self.lstm_states_index = None
+        if "autoregression" in self.states_name:
+            if "phi" in self.states_name:
+                self.autoregression_index = self.states_name.index("autoregression")
+                self.phi_index = self.states_name.index("phi")
 
     def forward(
         self,
@@ -314,6 +340,14 @@ class Model:
             )
 
         # State-spaces model's prediction:
+        if "autoregression" in self.states_name:
+            if "phi" in self.states_name:
+                phi_index, ar_index = self.phi_index, self.autoregression_index
+                # GMA operations
+                self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
+                                                    index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
+                # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
+                self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
