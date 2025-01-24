@@ -650,6 +650,7 @@ class Model:
         self.initialize_states_with_smoother_estimates()
         if self.lstm_net is not None:
             self.lstm_net.reset_lstm_states()
+
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),

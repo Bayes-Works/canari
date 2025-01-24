@@ -134,12 +134,12 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+# skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+# filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
+# smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
-marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
+# marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
@@ -162,13 +162,13 @@ plt.legend()
 plt.show()
 
 
-fig, ax = plot_skf_states(
-    data_processor=data_processor,
-    states=states,
-    states_to_plot=["local level", "local trend", "lstm", "white noise"],
-    model_prob=marginal_abnorm_prob_plot,
-    color="b",
-    legend_location="upper left",
-)
-fig.suptitle("SKF hidden states", fontsize=10, y=1)
-plt.show()
+# fig, ax = plot_skf_states(
+#     data_processor=data_processor,
+#     states=states,
+#     states_to_plot=["local level", "local trend", "lstm", "white noise"],
+#     model_prob=marginal_abnorm_prob_plot,
+#     color="b",
+#     legend_location="upper left",
+# )
+# fig.suptitle("SKF hidden states", fontsize=10, y=1)
+# plt.show()
