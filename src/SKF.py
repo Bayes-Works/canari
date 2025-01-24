@@ -1,4 +1,5 @@
 from typing import Tuple, Dict, Optional
+import copy
 import numpy as np
 from pytagi import metric
 from src.model import Model, load_model_dict
@@ -630,8 +631,6 @@ class SKF:
         self.initialize_states_history()
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
-            if time_step == 205:
-                check = 1
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
 
