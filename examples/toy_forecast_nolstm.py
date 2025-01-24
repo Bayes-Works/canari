@@ -10,6 +10,7 @@ from src import (
     Model,
     plot_data,
     plot_prediction,
+    plot_states,
 )
 from examples import DataProcess
 
@@ -46,7 +47,8 @@ local_acceleration = LocalAcceleration(
     mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-2, 1e-2], std_error=1e-2
 )
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
-AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
+# AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
+AR = Autoregression(std_error=5, mu_states=[0.5, -0.0621], var_states=[0.25, 6.36e-05])
 noise = WhiteNoise(std_error=sigma_v)
 
 # Normal model
@@ -76,4 +78,8 @@ plot_prediction(
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend(loc="upper left")  # Change "upper right" to your desired location
+plot_states(data_processor=data_processor,
+            states=model.states,
+            states_type='prior',
+            )
 plt.show()
