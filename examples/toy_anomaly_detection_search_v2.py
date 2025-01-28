@@ -53,13 +53,10 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # #
 def model_optimizer(trial=None, best_params=None):
-    # Use suggested parameters during Optuna optimization, otherwise use provided best_params
     if trial is not None:
-        # Optuna hyperparameter suggestion
         sigma_v = trial.suggest_loguniform("sigma_v", 1e-3, 1e-1)
         look_back_len = trial.suggest_int("look_back_len", 12, 48)
     elif best_params is not None:
-        # Use provided parameters
         sigma_v = best_params["sigma_v"]
         look_back_len = best_params["look_back_len"]
     else:
@@ -114,10 +111,8 @@ def model_optimizer(trial=None, best_params=None):
             break
 
     if trial is not None:
-        # Return validation metric for Optuna
         return model.early_stop_metric
     else:
-        # Return trained model when using best parameters
         print(f"Final validation MSE: {model.early_stop_metric}")
         return model
 
@@ -151,9 +146,7 @@ ab_model = Model(
 
 
 def objective_SKF(trial=None, best_params=None):
-    # Use Optuna to sample parameters or predefined parameters
     if trial is not None:
-        # Sample parameters from the search space
         std_transition_error = trial.suggest_loguniform(
             "std_transition_error", 1e-6, 1e-3
         )
@@ -162,7 +155,6 @@ def objective_SKF(trial=None, best_params=None):
         )
         slope = trial.suggest_uniform("slope", 0.01, 0.1)
     elif best_params is not None:
-        # Use provided best parameters
         std_transition_error = best_params["std_transition_error"]
         norm_to_abnorm_prob = best_params["norm_to_abnorm_prob"]
         slope = best_params["slope"]
