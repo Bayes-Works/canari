@@ -655,6 +655,7 @@ class SKF:
             )
 
         if self.lstm_net is not None:
+            if self.lstm_net:
             self.lstm_net.reset_lstm_states()
             
         return (

@@ -1,4 +1,5 @@
 import optuna
+import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,40 +20,102 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 
 
-# # Read data
-data_file = "./data/toy_time_series/sine.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-data_file_time = "./data/toy_time_series/sine_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
-df_raw.index = time_series
-df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+def main():
+    # # Read data
+    data_file = "./data/toy_time_series/sine.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(time_series[0])
+    df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["values"]
 
-# Add synthetic anomaly to data
-trend = np.linspace(0, 0, num=len(df_raw))
-time_anomaly = 200
-new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
-trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-df_raw = df_raw.add(trend, axis=0)
+    # Add synthetic anomaly to data
+    trend = np.linspace(0, 0, num=len(df_raw))
+    time_anomaly = 200
+    new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
+    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
+    df_raw = df_raw.add(trend, axis=0)
 
-# Data pre-processing
-output_col = [0]
-data_processor = DataProcess(
-    data=df_raw,
-    time_covariates=["hour_of_day"],
-    train_start="2000-01-01 00:00:00",
-    train_end="2000-01-09 23:00:00",
-    validation_start="2000-01-10 00:00:00",
-    validation_end="2000-01-10 23:00:00",
-    test_start="2000-01-11 00:00:00",
-    output_col=output_col,
-)
-train_data, validation_data, test_data, all_data = data_processor.get_splits()
+    # Data pre-processing
+    output_col = [0]
+    data_processor = DataProcess(
+        data=df_raw,
+        time_covariates=["hour_of_day"],
+        train_start="2000-01-01 00:00:00",
+        train_end="2000-01-09 23:00:00",
+        validation_start="2000-01-10 00:00:00",
+        validation_end="2000-01-10 23:00:00",
+        test_start="2000-01-11 00:00:00",
+        output_col=output_col,
+    )
+    train_data, validation_data, test_data, all_data = data_processor.get_splits()
+
+    # Use Optuna for hyperparameter tuning
+    model_optimizer = optuna.create_study(direction="minimize")
+    model_optimizer.optimize(
+        lambda trial: model_objective(
+            data_processor, train_data, validation_data, trial=trial
+        ),
+        n_trials=5,
+    )
+
+    # Print best results
+    print("Best parameters:", model_optimizer.best_params)
+    print("Best validation MSE:", model_optimizer.best_value)
+
+    # Train final model with best parameters
+    best_model = model_objective(
+        data_processor,
+        train_data,
+        validation_data,
+        best_params=model_optimizer.best_params,
+    )
+
+    # #
+    optimal_sigma_v = model_optimizer.best_params["sigma_v"]
+    optimal_look_back_len = model_optimizer.best_params["look_back_len"]
+    ab_model = Model(
+        LocalAcceleration(),
+        LstmNetwork(
+            look_back_len=optimal_look_back_len,
+            num_features=2,
+            num_layer=1,
+            num_hidden_unit=50,
+            device="cpu",
+            manual_seed=1,
+        ),
+        WhiteNoise(std_error=optimal_sigma_v),
+    )
+
+    # # Use the SKF_objective function with Optuna
+    SKF_optimizer = optuna.create_study(direction="minimize")
+    SKF_optimizer.optimize(
+        lambda trial: SKF_objective(
+            best_model, ab_model, data_processor, train_data, all_data, trial=trial
+        ),
+        n_trials=5,
+    )
+
+    # Print the best parameters and results
+    print("Best parameters:", SKF_optimizer.best_params)
+
+    # Use the SKF_objective function with the best parameters
+    SKF_objective(
+        best_model,
+        ab_model,
+        data_processor,
+        train_data,
+        all_data,
+        best_params=SKF_optimizer.best_params,
+    )
 
 
 # #
-def model_optimizer(trial=None, best_params=None):
+def model_objective(
+    data_processor, train_data, validation_data, trial=None, best_params=None
+):
     if trial is not None:
         sigma_v = trial.suggest_loguniform("sigma_v", 1e-3, 1e-1)
         look_back_len = trial.suggest_int("look_back_len", 12, 48)
@@ -97,13 +160,13 @@ def model_optimizer(trial=None, best_params=None):
         # Unstandardize predictions
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.norm_const_mean[output_col],
-            data_processor.norm_const_std[output_col],
+            data_processor.norm_const_mean[data_processor.output_col],
+            data_processor.norm_const_std[data_processor.output_col],
         )
 
         mse = metric.mse(
             mu_validation_preds,
-            data_processor.validation_data[:, output_col].flatten(),
+            data_processor.validation_data[:, data_processor.output_col].flatten(),
         )
 
         model.early_stopping(evaluate_metric=mse, mode="min")
@@ -117,27 +180,15 @@ def model_optimizer(trial=None, best_params=None):
         return model
 
 
-# Use the model_optimizer function with Optuna for tuning
-study = optuna.create_study(direction="minimize")
-study.optimize(model_optimizer, n_trials=20)
-
-# Print the best parameters and results
-print("Best parameters:", study.best_params)
-print("Best validation MSE:", study.best_value)
-
-# Use the model_optimizer function to train with the best parameters
-best_model = model_optimizer(best_params=study.best_params)
-
-# #
-optimal_sigma_v = study.best_params["sigma_v"]
-ab_model = Model(
-    LocalAcceleration(),
-    LstmNetwork(),
-    WhiteNoise(std_error=optimal_sigma_v),
-)
-
-
-def objective_SKF(trial=None, best_params=None):
+def SKF_objective(
+    norm_model,
+    abnorm_model,
+    data_processor,
+    train_data,
+    test_data,
+    trial=None,
+    best_params=None,
+):
     if trial is not None:
         std_transition_error = trial.suggest_loguniform(
             "std_transition_error", 1e-6, 1e-3
@@ -154,10 +205,10 @@ def objective_SKF(trial=None, best_params=None):
         raise ValueError("Either `trial` or `best_params` must be provided.")
 
     # Initialize SKF with parameters
-    best_model.lstm_net.reset_lstm_states()
+    norm_model.lstm_net.reset_lstm_states()
     skf = SKF(
-        norm_model=best_model,
-        abnorm_model=ab_model,
+        norm_model=norm_model,
+        abnorm_model=abnorm_model,
         std_transition_error=std_transition_error,
         norm_to_abnorm_prob=norm_to_abnorm_prob,
         abnorm_to_norm_prob=1e-1,  # Fixed value
@@ -182,8 +233,8 @@ def objective_SKF(trial=None, best_params=None):
         return score
     else:
         # If used for fixed parameter training or evaluation, return the SKF instance
-        filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-        smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+        filter_marginal_abnorm_prob, _ = skf.filter(data=test_data)
+        smooth_marginal_abnorm_prob, states = skf.smoother(data=test_data)
 
         fig, ax = plot_skf_states(
             data_processor=data_processor,
@@ -197,12 +248,5 @@ def objective_SKF(trial=None, best_params=None):
         plt.show()
 
 
-# Use the objective_SKF function with Optuna
-study_SKF = optuna.create_study(direction="minimize")
-study_SKF.optimize(objective_SKF, n_trials=50)
-
-# Print the best parameters and results
-print("Best parameters:", study_SKF.best_params)
-
-# Use the objective_SKF function with the best parameters
-objective_SKF(best_params=study_SKF.best_params)
+if __name__ == "__main__":
+    fire.Fire(main)

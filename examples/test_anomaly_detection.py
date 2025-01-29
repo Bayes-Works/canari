@@ -18,49 +18,39 @@ from src import (
 )
 import pytagi.metric as metric
 
-
 # # Read data
-data_file = "./data/toy_time_series/sine.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-data_file_time = "./data/toy_time_series/sine_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+data_file = "./data/test_data.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=";", header=None)
+time_series = pd.to_datetime(df_raw.iloc[:, 4])
+df_raw = df_raw.iloc[:, 6].to_frame()
 df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
-
-# Add synthetic anomaly to data
-trend = np.linspace(0, 0, num=len(df_raw))
-time_anomaly = 200
-new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
-trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-df_raw = df_raw.add(trend, axis=0)
-
+df = df_raw.resample("W").mean()
+df = df.iloc[30:, :]
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
-    data=df_raw,
-    time_covariates=["hour_of_day"],
-    train_start="2000-01-01 00:00:00",
-    train_end="2000-01-09 23:00:00",
-    validation_start="2000-01-10 00:00:00",
-    validation_end="2000-01-10 23:00:00",
-    test_start="2000-01-11 00:00:00",
+    data=df,
+    time_covariates=["week_of_year"],
+    train_split=0.25,
+    validation_split=0.08,
+    test_split=0.67,
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 1e-2
-local_trend = LocalTrend(var_states=[1e-2, 1e-2])
+sigma_v = 0.001387094942864236
+local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
+    look_back_len=13,
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    # manual_seed=1,
+    manual_seed=1,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -87,7 +77,7 @@ skf = SKF(
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
-skf.auto_initialize_baseline_states(train_data["y"][0:23])
+skf.auto_initialize_baseline_states(train_data["y"][0:52])
 
 #  Training
 num_epoch = 50
@@ -97,7 +87,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     scheduled_sigma_v = exponential_scheduler(
         curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
     )
-    noise_index = skf.states_name.index("white noise")
+    noise_index = skf.model["norm_norm"].states_name.index("white noise")
     skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
         scheduled_sigma_v**2
     )
@@ -140,33 +130,13 @@ smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_data(
-    data_processor=data_processor,
-    plot_column=output_col,
-    plot_test_data=False,
-    sub_plot=ax,
-    validation_label="y",
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    sub_plot=ax,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
-ax.set_xlabel("Time")
-plt.title("Validation predictions")
-plt.tight_layout()
-plt.legend()
-plt.show()
-
 
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
     states_to_plot=["local level", "local trend", "lstm", "white noise"],
-    model_prob=marginal_abnorm_prob_plot,
+    states_type="smooth",
+    model_prob=smooth_marginal_abnorm_prob,
     color="b",
     legend_location="upper left",
 )

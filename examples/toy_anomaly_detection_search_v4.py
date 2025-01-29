@@ -125,7 +125,7 @@ class ModelOptimizer:
 
         return model.early_stop_metric
 
-    def _initialize_model(self, params):
+    def _initialize_model(self):
         """
         Initialize the model with given parameters.
         """
