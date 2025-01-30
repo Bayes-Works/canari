@@ -102,9 +102,6 @@ def rts_smoother(
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
-    if np.isnan(var_states_smooth).any():
-        # Running warning
-        print("Warning: NaN in the var_states_smooth")
     return mu_states_smooth, var_states_smooth
 
 
