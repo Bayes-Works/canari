@@ -11,6 +11,7 @@ from src.data_struct import (
     initialize_marginal,
     initialize_marginal_prob_history,
 )
+from examples import DataProcess
 
 
 class SKF:
@@ -735,22 +736,27 @@ def load_SKF_dict(save_dict: dict) -> SKF:
         data: list[Dict[str, np.ndarray]],
         threshold: Optional[float] = 0.5,
         max_timestep_to_detect: Optional[int] = None,
+        num_anomaly: Optional[int] = None,
+        slope_anomaly: Optional[float] = None,
     ) -> float:
-        num_synthetic_ts = len(data)
-        num_train_timesteps = len(data[0]["y"])
+
+        synthetic_data = DataProcess.add_synthetic_anomaly(
+            data, num_samples=num_anomaly, slope=slope_anomaly
+        )
+        num_timesteps = len(data["y"])
         num_anomaly_detected = 0
 
-        for i in range(0, num_synthetic_ts):
-            filter_marginal_abnorm_prob, _ = self.filter(data=data[i])
-            window_start = data[i]["anomaly_timestep"]
+        for i in range(0, num_anomaly):
+            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
-                window_end = num_train_timesteps
+                window_end = num_timesteps
             else:
                 window_end = window_start + max_timestep_to_detect
             if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
                 num_anomaly_detected += 1
 
-        detection_rate = num_anomaly_detected / num_synthetic_ts
+        detection_rate = num_anomaly_detected / num_anomaly
 
         return detection_rate

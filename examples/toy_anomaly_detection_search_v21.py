@@ -53,12 +53,12 @@ def main():
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     # Use Optuna for hyperparameter tuning
-    model_optimizer = optuna.create_study(direction="minimize")
+    model_optimizer = optuna.create_study(direction="maximize")
     model_optimizer.optimize(
         lambda trial: model_objective(
             data_processor, train_data, validation_data, trial=trial
         ),
-        n_trials=5,
+        n_trials=20,
     )
 
     # Print best results
@@ -75,27 +75,20 @@ def main():
 
     # #
     optimal_sigma_v = model_optimizer.best_params["sigma_v"]
-    optimal_look_back_len = model_optimizer.best_params["look_back_len"]
     ab_model = Model(
         LocalAcceleration(),
-        LstmNetwork(
-            look_back_len=optimal_look_back_len,
-            num_features=2,
-            num_layer=1,
-            num_hidden_unit=50,
-            device="cpu",
-            manual_seed=1,
-        ),
+        LstmNetwork(),
         WhiteNoise(std_error=optimal_sigma_v),
     )
 
     # # Use the SKF_objective function with Optuna
-    SKF_optimizer = optuna.create_study(direction="minimize")
+    # SKF_optimizer = optuna.create_study(direction="minimize")
+    SKF_optimizer = optuna.create_study(direction="maximize")
     SKF_optimizer.optimize(
         lambda trial: SKF_objective(
             best_model, ab_model, data_processor, train_data, all_data, trial=trial
         ),
-        n_trials=5,
+        n_trials=20,
     )
 
     # Print the best parameters and results
@@ -117,8 +110,8 @@ def model_objective(
     data_processor, train_data, validation_data, trial=None, best_params=None
 ):
     if trial is not None:
-        sigma_v = trial.suggest_loguniform("sigma_v", 1e-3, 1e-1)
-        look_back_len = trial.suggest_int("look_back_len", 12, 48)
+        sigma_v = trial.suggest_loguniform("sigma_v", 1e-3, 2e-1)
+        look_back_len = trial.suggest_int("look_back_len", 12, 52)
     elif best_params is not None:
         sigma_v = best_params["sigma_v"]
         look_back_len = best_params["look_back_len"]
@@ -134,10 +127,11 @@ def model_objective(
             num_layer=1,
             num_hidden_unit=50,
             device="cpu",
+            manual_seed=1,
         ),
         WhiteNoise(std_error=sigma_v),
     )
-    model.auto_initialize_baseline_states(train_data["y"][1:24])
+    model.auto_initialize_baseline_states(train_data["y"][0:23])
 
     # Training process
     scheduled_sigma_v = 1
@@ -190,13 +184,21 @@ def SKF_objective(
     best_params=None,
 ):
     if trial is not None:
-        std_transition_error = trial.suggest_loguniform(
-            "std_transition_error", 1e-6, 1e-3
+        # std_transition_error = trial.suggest_loguniform(
+        #     "std_transition_error", 1e-6, 1e-3
+        # )
+        # norm_to_abnorm_prob = trial.suggest_loguniform(
+        #     "norm_to_abnorm_prob", 1e-6, 1e-3
+        # )
+        # slope = trial.suggest_uniform("slope", 0.01, 0.1)
+        std_transition_error = trial.suggest_categorical(
+            "std_transition_error", [1e-6, 1e-5, 1e-4]
         )
-        norm_to_abnorm_prob = trial.suggest_loguniform(
-            "norm_to_abnorm_prob", 1e-6, 1e-3
+        norm_to_abnorm_prob = trial.suggest_categorical(
+            "norm_to_abnorm_prob", [1e-6, 1e-5, 1e-4]
         )
-        slope = trial.suggest_uniform("slope", 0.01, 0.1)
+        slope = trial.suggest_categorical("slope", [0.01, 0.02, 0.03])
+
     elif best_params is not None:
         std_transition_error = best_params["std_transition_error"]
         norm_to_abnorm_prob = best_params["norm_to_abnorm_prob"]
@@ -216,20 +218,19 @@ def SKF_objective(
     )
 
     if trial is not None:
-        # Generate synthetic training data
-        num_synthetic_anomaly = 50
-        synthetic_train_data, _ = DataProcess.add_synthetic_anomaly(
-            train_data, num_samples=num_synthetic_anomaly, slope=slope
-        )
-
         # Compute detection rate
-        detection_rate = skf.detect_synthetic_anomaly(data=synthetic_train_data)
+        detection_rate = skf.detect_synthetic_anomaly(
+            data=train_data, num_anomaly=50, slope_anomaly=slope
+        )
 
         if detection_rate > 0.5:
             detection_rate = 0
+        score = detection_rate - 10 * slope  # Add slope to detection rate
 
-        # Define objective: minimize detection rate and slope
-        score = detection_rate - slope  # Add slope to detection rate
+        # if detection_rate < 0.5:
+        #     detection_rate = 1
+        # score = detection_rate + slope * 1  # Add slope to detection rate
+
         return score
     else:
         # If used for fixed parameter training or evaluation, return the SKF instance

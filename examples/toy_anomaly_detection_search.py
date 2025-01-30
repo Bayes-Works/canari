@@ -52,11 +52,13 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 1e-2
+# sigma_v = 1e-2
+sigma_v = 0.006532070659533046
 local_trend = LocalTrend(var_states=[1e-2, 1e-2])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
+    # look_back_len=12,
+    look_back_len=41,
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
@@ -123,60 +125,60 @@ ab_model = Model(
 )
 
 
-# def objective(trial):
-#     # Sample parameters from the search space
-#     std_transition_error = trial.suggest_loguniform("std_transition_error", 1e-6, 1e-3)
-#     norm_to_abnorm_prob = trial.suggest_loguniform("norm_to_abnorm_prob", 1e-6, 1e-3)
-#     slope = trial.suggest_uniform("slope", 0.01, 0.1)
+def objective(trial):
+    # Sample parameters from the search space
+    # std_transition_error = trial.suggest_loguniform("std_transition_error", 1e-6, 1e-3)
+    # norm_to_abnorm_prob = trial.suggest_loguniform("norm_to_abnorm_prob", 1e-6, 1e-3)
+    # slope = trial.suggest_uniform("slope", 0, 0.1)
 
-#     # Initialize SKF with sampled parameters
-#     model.lstm_net.reset_lstm_states()
-#     skf = SKF(
-#         norm_model=model,
-#         abnorm_model=ab_model,
-#         std_transition_error=std_transition_error,
-#         norm_to_abnorm_prob=norm_to_abnorm_prob,
-#         abnorm_to_norm_prob=1e-1,  # Fixed value
-#         norm_model_prior_prob=0.99,  # Fixed value
-#     )
+    std_transition_error = trial.suggest_categorical(
+        "std_transition_error", [1e-6, 1e-5, 1e-4]
+    )
+    norm_to_abnorm_prob = trial.suggest_categorical(
+        "norm_to_abnorm_prob", [1e-6, 1e-5, 1e-4]
+    )
+    slope = trial.suggest_categorical("slope", [0.005, 0.01, 0.02])
 
-#     # Generate synthetic training data
-#     num_synthetic_anomaly = 50
-#     synthetic_train_data, _ = DataProcess.add_synthetic_anomaly(
-#         train_data, num_samples=num_synthetic_anomaly, slope=slope
-#     )
+    # Initialize SKF with sampled parameters
+    model.lstm_net.reset_lstm_states()
+    skf = SKF(
+        norm_model=model,
+        abnorm_model=ab_model,
+        std_transition_error=std_transition_error,
+        norm_to_abnorm_prob=norm_to_abnorm_prob,
+        abnorm_to_norm_prob=1e-1,  # Fixed value
+        norm_model_prior_prob=0.99,  # Fixed value
+    )
 
-#     # Compute detection rate
-#     detection_rate = skf.detect_synthetic_anomaly(data=synthetic_train_data)
+    # Generate synthetic training data
+    detection_rate = skf.detect_synthetic_anomaly(
+        data=train_data, num_anomaly=30, slope_anomaly=slope
+    )
 
-#     if detection_rate > 0.5:
-#         detection_rate = 0
+    if detection_rate > 0.5:
+        detection_rate = 0
 
-#     # Define objective: minimize detection rate and slope
-#     score = detection_rate - slope  # Add slope to detection rate
+    # Define objective: minimize detection rate and slope
+    score = detection_rate - slope / 0.1 / 2  # Add slope to detection rate
 
-#     return score  # Lower scores are better
+    return score  # Lower scores are better
 
 
-# study = optuna.create_study(direction="maximize")  # Minimizing the combined score
-# study.optimize(objective, n_trials=50)
-# # Print the best parameters
-# print("Best parameters:", study.best_params)
-# print("Best combined score:", study.best_value)
+study = optuna.create_study(direction="maximize")  # Minimizing the combined score
+study.optimize(objective, n_trials=100)
+# Print the best parameters
+print("Best parameters:", study.best_params)
+print("Best combined score:", study.best_value)
 
 # # # Switching Kalman filter
 model.lstm_net.reset_lstm_states()
 skf_optimal = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    # std_transition_error=study.best_params["std_transition_error"],
-    # norm_to_abnorm_prob=study.best_params["norm_to_abnorm_prob"],
-    std_transition_error=0.00041951244650633985,
-    norm_to_abnorm_prob=1.5082032194417e-06,
-    # std_transition_error=1e-4,
-    # norm_to_abnorm_prob=1e-4,
-    # std_transition_error=3.0478629661685305e-06,
-    # norm_to_abnorm_prob=5.484594028583117e-05,
+    std_transition_error=study.best_params["std_transition_error"],
+    norm_to_abnorm_prob=study.best_params["norm_to_abnorm_prob"],
+    # std_transition_error=0.00041951244650633985,
+    # norm_to_abnorm_prob=1.5082032194417e-06,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )

@@ -288,4 +288,4 @@ class DataProcess:
             }
             for arr, timestep in zip(_time_series_with_anomaly, anomaly_start_history)
         ]
-        return time_series_with_anomaly, anomaly_start_history
+        return time_series_with_anomaly
