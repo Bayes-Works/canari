@@ -265,7 +265,14 @@ class Model:
         )
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
-        self.states.cov_states.append(self.var_states @ self.transition_matrix.T)
+        if "AR_error" in self.states_name:
+            cov_states = self.var_states @ self.transition_matrix.T
+            # Set covariance between W and other states to zero
+            cov_states[self.ar_error_index, :] = np.zeros_like(cov_states[self.ar_error_index, :])
+            cov_states[:, self.ar_error_index] = np.zeros_like(cov_states[:, self.ar_error_index])
+            self.states.cov_states.append(cov_states)
+        else:
+            self.states.cov_states.append(self.var_states @ self.transition_matrix.T)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
 
@@ -353,8 +360,8 @@ class Model:
                 self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar ** 2
                 # # From W2 to W
                 self.mu_states[ar_error_index] = 0
-                # self.var_states[ar_error_index, :] = np.zeros_like(self.var_states[ar_error_index, :])
-                # self.var_states[:, ar_error_index] = np.zeros_like(self.var_states[:, ar_error_index])
+                self.var_states[ar_error_index, :] = np.zeros_like(self.var_states[ar_error_index, :])
+                self.var_states[:, ar_error_index] = np.zeros_like(self.var_states[:, ar_error_index])
                 self.var_states[ar_error_index, ar_error_index] = self.mu_W2bar
                 self.var_states[ar_error_index, ar_index] = self.mu_W2bar
                 self.var_states[ar_index, ar_error_index] = self.mu_W2bar
@@ -406,7 +413,7 @@ class Model:
             K = self.var_W2bar / self.var_W2_prior
             self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
             self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
-
+            
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
