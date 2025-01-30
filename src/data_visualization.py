@@ -280,7 +280,7 @@ def plot_states(
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_plot[:, plot_index],
+            mu=mu_plot[:, plot_index].flatten(),
             std=var_plot[:, plot_index, plot_index] ** 0.5,
             num_std=num_std,
             color=color,
@@ -344,7 +344,7 @@ def plot_skf_states(
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_plot[:, plot_index],
+            mu=mu_plot[:, plot_index].flatten(),
             std=var_plot[:, plot_index, plot_index] ** 0.5,
             num_std=num_std,
             color=color,

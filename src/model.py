@@ -230,7 +230,7 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = np.atleast_2d(self.states.mu_smooth[0]).copy().T
+        self.mu_states = self.states.mu_smooth[0].copy()
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.states_name.index("local level")
@@ -246,11 +246,11 @@ class Model:
         """
         Save states' priors, posteriors and cross-covariances for smoother
         """
-        self.states.mu_prior.append(self.mu_states_prior.flatten())
+        self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(
             (self.var_states_prior + self.var_states_prior.T) * 0.5
         )
-        self.states.mu_posterior.append(self.mu_states_posterior.flatten())
+        self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         self.states.cov_states.append(self.var_states @ self.transition_matrix.T)
         self.states.mu_smooth.append([])
@@ -263,25 +263,6 @@ class Model:
 
         self.states.mu_smooth[-1] = self.states.mu_posterior[-1].copy()
         self.states.var_smooth[-1] = self.states.var_posterior[-1].copy()
-
-    def duplicate(self) -> "Model":
-        """
-        Duplicate models for using in SKF
-        """
-
-        model_copy = Model()
-        model_copy.transition_matrix = self.transition_matrix.copy()
-        model_copy.process_noise_matrix = self.process_noise_matrix.copy()
-        model_copy.observation_matrix = self.observation_matrix.copy()
-        model_copy.mu_states = self.mu_states.copy()
-        model_copy.var_states = self.var_states.copy()
-        model_copy.states = StatesHistory()
-        model_copy.states_name = self.states_name.copy()
-        model_copy.num_states = copy.copy(self.num_states)
-        model_copy.lstm_net = None
-        model_copy.lstm_states_index = copy.copy(self.lstm_states_index)
-        model_copy.states_name = self.states_name.copy()
-        return model_copy
 
     def create_compatible_model(self, target_model) -> None:
         """
