@@ -80,8 +80,6 @@ plot_prediction(
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend(loc="upper left")  # Change "upper right" to your desired location
-# for i in range(len(model.states.var_prior)):
-#     print(model.states.var_prior[i][model.ar_error_index, model.ar_error_index])
 plot_states(data_processor=data_processor,
             states=model.states,
             states_type='prior',
