@@ -38,7 +38,7 @@ class Autoregression(BaseComponent):
         if self.phi is None:
             self._states_name.insert(0, "phi")
         if self.std_error is None:
-            self._states_name.insert(2, "AR_error")
+            self._states_name.append("AR_error")
 
     def initialize_transition_matrix(self):
         if self.phi is None:
