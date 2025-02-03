@@ -1,6 +1,4 @@
 import ray
-
-ray.init(num_cpus=None)  # Automatically uses all available CPUs
 from ray import tune
 from ray.tune.search.optuna import OptunaSearch
 import pandas as pd
@@ -22,14 +20,26 @@ from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 import fire
-import pickle
+
+# Parameters space for searching
+sigma_v_space = [1e-3, 2e-1]
+look_back_len_space = [12, 52]
+SKF_std_transition_error_space = [1e-6, 1e-3]
+SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
+synthetic_anomaly_slope_space = [1e-3, 1e-1]
+
+# Fix parameters:
+sigma_v_fix = 1e-2
+look_back_len_fix = 12
+SKF_std_transition_error_fix = 1e-4
+SKF_norm_to_abnorm_prob_fix = 1e-4
 
 
 def main(
     num_epoch: int = 50,
     model_search: bool = True,
     SKF_search: bool = True,
-    num_sample_optimization: int = 50,
+    num_sample_optimization: int = 5,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -135,28 +145,34 @@ def main(
         else:
             tune.report({"metric": model.early_stop_metric})
 
-    # Run hyperparameter tuning with Ray Tune
+    # Run hyperparameter tuning if model_search = True
     if model_search:
         model_optimizer_runner = tune.run(
             model_optimizer,
             config={
-                "sigma_v": tune.loguniform(1e-3, 3e-1),
-                "look_back_len": tune.randint(12, 52),
+                "sigma_v": tune.loguniform(sigma_v_space[0], sigma_v_space[-1]),
+                "look_back_len": tune.randint(
+                    look_back_len_space[0], look_back_len_space[-1]
+                ),
             },
             search_alg=OptunaSearch(metric="metric", mode="min"),
             name="Model optimizer",
             num_samples=num_sample_optimization,
             verbose=1,
         )
-        # Get the best configuration
+        # Get the optimal parameters
         model_optim_params = model_optimizer_runner.get_best_config(
             metric="metric", mode="min"
         )
-        print("Best parameters:", model_optim_params)
-    else:
-        model_optim_params = {"sigma_v": 0.01, "look_back_len": 12}
 
-    # Train with the best parameters
+    # Run fix parameters
+    else:
+        model_optim_params = {
+            "sigma_v": sigma_v_fix,
+            "look_back_len": look_back_len_fix,
+        }
+
+    # Re-train with the optimal parameters
     model_optim = model_optimizer(model_optim_params, return_model=True)
     model_optim_dict = {
         "lstm_net_params": model_optim.lstm_net.get_state_dict(),
@@ -167,8 +183,6 @@ def main(
     }
 
     # Initialize SKF tuning
-    slope_max = 0.1
-
     def SKF_optimizer(config, model_params=None, return_model=False):
         std_transition_error = config["std_transition_error"]
         norm_to_abnorm_prob = config["norm_to_abnorm_prob"]
@@ -209,10 +223,10 @@ def main(
             if detection_rate > 0.5:
                 detection_rate = 0
             # Objective function
-            score = detection_rate - slope / slope_max / 2
+            score = detection_rate - slope / synthetic_anomaly_slope_space[-1] / 2
             tune.report({"score": score})
 
-    # Run SKF hyperparameter tuning
+    # Run SKF hyperparameter tuning if SKF_search = True
     if SKF_search:
         SKF_optimizer_runner = tune.run(
             tune.with_parameters(
@@ -220,9 +234,16 @@ def main(
                 model_params=model_optim_dict,
             ),
             config={
-                "std_transition_error": tune.loguniform(1e-6, 1e-3),
-                "norm_to_abnorm_prob": tune.loguniform(1e-6, 1e-3),
-                "slope": tune.uniform(0.001, slope_max),
+                "std_transition_error": tune.loguniform(
+                    SKF_std_transition_error_space[0],
+                    SKF_std_transition_error_space[-1],
+                ),
+                "norm_to_abnorm_prob": tune.loguniform(
+                    SKF_norm_to_abnorm_prob_space[0], SKF_norm_to_abnorm_prob_space[-1]
+                ),
+                "slope": tune.uniform(
+                    synthetic_anomaly_slope_space[0], synthetic_anomaly_slope_space[-1]
+                ),
             },
             search_alg=OptunaSearch(metric="score", mode="max"),
             name="SKF_optimizer",
@@ -232,12 +253,13 @@ def main(
         SKF_optim_params = SKF_optimizer_runner.get_best_config(
             metric="score", mode="max"
         )
-        print("Best SKF parameters:", SKF_optim_params)
+
+    # Run with fixed parameters
     else:
         SKF_optim_params = {
-            "std_transition_error": 1e-4,
-            "norm_to_abnorm_prob": 1e-4,
-            "slope": 0.01,
+            "std_transition_error": SKF_std_transition_error_fix,
+            "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
+            "slope": synthetic_anomaly_slope_space[-1],
         }
 
     # Anomaly Detection with optimal parameters
@@ -257,6 +279,9 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
+
+    print("Model parameters used:", model_optim_params)
+    print("SKF model parameters used:", SKF_optim_params)
 
 
 if __name__ == "__main__":
