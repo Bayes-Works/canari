@@ -708,3 +708,29 @@ class Model:
             self.early_stop_metric,
             self.early_stop_metric_history,
         )
+    
+    def save_model_dict(self):
+        """
+        Save the model as a dict.
+        """
+        model_dict = {}
+        model_dict["components"] = self.components
+        model_dict["mu_states"] = self.mu_states
+        model_dict["var_states"] = self.var_states
+        if self.lstm_net:
+            model_dict["lstm_network_params"] = self.lstm_net.get_state_dict() 
+        return model_dict
+
+    @staticmethod
+    def load_model_dict(save_dict):
+        """
+        Create a model from a saved dict
+        """
+
+        model = Model(save_dict[""])
+
+        
+
+
+        
+
