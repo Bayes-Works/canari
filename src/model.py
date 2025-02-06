@@ -720,14 +720,15 @@ class Model:
         if self.lstm_net:
             model_dict["lstm_network_params"] = self.lstm_net.get_state_dict() 
         return model_dict
+    
 
-    @staticmethod
-    def load_model_dict(save_dict):
-        """
-        Create a model from a saved dict
-        """
+def load_model_dict(save_dict):
+    """
+    Create a model from a saved dict
+    """
 
-        model = Model(save_dict[""])
+    model = Model(*save_dict["components"])
+    check = 1
 
         
 
