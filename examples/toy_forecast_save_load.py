@@ -54,14 +54,14 @@ sigma_v = 1e-2
 model = Model(
     LocalTrend(),
     LocalAcceleration(),
-    # LstmNetwork(
-    #     look_back_len=12,
-    #     num_features=1,
-    #     num_layer=1,
-    #     num_hidden_unit=50,
-    #     device="cpu",
-    #     # manual_seed=3,
-    # ),
+    LstmNetwork(
+        look_back_len=12,
+        num_features=1,
+        num_layer=1,
+        num_hidden_unit=50,
+        device="cpu",
+        # manual_seed=3,
+    ),
     WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][1:24])
