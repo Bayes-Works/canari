@@ -709,7 +709,7 @@ class Model:
             self.early_stop_metric_history,
         )
     
-    def save_model_dict(self):
+    def save_model_dict(self) -> dict:
         """
         Save the model as a dict.
         """
@@ -722,13 +722,17 @@ class Model:
         return model_dict
     
 
-def load_model_dict(save_dict):
+def load_model_dict(save_dict) -> Model:
     """
     Create a model from a saved dict
     """
 
     model = Model(*save_dict["components"])
-    check = 1
+    model.set_states(save_dict["mu_states"], save_dict["var_states"])
+    if model.lstm_net:
+        model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    return model
 
         
 
