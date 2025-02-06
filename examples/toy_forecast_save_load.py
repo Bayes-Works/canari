@@ -11,6 +11,7 @@ from src import (
     Model,
     plot_data,
     plot_prediction,
+    load_model_dict,
 )
 from examples import DataProcess
 from pytagi import exponential_scheduler
@@ -67,7 +68,7 @@ model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 model_dict = model.save_model_dict()
 
-model1 = Model(model_dict["components"])
+model1 = load_model_dict(model_dict)
 
 # Training
 scheduled_sigma_v = 1
