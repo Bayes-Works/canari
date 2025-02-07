@@ -648,7 +648,7 @@ class Model:
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
         self.initialize_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
-        if self.lstm_net is not None:
+        if self.lstm_net:
             self.lstm_net.reset_lstm_states()
 
         return (
