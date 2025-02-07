@@ -37,7 +37,7 @@ SKF_norm_to_abnorm_prob_fix = 1e-4
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = True,
+    model_search: bool = False,
     SKF_search: bool = True,
     num_sample_optimization: int = 5,
 ):

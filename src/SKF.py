@@ -655,9 +655,9 @@ class SKF:
                 self._marginal_prob["abnorm"].copy()
             )
 
-        if self.lstm_net is not None:
-            if self.lstm_net:
+        if self.lstm_net:
             self.lstm_net.reset_lstm_states()
+            self.initialize_lstm_output_history()
             
         return (
             self.filter_marginal_prob_history["abnorm"],
@@ -683,6 +683,36 @@ class SKF:
             self.smooth_marginal_prob_history["abnorm"],
             self.states,
         )
+    
+    def detect_synthetic_anomaly(
+        self,
+        data: list[Dict[str, np.ndarray]],
+        threshold: Optional[float] = 0.5,
+        max_timestep_to_detect: Optional[int] = None,
+        num_anomaly: Optional[int] = None,
+        slope_anomaly: Optional[float] = None,
+    ) -> float:
+
+        synthetic_data = DataProcess.add_synthetic_anomaly(
+            data, num_samples=num_anomaly, slope=slope_anomaly
+        )
+        num_timesteps = len(data["y"])
+        num_anomaly_detected = 0
+
+        for i in range(0, num_anomaly):
+            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            window_start = synthetic_data[i]["anomaly_timestep"]
+
+            if max_timestep_to_detect is None:
+                window_end = num_timesteps
+            else:
+                window_end = window_start + max_timestep_to_detect
+            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
+                num_anomaly_detected += 1
+
+        detection_rate = num_anomaly_detected / num_anomaly
+
+        return detection_rate
     
     def save_model_dict(self) -> dict:
         """
@@ -731,32 +761,4 @@ def load_SKF_dict(save_dict: dict) -> SKF:
         skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
 
     return skf
-    def detect_synthetic_anomaly(
-        self,
-        data: list[Dict[str, np.ndarray]],
-        threshold: Optional[float] = 0.5,
-        max_timestep_to_detect: Optional[int] = None,
-        num_anomaly: Optional[int] = None,
-        slope_anomaly: Optional[float] = None,
-    ) -> float:
 
-        synthetic_data = DataProcess.add_synthetic_anomaly(
-            data, num_samples=num_anomaly, slope=slope_anomaly
-        )
-        num_timesteps = len(data["y"])
-        num_anomaly_detected = 0
-
-        for i in range(0, num_anomaly):
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
-            window_start = synthetic_data[i]["anomaly_timestep"]
-
-            if max_timestep_to_detect is None:
-                window_end = num_timesteps
-            else:
-                window_end = window_start + max_timestep_to_detect
-            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
-                num_anomaly_detected += 1
-
-        detection_rate = num_anomaly_detected / num_anomaly
-
-        return detection_rate
