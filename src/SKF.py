@@ -35,8 +35,6 @@ class SKF:
         self.create_transition_model(
             norm_model,
             abnorm_model,
-            norm_to_abnorm_prob,
-            abnorm_to_norm_prob,
         )
         self.transition_coef = initialize_transition()
         self.define_lstm_network()
@@ -45,16 +43,14 @@ class SKF:
         self.smooth_marginal_prob_history = None
         self.marginal_list = {"norm", "abnorm"}
         self._marginal_prob = initialize_marginal()
-        self._marginal_prob["norm"] = norm_model_prior_prob
-        self._marginal_prob["abnorm"] = 1 - norm_model_prior_prob
+        self._marginal_prob["norm"] = self.norm_model_prior_prob
+        self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
         self.initialize_early_stop()
 
     def create_transition_model(
         self,
         norm_model: Model,
         abnorm_model: Model,
-        norm_to_abnorm_prob: float,
-        abnorm_to_norm_prob: float,
     ):
         """
         Create transitional models
@@ -83,10 +79,10 @@ class SKF:
 
         # Transition probability
         self.transition_prob = initialize_transition()
-        self.transition_prob["norm_norm"] = 1 - norm_to_abnorm_prob
-        self.transition_prob["norm_abnorm"] = norm_to_abnorm_prob
-        self.transition_prob["abnorm_norm"] = abnorm_to_norm_prob
-        self.transition_prob["abnorm_abnorm"] = 1 - abnorm_to_norm_prob
+        self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
+        self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
+        self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
+        self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
 
         self.num_states = self.model["norm_norm"].num_states
         self.states_name = self.model["norm_norm"].states_name
