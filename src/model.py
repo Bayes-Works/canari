@@ -22,7 +22,8 @@ class Model:
         if not components:
             pass
         else:
-            self.components = list(components)
+            # self.components = list(components)
+            self.components = {component.component_name: component for component in components}
             self.define_model()
             self.initialize_lstm_network()
             self.initialize_autoregression_component()
@@ -69,19 +70,19 @@ class Model:
 
         # Global transition matrix
         transition_matrices = [
-            component.transition_matrix for component in self.components
+            component.transition_matrix for component in self.components.values()
         ]
         self.transition_matrix = common.create_block_diag(*transition_matrices)
 
         # Global process_noise_matrix
         process_noise_matrices = [
-            component.process_noise_matrix for component in self.components
+            component.process_noise_matrix for component in self.components.values()
         ]
         self.process_noise_matrix = common.create_block_diag(*process_noise_matrices)
 
         # Glolabl observation noise matrix
         global_observation_matrix = np.array([])
-        for component in self.components:
+        for component in self.components.values():
             global_observation_matrix = np.concatenate(
                 (global_observation_matrix, component.observation_matrix[0, :]), axis=0
             )
@@ -93,19 +94,19 @@ class Model:
         """
 
         self.mu_states = np.vstack(
-            [component.mu_states for component in self.components]
+            [component.mu_states for component in self.components.values()]
         )
         self.var_states = np.vstack(
-            [component.var_states for component in self.components]
+            [component.var_states for component in self.components.values()]
         )
         self.var_states = np.diagflat(self.var_states)
         self.component_name = ", ".join(
-            [component.component_name for component in self.components]
+            [component.component_name for component in self.components.values()]
         )
         self.states_name = [
-            state for component in self.components for state in component.states_name
+            state for component in self.components.values() for state in component.states_name
         ]
-        self.num_states = sum(component.num_states for component in self.components)
+        self.num_states = sum(component.num_states for component in self.components.values())
         if "lstm" in self.states_name:
             self.lstm_states_index = self.states_name.index("lstm")
         else:
@@ -147,7 +148,7 @@ class Model:
         lstm_component = next(
             (
                 component
-                for component in self.components
+                for component in self.components.values()
                 if component.component_name == "lstm"
             ),
             None,
@@ -647,6 +648,8 @@ class Model:
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
         self.initialize_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
+        if self.lstm_net is not None:
+            self.lstm_net.reset_lstm_states()
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),
@@ -722,12 +725,12 @@ class Model:
         return model_dict
     
 
-def load_model_dict(save_dict) -> Model:
+def load_model_dict(save_dict: dict) -> Model:
     """
     Create a model from a saved dict
     """
-
-    model = Model(*save_dict["components"])
+    components = list(save_dict["components"].values())
+    model = Model(*components)
     model.set_states(save_dict["mu_states"], save_dict["var_states"])
     if model.lstm_net:
         model.lstm_net.load_state_dict(save_dict["lstm_network_params"])

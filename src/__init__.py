@@ -13,4 +13,4 @@ from src.data_visualization import (
     plot_states,
     plot_skf_states,
 )
-from src.SKF import SKF
+from src.SKF import SKF, load_SKF_dict

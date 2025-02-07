@@ -1,7 +1,7 @@
 from typing import Tuple, Dict, Optional
 import numpy as np
 from pytagi import metric
-from src.model import Model
+from src.model import Model, load_model_dict
 from src import common
 import copy
 from src.data_struct import (
@@ -28,6 +28,9 @@ class SKF:
         conditional_likelihood: Optional[bool] = True,
     ):
         self.std_transition_error = std_transition_error
+        self.norm_to_abnorm_prob = norm_to_abnorm_prob
+        self.abnorm_to_norm_prob = abnorm_to_norm_prob
+        self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
         self.create_transition_model(
             norm_model,
@@ -58,20 +61,23 @@ class SKF:
         """
 
         # Create transitional model
-        norm_model.create_compatible_model(abnorm_model)
-        abnorm_norm = copy.deepcopy(norm_model)
+        norm_norm = copy.deepcopy(norm_model)
+        norm_norm.lstm_net = norm_model.lstm_net
+        norm_norm.create_compatible_model(abnorm_model)
+        abnorm_norm = copy.deepcopy(norm_norm)
         norm_abnorm = copy.deepcopy(abnorm_model)
+        abnorm_abnorm = copy.deepcopy(abnorm_model)
 
         # Add transition noise to norm_abnorm.process_noise_matrix
-        index_pad_state = norm_model.index_pad_state
+        index_pad_state = norm_norm.index_pad_state
         norm_abnorm.process_noise_matrix[index_pad_state, index_pad_state] = (
             self.std_transition_error**2
         )
 
         # Store transitional models in a dictionary
         self.model = initialize_transition()
-        self.model["norm_norm"] = norm_model
-        self.model["abnorm_abnorm"] = abnorm_model
+        self.model["norm_norm"] = norm_norm
+        self.model["abnorm_abnorm"] = abnorm_abnorm
         self.model["norm_abnorm"] = norm_abnorm
         self.model["abnorm_norm"] = abnorm_norm
 
@@ -645,6 +651,9 @@ class SKF:
                 self._marginal_prob["abnorm"].copy()
             )
 
+        if self.lstm_net is not None:
+            self.lstm_net.reset_lstm_states()
+            
         return (
             self.filter_marginal_prob_history["abnorm"],
             self.states,
@@ -669,3 +678,51 @@ class SKF:
             self.smooth_marginal_prob_history["abnorm"],
             self.states,
         )
+    
+    def save_model_dict(self) -> dict:
+        """
+        Save the SKF model as a dict.
+        """
+
+        SKF_dict = {}
+        SKF_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
+        SKF_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
+        SKF_dict["std_transition_error"] = self.std_transition_error
+        SKF_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
+        SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
+        SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
+        if self.lstm_net:
+            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict() 
+
+        return SKF_dict
+    
+
+def load_SKF_dict(save_dict: dict) -> SKF:
+    """
+    Create a model from a saved dict
+    """
+
+    # Create normal model 
+    norm_components = list(save_dict["norm_model"]["components"].values())
+    norm_model = Model(*norm_components)
+    if norm_model.lstm_net:
+        norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    # Create abnormal model 
+    ab_components = list(save_dict["abnorm_model"]["components"].values())
+    ab_model = Model(*ab_components)
+
+    skf = SKF(
+        norm_model=norm_model,
+        abnorm_model=ab_model,
+        std_transition_error=save_dict["std_transition_error"],
+        norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
+        abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
+        norm_model_prior_prob=save_dict["norm_model_prior_prob"],
+    )
+    skf.model["norm_norm"].set_states(save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"])
+
+    if skf.lstm_net:
+        skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    return skf
