@@ -12,6 +12,8 @@ from src import (
     WhiteNoise,
     Model,
     SKF,
+    load_model_dict,
+    load_SKF_dict,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -134,9 +136,10 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+skf_dict =skf.save_model_dict()
+save_skf = load_SKF_dict(skf_dict)
+filter_marginal_abnorm_prob, _ = save_skf.filter(data=all_data)
+smooth_marginal_abnorm_prob, states = save_skf.smoother(data=all_data)
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
