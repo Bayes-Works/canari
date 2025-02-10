@@ -54,8 +54,8 @@ periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
 # AR = Autoregression(std_error=5, mu_states=[-0.0621, 0.5], var_states=[6.36e-05, 0.25])
 
 # # Case 3: AR with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
-AR_process_error_var_prior = 100
-var_W2bar_prior = 100
+# AR_process_error_var_prior = 100
+# var_W2bar_prior = 100
 # AR = Autoregression(phi=0.9, mu_states=[-0.0621, 0, 0, AR_process_error_var_prior], var_states=[6.36e-05, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
 
 # Case 4: Fully online AR, learn both phi and process error online. phi should converge to ~0.9, W2bar should converge to ~25.
