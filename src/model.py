@@ -126,6 +126,8 @@ class Model:
 
         if "autoregression" in self.states_name:
             self.autoregression_index = self.states_name.index("autoregression")
+            self.mu_W2bar = None
+            self.var_W2bar = None
             if "phi" in self.states_name:
                 self.phi_index = self.states_name.index("phi")
             if "AR_error" in self.states_name:
@@ -268,6 +270,9 @@ class Model:
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         if "AR_error" in self.states_name:
+            self.ar_error_index = self.states_name.index("AR_error")
+            self.W2_index = self.states_name.index("W2")
+            self.W2bar_index = self.states_name.index("W2bar")
             cov_states = self.var_states @ self.transition_matrix.T
             # Set covariance between W and other states to zero
             cov_states[self.ar_error_index, :] = np.zeros_like(cov_states[self.ar_error_index, :])
@@ -322,14 +327,6 @@ class Model:
             self.lstm_states_index = target_model.states_name.index("lstm")
         else:
             self.lstm_states_index = None
-        if "autoregression" in self.states_name:
-            self.autoregression_index = self.states_name.index("autoregression")
-            if "phi" in self.states_name:
-                self.phi_index = self.states_name.index("phi")
-            if "AR_error" in self.states_name:
-                self.ar_error_index = self.states_name.index("AR_error")
-                self.W2_index = self.states_name.index("W2")
-                self.W2bar_index = self.states_name.index("W2bar")
 
     def forward(
         self,
@@ -352,34 +349,14 @@ class Model:
 
         # Autoregression
         if "autoregression" in self.states_name:
-            ar_index = self.autoregression_index
-            if "phi" in self.states_name:
-                phi_index = self.phi_index
-                # GMA operations
-                self.mu_states, self.var_states = GMA(self.mu_states, self.var_states, 
-                                                    index1=phi_index, index2=ar_index, replace_index=ar_index).get_results()
-                # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
-                self.mu_states[phi_index] = 0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
-            if "AR_error" in self.states_name:
-                # Forward path to compute the moments of W
-                # # W2bar
-                self.mu_states[self.W2bar_index] = self.mu_W2bar
-                self.var_states[self.W2bar_index, self.W2bar_index] = self.var_W2bar
-                # # From W2bar to W2
-                self.mu_W2_prior = self.mu_W2bar
-                self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar ** 2
-                self.mu_states[self.W2_index] = self.mu_W2_prior
-                self.var_states[self.W2_index, self.W2_index] = self.var_W2_prior
-                # # From W2 to W
-                self.mu_states[self.ar_error_index] = 0
-                self.var_states[self.ar_error_index, :] = np.zeros_like(self.var_states[self.ar_error_index, :])
-                self.var_states[:, self.ar_error_index] = np.zeros_like(self.var_states[:, self.ar_error_index])
-                self.var_states[self.ar_error_index, self.ar_error_index] = self.mu_W2bar
-                self.var_states[self.ar_error_index, ar_index] = self.mu_W2bar
-                self.var_states[ar_index, self.ar_error_index] = self.mu_W2bar
-
-                # Replace the process error variance in self.process_noise_matrix
-                self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+            self.mu_states, self.var_states, self.process_noise_matrix, self.mu_W2_prior, self.var_W2_prior = common.online_AR_forward_modification(
+                    self.states_name,
+                    self.mu_states,
+                    self.var_states,
+                    self.process_noise_matrix,
+                    self.mu_W2bar,
+                    self.var_W2bar,
+                )
 
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
@@ -419,22 +396,15 @@ class Model:
             delta_mu_states, delta_var_states
         )
         if "AR_error" in self.states_name:
-            # Backward path to update W2 and W2bar
-            # # From W to W2
-            mu_W2_posterior = mu_states_posterior[self.ar_error_index] ** 2 + var_states_posterior[self.ar_error_index, self.ar_error_index]
-            var_W2_posterior = 2 * var_states_posterior[self.ar_error_index, self.ar_error_index] ** 2 + 4 * var_states_posterior[self.ar_error_index, self.ar_error_index] * mu_states_posterior[self.ar_error_index] ** 2
-            mu_states_posterior[self.W2_index] = mu_W2_posterior
-            var_states_posterior[self.W2_index, :] = np.zeros_like(var_states_posterior[self.W2_index, :] )
-            var_states_posterior[:, self.W2_index] = np.zeros_like(var_states_posterior[:, self.W2_index])
-            var_states_posterior[self.W2_index, self.W2_index] = var_W2_posterior
-            # # From W2 to W2bar
-            K = self.var_W2bar / self.var_W2_prior
-            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
-            self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
-            mu_states_posterior[self.W2bar_index] = self.mu_W2bar
-            var_states_posterior[self.W2bar_index, :] = np.zeros_like(var_states_posterior[self.W2bar_index, :])
-            var_states_posterior[:, self.W2bar_index] = np.zeros_like(var_states_posterior[:, self.W2bar_index])
-            var_states_posterior[self.W2bar_index, self.W2bar_index] = self.var_W2bar
+            mu_states_posterior, var_states_posterior, self.mu_W2bar, self.var_W2bar = common.online_AR_backward_modification(
+                self.states_name,
+                mu_states_posterior,
+                var_states_posterior,
+                self.mu_W2bar,
+                self.var_W2bar,
+                self.mu_W2_prior,
+                self.var_W2_prior,
+            )
             
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
@@ -489,7 +459,7 @@ class Model:
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
                 )
-
+            self.set_posterior_states(mu_states_prior, var_states_prior)
             self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
