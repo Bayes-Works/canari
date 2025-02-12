@@ -150,28 +150,28 @@ def main(
 
         if return_model:
             # Plotting
-            fig, ax = plt.subplots(figsize=(10, 6))
-            plot_data(
-                data_processor=data_processor,
-                normalization=True,
-                plot_test_data=False,
-                plot_column=output_col,
-                validation_label="y",
-            )
-            plot_prediction(
-                data_processor=data_processor,
-                mean_validation_pred=mu_validation_preds,
-                std_validation_pred=std_validation_preds,
-                validation_label=[r"$\mu$", f"$\pm\sigma$"],
-            )
-            plot_states(
-                data_processor=data_processor,
-                states=states,
-                states_to_plot=["local level"],
-                sub_plot=ax,
-            )
-            plt.legend()
-            plt.show()
+            # fig, ax = plt.subplots(figsize=(10, 6))
+            # plot_data(
+            #     data_processor=data_processor,
+            #     normalization=True,
+            #     plot_test_data=False,
+            #     plot_column=output_col,
+            #     validation_label="y",
+            # )
+            # plot_prediction(
+            #     data_processor=data_processor,
+            #     mean_validation_pred=mu_validation_preds,
+            #     std_validation_pred=std_validation_preds,
+            #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+            # )
+            # plot_states(
+            #     data_processor=data_processor,
+            #     states=states,
+            #     states_to_plot=["local level"],
+            #     sub_plot=ax,
+            # )
+            # plt.legend()
+            # plt.show()
             return model
 
         else:

@@ -25,36 +25,35 @@ import fire
 
 # Parameters space for searching
 sigma_v_space = [1e-3, 2e-1]
-look_back_len_space = [10, 65]
+look_back_len_space = [12, 52]
 SKF_std_transition_error_space = [1e-6, 1e-3]
 SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
 synthetic_anomaly_slope_space = [1e-3, 5e-2]
 
 # Fix parameters:
-sigma_v_fix = 0.04581066391846972
-look_back_len_fix = 26
+sigma_v_fix = 0.07825376356003283
+look_back_len_fix = 50
 SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-5
+SKF_norm_to_abnorm_prob_fix = 1e-4
 
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = False,
-    SKF_search: bool = False,
-    num_sample_optimization: int = 100,
+    model_search: bool = True,
+    SKF_search: bool = True,
+    num_sample_optimization: int = 50,
     verbose: int = 1,
     grid_search_model: bool = False,
     grid_search_SKF: bool = True,
-    conditional_likelihood: bool = False,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_10_data.csv"
+    data_file = "./data/benchmark_data/test_4_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
+    df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
     lags = [0, 4, 4, 4]
     df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
@@ -62,8 +61,8 @@ def main(
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["week_of_year"],
-        train_split=0.27975,
-        validation_split=0.054,
+        train_split=0.23,
+        validation_split=0.07,
         output_col=output_col,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
@@ -84,7 +83,7 @@ def main(
         look_back_len = config["look_back_len"]
 
         model = Model(
-            LocalTrend(var_states=[1e-2, 1e-2]),
+            LocalTrend(var_states=[1e-1, 1e-1]),
             LstmNetwork(
                 look_back_len=look_back_len,
                 num_features=df_raw.shape[1],
@@ -95,7 +94,7 @@ def main(
             ),
             WhiteNoise(std_error=sigma_v),
         )
-        model.auto_initialize_baseline_states(train_data["y"][0:51])  # 72
+        model.auto_initialize_baseline_states(train_data["y"][0:47])  # 72
 
         noise_index = model.states_name.index("white noise")
         scheduled_sigma_v = 5
@@ -213,7 +212,7 @@ def main(
                 },
                 search_alg=OptunaSearch(metric="metric", mode="max"),
                 name="Model optimizer",
-                num_samples=int(num_sample_optimization / 2),
+                num_samples=int(num_sample_optimization),
                 verbose=verbose,
                 raise_on_failed_trial=False,
             )
@@ -252,7 +251,7 @@ def main(
             norm_to_abnorm_prob=norm_to_abnorm_prob,
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
-            conditional_likelihood=conditional_likelihood,
+            conditional_likelihood=False,
         )
         skf.save_initial_states()
 
@@ -260,7 +259,9 @@ def main(
             return skf
         else:
             detection_rate_raw, false_rate = skf.detect_synthetic_anomaly(
-                data=train_data, num_anomaly=40, slope_anomaly=slope
+                data=train_data,
+                num_anomaly=50,
+                slope_anomaly=slope,
             )
             if detection_rate_raw < 0.5 or false_rate > 0:
                 detection_rate = 2

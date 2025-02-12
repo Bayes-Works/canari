@@ -24,17 +24,17 @@ from pytagi import Normalizer as normalizer
 import fire
 
 # Parameters space for searching
-sigma_v_space = [1e-3, 2e-1]
+sigma_v_space = [1e-3, 1e-1]
 look_back_len_space = [10, 65]
-SKF_std_transition_error_space = [1e-6, 1e-3]
-SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
+SKF_std_transition_error_space = [1e-6, 1e-2]
+SKF_norm_to_abnorm_prob_space = [1e-6, 1e-2]
 synthetic_anomaly_slope_space = [1e-3, 5e-2]
 
 # Fix parameters:
-sigma_v_fix = 0.04581066391846972
-look_back_len_fix = 26
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-5
+sigma_v_fix = 0.038122020693774676
+look_back_len_fix = 16
+SKF_std_transition_error_fix = 1.247713290690524e-05
+SKF_norm_to_abnorm_prob_fix = 1.3145342373183475e-06
 
 
 def main(
@@ -44,19 +44,17 @@ def main(
     num_sample_optimization: int = 100,
     verbose: int = 1,
     grid_search_model: bool = False,
-    grid_search_SKF: bool = True,
+    grid_search_SKF: bool = False,
     conditional_likelihood: bool = False,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_10_data.csv"
+    data_file = "./data/benchmark_data/test_11_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
-    lags = [0, 4, 4, 4]
-    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+    df_raw.columns = ["displacement"]
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
@@ -260,7 +258,10 @@ def main(
             return skf
         else:
             detection_rate_raw, false_rate = skf.detect_synthetic_anomaly(
-                data=train_data, num_anomaly=40, slope_anomaly=slope
+                data=train_data,
+                num_anomaly=50,
+                slope_anomaly=slope,
+                max_timestep_to_detect=104,
             )
             if detection_rate_raw < 0.5 or false_rate > 0:
                 detection_rate = 2
@@ -350,7 +351,7 @@ def main(
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         color="b",
-        legend_location="upper left",
+        legend_location="lower left",
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()

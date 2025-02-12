@@ -39,11 +39,13 @@ SKF_norm_to_abnorm_prob_fix = 0.00030791478102889456
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = True,
-    SKF_search: bool = True,
-    num_sample_optimization: int = 50,
+    model_search: bool = False,
+    SKF_search: bool = False,
+    num_sample_optimization: int = 100,
     verbose: int = 1,
-    grid_search: bool = False,
+    grid_search_model: bool = False,
+    grid_search_SKF: bool = False,
+    conditional_likelihood: bool = False,
 ):
     # Read data
     data_file = "./data/benchmark_data/test_1_data.csv"
@@ -150,28 +152,28 @@ def main(
 
         if return_model:
             # # Plotting
-            fig, ax = plt.subplots(figsize=(10, 6))
-            plot_data(
-                data_processor=data_processor,
-                normalization=True,
-                plot_test_data=False,
-                plot_column=output_col,
-                validation_label="y",
-            )
-            plot_prediction(
-                data_processor=data_processor,
-                mean_validation_pred=mu_validation_preds,
-                std_validation_pred=std_validation_preds,
-                validation_label=[r"$\mu$", f"$\pm\sigma$"],
-            )
-            plot_states(
-                data_processor=data_processor,
-                states=states,
-                states_to_plot=["local level"],
-                sub_plot=ax,
-            )
-            plt.legend()
-            plt.show()
+            # fig, ax = plt.subplots(figsize=(10, 6))
+            # plot_data(
+            #     data_processor=data_processor,
+            #     normalization=True,
+            #     plot_test_data=False,
+            #     plot_column=output_col,
+            #     validation_label="y",
+            # )
+            # plot_prediction(
+            #     data_processor=data_processor,
+            #     mean_validation_pred=mu_validation_preds,
+            #     std_validation_pred=std_validation_preds,
+            #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+            # )
+            # plot_states(
+            #     data_processor=data_processor,
+            #     states=states,
+            #     states_to_plot=["local level"],
+            #     sub_plot=ax,
+            # )
+            # plt.legend()
+            # plt.show()
             return model
 
         else:
@@ -179,7 +181,7 @@ def main(
 
     # Run hyperparameter tuning if model_search = True
     if model_search:
-        if grid_search:
+        if grid_search_model:
             model_optimizer_runner = tune.run(
                 model_optimizer,
                 config={
@@ -241,7 +243,7 @@ def main(
             norm_to_abnorm_prob=norm_to_abnorm_prob,
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
-            conditional_likelihood=False,
+            conditional_likelihood=conditional_likelihood,
         )
         skf.save_initial_states()
 
@@ -267,7 +269,7 @@ def main(
 
     # Run SKF hyperparameter tuning if SKF_search = True
     if SKF_search:
-        if grid_search:
+        if grid_search_SKF:
             SKF_optimizer_runner = tune.run(
                 tune.with_parameters(
                     SKF_optimizer,

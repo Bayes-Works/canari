@@ -39,12 +39,13 @@ SKF_norm_to_abnorm_prob_fix = 0.001
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = False,
-    SKF_search: bool = False,
-    num_sample_optimization: int = 50,
+    model_search: bool = True,
+    SKF_search: bool = True,
+    num_sample_optimization: int = 100,
     verbose: int = 1,
     grid_search_model: bool = False,
     grid_search_SKF: bool = True,
+    conditional_likelihood: bool = False,
 ):
     # Read data
     data_file = "./data/benchmark_data/test_1_data.csv"
@@ -242,7 +243,7 @@ def main(
             norm_to_abnorm_prob=norm_to_abnorm_prob,
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
-            conditional_likelihood=False,
+            conditional_likelihood=conditional_likelihood,
         )
         skf.save_initial_states()
 
