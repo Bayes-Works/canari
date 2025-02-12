@@ -47,8 +47,29 @@ local_acceleration = LocalAcceleration(
     mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-2, 1e-2], std_error=1e-2
 )
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
+# # Case 1: regular AR, with process error and phi provided
 # AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
-AR = Autoregression(std_error=5, mu_states=[0.5, -0.0621], var_states=[0.25, 6.36e-05])
+
+# # Case 2: AR with process error provided, learn phi online. It should converge to ~0.9
+# AR = Autoregression(std_error=5, mu_states=[-0.0621, 0.5], var_states=[6.36e-05, 0.25])
+
+# # Case 3: AR with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
+# AR_process_error_var_prior = 100
+# var_W2bar_prior = 100
+# AR = Autoregression(
+#     phi=0.9,
+#     mu_states=[-0.0621, 0, 0, AR_process_error_var_prior],
+#     var_states=[6.36e-05, AR_process_error_var_prior, 1e-6, var_W2bar_prior],
+# )
+
+# Case 4: Fully online AR, learn both phi and process error online. phi should converge to ~0.9, W2bar should converge to ~25.
+AR_process_error_var_prior = 100
+var_W2bar_prior = 100
+AR = Autoregression(
+    mu_states=[-0.0621, 0.5, 0, 0, AR_process_error_var_prior],
+    var_states=[6.36e-05, 0.25, AR_process_error_var_prior, 1e-6, var_W2bar_prior],
+)
+
 noise = WhiteNoise(std_error=sigma_v)
 
 # Normal model
@@ -78,8 +99,10 @@ plot_prediction(
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend(loc="upper left")  # Change "upper right" to your desired location
-plot_states(data_processor=data_processor,
-            states=model.states,
-            states_type='prior',
-            )
+plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type="prior",
+    # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
+)
 plt.show()

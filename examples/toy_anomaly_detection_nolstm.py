@@ -43,13 +43,27 @@ _, _, _, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = np.sqrt(1e-6)
-local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
+local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12])
 local_acceleration = LocalAcceleration(
-    mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-4, 1e-4], std_error=1e-3
+    mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-4, 1e-4]
 )
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
+# # Case 1: regular AR, with process error and phi provided
 # AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
-AR = Autoregression(std_error=5, mu_states=[0.5, -0.0621], var_states=[0.25, 6.36e-05])
+
+# # Case 2: AR with process error provided, learn phi online. It should converge to ~0.9
+# AR = Autoregression(std_error=5, mu_states=[-0.0621, 0.5], var_states=[6.36e-05, 0.25])
+
+# # Case 3: AR with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
+# AR = Autoregression(
+#     phi=0.9, mu_states=[-0.0621, 0, 0, 100], var_states=[6.36e-05, 100, 1e-6, 100]
+# )
+
+# Case 4: Fully online AR, learn both phi and process error online. phi should converge to ~0.9, W2bar should converge to ~25.
+AR = Autoregression(
+    mu_states=[-0.0621, 0.5, 0, 0, 100], var_states=[6.36e-05, 0.25, 100, 1e-6, 100]
+)
+
 noise = WhiteNoise(std_error=sigma_v)
 
 # Normal model
@@ -79,7 +93,7 @@ skf = SKF(
 )
 
 # # # Anomaly Detection
-filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 #  Plot
@@ -87,7 +101,9 @@ marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
+    states_type="prior",
     model_prob=marginal_abnorm_prob_plot,
+    # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
     color="b",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
