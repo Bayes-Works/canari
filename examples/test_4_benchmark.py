@@ -31,20 +31,20 @@ SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
 synthetic_anomaly_slope_space = [1e-3, 5e-2]
 
 # Fix parameters:
-sigma_v_fix = 0.03221472404046498
-look_back_len_fix = 22
-SKF_std_transition_error_fix = 1e-6
-SKF_norm_to_abnorm_prob_fix = 1e-6
+sigma_v_fix = 0.0877013151472895
+look_back_len_fix = 50
+SKF_std_transition_error_fix = 0.0002840197607249382
+SKF_norm_to_abnorm_prob_fix = 0.00012306655795926166
 
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = True,
-    SKF_search: bool = True,
-    num_sample_optimization: int = 50,
+    model_search: bool = False,
+    SKF_search: bool = False,
+    num_sample_optimization: int = 100,
     verbose: int = 1,
     grid_search_model: bool = False,
-    grid_search_SKF: bool = True,
+    grid_search_SKF: bool = False,
 ):
     # Read data
     data_file = "./data/benchmark_data/test_4_data.csv"
@@ -83,21 +83,21 @@ def main(
         look_back_len = config["look_back_len"]
 
         model = Model(
-            LocalTrend(var_states=[1e-2, 1e-2]),
+            LocalTrend(var_states=[1e-1, 1e-1]),
             LstmNetwork(
                 look_back_len=look_back_len,
                 num_features=df_raw.shape[1],
                 num_layer=1,
                 num_hidden_unit=50,
                 device="cpu",
-                manual_seed=2,
+                manual_seed=1,
             ),
             WhiteNoise(std_error=sigma_v),
         )
-        model.auto_initialize_baseline_states(train_data["y"][10:62])  # 72
+        model.auto_initialize_baseline_states(train_data["y"][0:47])  # 72
 
         noise_index = model.states_name.index("white noise")
-        scheduled_sigma_v = 2
+        scheduled_sigma_v = 5
         for epoch in range(num_epoch):
             # Decaying observation's variance
             scheduled_sigma_v = exponential_scheduler(
@@ -160,28 +160,28 @@ def main(
 
         if return_model:
             # Plotting
-            fig, ax = plt.subplots(figsize=(10, 6))
-            plot_data(
-                data_processor=data_processor,
-                normalization=True,
-                plot_test_data=False,
-                plot_column=output_col,
-                validation_label="y",
-            )
-            plot_prediction(
-                data_processor=data_processor,
-                mean_validation_pred=mu_validation_preds,
-                std_validation_pred=std_validation_preds,
-                validation_label=[r"$\mu$", f"$\pm\sigma$"],
-            )
-            plot_states(
-                data_processor=data_processor,
-                states=states,
-                states_to_plot=["local level"],
-                sub_plot=ax,
-            )
-            plt.legend()
-            plt.show()
+            # fig, ax = plt.subplots(figsize=(10, 6))
+            # plot_data(
+            #     data_processor=data_processor,
+            #     normalization=True,
+            #     plot_test_data=False,
+            #     plot_column=output_col,
+            #     validation_label="y",
+            # )
+            # plot_prediction(
+            #     data_processor=data_processor,
+            #     mean_validation_pred=mu_validation_preds,
+            #     std_validation_pred=std_validation_preds,
+            #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+            # )
+            # plot_states(
+            #     data_processor=data_processor,
+            #     states=states,
+            #     states_to_plot=["local level"],
+            #     sub_plot=ax,
+            # )
+            # plt.legend()
+            # plt.show()
             return model
 
         else:
@@ -212,7 +212,7 @@ def main(
                 },
                 search_alg=OptunaSearch(metric="metric", mode="max"),
                 name="Model optimizer",
-                num_samples=int(num_sample_optimization),
+                num_samples=int(num_sample_optimization / 2),
                 verbose=verbose,
                 raise_on_failed_trial=False,
             )

@@ -22,19 +22,20 @@ from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 import fire
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 # Parameters space for searching
-sigma_v_space = [1e-3, 2e-1]
+sigma_v_space = [1e-3, 3e-1]
 look_back_len_space = [10, 65]
 SKF_std_transition_error_space = [1e-6, 1e-3]
 SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
 synthetic_anomaly_slope_space = [1e-3, 5e-2]
 
 # Fix parameters:
-sigma_v_fix = 0.04581066391846972
-look_back_len_fix = 26
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-5
+sigma_v_fix = 0.038122020693774676
+look_back_len_fix = 16
+SKF_std_transition_error_fix = 1.247713290690524e-05
+SKF_norm_to_abnorm_prob_fix = 1.3145342373183475e-06
 
 
 def main(
@@ -44,33 +45,77 @@ def main(
     num_sample_optimization: int = 100,
     verbose: int = 1,
     grid_search_model: bool = False,
-    grid_search_SKF: bool = True,
+    grid_search_SKF: bool = False,
     conditional_likelihood: bool = False,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_10_data.csv"
+    data_file = "./data/benchmark_data/test_11_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
-    lags = [0, 4, 4, 4]
-    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+    df_raw.columns = ["displacement"]
+
+    # Detrend data
+    df_detrend = df_raw.copy()
+    df_detrend = df_detrend.interpolate()
+    decomposition = seasonal_decompose(
+        df_detrend["displacement"], model="additive", period=52
+    )
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    residual = residual.fillna(0)
+    df_detrend.displacement = seasonal + residual + np.mean(trend)
+
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["week_of_year"],
-        train_split=0.27975,
+        train_split=0.3,
         validation_split=0.054,
         output_col=output_col,
     )
-    train_data, validation_data, _, all_data = data_processor.get_splits()
+    data_processor_detrend = DataProcess(
+        data=df_detrend,
+        time_covariates=["week_of_year"],
+        train_split=0.3,
+        validation_split=0.054,
+        output_col=output_col,
+    )
+    train_data, validation_data, _, _ = data_processor_detrend.get_splits()
+
+    train_data_norm = normalizer.standardize(
+        data=data_processor.train_data,
+        mu=data_processor_detrend.norm_const_mean,
+        std=data_processor_detrend.norm_const_std,
+    )
+    train_data_anorm = {}
+    train_data_anorm["x"] = np.array(
+        train_data_norm[:, data_processor_detrend.covariates_col], dtype=np.float32
+    )
+    train_data_anorm["y"] = np.array(
+        train_data_norm[:, data_processor_detrend.output_col], dtype=np.float32
+    )
+
+    all_data_norm = normalizer.standardize(
+        data=df_raw.values,
+        mu=data_processor_detrend.norm_const_mean,
+        std=data_processor_detrend.norm_const_std,
+    )
+    all_data = {}
+    all_data["x"] = np.array(
+        all_data_norm[:, data_processor_detrend.covariates_col], dtype=np.float32
+    )
+    all_data["y"] = np.array(
+        all_data_norm[:, data_processor_detrend.output_col], dtype=np.float32
+    )
 
     # fig, ax = plt.subplots(figsize=(10, 6))
     # plot_data(
-    #     data_processor=data_processor,
+    #     data_processor=data_processor_detrend,
     #     normalization=True,
     #     plot_test_data=True,
     #     plot_column=output_col,
@@ -160,10 +205,10 @@ def main(
                 break
 
         if return_model:
-            # Plotting
+            # # Plotting
             # fig, ax = plt.subplots(figsize=(10, 6))
             # plot_data(
-            #     data_processor=data_processor,
+            #     data_processor=data_processor_detrend,
             #     normalization=True,
             #     plot_test_data=False,
             #     plot_column=output_col,
@@ -254,13 +299,17 @@ def main(
             norm_model_prior_prob=0.99,
             conditional_likelihood=conditional_likelihood,
         )
+        skf.auto_initialize_baseline_states(all_data["y"][0:51])
         skf.save_initial_states()
 
         if return_model:
             return skf
         else:
             detection_rate_raw, false_rate = skf.detect_synthetic_anomaly(
-                data=train_data, num_anomaly=40, slope_anomaly=slope
+                data=train_data_norm,
+                num_anomaly=50,
+                slope_anomaly=slope,
+                max_timestep_to_detect=104,
             )
             if detection_rate_raw < 0.5 or false_rate > 0:
                 detection_rate = 2
@@ -350,7 +399,7 @@ def main(
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         color="b",
-        legend_location="upper left",
+        legend_location="lower left",
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()

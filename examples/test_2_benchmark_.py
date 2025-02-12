@@ -39,8 +39,8 @@ SKF_norm_to_abnorm_prob_fix = 9.10375706321866e-05
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = True,
-    SKF_search: bool = True,
+    model_search: bool = False,
+    SKF_search: bool = False,
     num_sample_optimization: int = 50,
     verbose: int = 1,
     grid_search_model: bool = False,

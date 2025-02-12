@@ -31,10 +31,10 @@ SKF_norm_to_abnorm_prob_space = [1e-6, 1e-3]
 synthetic_anomaly_slope_space = [1e-3, 5e-2]
 
 # Fix parameters:
-sigma_v_fix = 0.004714971624600351
-look_back_len_fix = 15
-SKF_std_transition_error_fix = 0.00034313161006367025
-SKF_norm_to_abnorm_prob_fix = 0.00018598347780609365
+sigma_v_fix = 0.037700916754808994
+look_back_len_fix = 26
+SKF_std_transition_error_fix = 0.00038570193106477737
+SKF_norm_to_abnorm_prob_fix = 0.00011982449845612612
 
 
 def main(
@@ -62,8 +62,8 @@ def main(
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["week_of_year"],
-        train_split=0.31987,
-        validation_split=0.087542,
+        train_split=0.27975,
+        validation_split=0.054,
         output_col=output_col,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
@@ -260,7 +260,7 @@ def main(
             return skf
         else:
             detection_rate_raw, false_rate = skf.detect_synthetic_anomaly(
-                data=train_data, num_anomaly=50, slope_anomaly=slope
+                data=train_data, num_anomaly=40, slope_anomaly=slope
             )
             if detection_rate_raw < 0.5 or false_rate > 0:
                 detection_rate = 2
