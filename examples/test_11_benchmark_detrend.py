@@ -40,12 +40,12 @@ SKF_norm_to_abnorm_prob_fix = 1.3145342373183475e-06
 
 def main(
     num_epoch: int = 50,
-    model_search: bool = False,
-    SKF_search: bool = False,
-    num_sample_optimization: int = 100,
+    model_search: bool = True,
+    SKF_search: bool = True,
+    num_sample_optimization: int = 5,
     verbose: int = 1,
     grid_search_model: bool = False,
-    grid_search_SKF: bool = False,
+    grid_search_SKF: bool = True,
     conditional_likelihood: bool = False,
 ):
     # Read data
@@ -77,6 +77,7 @@ def main(
         train_split=0.3,
         validation_split=0.054,
         output_col=output_col,
+        normalization=False,
     )
     data_processor_detrend = DataProcess(
         data=df_detrend,
@@ -112,6 +113,12 @@ def main(
     all_data["y"] = np.array(
         all_data_norm[:, data_processor_detrend.output_col], dtype=np.float32
     )
+
+    # plt.plot(all_data["y"], color="r")
+    # plt.plot(train_data["y"], color="b")
+    # plt.plot(df_raw.values[:, 0], color="k")
+    # plt.plot(data_processor.data.iloc[:, 0].values, color="r")
+    # plt.show()
 
     # fig, ax = plt.subplots(figsize=(10, 6))
     # plot_data(
@@ -309,7 +316,7 @@ def main(
                 data=train_data_norm,
                 num_anomaly=50,
                 slope_anomaly=slope,
-                max_timestep_to_detect=104,
+                # max_timestep_to_detect=104,
             )
             if detection_rate_raw < 0.5 or false_rate > 0:
                 detection_rate = 2
