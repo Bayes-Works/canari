@@ -96,6 +96,9 @@ for epoch in range(num_epoch):
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")
+    if epoch == model.optimal_epoch:
+        mu_validation_preds_optim = mu_validation_preds
+        std_validation_preds_optim = std_validation_preds
     if model.stop_training:
         break
 
