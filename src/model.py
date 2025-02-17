@@ -573,6 +573,7 @@ class Model:
     def filter(
         self,
         data: Dict[str, np.ndarray],
+        train_lstm: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Filter for whole time series data
@@ -602,9 +603,10 @@ class Model:
                     delta_var_states[lstm_index, lstm_index]
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
-                self.lstm_net.update_param(
-                    np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
-                )
+                if train_lstm:
+                    self.lstm_net.update_param(
+                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                    )
                 self.update_lstm_output_history(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
