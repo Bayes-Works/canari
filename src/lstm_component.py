@@ -27,6 +27,7 @@ class LstmNetwork(BaseComponent):
         manual_seed: Optional[int] = None,
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
+        load_lstm_net: Optional[str] = None,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -42,6 +43,7 @@ class LstmNetwork(BaseComponent):
         self.manual_seed = manual_seed
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
+        self.load_lstm_net = load_lstm_net
         super().__init__()
 
     def initialize_component_name(self):
@@ -112,5 +114,8 @@ class LstmNetwork(BaseComponent):
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
             lstm_network.to_device("cuda")
+
+        if self.load_lstm_net:
+            lstm_network.load(filename = self.load_lstm_net)
 
         return lstm_network
