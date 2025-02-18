@@ -251,6 +251,7 @@ class DataProcess:
         time_series: Dict[str, np.ndarray],
         num_samples: int,
         slope: list[float],
+        slope: list[float],
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ):
@@ -258,7 +259,7 @@ class DataProcess:
         len_time_series = len(time_series["y"])
         window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
         window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
-        np.random.seed(1)
+        # np.random.seed(1)
         anomaly_start_history = np.random.choice(
             np.arange(window_anomaly_start, window_anomaly_end),
             size=num_samples,
