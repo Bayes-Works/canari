@@ -32,6 +32,7 @@ class SKF:
         abnorm_to_norm_prob: Optional[float] = 0.1,
         norm_model_prior_prob: Optional[float] = 0.99,
         conditional_likelihood: Optional[bool] = False,
+        conditional_likelihood: Optional[bool] = False,
     ):
         self.std_transition_error = std_transition_error
         self.norm_to_abnorm_prob = norm_to_abnorm_prob
@@ -721,7 +722,11 @@ class SKF:
         """ """
 
         synthetic_data = DataProcess.add_synthetic_anomaly(
-            data, num_samples=num_anomaly, slope=slope_anomaly
+            data,
+            num_samples=num_anomaly,
+            slope=slope_anomaly,
+            anomaly_start=anomaly_start,
+            anomaly_end=anomaly_end,
         )
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
@@ -738,6 +743,19 @@ class SKF:
                 window_end = window_start + max_timestep_to_detect
             if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
                 num_anomaly_detected += 1
+            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
+                num_false_alarm += 1
+
+            # states_plot = np.array(states.mu_posterior)
+
+            # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4))
+
+            # axes[0].plot(states_plot[:, 1])
+            # axes[0].plot(synthetic_data[i]["y"])
+            # axes[0].axvline(x=window_start, color="b", linestyle="--")
+            # axes[1].plot(filter_marginal_abnorm_prob, color="r")
+            # axes[1].axvline(x=window_start, color="b", linestyle="--")
+            # plt.show()
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly
