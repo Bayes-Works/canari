@@ -152,7 +152,7 @@ def main(
         skf_param = {
             "std_transition_error": [1e-6, 1e-5, 1e-4],
             "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
-            "slope": [4e-3, 6e-3, 8e-3],
+            "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
         }
     else:
         skf_param = {
