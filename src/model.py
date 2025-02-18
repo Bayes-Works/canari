@@ -665,10 +665,9 @@ class Model:
 
     def early_stopping(
         self,
-        mode: Optional[str] = "max",
+        mode: Optional[str] = "min",
         patience: Optional[int] = 20,
         evaluate_metric: Optional[float] = None,
-        skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
 
         if self._current_epoch == 0:
@@ -681,17 +680,9 @@ class Model:
 
         # Check for improvement
         improved = False
-        if (
-            mode == "max"
-            and evaluate_metric > self.early_stop_metric
-            and self._current_epoch > skip_epoch
-        ):
+        if mode == "max" and evaluate_metric > self.early_stop_metric:
             improved = True
-        elif (
-            mode == "min"
-            and evaluate_metric < self.early_stop_metric
-            and self._current_epoch > skip_epoch
-        ):
+        elif mode == "min" and evaluate_metric < self.early_stop_metric:
             improved = True
 
         # Update metric and parameters if there's an improvement
@@ -701,6 +692,7 @@ class Model:
             self.early_stop_init_mu_states = copy.copy(self.mu_states)
             self.early_stop_init_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
+            # self.early_stop_states = copy.copy(self.states)
 
         self._current_epoch += 1
 
@@ -708,9 +700,8 @@ class Model:
         if (self._current_epoch - self.optimal_epoch) >= patience:
             self.stop_training = True
             self.lstm_net.load_state_dict(self.early_stop_lstm_param)
-            self.set_states(
-                self.early_stop_init_mu_states, self.early_stop_init_var_states
-            )
+            self.set_states(self.early_stop_mu_states, self.early_stop_var_states)
+            # self.states = self.early_stop_states
 
         return (
             self.stop_training,

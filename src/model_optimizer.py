@@ -39,7 +39,6 @@ class ModelOptimizer:
         train: Callable,
         param_space: dict,
         data_processor: DataProcess,
-        num_epoch: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
     ):
@@ -47,7 +46,6 @@ class ModelOptimizer:
         self.train = train
         self.param_space = param_space
         self.data_processor = data_processor
-        self.num_epoch = num_epoch
         self.num_optimization_trial = num_optimization_trial
         self.grid_search = grid_search
         self.model_optim = None
@@ -63,10 +61,9 @@ class ModelOptimizer:
             config,
         ):
             model = self.initialize_model(config)
-            trained_model, _, _ = self.train(
+            trained_model, _, _, _ = self.train(
                 model,
                 self.data_processor,
-                self.num_epoch,
             )
             tune.report({"metric": trained_model.early_stop_metric})
 
@@ -129,9 +126,9 @@ class ModelOptimizer:
         self.model_optim = self.initialize_model(self.param_optim)
 
         # Print optimal parameters
-        print(
-            f"Optimal parameters at trial # {best_sample_number}/{self.num_optimization_trial}: {self.param_optim}"
-        )
+        print("-----")
+        print(f"Optimal parameters at trial # {best_sample_number}: {self.param_optim}")
+        print("-----")
 
     def get_best_model(self):
         """

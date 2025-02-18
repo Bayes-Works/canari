@@ -1,3 +1,6 @@
+import fire
+import copy
+from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,27 +23,10 @@ from examples import DataProcess
 from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-import fire
-from typing import Optional
-
-# Parameters space for searching
-sigma_v_space = [1e-3, 2e-1]
-look_back_len_space = [12, 52]
-SKF_std_transition_error_space = [1e-6, 1e-4]
-SKF_norm_to_abnorm_prob_space = [1e-6, 1e-4]
-synthetic_anomaly_slope_space = [1e-3, 1e-1]
-
-# Fix parameters:
-sigma_v_fix = 0.00997597533731805
-look_back_len_fix = 35
-SKF_std_transition_error_fix = 1e-3
-SKF_norm_to_abnorm_prob_fix = 6.151115737882297e-06
 
 
 def main(
-    model_search: bool = True,
-    SKF_search: bool = True,
-    num_trial_optimization: int = 5,
+    num_trial_optimization: int = 50,
     grid_search: bool = False,
 ):
     # Read data
@@ -73,14 +59,8 @@ def main(
         output_col=output_col,
     )
 
-    synthetic_data_anomaly = DataProcess.add_synthetic_anomaly(
-        data_processor.train_split,
-        num_samples=50,
-        slope=0.01,
-    )
-
     # Define model
-    def model(param):
+    def initialize_model(param):
         return Model(
             LocalTrend(),
             LstmNetwork(
@@ -102,12 +82,11 @@ def main(
 
     # Define optimizer
     model_optimizer = ModelOptimizer(
-        initialize_model=model,
+        initialize_model=initialize_model,
         train=training,
         param_space=param,
         data_processor=data_processor,
         num_optimization_trial=num_trial_optimization,
-        # grid_search=True,
     )
     model_optimizer.optimize()
 
@@ -115,34 +94,37 @@ def main(
     model_optim = model_optimizer.get_best_model()
 
     # Train best model
-    model_optim, mu_validation_preds, std_validation_preds = training(
+    model_optim, states_optim, mu_validation_preds, std_validation_preds = training(
         model=model_optim, data_processor=data_processor
     )
+
+    # Save best model for SKF analysis later
     model_optim_dict = model_optim.save_model_dict()
 
     # Plot
-    # fig, ax = plt.subplots(figsize=(10, 6))
-    # plot_data(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     plot_test_data=False,
-    #     plot_column=output_col,
-    #     validation_label="y",
-    # )
-    # plot_prediction(
-    #     data_processor=data_processor,
-    #     mean_validation_pred=mu_validation_preds,
-    #     std_validation_pred=std_validation_preds,
-    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    # )
-    # plot_states(
-    #     data_processor=data_processor,
-    #     states=model_optim.states,
-    #     states_to_plot=["local level"],
-    #     sub_plot=ax,
-    # )
-    # plt.legend()
-    # plt.show()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_test_data=False,
+        plot_column=output_col,
+        validation_label="y",
+    )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    )
+    plot_states(
+        data_processor=data_processor,
+        states=states_optim,
+        states_to_plot=["local level"],
+        sub_plot=ax,
+    )
+    plt.legend()
+    plt.title("Validation predictions")
+    plt.show()
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
@@ -159,17 +141,45 @@ def main(
             norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
-            conditional_likelihood=False,
         )
         skf.save_initial_states()
         return skf
 
     # Define parameter search space
-    skf_param = {
-        "std_transition_error": [1e-6, 1e-3],
-        "norm_to_abnorm_prob": [1e-6, 1e-3],
-        "slope": [1e-3, 5e-2],
-    }
+    slope_upper_bound = 5e-2
+    slope_lower_bound = 1e-3
+    if grid_search:
+        skf_param = {
+            "std_transition_error": [1e-6, 1e-5, 1e-4],
+            "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
+            "slope": [4e-3, 6e-3, 8e-3],
+        }
+    else:
+        skf_param = {
+            "std_transition_error": [1e-6, 1e-3],
+            "norm_to_abnorm_prob": [1e-6, 1e-3],
+            "slope": [slope_lower_bound, slope_upper_bound],
+        }
+
+    # # Plot synthetic anomaly
+    synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+        data_processor.train_split,
+        num_samples=1,
+        slope=[slope_lower_bound, slope_upper_bound],
+    )
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_validation_data=False,
+        plot_test_data=False,
+        plot_column=output_col,
+        train_label="data without anomaly",
+    )
+    for ts in synthetic_anomaly_data:
+        plt.plot(data_processor.train_time, ts["y"])
+    plt.legend()
+    plt.title("Train data with added synthetic anomalies")
+    plt.show()
 
     # Define optimizer
     skf_optimizer = SKFOptimizer(
@@ -177,10 +187,9 @@ def main(
         model=model_optim_dict,
         param_space=skf_param,
         data_processor=data_processor,
-        detection_threshold=0.5,
         num_synthetic_anomaly=50,
         num_optimization_trial=num_trial_optimization * 2,
-        # grid_search=True,
+        grid_search=grid_search,
     )
     skf_optimizer.optimize()
 
@@ -203,6 +212,7 @@ def main(
 
     print("Model parameters used:", model_optimizer.param_optim)
     print("SKF model parameters used:", skf_optimizer.param_optim)
+    print("-----")
 
 
 def training(model, data_processor, num_epoch: int = 50):
@@ -214,6 +224,10 @@ def training(model, data_processor, num_epoch: int = 50):
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error
+    states_optim = None
+    mu_validation_preds_optim = None
+    std_validation_preds_optim = None
+
     for epoch in range(num_epoch):
         # Decaying observation's variance
         scheduled_sigma_v = exponential_scheduler(
@@ -249,13 +263,19 @@ def training(model, data_processor, num_epoch: int = 50):
         )
 
         model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+
+        if epoch == model.optimal_epoch:
+            mu_validation_preds_optim = mu_validation_preds.copy()
+            std_validation_preds_optim = std_validation_preds.copy()
+            states_optim = copy.copy(states)
         if model.stop_training:
             break
 
     return (
         model,
-        mu_validation_preds,
-        std_validation_preds,
+        states_optim,
+        mu_validation_preds_optim,
+        std_validation_preds_optim,
     )
 
 

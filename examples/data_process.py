@@ -248,7 +248,7 @@ class DataProcess:
     def add_synthetic_anomaly(
         time_series: Dict[str, np.ndarray],
         num_samples: int,
-        slope: float,
+        slope: list[float],
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ):
@@ -257,29 +257,28 @@ class DataProcess:
         window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
         window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
         # np.random.seed(1)
-        anomaly_start_history = np.random.choice(
-            np.arange(window_anomaly_start, window_anomaly_end),
-            size=num_samples,
-            replace=False,
+        anomaly_start_history = np.random.randint(
+            window_anomaly_start, window_anomaly_end, size=num_samples * len(slope)
         )
 
-        for i in range(0, num_samples):
-            trend = np.zeros(len_time_series)
-            change_point = anomaly_start_history[i]
-            trend_end_value = slope * (len_time_series - change_point - 1)
-            trend[change_point:] = np.linspace(
-                0, trend_end_value, len_time_series - change_point
-            )
+        for j, _slope in enumerate(slope):
+            for i in range(0, num_samples):
+                trend = np.zeros(len_time_series)
+                change_point = anomaly_start_history[i + j * num_samples]
+                trend_end_value = _slope * (len_time_series - change_point - 1)
+                trend[change_point:] = np.linspace(
+                    0, trend_end_value, len_time_series - change_point
+                )
 
-            # Add the trend to the original time series
-            _time_series_with_anomaly.append(time_series["y"].flatten() + trend)
+                # Add the trend to the original time series
+                _time_series_with_anomaly.append(time_series["y"].flatten() + trend)
 
         time_series_with_anomaly = [
             {
                 "x": time_series["x"],
-                "y": arr.reshape(-1, 1),
+                "y": ts.reshape(-1, 1),
                 "anomaly_timestep": timestep,
             }
-            for arr, timestep in zip(_time_series_with_anomaly, anomaly_start_history)
+            for ts, timestep in zip(_time_series_with_anomaly, anomaly_start_history)
         ]
         return time_series_with_anomaly
