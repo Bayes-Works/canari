@@ -45,8 +45,8 @@ class DataProcess:
         self.train_data_norm = None
         self.validation_data_norm = None
         self.test_data_norm = None
-        self.norm_const_mean = None
-        self.norm_const_std = None
+        self.norm_const_mean = 0
+        self.norm_const_std = 1
 
         # Add time covariates if needed
         self.add_time_covariates()
@@ -60,6 +60,14 @@ class DataProcess:
 
         #  Normalize data if needed
         self.normalization()
+
+        # Get data splits
+        (
+            self.train_split,
+            self.validation_split,
+            self.test_split,
+            self.all_data_split,
+        ) = self.get_splits()
 
     def add_time_covariates(self):
         """
@@ -177,6 +185,8 @@ class DataProcess:
             self.validation_data_norm = self.validation_data
             self.test_data_norm = self.test_data
             self.data_norm = self.data.values
+            self.norm_const_mean = np.zeros(self.train_data.shape[1]).flatten()
+            self.norm_const_std = np.ones(self.train_data.shape[1]).flatten()
 
     def get_splits(
         self,
@@ -207,46 +217,30 @@ class DataProcess:
     @staticmethod
     def add_lagged_columns(df, lags_per_column):
         """
-        Add lagged columns immediately after each original column.
+        Add lagged columns immediately after each original column while maintaining the datetime index.
 
         Parameters:
-        df (pd.DataFrame): The original DataFrame.
+        df (pd.DataFrame): The original DataFrame with a datetime index.
         lags_per_column (list of int): Number of lags for each column, in order.
 
         Returns:
         pd.DataFrame: DataFrame with lagged columns added inline.
         """
-        df_new = pd.DataFrame()
-        current_position = 0  # To keep track of the insertion point
+        df_new = pd.DataFrame(index=df.index)  # Preserve the datetime index
 
         for col_idx, num_lags in enumerate(lags_per_column):
             col = df.iloc[:, col_idx]
-            df_new = pd.concat([df_new, col], axis=1)
-            current_position += 1
+            df_new[col.name] = col  # Add original column
 
             # Generate lagged columns
             for lag in range(1, num_lags + 1):
-                lagged_col = col.shift(lag).fillna(0)
-                df_new = pd.concat([df_new, lagged_col], axis=1)
-                current_position += 1
+                df_new[f"{col.name}_lag{lag}"] = col.shift(lag).fillna(0)
 
         # If there are additional columns without specified lags, add them as is
         if len(lags_per_column) < df.shape[1]:
             for col_idx in range(len(lags_per_column), df.shape[1]):
                 col = df.iloc[:, col_idx]
-                df_new = pd.concat([df_new, col], axis=1)
-
-        # Assign appropriate column names
-        new_columns = []
-        for col_idx, num_lags in enumerate(lags_per_column):
-            new_columns.append(f"{df.columns[col_idx]}")  # Original column
-            for lag in range(1, num_lags + 1):
-                new_columns.append(f"{df.columns[col_idx]}_lag{lag}")  # Lagged columns
-        # Add remaining columns without lags
-        for col_idx in range(len(lags_per_column), df.shape[1]):
-            new_columns.append(f"{df.columns[col_idx]}")
-
-        df_new.columns = new_columns
+                df_new[col.name] = col  # Preserve remaining columns
 
         return df_new
 
@@ -262,7 +256,7 @@ class DataProcess:
         len_time_series = len(time_series["y"])
         window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
         window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
-        np.random.seed(1)
+        # np.random.seed(1)
         anomaly_start_history = np.random.choice(
             np.arange(window_anomaly_start, window_anomaly_end),
             size=num_samples,

@@ -13,4 +13,6 @@ from src.data_visualization import (
     plot_states,
     plot_skf_states,
 )
+from src.model_optimizer import ModelOptimizer
+from src.SKF_optimizer import SKFOptimizer
 from src.SKF import SKF, load_SKF_dict
