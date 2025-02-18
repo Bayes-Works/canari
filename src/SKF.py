@@ -14,6 +14,8 @@ from src.data_struct import (
 from examples import DataProcess
 from src.data_visualization import plot_skf_states, plot_data
 import matplotlib.pyplot as plt
+from src.data_visualization import plot_skf_states, plot_data
+import matplotlib.pyplot as plt
 
 
 class SKF:
@@ -719,11 +721,7 @@ class SKF:
         """ """
 
         synthetic_data = DataProcess.add_synthetic_anomaly(
-            data,
-            num_samples=num_anomaly,
-            slope=[slope_anomaly],
-            anomaly_start=anomaly_start,
-            anomaly_end=anomaly_end,
+            data, num_samples=num_anomaly, slope=slope_anomaly
         )
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
@@ -740,8 +738,6 @@ class SKF:
                 window_end = window_start + max_timestep_to_detect
             if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
                 num_anomaly_detected += 1
-            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
-                num_false_alarm += 1
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly
