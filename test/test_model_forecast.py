@@ -39,11 +39,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
     # Data processing
     data_processor = DataProcess(
         data=df_raw,
-        # train_start="2000-01-01 00:00:00",
-        # train_end="2000-01-09 23:00:00",
-        # validation_start="2000-01-10 00:00:00",
-        # validation_end="2000-01-11 23:00:00",
-        # test_start="2000-01-11 23:00:00",
         train_split=0.8,
         validation_split=0.2,
         output_col=output_col,
@@ -121,7 +116,6 @@ def test_model_forecast(run_mode, plot_mode, threshold_setup):
             device="cpu",
             manual_seed=1,
         ),
-        Autoregression(),
         WhiteNoise(std_error=1e-3),
     )
     mse = model_test_runner(model, plot=plot_mode)

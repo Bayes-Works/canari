@@ -12,6 +12,8 @@ from src.data_struct import (
     initialize_marginal_prob_history,
 )
 from examples import DataProcess
+from src.data_visualization import plot_skf_states, plot_data
+import matplotlib.pyplot as plt
 
 
 class SKF:
@@ -90,6 +92,13 @@ class SKF:
         self.states_name = self.model["norm_norm"].states_name
         self.index_pad_state = self.model["norm_norm"].index_pad_state
 
+        # Copy white noise from norm_norm to abnorm_abnorm
+        if "white noise" in self.states_name:
+            index_noise = self.states_name.index("white noise")
+            abnorm_abnorm.process_noise_matrix[index_noise, index_noise] = (
+                norm_norm.process_noise_matrix[index_noise, index_noise]
+            )
+
     def define_lstm_network(self):
         """
         Assign self.lstm_net using self.model["norm_norm"].lstm_net
@@ -148,6 +157,20 @@ class SKF:
         self.states.var_posterior.append(self.var_states_posterior)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
+
+    def save_initial_states(self):
+        """
+        save initial states at time = 0 for reuse SKF
+        """
+
+        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
+        self.var_states_init = self.model["norm_norm"].var_states.copy()
+
+    def load_initial_states(self):
+        """ """
+
+        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
+        self.model["norm_norm"].var_states = self.var_states_init.copy()
 
     def initialize_states_history(self):
         """
@@ -347,7 +370,7 @@ class SKF:
         Estimate coefficients for each transition model
         """
 
-        epsilon = 0
+        epsilon = 0 * 1e-300
         transition_coef = initialize_transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
@@ -526,7 +549,7 @@ class SKF:
         RTS smoother
         """
 
-        epsilon = 0
+        epsilon = 0 * 1e-300
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
@@ -658,7 +681,6 @@ class SKF:
         if self.lstm_net:
             self.lstm_net.reset_lstm_states()
             self.initialize_lstm_output_history()
-            
         return (
             self.filter_marginal_prob_history["abnorm"],
             self.states,
@@ -683,7 +705,7 @@ class SKF:
             self.smooth_marginal_prob_history["abnorm"],
             self.states,
         )
-    
+
     def detect_synthetic_anomaly(
         self,
         data: list[Dict[str, np.ndarray]],
@@ -691,16 +713,25 @@ class SKF:
         max_timestep_to_detect: Optional[int] = None,
         num_anomaly: Optional[int] = None,
         slope_anomaly: Optional[float] = None,
-    ) -> float:
+        anomaly_start: Optional[float] = 0.33,
+        anomaly_end: Optional[float] = 0.66,
+    ) -> Tuple[float, float]:
+        """ """
 
         synthetic_data = DataProcess.add_synthetic_anomaly(
-            data, num_samples=num_anomaly, slope=slope_anomaly
+            data,
+            num_samples=num_anomaly,
+            slope=slope_anomaly,
+            anomaly_start=anomaly_start,
+            anomaly_end=anomaly_end,
         )
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
+        num_false_alarm = 0
 
         for i in range(0, num_anomaly):
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            self.load_initial_states()
+            filter_marginal_abnorm_prob, states = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
@@ -709,11 +740,25 @@ class SKF:
                 window_end = window_start + max_timestep_to_detect
             if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
                 num_anomaly_detected += 1
+            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
+                num_false_alarm += 1
+
+            # states_plot = np.array(states.mu_posterior)
+
+            # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4))
+
+            # axes[0].plot(states_plot[:, 1])
+            # axes[0].plot(synthetic_data[i]["y"])
+            # axes[0].axvline(x=window_start, color="b", linestyle="--")
+            # axes[1].plot(filter_marginal_abnorm_prob, color="r")
+            # axes[1].axvline(x=window_start, color="b", linestyle="--")
+            # plt.show()
 
         detection_rate = num_anomaly_detected / num_anomaly
+        false_rate = num_false_alarm / num_anomaly
 
-        return detection_rate
-    
+        return detection_rate, false_rate
+
     def save_model_dict(self) -> dict:
         """
         Save the SKF model as a dict.
@@ -727,23 +772,23 @@ class SKF:
         SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
         SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
-            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict() 
+            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
 
         return SKF_dict
-    
+
 
 def load_SKF_dict(save_dict: dict) -> SKF:
     """
     Create a model from a saved dict
     """
 
-    # Create normal model 
+    # Create normal model
     norm_components = list(save_dict["norm_model"]["components"].values())
     norm_model = Model(*norm_components)
     if norm_model.lstm_net:
         norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
 
-    # Create abnormal model 
+    # Create abnormal model
     ab_components = list(save_dict["abnorm_model"]["components"].values())
     ab_model = Model(*ab_components)
 
@@ -755,10 +800,11 @@ def load_SKF_dict(save_dict: dict) -> SKF:
         abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
         norm_model_prior_prob=save_dict["norm_model_prior_prob"],
     )
-    skf.model["norm_norm"].set_states(save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"])
+    skf.model["norm_norm"].set_states(
+        save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"]
+    )
 
     if skf.lstm_net:
         skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
 
     return skf
-

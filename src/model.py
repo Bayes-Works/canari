@@ -22,8 +22,9 @@ class Model:
         if not components:
             pass
         else:
-            # self.components = list(components)
-            self.components = {component.component_name: component for component in components}
+            self.components = {
+                component.component_name: component for component in components
+            }
             self.define_model()
             self.initialize_lstm_network()
             self.initialize_autoregression_component()
@@ -104,9 +105,13 @@ class Model:
             [component.component_name for component in self.components.values()]
         )
         self.states_name = [
-            state for component in self.components.values() for state in component.states_name
+            state
+            for component in self.components.values()
+            for state in component.states_name
         ]
-        self.num_states = sum(component.num_states for component in self.components.values())
+        self.num_states = sum(
+            component.num_states for component in self.components.values()
+        )
         if "lstm" in self.states_name:
             self.lstm_states_index = self.states_name.index("lstm")
         else:
@@ -564,6 +569,7 @@ class Model:
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
                 )
+
             self.set_posterior_states(mu_states_prior, var_states_prior)
             self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
@@ -646,10 +652,10 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
-        self.initialize_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
         if self.lstm_net:
             self.lstm_net.reset_lstm_states()
+            self.initialize_lstm_output_history()
 
         return (
             np.array(mu_validation_preds).flatten(),
@@ -712,7 +718,7 @@ class Model:
             self.early_stop_metric,
             self.early_stop_metric_history,
         )
-    
+
     def save_model_dict(self) -> dict:
         """
         Save the model as a dict.
@@ -722,9 +728,9 @@ class Model:
         model_dict["mu_states"] = self.mu_states
         model_dict["var_states"] = self.var_states
         if self.lstm_net:
-            model_dict["lstm_network_params"] = self.lstm_net.get_state_dict() 
+            model_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
         return model_dict
-    
+
 
 def load_model_dict(save_dict: dict) -> Model:
     """
@@ -737,9 +743,3 @@ def load_model_dict(save_dict: dict) -> Model:
         model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
 
     return model
-
-        
-
-
-        
-
