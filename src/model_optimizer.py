@@ -61,7 +61,7 @@ class ModelOptimizer:
             config,
         ):
             model = self.initialize_model(config)
-            trained_model, _, _, _ = self.train(
+            trained_model, *_ = self.train(
                 model,
                 self.data_processor,
             )
