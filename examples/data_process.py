@@ -47,6 +47,8 @@ class DataProcess:
         self.test_data_norm = None
         self.norm_const_mean = 0
         self.norm_const_std = 1
+        self.norm_const_mean = 0
+        self.norm_const_std = 1
 
         # Add time covariates if needed
         self.add_time_covariates()
@@ -256,19 +258,20 @@ class DataProcess:
         len_time_series = len(time_series["y"])
         window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
         window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
-        # np.random.seed(1)
-        anomaly_start_history = np.random.randint(
-            window_anomaly_start, window_anomaly_end, size=num_samples * len(slope)
+        np.random.seed(1)
+        anomaly_start_history = np.random.choice(
+            np.arange(window_anomaly_start, window_anomaly_end),
+            size=num_samples,
+            replace=False,
         )
 
-        for j, _slope in enumerate(slope):
-            for i in range(0, num_samples):
-                trend = np.zeros(len_time_series)
-                change_point = anomaly_start_history[i + j * num_samples]
-                trend_end_value = _slope * (len_time_series - change_point - 1)
-                trend[change_point:] = np.linspace(
-                    0, trend_end_value, len_time_series - change_point
-                )
+        for i in range(0, num_samples):
+            trend = np.zeros(len_time_series)
+            change_point = anomaly_start_history[i]
+            trend_end_value = slope * (len_time_series - change_point - 1)
+            trend[change_point:] = np.linspace(
+                0, trend_end_value, len_time_series - change_point
+            )
 
                 # Add the trend to the original time series
                 _time_series_with_anomaly.append(time_series["y"].flatten() + trend)

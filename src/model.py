@@ -25,6 +25,9 @@ class Model:
             self.components = {
                 component.component_name: component for component in components
             }
+            self.components = {
+                component.component_name: component for component in components
+            }
             self.define_model()
             self.initialize_lstm_network()
             self.initialize_autoregression_component()
@@ -252,7 +255,9 @@ class Model:
         """
 
         self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
-        self.var_states = np.diag(np.diag(self.states.var_smooth[self._lstm_look_back_len])).copy()
+        self.var_states = np.diag(
+            np.diag(self.states.var_smooth[self._lstm_look_back_len])
+        ).copy()
 
         # self.mu_states = self.states.mu_smooth[0].copy()
         # self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
@@ -565,9 +570,17 @@ class Model:
 
         # Check for improvement
         improved = False
-        if mode == "max" and evaluate_metric > self.early_stop_metric and self._current_epoch > skip_epoch:
+        if (
+            mode == "max"
+            and evaluate_metric > self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
             improved = True
-        elif mode == "min" and evaluate_metric < self.early_stop_metric and self._current_epoch > skip_epoch:
+        elif (
+            mode == "min"
+            and evaluate_metric < self.early_stop_metric
+            and self._current_epoch > skip_epoch
+        ):
             improved = True
 
         # Update metric and parameters if there's an improvement
@@ -581,7 +594,9 @@ class Model:
         self._current_epoch += 1
 
         # Check stop condition and assign optimal values
-        if (self._current_epoch - self.optimal_epoch) >= patience and self._current_epoch > skip_epoch + 1:
+        if (
+            self._current_epoch - self.optimal_epoch
+        ) >= patience and self._current_epoch > skip_epoch + 1:
             self.stop_training = True
             self.lstm_net.load_state_dict(self.early_stop_lstm_param)
             self.set_states(
@@ -608,7 +623,9 @@ class Model:
         if "phi" in self.states_name:
             model_dict["phi_index"] = self.states_name.index("phi")
         if "autoregression" in self.states_name:
-            model_dict["autoregression_index"] = self.states_name.index("autoregression")
+            model_dict["autoregression_index"] = self.states_name.index(
+                "autoregression"
+            )
         if "W2bar" in self.states_name:
             model_dict["W2bar_index"] = self.states_name.index("W2bar")
         return model_dict
@@ -693,7 +710,9 @@ class Model:
             # # From W2 to W2bar
             K = self.var_W2bar / self.var_W2_prior
             self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
-            self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
+            self.var_W2bar = self.var_W2bar + K**2 * (
+                var_W2_posterior - self.var_W2_prior
+            )
             mu_states_posterior[W2bar_index] = self.mu_W2bar
             var_states_posterior[W2bar_index, :] = np.zeros_like(
                 var_states_posterior[W2bar_index, :]
