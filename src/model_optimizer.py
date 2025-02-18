@@ -92,7 +92,7 @@ class ModelOptimizer:
                     if isinstance(low, int) and isinstance(high, int):
                         search_config[param_name] = tune.randint(low, high)
                     elif isinstance(low, float) and isinstance(high, float):
-                        search_config[param_name] = tune.loguniform(low, high)
+                        search_config[param_name] = tune.uniform(low, high)
                     else:
                         raise ValueError(
                             f"Unsupported type for parameter {param_name}: {values}"
