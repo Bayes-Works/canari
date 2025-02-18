@@ -37,6 +37,7 @@ class SKFOptimizer:
         param_space: dict,
         data_processor: DataProcess,
         detection_threshold: Optional[float] = 0.5,
+        false_rate_threshold: Optional[float] = 0.0,
         num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
@@ -46,6 +47,7 @@ class SKFOptimizer:
         self.param_space = param_space
         self.data_processor = data_processor
         self.detection_threshold = detection_threshold
+        self.false_rate_threshold = false_rate_threshold
         self.num_optimization_trial = num_optimization_trial
         self.num_synthetic_anomaly = num_synthetic_anomaly
         self.grid_search = grid_search
@@ -71,7 +73,10 @@ class SKFOptimizer:
                 slope_anomaly=slope,
             )
 
-            if detection_rate < self.detection_threshold or false_rate > 0:
+            if (
+                detection_rate < self.detection_threshold
+                or false_rate > self.false_rate_threshold
+            ):
                 metric = 2 + 5 * slope
             else:
                 metric = detection_rate + 5 * slope
@@ -149,9 +154,9 @@ class SKFOptimizer:
         self.skf_optim = self.initialize_skf(self.param_optim, self.model)
 
         # Print optimal parameters
-        print(
-            f"Optimal parameters at trial # {best_sample_number}/{self.num_optimization_trial}: {self.param_optim}"
-        )
+        print("-----")
+        print(f"Optimal parameters at trial # {best_sample_number}: {self.param_optim}")
+        print("-----")
 
     def get_best_model(self):
         """
