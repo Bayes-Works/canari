@@ -26,7 +26,7 @@ from pytagi import Normalizer as normalizer
 
 
 def main(
-    num_trial_optimization: int = 50,
+    num_trial_optimization: int = 5,
     grid_search: bool = False,
 ):
     # Read data
