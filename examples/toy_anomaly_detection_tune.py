@@ -26,8 +26,8 @@ from pytagi import Normalizer as normalizer
 
 
 def main(
-    num_trial_optimization: int = 50,
-    grid_search: bool = False,
+    num_trial_optimization: int = 20,
+    grid_search: bool = True,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"

@@ -155,7 +155,7 @@ class SKFOptimizer:
 
         # Print optimal parameters
         print("-----")
-        print(f"Optimal parameters at trial # {best_sample_number}: {self.param_optim}")
+        print(f"Optimal parameters at trial #{best_sample_number}: {self.param_optim}")
         print("-----")
 
     def get_best_model(self):
