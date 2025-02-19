@@ -719,7 +719,7 @@ class Model:
         model_dict["mu_states"] = self.mu_states
         model_dict["var_states"] = self.var_states
         if self.lstm_net:
-            model_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
+            model_dict["lstm_network_params"] = self.lstm_net.state_dict()
         return model_dict
 
 
