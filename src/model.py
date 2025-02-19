@@ -587,8 +587,8 @@ class Model:
         if improved:
             self.early_stop_metric = copy.copy(evaluate_metric)
             self.early_stop_lstm_param = copy.copy(self.lstm_net.state_dict())
-            self.early_stop_init_mu_states = copy.copy(self.mu_states)
-            self.early_stop_init_var_states = copy.copy(self.var_states)
+            self.early_stop_mu_states = copy.copy(self.mu_states)
+            self.early_stop_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
 
         self._current_epoch += 1
