@@ -124,7 +124,7 @@ class Model:
         autoregression_component = next(
             (
                 component
-                for component in self.components
+                for component in self.components.values()
                 if component.component_name == "autoregression"
             ),
             None,
