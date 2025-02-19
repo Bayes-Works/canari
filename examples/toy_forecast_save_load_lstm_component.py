@@ -128,14 +128,14 @@ model2 = Model(
 model2.mu_states = model.early_stop_init_mu_states
 model2.var_states = model.early_stop_init_var_states
 model2.initialize_lstm_output_history()
-lstm_params_before_filter = copy.deepcopy(model2.lstm_net.get_state_dict())
+lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 
 # # #
 model2.filter(data=train_data, train_lstm=False)
 model2.smoother(data=train_data)
 mu_validation_preds2, std_validation_preds2 = model2.forecast(validation_data)
 
-lstm_params_after_filter = copy.deepcopy(model2.lstm_net.get_state_dict())
+lstm_params_after_filter = copy.deepcopy(model2.lstm_net.state_dict())
 assert lstm_params_before_filter == lstm_params_after_filter
 print("LSTM network parameters are the same before and after filtering, smoothing, and forecasting.")
 
