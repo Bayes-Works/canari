@@ -26,8 +26,8 @@ from pytagi import Normalizer as normalizer
 
 
 def main(
-    num_trial_optimization: int = 20,
-    grid_search: bool = True,
+    num_trial_optimization: int = 2,
+    grid_search: bool = False,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -173,11 +173,11 @@ def main(
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
-        train_label="data without anomaly",
     )
     for ts in synthetic_anomaly_data:
         plt.plot(data_processor.train_time, ts["y"])
-    plt.legend()
+    plt.legend(["data without anomaly", "largest anomaly tested","smallest anomaly tested"])
+    # plt.legend()
     plt.title("Train data with added synthetic anomalies")
     plt.show()
 

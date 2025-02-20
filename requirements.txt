@@ -1,4 +1,4 @@
-pyTAGI==0.1.11
+pyTAGI==0.1.12
 # git+https://github.com/lhnguyen102/cuTAGI.git
 matplotlib==3.8.2
 ninja==1.11.1.1
