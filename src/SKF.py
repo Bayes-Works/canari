@@ -12,10 +12,6 @@ from src.data_struct import (
     initialize_marginal_prob_history,
 )
 from examples import DataProcess
-from src.data_visualization import plot_skf_states, plot_data
-import matplotlib.pyplot as plt
-from src.data_visualization import plot_skf_states, plot_data
-import matplotlib.pyplot as plt
 
 
 class SKF:
@@ -31,7 +27,6 @@ class SKF:
         norm_to_abnorm_prob: Optional[float] = 1e-4,
         abnorm_to_norm_prob: Optional[float] = 0.1,
         norm_model_prior_prob: Optional[float] = 0.99,
-        conditional_likelihood: Optional[bool] = False,
         conditional_likelihood: Optional[bool] = False,
     ):
         self.std_transition_error = std_transition_error
@@ -724,7 +719,7 @@ class SKF:
         synthetic_data = DataProcess.add_synthetic_anomaly(
             data,
             num_samples=num_anomaly,
-            slope=slope_anomaly,
+            slope=[slope_anomaly],
             anomaly_start=anomaly_start,
             anomaly_end=anomaly_end,
         )
@@ -734,7 +729,7 @@ class SKF:
 
         for i in range(0, num_anomaly):
             self.load_initial_states()
-            filter_marginal_abnorm_prob, states = self.filter(data=synthetic_data[i])
+            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
@@ -745,17 +740,6 @@ class SKF:
                 num_anomaly_detected += 1
             if any(filter_marginal_abnorm_prob[:window_start] > threshold):
                 num_false_alarm += 1
-
-            # states_plot = np.array(states.mu_posterior)
-
-            # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4))
-
-            # axes[0].plot(states_plot[:, 1])
-            # axes[0].plot(synthetic_data[i]["y"])
-            # axes[0].axvline(x=window_start, color="b", linestyle="--")
-            # axes[1].plot(filter_marginal_abnorm_prob, color="r")
-            # axes[1].axvline(x=window_start, color="b", linestyle="--")
-            # plt.show()
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly
