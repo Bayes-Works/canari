@@ -1,7 +1,8 @@
 from typing import Tuple, Dict, Optional
+import copy
 import numpy as np
 from pytagi import metric
-from src.model import Model
+from src.model import Model, load_model_dict
 from src import common
 import copy
 from src.data_struct import (
@@ -10,6 +11,9 @@ from src.data_struct import (
     initialize_marginal,
     initialize_marginal_prob_history,
 )
+from examples import DataProcess
+from src.data_visualization import plot_skf_states, plot_data
+import matplotlib.pyplot as plt
 
 
 class SKF:
@@ -25,15 +29,16 @@ class SKF:
         norm_to_abnorm_prob: Optional[float] = 1e-4,
         abnorm_to_norm_prob: Optional[float] = 0.1,
         norm_model_prior_prob: Optional[float] = 0.99,
-        conditional_likelihood: Optional[bool] = True,
+        conditional_likelihood: Optional[bool] = False,
     ):
         self.std_transition_error = std_transition_error
+        self.norm_to_abnorm_prob = norm_to_abnorm_prob
+        self.abnorm_to_norm_prob = abnorm_to_norm_prob
+        self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
         self.create_transition_model(
             norm_model,
             abnorm_model,
-            norm_to_abnorm_prob,
-            abnorm_to_norm_prob,
         )
         self.transition_coef = initialize_transition()
         self.define_lstm_network()
@@ -42,49 +47,57 @@ class SKF:
         self.smooth_marginal_prob_history = None
         self.marginal_list = {"norm", "abnorm"}
         self._marginal_prob = initialize_marginal()
-        self._marginal_prob["norm"] = norm_model_prior_prob
-        self._marginal_prob["abnorm"] = 1 - norm_model_prior_prob
+        self._marginal_prob["norm"] = self.norm_model_prior_prob
+        self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
         self.initialize_early_stop()
 
     def create_transition_model(
         self,
         norm_model: Model,
         abnorm_model: Model,
-        norm_to_abnorm_prob: float,
-        abnorm_to_norm_prob: float,
     ):
         """
         Create transitional models
         """
 
         # Create transitional model
-        norm_model.create_compatible_model(abnorm_model)
-        abnorm_norm = copy.deepcopy(norm_model)
+        norm_norm = copy.deepcopy(norm_model)
+        norm_norm.lstm_net = norm_model.lstm_net
+        norm_norm.create_compatible_model(abnorm_model)
+        abnorm_norm = copy.deepcopy(norm_norm)
         norm_abnorm = copy.deepcopy(abnorm_model)
+        abnorm_abnorm = copy.deepcopy(abnorm_model)
 
         # Add transition noise to norm_abnorm.process_noise_matrix
-        index_pad_state = norm_model.index_pad_state
+        index_pad_state = norm_norm.index_pad_state
         norm_abnorm.process_noise_matrix[index_pad_state, index_pad_state] = (
             self.std_transition_error**2
         )
 
         # Store transitional models in a dictionary
         self.model = initialize_transition()
-        self.model["norm_norm"] = norm_model
-        self.model["abnorm_abnorm"] = abnorm_model
+        self.model["norm_norm"] = norm_norm
+        self.model["abnorm_abnorm"] = abnorm_abnorm
         self.model["norm_abnorm"] = norm_abnorm
         self.model["abnorm_norm"] = abnorm_norm
 
         # Transition probability
         self.transition_prob = initialize_transition()
-        self.transition_prob["norm_norm"] = 1 - norm_to_abnorm_prob
-        self.transition_prob["norm_abnorm"] = norm_to_abnorm_prob
-        self.transition_prob["abnorm_norm"] = abnorm_to_norm_prob
-        self.transition_prob["abnorm_abnorm"] = 1 - abnorm_to_norm_prob
+        self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
+        self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
+        self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
+        self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
 
         self.num_states = self.model["norm_norm"].num_states
         self.states_name = self.model["norm_norm"].states_name
         self.index_pad_state = self.model["norm_norm"].index_pad_state
+
+        # Copy white noise from norm_norm to abnorm_abnorm
+        if "white noise" in self.states_name:
+            index_noise = self.states_name.index("white noise")
+            abnorm_abnorm.process_noise_matrix[index_noise, index_noise] = (
+                norm_norm.process_noise_matrix[index_noise, index_noise]
+            )
 
     def define_lstm_network(self):
         """
@@ -97,6 +110,9 @@ class SKF:
             self.update_lstm_output_history = self.model[
                 "norm_norm"
             ].update_lstm_output_history
+            self.initialize_lstm_output_history = self.model[
+                "norm_norm"
+            ].initialize_lstm_output_history
         else:
             self.lstm_net = None
 
@@ -141,6 +157,20 @@ class SKF:
         self.states.var_posterior.append(self.var_states_posterior)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
+
+    def save_initial_states(self):
+        """
+        save initial states at time = 0 for reuse SKF
+        """
+
+        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
+        self.var_states_init = self.model["norm_norm"].var_states.copy()
+
+    def load_initial_states(self):
+        """ """
+
+        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
+        self.model["norm_norm"].var_states = self.var_states_init.copy()
 
     def initialize_states_history(self):
         """
@@ -340,6 +370,7 @@ class SKF:
         Estimate coefficients for each transition model
         """
 
+        epsilon = 0 * 1e-300
         transition_coef = initialize_transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
@@ -358,7 +389,9 @@ class SKF:
                 )
                 sum_trans_prob += trans_prob[transit]
         for transit in trans_prob:
-            trans_prob[transit] = trans_prob[transit] / sum_trans_prob
+            trans_prob[transit] = trans_prob[transit] / np.maximum(
+                sum_trans_prob, epsilon
+            )
 
         #
         self._marginal_prob["norm"] = (
@@ -371,8 +404,8 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                transition_coef[transit] = (
-                    trans_prob[transit] / self._marginal_prob[arrival_state]
+                transition_coef[transit] = trans_prob[transit] / np.maximum(
+                    self._marginal_prob[arrival_state], epsilon
                 )
 
         return transition_coef
@@ -516,6 +549,7 @@ class SKF:
         RTS smoother
         """
 
+        epsilon = 0 * 1e-300
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
@@ -541,10 +575,9 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                joint_transition_prob[transit] = (
-                    joint_transition_prob[transit]
-                    / arrival_state_marginal[arrival_state]
-                )
+                joint_transition_prob[transit] = joint_transition_prob[
+                    transit
+                ] / np.maximum(arrival_state_marginal[arrival_state], epsilon)
 
         joint_future_prob = initialize_transition()
         for origin_state in self.marginal_list:
@@ -572,8 +605,8 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                self.transition_coef[transit] = (
-                    joint_future_prob[transit] / self._marginal_prob[origin_state]
+                self.transition_coef[transit] = joint_future_prob[transit] / np.maximum(
+                    self._marginal_prob[origin_state], epsilon
                 )
 
         mu_states_transit, var_states_transit = self._get_smooth_states_transition(
@@ -645,6 +678,9 @@ class SKF:
                 self._marginal_prob["abnorm"].copy()
             )
 
+        if self.lstm_net:
+            self.lstm_net.reset_lstm_states()
+            self.initialize_lstm_output_history()
         return (
             self.filter_marginal_prob_history["abnorm"],
             self.states,
@@ -669,3 +705,95 @@ class SKF:
             self.smooth_marginal_prob_history["abnorm"],
             self.states,
         )
+
+    def detect_synthetic_anomaly(
+        self,
+        data: list[Dict[str, np.ndarray]],
+        threshold: Optional[float] = 0.5,
+        max_timestep_to_detect: Optional[int] = None,
+        num_anomaly: Optional[int] = None,
+        slope_anomaly: Optional[float] = None,
+        anomaly_start: Optional[float] = 0.33,
+        anomaly_end: Optional[float] = 0.66,
+    ) -> Tuple[float, float]:
+        """ """
+
+        synthetic_data = DataProcess.add_synthetic_anomaly(
+            data,
+            num_samples=num_anomaly,
+            slope=[slope_anomaly],
+            anomaly_start=anomaly_start,
+            anomaly_end=anomaly_end,
+        )
+        num_timesteps = len(data["y"])
+        num_anomaly_detected = 0
+        num_false_alarm = 0
+
+        for i in range(0, num_anomaly):
+            self.load_initial_states()
+            filter_marginal_abnorm_prob, states = self.filter(data=synthetic_data[i])
+            window_start = synthetic_data[i]["anomaly_timestep"]
+
+            if max_timestep_to_detect is None:
+                window_end = num_timesteps
+            else:
+                window_end = window_start + max_timestep_to_detect
+            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
+                num_anomaly_detected += 1
+            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
+                num_false_alarm += 1
+
+        detection_rate = num_anomaly_detected / num_anomaly
+        false_rate = num_false_alarm / num_anomaly
+
+        return detection_rate, false_rate
+
+    def save_model_dict(self) -> dict:
+        """
+        Save the SKF model as a dict.
+        """
+
+        SKF_dict = {}
+        SKF_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
+        SKF_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
+        SKF_dict["std_transition_error"] = self.std_transition_error
+        SKF_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
+        SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
+        SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
+        if self.lstm_net:
+            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
+
+        return SKF_dict
+
+
+def load_SKF_dict(save_dict: dict) -> SKF:
+    """
+    Create a model from a saved dict
+    """
+
+    # Create normal model
+    norm_components = list(save_dict["norm_model"]["components"].values())
+    norm_model = Model(*norm_components)
+    if norm_model.lstm_net:
+        norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    # Create abnormal model
+    ab_components = list(save_dict["abnorm_model"]["components"].values())
+    ab_model = Model(*ab_components)
+
+    skf = SKF(
+        norm_model=norm_model,
+        abnorm_model=ab_model,
+        std_transition_error=save_dict["std_transition_error"],
+        norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
+        abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
+        norm_model_prior_prob=save_dict["norm_model_prior_prob"],
+    )
+    skf.model["norm_norm"].set_states(
+        save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"]
+    )
+
+    if skf.lstm_net:
+        skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    return skf

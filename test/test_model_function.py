@@ -107,7 +107,7 @@ def test_local_level_periodic_autoregression():
     ) = model_forward_backward(
         LocalLevel(mu_states=[0.15], var_states=[0.25]),
         Periodic(period=period, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 
@@ -162,7 +162,7 @@ def test_local_trend_periodic_autoregression():
     ) = model_forward_backward(
         LocalTrend(mu_states=[0.15, 0.5], var_states=[0.3, 0.25]),
         Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 
@@ -218,7 +218,7 @@ def test_local_acceleration_periodic_autoregression():
     ) = model_forward_backward(
         LocalAcceleration(mu_states=[0.1, 0.1, 0.1], var_states=[0.1, 0.2, 0.3]),
         Periodic(period=20, mu_states=[0.1, 0.2], var_states=[0.1, 0.2]),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 
@@ -275,7 +275,7 @@ def test_local_level_lstm_autoregression():
             mu_states=[0.6],
             var_states=[0.6],
         ),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 
@@ -333,7 +333,7 @@ def test_local_trend_lstm_autoregression():
             mu_states=[0.6],
             var_states=[0.6],
         ),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 
@@ -392,7 +392,7 @@ def test_local_acceleration_lstm_autoregression():
             mu_states=[0.6],
             var_states=[0.6],
         ),
-        Autoregression(phi=0.9, mu_states=[0.5], var_states=[0.5]),
+        Autoregression(phi=0.9, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=0.1),
     )
 

@@ -22,7 +22,9 @@ class Model:
         if not components:
             pass
         else:
-            self.components = list(components)
+            self.components = {
+                component.component_name: component for component in components
+            }
             self.define_model()
             self.initialize_lstm_network()
             self.initialize_autoregression_component()
@@ -69,19 +71,19 @@ class Model:
 
         # Global transition matrix
         transition_matrices = [
-            component.transition_matrix for component in self.components
+            component.transition_matrix for component in self.components.values()
         ]
         self.transition_matrix = common.create_block_diag(*transition_matrices)
 
         # Global process_noise_matrix
         process_noise_matrices = [
-            component.process_noise_matrix for component in self.components
+            component.process_noise_matrix for component in self.components.values()
         ]
         self.process_noise_matrix = common.create_block_diag(*process_noise_matrices)
 
         # Glolabl observation noise matrix
         global_observation_matrix = np.array([])
-        for component in self.components:
+        for component in self.components.values():
             global_observation_matrix = np.concatenate(
                 (global_observation_matrix, component.observation_matrix[0, :]), axis=0
             )
@@ -93,19 +95,23 @@ class Model:
         """
 
         self.mu_states = np.vstack(
-            [component.mu_states for component in self.components]
+            [component.mu_states for component in self.components.values()]
         )
         self.var_states = np.vstack(
-            [component.var_states for component in self.components]
+            [component.var_states for component in self.components.values()]
         )
         self.var_states = np.diagflat(self.var_states)
         self.component_name = ", ".join(
-            [component.component_name for component in self.components]
+            [component.component_name for component in self.components.values()]
         )
         self.states_name = [
-            state for component in self.components for state in component.states_name
+            state
+            for component in self.components.values()
+            for state in component.states_name
         ]
-        self.num_states = sum(component.num_states for component in self.components)
+        self.num_states = sum(
+            component.num_states for component in self.components.values()
+        )
         if "lstm" in self.states_name:
             self.lstm_states_index = self.states_name.index("lstm")
         else:
@@ -118,7 +124,7 @@ class Model:
         autoregression_component = next(
             (
                 component
-                for component in self.components
+                for component in self.components.values()
                 if component.component_name == "autoregression"
             ),
             None,
@@ -147,7 +153,7 @@ class Model:
         lstm_component = next(
             (
                 component
-                for component in self.components
+                for component in self.components.values()
                 if component.component_name == "lstm"
             ),
             None,
@@ -563,6 +569,7 @@ class Model:
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
                 )
+
             self.set_posterior_states(mu_states_prior, var_states_prior)
             self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
@@ -645,8 +652,11 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
-        self.initialize_lstm_output_history()
         self.initialize_states_with_smoother_estimates()
+        if self.lstm_net:
+            self.lstm_net.reset_lstm_states()
+            self.initialize_lstm_output_history()
+
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),
@@ -655,10 +665,9 @@ class Model:
 
     def early_stopping(
         self,
-        mode: Optional[str] = "max",
+        mode: Optional[str] = "min",
         patience: Optional[int] = 20,
         evaluate_metric: Optional[float] = None,
-        skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
 
         if self._current_epoch == 0:
@@ -671,17 +680,9 @@ class Model:
 
         # Check for improvement
         improved = False
-        if (
-            mode == "max"
-            and evaluate_metric > self.early_stop_metric
-            and self._current_epoch > skip_epoch
-        ):
+        if mode == "max" and evaluate_metric > self.early_stop_metric:
             improved = True
-        elif (
-            mode == "min"
-            and evaluate_metric < self.early_stop_metric
-            and self._current_epoch > skip_epoch
-        ):
+        elif mode == "min" and evaluate_metric < self.early_stop_metric:
             improved = True
 
         # Update metric and parameters if there's an improvement
@@ -691,6 +692,7 @@ class Model:
             self.early_stop_init_mu_states = copy.copy(self.mu_states)
             self.early_stop_init_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
+            # self.early_stop_states = copy.copy(self.states)
 
         self._current_epoch += 1
 
@@ -698,9 +700,8 @@ class Model:
         if (self._current_epoch - self.optimal_epoch) >= patience:
             self.stop_training = True
             self.lstm_net.load_state_dict(self.early_stop_lstm_param)
-            self.set_states(
-                self.early_stop_init_mu_states, self.early_stop_init_var_states
-            )
+            self.set_states(self.early_stop_mu_states, self.early_stop_var_states)
+            # self.states = self.early_stop_states
 
         return (
             self.stop_training,
@@ -708,3 +709,28 @@ class Model:
             self.early_stop_metric,
             self.early_stop_metric_history,
         )
+
+    def save_model_dict(self) -> dict:
+        """
+        Save the model as a dict.
+        """
+        model_dict = {}
+        model_dict["components"] = self.components
+        model_dict["mu_states"] = self.mu_states
+        model_dict["var_states"] = self.var_states
+        if self.lstm_net:
+            model_dict["lstm_network_params"] = self.lstm_net.state_dict()
+        return model_dict
+
+
+def load_model_dict(save_dict: dict) -> Model:
+    """
+    Create a model from a saved dict
+    """
+    components = list(save_dict["components"].values())
+    model = Model(*components)
+    model.set_states(save_dict["mu_states"], save_dict["var_states"])
+    if model.lstm_net:
+        model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+    return model

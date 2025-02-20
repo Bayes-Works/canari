@@ -97,7 +97,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     scheduled_sigma_v = exponential_scheduler(
         curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
     )
-    noise_index = model.states_name.index("white noise")
+    noise_index = skf.states_name.index("white noise")
     skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
         scheduled_sigma_v**2
     )
