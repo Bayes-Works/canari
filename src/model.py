@@ -573,6 +573,7 @@ class Model:
     def filter(
         self,
         data: Dict[str, np.ndarray],
+        train_lstm: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Filter for whole time series data
@@ -602,9 +603,10 @@ class Model:
                     delta_var_states[lstm_index, lstm_index]
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
-                self.lstm_net.update_param(
-                    np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
-                )
+                if train_lstm:
+                    self.lstm_net.update_param(
+                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                    )
                 self.update_lstm_output_history(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
@@ -685,7 +687,7 @@ class Model:
         # Update metric and parameters if there's an improvement
         if improved:
             self.early_stop_metric = copy.copy(evaluate_metric)
-            self.early_stop_lstm_param = copy.copy(self.lstm_net.get_state_dict())
+            self.early_stop_lstm_param = copy.copy(self.lstm_net.state_dict())
             self.early_stop_init_mu_states = copy.copy(self.mu_states)
             self.early_stop_init_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
