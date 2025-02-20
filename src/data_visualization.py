@@ -27,7 +27,11 @@ def add_dynamic_grids(ax, time):
     end_date = time[-1]
     time_range = end_date - start_date
 
-    if time_range > np.timedelta64(365, "D"):  # More than a year
+    if time_range > np.timedelta64(10 * 365, "D"):  # More than 10 years
+        major_locator = YearLocator(3)  # Show major ticks every 5 years
+        minor_locator = YearLocator(1)  # Show minor ticks every year
+        major_formatter = DateFormatter("%Y")
+    elif time_range > np.timedelta64(365, "D"):  # More than a year
         major_locator = YearLocator()
         minor_locator = MonthLocator(bymonth=[1, 4, 7, 10])
         major_formatter = DateFormatter("%Y")
@@ -437,6 +441,7 @@ def plot_skf_states(
         sub_plot=axes[0],
         plot_nan=plot_nan,
     )
+    add_dynamic_grids(axes[0], time)
 
     # Add legends for the first subplot
     if legend_location:

@@ -115,6 +115,9 @@ class Model:
         self.num_states = sum(
             component.num_states for component in self.components.values()
         )
+        # if "local level" in self.states_name:
+        #     local_level_index = self.states_name.index("local level")
+        #     self._mu_local_level = self.mu_states[local_level_index]
         if "lstm" in self.states_name:
             self.lstm_states_index = self.states_name.index("lstm")
         else:

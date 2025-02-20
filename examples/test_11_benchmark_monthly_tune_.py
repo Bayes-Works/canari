@@ -25,10 +25,10 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 
 # Fix parameters grid search
-sigma_v_fix = 0.0406308676223954
+sigma_v_fix = 0.0016195398146008344
 look_back_len_fix = 6
-SKF_std_transition_error_fix = 0.00027787741941732807
-SKF_norm_to_abnorm_prob_fix = 0.0009565962418674387
+SKF_std_transition_error_fix = 0.00011347164343773834
+SKF_norm_to_abnorm_prob_fix = 0.0003414755716765266
 
 # Fix parameters
 # sigma_v_fix = 0.3819414484717393
@@ -63,12 +63,12 @@ def main(
     # Define model
     def initialize_model(param):
         return Model(
-            LocalTrend(var_states=[1e-1, 1e-1]),
+            LocalTrend(mu_states=[-1.2, 1e-2], var_states=[1e-1, 1e-1]),
             LstmNetwork(
                 look_back_len=param["look_back_len"],
                 num_features=2,
-                num_layer=1,
-                num_hidden_unit=50,
+                num_layer=2,
+                num_hidden_unit=30,
                 device="cpu",
                 manual_seed=1,
             ),
@@ -127,6 +127,7 @@ def main(
         data_processor=data_processor,
         states=states_optim,
         states_to_plot=["local level"],
+        color="b",
         sub_plot=ax,
     )
     plt.legend()
@@ -238,14 +239,14 @@ def main(
         print("-----")
 
 
-def training(model, data_processor, num_epoch: int = 100):
+def training(model, data_processor, num_epoch: int = 50):
     """
     Training procedure
     """
 
-    model.auto_initialize_baseline_states(data_processor.train_split["y"][0:17])
+    # model.auto_initialize_baseline_states(data_processor.train_split["y"][0:17])
     noise_index = model.states_name.index("white noise")
-    scheduled_sigma_v = 2
+    scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error
     states_optim = None
     mu_validation_preds_optim = None

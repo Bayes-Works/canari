@@ -39,8 +39,8 @@ SKF_norm_to_abnorm_prob_fix = 1e-5
 
 def main(
     num_trial_optimization: int = 50,
-    param_tune: bool = False,
-    grid_search: bool = False,
+    param_tune: bool = True,
+    grid_search: bool = True,
 ):
     # Read data
     data_file = "./data/benchmark_data/test_10_data.csv"
