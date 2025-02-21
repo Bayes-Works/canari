@@ -12,6 +12,7 @@ from src.data_struct import (
     initialize_marginal_prob_history,
 )
 from examples import DataProcess
+import matplotlib.pyplot as plt
 
 
 class SKF:
@@ -62,6 +63,14 @@ class SKF:
         norm_norm = copy.deepcopy(norm_model)
         norm_norm.lstm_net = norm_model.lstm_net
         norm_norm.create_compatible_model(abnorm_model)
+
+        # Copy white noise from norm_norm to abnorm_abnorm
+        if "white noise" in norm_norm.states_name:
+            index_noise = norm_norm.states_name.index("white noise")
+            abnorm_model.process_noise_matrix[index_noise, index_noise] = (
+                norm_norm.process_noise_matrix[index_noise, index_noise]
+            )
+
         abnorm_norm = copy.deepcopy(norm_norm)
         norm_abnorm = copy.deepcopy(abnorm_model)
         abnorm_abnorm = copy.deepcopy(abnorm_model)
@@ -89,13 +98,6 @@ class SKF:
         self.num_states = self.model["norm_norm"].num_states
         self.states_name = self.model["norm_norm"].states_name
         self.index_pad_state = self.model["norm_norm"].index_pad_state
-
-        # Copy white noise from norm_norm to abnorm_abnorm
-        if "white noise" in self.states_name:
-            index_noise = self.states_name.index("white noise")
-            abnorm_abnorm.process_noise_matrix[index_noise, index_noise] = (
-                norm_norm.process_noise_matrix[index_noise, index_noise]
-            )
 
     def define_lstm_network(self):
         """
@@ -726,10 +728,11 @@ class SKF:
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
         num_false_alarm = 0
+        param_1 = copy.deepcopy(self.lstm_net.state_dict())
 
         for i in range(0, num_anomaly):
             self.load_initial_states()
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            filter_marginal_abnorm_prob, states = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
@@ -740,6 +743,21 @@ class SKF:
                 num_anomaly_detected += 1
             if any(filter_marginal_abnorm_prob[:window_start] > threshold):
                 num_false_alarm += 1
+
+            param_2 = copy.deepcopy(self.lstm_net.state_dict())
+
+            assert param_1 == param_2
+
+            check = 1
+            # states_plot = np.array(states.mu_posterior)
+            # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4))
+
+            # axes[0].plot(states_plot[:, 0])
+            # axes[0].plot(synthetic_data[i]["y"])
+            # axes[0].axvline(x=window_start, color="b", linestyle="--")
+            # axes[1].plot(filter_marginal_abnorm_prob, color="r")
+            # axes[1].axvline(x=window_start, color="b", linestyle="--")
+            # plt.show()
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly

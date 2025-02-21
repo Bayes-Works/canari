@@ -39,8 +39,8 @@ SKF_norm_to_abnorm_prob_fix = 1e-5
 
 def main(
     num_trial_optimization: int = 50,
-    param_tune: bool = True,
-    grid_search: bool = True,
+    param_tune: bool = False,
+    grid_search: bool = False,
 ):
     # Read data
     data_file = "./data/benchmark_data/test_10_data.csv"
@@ -110,29 +110,29 @@ def main(
     model_optim_dict = model_optim.save_model_dict()
 
     # Plot
-    fig, ax = plt.subplots(figsize=(10, 6))
-    plot_data(
-        data_processor=data_processor,
-        normalization=True,
-        plot_test_data=False,
-        plot_column=output_col,
-        validation_label="y",
-    )
-    plot_prediction(
-        data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
-        std_validation_pred=std_validation_preds,
-        validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    )
-    plot_states(
-        data_processor=data_processor,
-        states=states_optim,
-        states_to_plot=["local level"],
-        sub_plot=ax,
-    )
-    plt.legend()
-    plt.title("Validation predictions")
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # plot_data(
+    #     data_processor=data_processor,
+    #     normalization=True,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    # )
+    # plot_prediction(
+    #     data_processor=data_processor,
+    #     mean_validation_pred=mu_validation_preds,
+    #     std_validation_pred=std_validation_preds,
+    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    # )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=states_optim,
+    #     states_to_plot=["local level"],
+    #     sub_plot=ax,
+    # )
+    # plt.legend()
+    # plt.title("Validation predictions")
+    # plt.show()
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
@@ -157,24 +157,24 @@ def main(
     slope_upper_bound = 5e-2
     slope_lower_bound = 1e-3
     # # Plot synthetic anomaly
-    synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_split,
-        num_samples=1,
-        slope=[slope_lower_bound, slope_upper_bound],
-    )
-    plot_data(
-        data_processor=data_processor,
-        normalization=True,
-        plot_validation_data=False,
-        plot_test_data=False,
-        plot_column=output_col,
-        train_label="data without anomaly",
-    )
-    for ts in synthetic_anomaly_data:
-        plt.plot(data_processor.train_time, ts["y"])
-    plt.legend()
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
+    # synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+    #     data_processor.train_split,
+    #     num_samples=1,
+    #     slope=[slope_lower_bound, slope_upper_bound],
+    # )
+    # plot_data(
+    #     data_processor=data_processor,
+    #     normalization=True,
+    #     plot_validation_data=False,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    #     train_label="data without anomaly",
+    # )
+    # for ts in synthetic_anomaly_data:
+    #     plt.plot(data_processor.train_time, ts["y"])
+    # plt.legend()
+    # plt.title("Train data with added synthetic anomalies")
+    # plt.show()
 
     if param_tune:
         if grid_search:
