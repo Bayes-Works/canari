@@ -367,7 +367,7 @@ class SKF:
         Estimate coefficients for each transition model
         """
 
-        epsilon = 0 * 1e-300
+        epsilon = 0 * 1e-20
         transition_coef = initialize_transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
@@ -557,7 +557,7 @@ class SKF:
         RTS smoother
         """
 
-        epsilon = 0 * 1e-300
+        epsilon = 0 * 1e-20
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
@@ -725,6 +725,11 @@ class SKF:
     ) -> Tuple[float, float]:
         """ """
 
+        num_timesteps = len(data["y"])
+        num_anomaly_detected = 0
+        num_false_alarm = 0
+        false_alarm_train = "No"
+
         synthetic_data = DataProcess.add_synthetic_anomaly(
             data,
             num_samples=num_anomaly,
@@ -732,13 +737,17 @@ class SKF:
             anomaly_start=anomaly_start,
             anomaly_end=anomaly_end,
         )
-        num_timesteps = len(data["y"])
-        num_anomaly_detected = 0
-        num_false_alarm = 0
 
+        filter_marginal_abnorm_prob, states = self.filter(data=data)
+
+        # Check false alarm in the training set
+        if any(filter_marginal_abnorm_prob > threshold):
+            false_alarm_train = "Yes"
+
+        # Iterate over data with synthetic anomalies
         for i in range(0, num_anomaly):
             self.load_initial_states()
-            filter_marginal_abnorm_prob, states = self.filter(data=synthetic_data[i])
+            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
@@ -760,12 +769,10 @@ class SKF:
             # axes[1].axvline(x=window_start, color="b", linestyle="--")
             # plt.show()
 
-            check = 1
-
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly
 
-        return detection_rate, false_rate
+        return detection_rate, false_rate, false_alarm_train
 
     def save_model_dict(self) -> dict:
         """
