@@ -217,14 +217,11 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
-        # param_1 = copy.deepcopy(skf_optim.lstm_net.state_dict())
         detection_rate, false_rate = skf_optim.detect_synthetic_anomaly(
             data=data_processor.train_split,
             num_anomaly=40,
             slope_anomaly=2e-2,
         )
-        # param_2 = copy.deepcopy(skf_optim.lstm_net.state_dict())
-        # assert param_1 == param_2
 
     # Detect anomaly
     skf_optim.load_initial_states()
