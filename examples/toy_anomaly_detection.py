@@ -52,7 +52,7 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = 1e-2
-local_trend = LocalTrend(var_states=[1e-1, 1e-1])
+local_trend = LocalTrend(var_states=[1e-2, 1e-2])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=12,

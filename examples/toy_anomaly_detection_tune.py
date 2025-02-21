@@ -25,9 +25,17 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 
 
+# Fix parameters grid search
+sigma_v_fix = 0.007701835186574768
+look_back_len_fix = 19
+SKF_std_transition_error_fix = 1e-4
+SKF_norm_to_abnorm_prob_fix = 1e-5
+
+
 def main(
-    num_trial_optimization: int = 20,
-    grid_search: bool = False,
+    num_trial_optimization: int = 50,
+    param_tune: bool = True,
+    grid_search: bool = True,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -41,8 +49,8 @@ def main(
 
     # Add synthetic anomaly to data
     trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 200
-    new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
+    time_anomaly = 120
+    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
     trend[time_anomaly:] = trend[time_anomaly:] + new_trend
     df_raw = df_raw.add(trend, axis=0)
 
@@ -51,11 +59,8 @@ def main(
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["hour_of_day"],
-        train_start="2000-01-01 00:00:00",
-        train_end="2000-01-09 23:00:00",
-        validation_start="2000-01-10 00:00:00",
-        validation_end="2000-01-10 23:00:00",
-        test_start="2000-01-11 00:00:00",
+        train_split=0.4,
+        validation_split=0.1,
         output_col=output_col,
     )
 
@@ -75,23 +80,28 @@ def main(
         )
 
     # Define parameter search space
-    param = {
-        "look_back_len": [10, 52],
-        "sigma_v": [1e-3, 2e-1],
-    }
-
-    # Define optimizer
-    model_optimizer = ModelOptimizer(
-        initialize_model=initialize_model,
-        train=training,
-        param_space=param,
-        data_processor=data_processor,
-        num_optimization_trial=num_trial_optimization,
-    )
-    model_optimizer.optimize()
-
-    # Get best model
-    model_optim = model_optimizer.get_best_model()
+    if param_tune:
+        param = {
+            "look_back_len": [10, 30],
+            "sigma_v": [1e-3, 2e-1],
+        }
+        # Define optimizer
+        model_optimizer = ModelOptimizer(
+            initialize_model=initialize_model,
+            train=training,
+            param_space=param,
+            data_processor=data_processor,
+            num_optimization_trial=num_trial_optimization,
+        )
+        model_optimizer.optimize()
+        # Get best model
+        model_optim = model_optimizer.get_best_model()
+    else:
+        param = {
+            "look_back_len": look_back_len_fix,
+            "sigma_v": sigma_v_fix,
+        }
+        model_optim = initialize_model(param)
 
     # Train best model
     model_optim, states_optim, mu_validation_preds, std_validation_preds = training(
@@ -148,18 +158,6 @@ def main(
     # Define parameter search space
     slope_upper_bound = 5e-2
     slope_lower_bound = 1e-3
-    if grid_search:
-        skf_param = {
-            "std_transition_error": [1e-6, 1e-5, 1e-4],
-            "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
-            "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
-        }
-    else:
-        skf_param = {
-            "std_transition_error": [1e-6, 1e-3],
-            "norm_to_abnorm_prob": [1e-6, 1e-3],
-            "slope": [slope_lower_bound, slope_upper_bound],
-        }
 
     # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
@@ -176,25 +174,50 @@ def main(
     )
     for ts in synthetic_anomaly_data:
         plt.plot(data_processor.train_time, ts["y"])
-    plt.legend(["data without anomaly", "largest anomaly tested","smallest anomaly tested"])
+    plt.legend(
+        ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
+    )
     # plt.legend()
     plt.title("Train data with added synthetic anomalies")
     plt.show()
 
-    # Define optimizer
-    skf_optimizer = SKFOptimizer(
-        initialize_skf=initialize_skf,
-        model=model_optim_dict,
-        param_space=skf_param,
-        data_processor=data_processor,
-        num_synthetic_anomaly=50,
-        num_optimization_trial=num_trial_optimization * 2,
-        grid_search=grid_search,
-    )
-    skf_optimizer.optimize()
+    if param_tune:
+        if grid_search:
+            skf_param = {
+                "std_transition_error": [1e-5, 1e-4, 1e-3],
+                "norm_to_abnorm_prob": [1e-5, 1e-4, 1e-3],
+                "slope": [0.006, 0.008, 0.01, 0.02],
+            }
+        else:
+            skf_param = {
+                # "std_transition_error": [1e-5, 1e-2],
+                # "norm_to_abnorm_prob": [1e-5, 1e-2],
+                "std_transition_error": [1e-6, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "slope": [slope_lower_bound, slope_upper_bound],
+            }
+        # Define optimizer
+        skf_optimizer = SKFOptimizer(
+            initialize_skf=initialize_skf,
+            model=model_optim_dict,
+            param_space=skf_param,
+            data_processor=data_processor,
+            num_synthetic_anomaly=50,
+            num_optimization_trial=num_trial_optimization * 2,
+            grid_search=grid_search,
+        )
+        skf_optimizer.optimize()
+        # Get best model
+        skf_optim = skf_optimizer.get_best_model()
+    else:
+        skf_param = {
+            "std_transition_error": SKF_std_transition_error_fix,
+            "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
+        }
+        skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
-    # Get best model
-    skf_optim = skf_optimizer.get_best_model()
+    # Detect anomaly
+    skf_optim.load_initial_states()
     filter_marginal_abnorm_prob, states = skf_optim.filter(
         data=data_processor.all_data_split
     )

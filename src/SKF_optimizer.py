@@ -21,7 +21,7 @@ class CustomLogger(Callback):
             len(f"{self.total_samples}/{self.total_samples}")
         )
         print(
-            f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - Parameter: {params}"
+            f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
         )
 
 
@@ -67,15 +67,18 @@ class SKFOptimizer:
             skf = self.initialize_skf(config, model_param)
             slope = config["slope"]
 
-            detection_rate, false_rate = skf.detect_synthetic_anomaly(
-                data=self.data_processor.train_split,
-                num_anomaly=self.num_synthetic_anomaly,
-                slope_anomaly=slope,
+            detection_rate, false_rate, false_alarm_train = (
+                skf.detect_synthetic_anomaly(
+                    data=self.data_processor.train_split,
+                    num_anomaly=self.num_synthetic_anomaly,
+                    slope_anomaly=slope,
+                )
             )
 
             if (
                 detection_rate < self.detection_threshold
                 or false_rate > self.false_rate_threshold
+                or false_alarm_train == "Yes"
             ):
                 metric = 2 + 5 * slope
             else:
@@ -86,6 +89,7 @@ class SKFOptimizer:
                     "metric": metric,
                     "detection_rate": detection_rate,
                     "false_rate": false_rate,
+                    "false_alarm_train": false_alarm_train,
                 }
             )
 
