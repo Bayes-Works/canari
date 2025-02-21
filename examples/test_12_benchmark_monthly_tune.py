@@ -38,7 +38,7 @@ SKF_norm_to_abnorm_prob_fix = 1e-4
 
 
 def main(
-    num_trial_optimization: int = 50,
+    num_trial_optimization: int = 2,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
@@ -217,8 +217,17 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
+        # param_1 = copy.deepcopy(skf_optim.lstm_net.state_dict())
+        detection_rate, false_rate = skf_optim.detect_synthetic_anomaly(
+            data=data_processor.train_split,
+            num_anomaly=40,
+            slope_anomaly=2e-2,
+        )
+        # param_2 = copy.deepcopy(skf_optim.lstm_net.state_dict())
+        # assert param_1 == param_2
 
     # Detect anomaly
+    skf_optim.load_initial_states()
     filter_marginal_abnorm_prob, states = skf_optim.filter(
         data=data_processor.all_data_split
     )
