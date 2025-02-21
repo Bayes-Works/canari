@@ -52,7 +52,7 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = 1e-2
-local_trend = LocalTrend(var_states=[1e-2, 1e-2])
+local_trend = LocalTrend(var_states=[1e-1, 1e-1])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=12,
@@ -135,31 +135,35 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+skf.model["norm_abnorm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+skf.model["abnorm_abnorm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+skf.model["abnorm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
+print(skf._marginal_prob)
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_data(
-    data_processor=data_processor,
-    plot_column=output_col,
-    plot_test_data=False,
-    sub_plot=ax,
-    validation_label="y",
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    sub_plot=ax,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
-ax.set_xlabel("Time")
-plt.title("Validation predictions")
-plt.tight_layout()
-plt.legend()
-plt.show()
+# fig, ax = plt.subplots(figsize=(10, 6))
+# plot_data(
+#     data_processor=data_processor,
+#     plot_column=output_col,
+#     plot_test_data=False,
+#     sub_plot=ax,
+#     validation_label="y",
+# )
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds,
+#     std_validation_pred=std_validation_preds,
+#     sub_plot=ax,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+# )
+# ax.set_xlabel("Time")
+# plt.title("Validation predictions")
+# plt.tight_layout()
+# plt.legend()
+# plt.show()
 
 
 fig, ax = plot_skf_states(

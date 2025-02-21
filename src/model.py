@@ -53,8 +53,8 @@ class Model:
         self.early_stop_metric = None
         self.early_stop_metric_history = []
         self.early_stop_lstm_param = None
-        self.early_stop_init_mu_states = None
-        self.early_stop_init_var_states = None
+        self.early_stop_mu_states = None
+        self.early_stop_var_states = None
         self.optimal_epoch = 0
         self._current_epoch = 0
         self.stop_training = False
@@ -257,12 +257,7 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
-        self.var_states = np.diag(
-            np.diag(self.states.var_smooth[self._lstm_look_back_len])
-        ).copy()
-
-        # self.mu_states = self.states.mu_smooth[0].copy()
+        self.mu_states = self.states.mu_smooth[0].copy()
         # self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.states_name.index("local level")
@@ -298,6 +293,15 @@ class Model:
 
         self.states.mu_smooth[-1] = self.states.mu_posterior[-1].copy()
         self.states.var_smooth[-1] = self.states.var_posterior[-1].copy()
+
+    def clear_history(self):
+        """
+        Clear history for next run
+        """
+
+        if self.lstm_net:
+            self.lstm_net.reset_lstm_states()
+            self.initialize_lstm_output_history()
 
     def create_compatible_model(self, target_model) -> None:
         """
@@ -545,9 +549,7 @@ class Model:
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
         self.initialize_states_with_smoother_estimates()
-        if self.lstm_net:
-            self.lstm_net.reset_lstm_states()
-            self.initialize_lstm_output_history()
+        self.clear_history()
 
         return (
             np.array(mu_validation_preds).flatten(),
