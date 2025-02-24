@@ -3,6 +3,7 @@ from ray.tune import Callback
 from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 from examples.data_process import DataProcess
+import numpy as np
 
 
 class CustomLogger(Callback):
@@ -14,8 +15,6 @@ class CustomLogger(Callback):
     def on_trial_result(self, iteration, trial, result, **info):
         self.current_sample += 1
         params = trial.config
-        metric = result["metric"]
-
         self.trial_sample_map[trial.trial_id] = self.current_sample
         sample_str = f"{self.current_sample}/{self.total_samples}".rjust(
             len(f"{self.total_samples}/{self.total_samples}")
@@ -82,7 +81,7 @@ class SKFOptimizer:
             ):
                 metric = 2 + 5 * slope
             else:
-                metric = detection_rate + 5 * slope
+                metric = detection_rate + 5 * np.abs(slope)
 
             tune.report(
                 {
@@ -121,7 +120,10 @@ class SKFOptimizer:
                     if isinstance(low, int) and isinstance(high, int):
                         search_config[param_name] = tune.randint(low, high)
                     elif isinstance(low, float) and isinstance(high, float):
-                        search_config[param_name] = tune.loguniform(low, high)
+                        if low < 0 or high < 0:
+                            search_config[param_name] = tune.uniform(low, high)
+                        else:
+                            search_config[param_name] = tune.loguniform(low, high)
                     else:
                         raise ValueError(
                             f"Unsupported type for parameter {param_name}: {values}"
