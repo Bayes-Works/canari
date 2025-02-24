@@ -43,9 +43,7 @@ train_data, validation_data, _, _ = data_processor.get_splits()
 # Components
 sigma_v = np.sqrt(1e-6)
 local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
-local_acceleration = LocalAcceleration(
-    mu_states=[5, 0.0, 0.0], var_states=[1e-12, 1e-2, 1e-2], std_error=1e-2
-)
+# local_trend = LocalTrend(mu_states=[10, 0.0], var_states=[25, 1e-12], std_error=0)
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
 # # Case 1: regular AR, with process error and phi provided
 # AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
@@ -87,18 +85,29 @@ model.smoother(data=train_data)
 
 #  Plot
 
-plot_data(
-    data_processor=data_processor,
-    plot_column=output_col,
-    validation_label="y",
-)
+# plot_data(
+#     data_processor=data_processor,
+#     plot_column=output_col,
+#     validation_label="y",
+# )
 # plot_prediction(
 #     data_processor=data_processor,
 #     mean_validation_pred=mu_validation_preds,
 #     std_validation_pred=std_validation_preds,
 #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 # )
-plt.legend(loc="upper left")  # Change "upper right" to your desired location
+plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type="prior",
+    # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
+)
+plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type="posterior",
+    # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
+)
 plot_states(
     data_processor=data_processor,
     states=model.states,
