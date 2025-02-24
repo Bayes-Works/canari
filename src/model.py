@@ -273,6 +273,7 @@ class Model:
         """
         Save states' priors, posteriors and cross-covariances for smoother
         """
+
         self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(
             (self.var_states_prior + self.var_states_prior.T) * 0.5

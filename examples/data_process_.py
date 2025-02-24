@@ -25,12 +25,12 @@ class DataProcess:
         output_col: list[int] = [0],
         normalization: Optional[bool] = True,
     ) -> None:
-        self.train_start = train_start
-        self.train_end = train_end
-        self.validation_start = validation_start
-        self.validation_end = validation_end
-        self.test_start = test_start
-        self.normalization = normalization
+        self._train_start = train_start
+        self._train_end = train_end
+        self._validation_start = validation_start
+        self._validation_end = validation_end
+        self._test_start = test_start
+        self._normalization = normalization
         self.train_split = train_split
         self.validation_split = validation_split
         self.test_split = test_split
@@ -38,18 +38,43 @@ class DataProcess:
         self.output_col = output_col
 
         self.data = data
-        self.norm_const_mean, self.norm_const_std = None, None
+        self.data_norm = None
+        self.train_data = None
+        self.validation_data = None
+        self.test_data = None
+        self.train_data_norm = None
+        self.validation_data_norm = None
+        self.test_data_norm = None
+        self.norm_const_mean = 0
+        self.norm_const_std = 1
+        self.norm_const_mean = 0
+        self.norm_const_std = 1
 
+        # Add time covariates if needed
         self.add_time_covariates()
-        self.get_split_indices()
-        self.compute_normalization_constants()
 
         # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
 
+        # Split data
+        self.split_data()
+
+        #  Normalize data if needed
+        self.normalization()
+
+        # Get data splits
+        (
+            self.train_split,
+            self.validation_split,
+            self.test_split,
+            self.all_data_split,
+        ) = self.get_splits()
+
     def add_time_covariates(self):
-        """Add time covariates to the data"""
+        """
+        Add time covariates to the data
+        """
 
         if self.time_covariates is not None:
             for time_cov in self.time_covariates:
@@ -66,122 +91,130 @@ class DataProcess:
                 elif time_cov == "quarter_of_year":
                     self.data["quarter"] = self.data.index.quarter
 
-    def get_split_indices(self):
-        """Get indices for train, validation, and test sets"""
-
+    def split_data(self):
+        """
+        Split data into train, validation, and test sets.
+        """
         num_data = len(self.data)
-        if self.train_split is not None:
+
+        # Case 1: Splits are defined using ratios
+        if self.train_split:
             self.test_split = 1 - self.train_split - self.validation_split
-            self.train_start = 0
-            self.validation_start = int(np.floor(self.train_split * num_data))
-            self.test_start = self.validation_start + int(
+            self._train_end = int(np.floor(self.train_split * num_data))
+            self._validation_end = self._train_end + int(
                 np.ceil(self.validation_split * num_data)
             )
-            self.train_end, self.validation_end = (
-                self.validation_start,
-                self.test_start,
-            )
-        else:
-            self.train_start = (
-                self.data.index.get_loc(self.train_start) if self.train_start else 0
-            )
-            self.validation_start = self.data.index.get_loc(self.validation_start)
-            self.test_start = self.data.index.get_loc(self.test_start)
-            if self.train_end is None:
-                self.train_end = self.validation_start
-            else:
-                self.train_end = self.data.index.get_loc(self.train_end)
-            if self.validation_end is None:
-                self.validation_end = self.test_start
-            else:
-                self.validation_end = self.data.index.get_loc(self.validation_end)
 
-    def compute_normalization_constants(self):
-        """Compute normalization constants"""
-        if self.normalization:
+            # Extract train, validation, and test data and corresponding times
+            self.train_data = self.data.iloc[: self._train_end].values.astype(
+                np.float32
+            )
+            self.train_time = self.data.iloc[: self._train_end].index
+
+            self.validation_data = self.data.iloc[
+                self._train_end : self._validation_end
+            ].values.astype(np.float32)
+            self.validation_time = self.data.iloc[
+                self._train_end : self._validation_end
+            ].index
+
+            self.test_data = self.data.iloc[self._validation_end :].values.astype(
+                np.float32
+            )
+            self.test_time = self.data.iloc[self._validation_end :].index
+
+        # Case 2: Splits are explicitly defined using indices
+        else:
+            if self._train_start is not None and self._train_end is not None:
+                self.train_data = self.data.loc[
+                    self._train_start : self._train_end
+                ].values.astype(np.float32)
+                self.train_time = self.data.loc[
+                    self._train_start : self._train_end
+                ].index
+
+            if self._validation_start is not None and self._validation_end is not None:
+                self.validation_data = self.data.loc[
+                    self._validation_start : self._validation_end
+                ].values.astype(np.float32)
+                self.validation_time = self.data.loc[
+                    self._validation_start : self._validation_end
+                ].index
+
+            if self._test_start is not None:
+                self.test_data = self.data.loc[self._test_start :].values.astype(
+                    np.float32
+                )
+                self.test_time = self.data.loc[self._test_start :].index
+
+        # Store the overall time index
+        self.time = self.data.index
+
+    def normalization(self):
+        """
+        Nomalize data
+        """
+
+        if self._normalization:
             self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
-                self.data.iloc[self.train_start : self.train_end].values
+                self.train_data
             )
-        else:
-            self.norm_const_mean = np.zeros(self.data.shape[1])
-            self.norm_const_std = np.ones(self.data.shape[1])
-
-    def normalize_data(self, data: np.ndarray) -> np.ndarray:
-        """Apply normalization"""
-
-        return (
-            Normalizer.standardize(
-                data=data,
+            self.data_norm = Normalizer.standardize(
+                data=self.data.values.astype(np.float32),
                 mu=self.norm_const_mean,
                 std=self.norm_const_std,
             )
-            if self.normalization
-            else data
-        )
+            self.train_data_norm = Normalizer.standardize(
+                data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
+            )
+
+            if self.validation_data is not None:
+                self.validation_data_norm = Normalizer.standardize(
+                    data=self.validation_data,
+                    mu=self.norm_const_mean,
+                    std=self.norm_const_std,
+                )
+
+            if self.test_data is not None:
+                self.test_data_norm = Normalizer.standardize(
+                    data=self.test_data,
+                    mu=self.norm_const_mean,
+                    std=self.norm_const_std,
+                )
+
+        else:
+            self.train_data_norm = self.train_data
+            self.validation_data_norm = self.validation_data
+            self.test_data_norm = self.test_data
+            self.data_norm = self.data.values
+            self.norm_const_mean = np.zeros(self.train_data.shape[1]).flatten()
+            self.norm_const_std = np.ones(self.train_data.shape[1]).flatten()
 
     def get_splits(
         self,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """Return training, validation, and test splits"""
+        """
+        Get the train, valiation, test splits
+        """
 
         return (
-            # Train split
             {
-                "x": self.normalize_data(
-                    self.data.iloc[
-                        self.train_start : self.train_end, self.covariates_col
-                    ].values
-                ),
-                "y": self.normalize_data(
-                    self.data.iloc[
-                        self.train_start : self.train_end, self.output_col
-                    ].values
-                ),
+                "x": self.train_data_norm[:, self.covariates_col],
+                "y": self.train_data_norm[:, self.output_col],
             },
-            # Validation split
             {
-                "x": self.normalize_data(
-                    self.data.iloc[
-                        self.validation_start : self.validation_end,
-                        self.covariates_col,
-                    ].values
-                ),
-                "y": self.normalize_data(
-                    self.data.iloc[
-                        self.validation_start : self.validation_end,
-                        self.output_col,
-                    ].values
-                ),
+                "x": self.validation_data_norm[:, self.covariates_col],
+                "y": self.validation_data_norm[:, self.output_col],
             },
-            # Test split
             {
-                "x": self.normalize_data(
-                    self.data.iloc[self.test_start :, self.covariates_col].values
-                ),
-                "y": self.normalize_data(
-                    self.data.iloc[self.test_start :, self.output_col].values
-                ),
+                "x": self.test_data_norm[:, self.covariates_col],
+                "y": self.test_data_norm[:, self.output_col],
             },
-            # All data
             {
-                "x": self.normalize_data(
-                    self.data.iloc[self.train_start :, self.covariates_col].values
-                ),
-                "y": self.normalize_data(
-                    self.data.iloc[self.train_start :, self.output_col].values
-                ),
+                "x": self.data_norm[:, self.covariates_col],
+                "y": self.data_norm[:, self.output_col],
             },
         )
-
-    # TODO: output type
-    def get_time(self):
-        time = self.data.index
-        train_time = self.data.iloc[self.train_start : self.train_end].index
-        validation_time = self.data.iloc[
-            self.validation_start : self.validation_end,
-        ].index
-        test_time = self.data.iloc[self.test_start :,].index
-        return time, train_time, validation_time, test_time
 
     @staticmethod
     def add_lagged_columns(df, lags_per_column):
