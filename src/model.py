@@ -368,35 +368,37 @@ class Model:
             )
 
         if "AR_error" in self.states_name:
-            ar_error_index = self.states_name.index("AR_error")
-            W2_index = self.states_name.index("W2")
-            W2bar_index = self.states_name.index("W2bar")
-
-            # Forward path to compute the moments of W
-            # # W2bar
-            self.mu_states[W2bar_index] = self.mu_W2bar
-            self.var_states[W2bar_index, W2bar_index] = self.var_W2bar
-
-            # # From W2bar to W2
-            self.mu_W2_prior = self.mu_W2bar
-            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-            self.mu_states[W2_index] = self.mu_W2_prior
-            self.var_states[W2_index, W2_index] = self.var_W2_prior
-
-            # # From W2 to W
-            self.mu_states[ar_error_index] = 0
-            self.var_states[ar_error_index, :] = np.zeros_like(
-                self.var_states[ar_error_index, :]
-            )
-            self.var_states[:, ar_error_index] = np.zeros_like(
-                self.var_states[:, ar_error_index]
-            )
-            self.var_states[ar_error_index, ar_error_index] = self.mu_W2bar
-            self.var_states[ar_error_index, ar_index] = self.mu_W2bar
-            self.var_states[ar_index, ar_error_index] = self.mu_W2bar
-
-            # Replace the process error variance in self.process_noise_matrix
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+
+    def online_AR_update_error_states(self, mu_states_prior, var_states_prior) -> None:
+        ar_index = self.states_name.index("autoregression")
+        ar_error_index = self.states_name.index("AR_error")
+        W2_index = self.states_name.index("W2")
+        W2bar_index = self.states_name.index("W2bar")
+
+        # Forward path to compute the moments of W
+        # # W2bar
+        mu_states_prior[W2bar_index] = self.mu_W2bar
+        var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+
+        # # From W2bar to W2
+        self.mu_W2_prior = self.mu_W2bar
+        self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
+        mu_states_prior[W2_index] = self.mu_W2_prior
+        var_states_prior[W2_index, W2_index] = self.var_W2_prior
+
+        # # From W2 to W
+        mu_states_prior[ar_error_index] = 0
+        var_states_prior[ar_error_index, :] = np.zeros_like(
+            var_states_prior[ar_error_index, :]
+        )
+        var_states_prior[:, ar_error_index] = np.zeros_like(
+            var_states_prior[:, ar_error_index]
+        )
+        var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+        var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+        var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+        return mu_states_prior, var_states_prior
 
     def online_AR_backward_modification(
         self,
@@ -480,6 +482,10 @@ class Model:
             var_lstm_pred,
             self.lstm_states_index,
         )
+
+        if "AR_error" in self.states_name:
+            mu_states_prior, var_states_prior = self.online_AR_update_error_states(mu_states_prior, var_states_prior)
+
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
         self.mu_obs_prior = mu_obs_pred
