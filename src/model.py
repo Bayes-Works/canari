@@ -277,29 +277,13 @@ class Model:
         )
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
+        cov_states = self.var_states_prior @ self.transition_matrix.T
         if "AR_error" in self.states_name:
-            self.ar_error_index = self.states_name.index("AR_error")
-            self.W2_index = self.states_name.index("W2")
-            self.W2bar_index = self.states_name.index("W2bar")
-            cov_states = self.var_states @ self.transition_matrix.T
-            # Set covariance between W and other states to zero
-            cov_states[self.ar_error_index, :] = np.zeros_like(
-                cov_states[self.ar_error_index, :]
-            )
-            cov_states[:, self.ar_error_index] = np.zeros_like(
-                cov_states[:, self.ar_error_index]
-            )
-            cov_states[self.W2_index, :] = np.zeros_like(cov_states[self.W2_index, :])
-            cov_states[:, self.W2_index] = np.zeros_like(cov_states[:, self.W2_index])
-            cov_states[self.W2bar_index, :] = np.zeros_like(
-                cov_states[self.W2bar_index, :]
-            )
-            cov_states[:, self.W2bar_index] = np.zeros_like(
-                cov_states[:, self.W2bar_index]
-            )
-            self.states.cov_states.append(cov_states)
-        else:
-            self.states.cov_states.append(self.var_states @ self.transition_matrix.T)
+            ar_error_index = self.states_name.index("AR_error")
+            ar_index = self.states_name.index("autoregression")
+            # Set covariance between W and AR to zero
+            cov_states[ar_error_index, ar_index] = 0
+        self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
 
