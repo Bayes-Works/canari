@@ -34,8 +34,8 @@ SKF_norm_to_abnorm_prob_fix = 1e-5
 
 def main(
     num_trial_optimization: int = 50,
-    param_tune: bool = True,
-    grid_search: bool = True,
+    param_tune: bool = False,
+    grid_search: bool = False,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -62,7 +62,14 @@ def main(
         train_split=0.4,
         validation_split=0.1,
         output_col=output_col,
+        normalization=False,
     )
+    (
+        data_processor.train_split,
+        data_processor.validation_split,
+        data_processor.test_split,
+        data_processor.all_data_split,
+    ) = data_processor.get_splits()
 
     # Define model
     def initialize_model(param):
@@ -116,22 +123,22 @@ def main(
     plot_data(
         data_processor=data_processor,
         normalization=True,
-        plot_test_data=False,
+        plot_test_data=True,
         plot_column=output_col,
-        validation_label="y",
+        test_label="y",
     )
-    plot_prediction(
-        data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
-        std_validation_pred=std_validation_preds,
-        validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    )
-    plot_states(
-        data_processor=data_processor,
-        states=states_optim,
-        states_to_plot=["local level"],
-        sub_plot=ax,
-    )
+    # plot_prediction(
+    #     data_processor=data_processor,
+    #     mean_validation_pred=mu_validation_preds,
+    #     std_validation_pred=std_validation_preds,
+    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    # )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=states_optim,
+    #     states_to_plot=["local level"],
+    #     sub_plot=ax,
+    # )
     plt.legend()
     plt.title("Validation predictions")
     plt.show()
@@ -172,8 +179,9 @@ def main(
         plot_test_data=False,
         plot_column=output_col,
     )
+    _, train_time, _, _ = data_processor.get_time()
     for ts in synthetic_anomaly_data:
-        plt.plot(data_processor.train_time, ts["y"])
+        plt.plot(train_time, ts["y"])
     plt.legend(
         ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
     )
@@ -190,8 +198,6 @@ def main(
             }
         else:
             skf_param = {
-                # "std_transition_error": [1e-5, 1e-2],
-                # "norm_to_abnorm_prob": [1e-5, 1e-2],
                 "std_transition_error": [1e-6, 1e-3],
                 "norm_to_abnorm_prob": [1e-6, 1e-3],
                 "slope": [slope_lower_bound, slope_upper_bound],
@@ -279,9 +285,10 @@ def training(model, data_processor, num_epoch: int = 50):
 
         validation_log_lik = metric.log_likelihood(
             prediction=mu_validation_preds_unnorm,
-            observation=data_processor.validation_data[
-                :, data_processor.output_col
-            ].flatten(),
+            observation=data_processor.data.iloc[
+                data_processor.validation_start : data_processor.validation_end,
+                data_processor.output_col,
+            ].values,
             std=std_validation_preds_unnorm,
         )
 

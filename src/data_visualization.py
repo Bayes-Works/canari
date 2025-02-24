@@ -27,9 +27,9 @@ def add_dynamic_grids(ax, time):
     end_date = time[-1]
     time_range = end_date - start_date
 
-    if time_range > np.timedelta64(10 * 365, "D"):  # More than 10 years
-        major_locator = YearLocator(3)  # Show major ticks every 5 years
-        minor_locator = YearLocator(1)  # Show minor ticks every year
+    if time_range > np.timedelta64(15 * 365, "D"):  # More than 15 years
+        major_locator = YearLocator(3)
+        minor_locator = YearLocator(1)
         major_formatter = DateFormatter("%Y")
     elif time_range > np.timedelta64(365, "D"):  # More than a year
         major_locator = YearLocator()
@@ -66,6 +66,7 @@ def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
     """
     Determine the appropriate time array based on the length of states.
     """
+
     if len_states == len(data_processor.time):
         return data_processor.time
     elif len_states == len(data_processor.train_time):
@@ -115,147 +116,173 @@ def plot_data(
     if plot_column is None:
         plot_column = data_processor.output_col
 
-    if plot_train_data and len(data_processor.train_time) > 0:
-        if normalization:
-            if plot_nan:
-                ax.plot(
-                    data_processor.train_time,
-                    data_processor.train_data_norm[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=train_label,
-                )
-            else:
-                mask = ~np.isnan(
-                    data_processor.train_data_norm[:, plot_column]
-                ).flatten()
-                ax.plot(
-                    data_processor.train_time[mask],
-                    data_processor.train_data_norm[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=train_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
-        else:
-            if plot_nan:
-                ax.plot(
-                    data_processor.train_time,
-                    data_processor.train_data[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=train_label,
-                )
-            else:
-                mask = ~np.isnan(data_processor.train_data[:, plot_column]).flatten()
-                ax.plot(
-                    data_processor.train_time[mask],
-                    data_processor.train_data[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=train_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
+    data_splits = data_processor.get_splits()
 
-    if plot_validation_data and len(data_processor.validation_time) > 0:
-        if normalization:
-            if plot_nan:
-                ax.plot(
-                    data_processor.validation_time,
-                    data_processor.validation_data_norm[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=validation_label,
-                )
-            else:
-                mask = ~np.isnan(
-                    data_processor.validation_data_norm[:, plot_column]
-                ).flatten()
-                ax.plot(
-                    data_processor.validation_time[mask],
-                    data_processor.validation_data_norm[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=validation_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
-        else:
-            if plot_nan:
-                ax.plot(
-                    data_processor.validation_time,
-                    data_processor.validation_data[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=validation_label,
-                )
-            else:
-                mask = ~np.isnan(
-                    data_processor.validation_data[:, plot_column]
-                ).flatten()
-                ax.plot(
-                    data_processor.validation_time[mask],
-                    data_processor.validation_data[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=validation_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
-        ax.axvspan(
-            data_processor.validation_time[0],
-            data_processor.validation_time[-1],
-            color="green",
-            alpha=0.1,
-            edgecolor=None,
-        )
+    for label, start, end, values, plot_flag in zip(
+        [train_label, validation_label, test_label],
+        [
+            data_processor.train_start,
+            data_processor.validation_start,
+            data_processor.test_start,
+        ],
+        [
+            data_processor.train_end,
+            data_processor.validation_end,
+            len(data_processor.data),
+        ],
+        data_splits[0:3],
+        [plot_train_data, plot_validation_data, plot_test_data],
+    ):
+        if plot_flag:
+            ax.plot(
+                data_processor.data.index[start:end],
+                values["y"],
+                label=label,
+                color=color,
+            )
 
-    if plot_test_data and len(data_processor.test_time) > 0:
-        if normalization:
-            if plot_nan:
-                ax.plot(
-                    data_processor.test_time,
-                    data_processor.test_data_norm[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=test_label,
-                )
-            else:
-                mask = ~np.isnan(
-                    data_processor.test_data_norm[:, plot_column]
-                ).flatten()
-                ax.plot(
-                    data_processor.test_time[mask],
-                    data_processor.test_data_norm[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=test_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
-        else:
-            if plot_nan:
-                ax.plot(
-                    data_processor.test_time,
-                    data_processor.test_data[:, plot_column],
-                    color=color,
-                    linestyle=linestyle,
-                    label=test_label,
-                )
-            else:
-                mask = ~np.isnan(data_processor.test_data[:, plot_column]).flatten()
-                ax.plot(
-                    data_processor.test_time[mask],
-                    data_processor.test_data[:, plot_column][mask],
-                    color=color,
-                    linestyle=linestyle,
-                    label=test_label,
-                )
-            add_dynamic_grids(ax, data_processor.train_time)
-        ax.axvspan(
-            data_processor.test_time[0],
-            data_processor.test_time[-1],
-            color="k",
-            alpha=0.1,
-            edgecolor=None,
-        )
+    ax.axvspan(
+        data_processor.data.index[data_processor.validation_start],
+        data_processor.data.index[data_processor.validation_end],
+        color="green",
+        alpha=0.1,
+        edgecolor=None,
+    )
+
+    # if plot_train_data and len(data_processor.train_time) > 0:
+    #     if normalization:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.train_time,
+    #                 data_processor.train_data_norm[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=train_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(
+    #                 data_processor.train_data_norm[:, plot_column]
+    #             ).flatten()
+    #             ax.plot(
+    #                 data_processor.train_time[mask],
+    #                 data_processor.train_data_norm[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=train_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+    #     else:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.train_time,
+    #                 data_processor.train_data[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=train_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(data_processor.train_data[:, plot_column]).flatten()
+    #             ax.plot(
+    #                 data_processor.train_time[mask],
+    #                 data_processor.train_data[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=train_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+
+    # if plot_validation_data and len(data_processor.validation_time) > 0:
+    #     if normalization:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.validation_time,
+    #                 data_processor.validation_data_norm[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=validation_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(
+    #                 data_processor.validation_data_norm[:, plot_column]
+    #             ).flatten()
+    #             ax.plot(
+    #                 data_processor.validation_time[mask],
+    #                 data_processor.validation_data_norm[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=validation_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+    #     else:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.validation_time,
+    #                 data_processor.validation_data[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=validation_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(
+    #                 data_processor.validation_data[:, plot_column]
+    #             ).flatten()
+    #             ax.plot(
+    #                 data_processor.validation_time[mask],
+    #                 data_processor.validation_data[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=validation_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+
+    # if plot_test_data and len(data_processor.test_time) > 0:
+    #     if normalization:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.test_time,
+    #                 data_processor.test_data_norm[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=test_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(
+    #                 data_processor.test_data_norm[:, plot_column]
+    #             ).flatten()
+    #             ax.plot(
+    #                 data_processor.test_time[mask],
+    #                 data_processor.test_data_norm[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=test_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+    #     else:
+    #         if plot_nan:
+    #             ax.plot(
+    #                 data_processor.test_time,
+    #                 data_processor.test_data[:, plot_column],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=test_label,
+    #             )
+    #         else:
+    #             mask = ~np.isnan(data_processor.test_data[:, plot_column]).flatten()
+    #             ax.plot(
+    #                 data_processor.test_time[mask],
+    #                 data_processor.test_data[:, plot_column][mask],
+    #                 color=color,
+    #                 linestyle=linestyle,
+    #                 label=test_label,
+    #             )
+    #         add_dynamic_grids(ax, data_processor.train_time)
+    #     ax.axvspan(
+    #         data_processor.test_time[0],
+    #         data_processor.test_time[-1],
+    #         color="k",
+    #         alpha=0.1,
+    #         edgecolor=None,
+    #     )
 
 
 def plot_prediction(
