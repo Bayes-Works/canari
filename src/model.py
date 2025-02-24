@@ -519,18 +519,18 @@ class Model:
         """
         RTS smoother
         """
-        var_prior_modified = copy.deepcopy(self.states.var_prior[time_step + 1])
-        if "AR_error" in self.states_name:
-            ar_error_index = self.states_name.index("AR_error")
-            ar_index = self.states_name.index("autoregression")
-            var_prior_modified[ar_index, ar_error_index] = 0
-            var_prior_modified[ar_error_index, ar_index] = 0
+        # var_prior_modified = copy.deepcopy(self.states.var_prior[time_step + 1])
+        # if "AR_error" in self.states_name:
+        #     ar_error_index = self.states_name.index("AR_error")
+        #     ar_index = self.states_name.index("autoregression")
+        #     var_prior_modified[ar_index, ar_error_index] = 0
+        #     var_prior_modified[ar_error_index, ar_index] = 0
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
         ) = common.rts_smoother(
             self.states.mu_prior[time_step + 1],
-            var_prior_modified,
+            self.states.var_prior[time_step + 1],
             self.states.mu_smooth[time_step + 1],
             self.states.var_smooth[time_step + 1],
             self.states.mu_posterior[time_step],
