@@ -50,9 +50,6 @@ class Autoregression(BaseComponent):
                 [[self._transition_matrix, np.zeros((self.num_states - 3, 3))],
                  [np.zeros((3, self.num_states))]]
             )
-            self._transition_matrix[-1, -1] = 1
-            self._transition_matrix[-2, -2] = 1
-            self._transition_matrix[-3, -3] = 1
 
     def initialize_observation_matrix(self):
         self._observation_matrix = np.array([[1]])
