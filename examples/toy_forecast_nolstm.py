@@ -83,7 +83,7 @@ model = Model(
 # # #
 model.filter(data=train_data)
 model.smoother(data=train_data)
-mu_validation_preds, std_validation_preds = model.forecast(validation_data)
+# mu_validation_preds, std_validation_preds = model.forecast(validation_data)
 
 #  Plot
 
@@ -92,17 +92,17 @@ plot_data(
     plot_column=output_col,
     validation_label="y",
 )
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds,
+#     std_validation_pred=std_validation_preds,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+# )
 plt.legend(loc="upper left")  # Change "upper right" to your desired location
 plot_states(
     data_processor=data_processor,
     states=model.states,
-    states_type="prior",
+    states_type="smooth",
     # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
 )
 plt.show()
