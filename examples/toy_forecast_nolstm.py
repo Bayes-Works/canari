@@ -42,7 +42,7 @@ train_data, validation_data, _, _ = data_processor.get_splits()
 
 # Components
 sigma_v = np.sqrt(1e-6)
-local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
+local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-3, 1e-6], std_error=0)
 # local_trend = LocalTrend(mu_states=[10, 0.0], var_states=[25, 1e-12], std_error=0)
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
 # # Case 1: regular AR, with process error and phi provided
@@ -75,7 +75,7 @@ model = Model(
     local_trend,
     periodic,
     AR,
-    noise,
+    # noise,
 )
 
 # # #

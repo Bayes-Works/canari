@@ -280,9 +280,8 @@ class Model:
         cov_states = self.var_states @ self.transition_matrix.T
         if "AR_error" in self.states_name:
             ar_error_index = self.states_name.index("AR_error")
-            ar_index = self.states_name.index("autoregression")
-            # Set covariance between W and AR to zero
-            cov_states[ar_error_index, ar_index] = 0
+            # Set covariance between W and other states to zero
+            cov_states[ar_error_index, :] = 0
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
@@ -349,7 +348,7 @@ class Model:
         if "AR_error" in self.states_name:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
-    def online_AR_update_error_states(self, mu_states_prior, var_states_prior) -> None:
+    def online_AR_overwrite_error_states(self, mu_states_prior, var_states_prior):
         ar_index = self.states_name.index("autoregression")
         ar_error_index = self.states_name.index("AR_error")
         W2_index = self.states_name.index("W2")
@@ -463,7 +462,7 @@ class Model:
         )
 
         if "AR_error" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_update_error_states(mu_states_prior, var_states_prior)
+            mu_states_prior, var_states_prior = self.online_AR_overwrite_error_states(mu_states_prior, var_states_prior)
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -519,18 +518,12 @@ class Model:
         """
         RTS smoother
         """
-        var_prior_modified = copy.deepcopy(self.states.var_prior[time_step + 1])
-        # if "AR_error" in self.states_name:
-        #     ar_error_index = self.states_name.index("AR_error")
-        #     ar_index = self.states_name.index("autoregression")
-        #     var_prior_modified[ar_index, ar_error_index] = 0
-        #     var_prior_modified[ar_error_index, ar_index] = 0
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
         ) = common.rts_smoother(
             self.states.mu_prior[time_step + 1],
-            var_prior_modified,
+            self.states.var_prior[time_step + 1],
             self.states.mu_smooth[time_step + 1],
             self.states.var_smooth[time_step + 1],
             self.states.mu_posterior[time_step],
