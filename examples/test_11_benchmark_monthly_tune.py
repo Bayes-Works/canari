@@ -24,21 +24,21 @@ from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 
-# Fix parameters grid search
-sigma_v_fix = 0.0406308676223954
-look_back_len_fix = 6
-SKF_std_transition_error_fix = 0.00027787741941732807
-SKF_norm_to_abnorm_prob_fix = 0.0009565962418674387
+# Fix parameters
+# sigma_v_fix = 0.07794148385711136
+# look_back_len_fix = 6
+# SKF_std_transition_error_fix = 0.0002876702842607609
+# SKF_norm_to_abnorm_prob_fix = 6.221328051970482e-05
 
 # Fix parameters
-# sigma_v_fix = 0.3819414484717393
-# look_back_len_fix = 12
-# SKF_std_transition_error_fix = 0.000966524465635005
-# SKF_norm_to_abnorm_prob_fix = 0.00030791478102889456
+sigma_v_fix = 0.0747805401245962
+look_back_len_fix = 6
+SKF_std_transition_error_fix = 1e-4
+SKF_norm_to_abnorm_prob_fix = 1e-5
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 40,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
@@ -108,30 +108,30 @@ def main(
     model_optim_dict = model_optim.save_model_dict()
 
     # Plot
-    # fig, ax = plt.subplots(figsize=(10, 6))
-    # plot_data(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     plot_test_data=False,
-    #     plot_column=output_col,
-    #     validation_label="y",
-    #     plot_nan=False,
-    # )
-    # plot_prediction(
-    #     data_processor=data_processor,
-    #     mean_validation_pred=mu_validation_preds,
-    #     std_validation_pred=std_validation_preds,
-    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    # )
-    # plot_states(
-    #     data_processor=data_processor,
-    #     states=states_optim,
-    #     states_to_plot=["local level"],
-    #     sub_plot=ax,
-    # )
-    # plt.legend()
-    # plt.title("Validation predictions")
-    # plt.show()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_test_data=False,
+        plot_column=output_col,
+        validation_label="y",
+        plot_nan=False,
+    )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    )
+    plot_states(
+        data_processor=data_processor,
+        states=states_optim,
+        states_to_plot=["local level"],
+        sub_plot=ax,
+    )
+    plt.legend()
+    plt.title("Validation predictions")
+    plt.show()
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
@@ -156,27 +156,28 @@ def main(
     # Define parameter search space
     slope_upper_bound = 2e-1
     slope_lower_bound = 1e-2
+
     # # Plot synthetic anomaly
-    # synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-    #     data_processor.train_split,
-    #     num_samples=1,
-    #     slope=[slope_lower_bound, slope_upper_bound],
-    # )
-    # plot_data(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     plot_validation_data=False,
-    #     plot_test_data=False,
-    #     plot_column=output_col,
-    #     plot_nan=False,
-    # )
-    # for ts in synthetic_anomaly_data:
-    #     plt.plot(data_processor.train_time, ts["y"])
-    # plt.legend(
-    #     ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
-    # )
-    # plt.title("Train data with added synthetic anomalies")
-    # plt.show()
+    synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+        data_processor.train_split,
+        num_samples=1,
+        slope=[slope_lower_bound, slope_upper_bound],
+    )
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_validation_data=False,
+        plot_test_data=False,
+        plot_column=output_col,
+        plot_nan=False,
+    )
+    for ts in synthetic_anomaly_data:
+        plt.plot(data_processor.train_time, ts["y"])
+    plt.legend(
+        ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
+    )
+    plt.title("Train data with added synthetic anomalies")
+    plt.show()
 
     if param_tune:
         if grid_search:
@@ -210,11 +211,6 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
-        detection_rate, false_rate = skf_optim.detect_synthetic_anomaly(
-            data=data_processor.train_split,
-            num_anomaly=10,
-            slope_anomaly=2e-2,
-        )
 
     # Detect anomaly
     skf_optim.load_initial_states()
