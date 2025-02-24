@@ -277,7 +277,7 @@ class Model:
         )
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
-        cov_states = self.var_states_prior @ self.transition_matrix.T
+        cov_states = self.var_states @ self.transition_matrix.T
         if "AR_error" in self.states_name:
             ar_error_index = self.states_name.index("AR_error")
             ar_index = self.states_name.index("autoregression")
@@ -345,11 +345,6 @@ class Model:
                 index2=ar_index,
                 replace_index=ar_index,
             ).get_results()
-
-            # Cap phi_AR if it is bigger than 1: for numerical stability in BAR later
-            self.mu_states[phi_index] = (
-                0.9999 if self.mu_states[phi_index] >= 1 else self.mu_states[phi_index]
-            )
 
         if "AR_error" in self.states_name:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
@@ -524,13 +519,18 @@ class Model:
         """
         RTS smoother
         """
-
+        var_prior_modified = copy.deepcopy(self.states.var_prior[time_step + 1])
+        if "AR_error" in self.states_name:
+            ar_error_index = self.states_name.index("AR_error")
+            ar_index = self.states_name.index("autoregression")
+            var_prior_modified[ar_index, ar_error_index] = 0
+            var_prior_modified[ar_error_index, ar_index] = 0
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
         ) = common.rts_smoother(
             self.states.mu_prior[time_step + 1],
-            self.states.var_prior[time_step + 1],
+            var_prior_modified,
             self.states.mu_smooth[time_step + 1],
             self.states.var_smooth[time_step + 1],
             self.states.mu_posterior[time_step],
