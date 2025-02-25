@@ -67,7 +67,7 @@ def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
     """
     Determine the appropriate time array based on the length of states.
     """
-    train_index, val_index, _ = data_processor.generate_split_indices()
+    train_index, val_index, _ = data_processor.get_split_indices()
     if len_states == len(data_processor.data):
         return data_processor.data.index.to_numpy()
     elif len_states == len(train_index):
@@ -130,7 +130,7 @@ def plot_data(
 
     labels = [train_label, validation_label, test_label]
     plot_flags = [plot_train_data, plot_validation_data, plot_test_data]
-    split_indices = list(data_processor.generate_split_indices())
+    split_indices = list(data_processor.get_split_indices())
     total_time = []
 
     for plot_flag, index, label in zip(plot_flags, split_indices, labels):
@@ -183,7 +183,7 @@ def plot_prediction(
     else:
         ax = sub_plot
 
-    split_indices = list(data_processor.generate_split_indices())
+    split_indices = list(data_processor.get_split_indices())
     mean_values = [mean_train_pred, mean_validation_pred, mean_test_pred]
     std_values = [std_train_pred, std_validation_pred, std_test_pred]
     labels = [train_label, validation_label, test_label]
