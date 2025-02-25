@@ -43,7 +43,7 @@ class DataProcess:
         self.norm_const_mean, self.norm_const_std = None, None
 
         self.add_time_covariates()
-        self.get_split_indices()
+        self.get_split_start_end_indices()
         self.compute_normalization_constants()
 
         # Covariates columns
@@ -68,7 +68,7 @@ class DataProcess:
                 elif time_cov == "quarter_of_year":
                     self.data["quarter"] = self.data.index.quarter
 
-    def get_split_indices(self):
+    def get_split_start_end_indices(self):
         """Get indices for train, validation, and test sets"""
 
         num_data = len(self.data)
@@ -126,6 +126,14 @@ class DataProcess:
             else self.data.values
         )
 
+    def get_split_indices(self) -> Tuple[np.array, np.array, np.array]:
+        """Get train, validation, and test indices"""
+
+        train_index = np.arange(self.train_start, self.train_end)
+        validation_index = np.arange(self.validation_start, self.validation_end)
+        test_index = np.arange(self.test_start, self.test_end)
+        return train_index, validation_index, test_index
+
     def get_splits(
         self,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
@@ -157,23 +165,44 @@ class DataProcess:
             },
         )
 
-    # TODO: output type
-    def get_time(self):
-        all_time = self.data.index
-        train_time = self.data.iloc[self.train_start : self.train_end].index
-        validation_time = self.data.iloc[
-            self.validation_start : self.validation_end,
-        ].index
-        test_time = self.data.iloc[self.test_start :,].index
-        return train_time, validation_time, test_time, all_time
+    def get_data(self, split: str, normalization: Optional[bool] = False) -> np.ndarray:
+        """Data getter"""
 
-    def generate_split_indices(self):
-        """Get train, validation, and test indices"""
+        if normalization:
+            data = self.normalize_data()
+        else:
+            data = self.data.values
 
-        train_index = np.arange(self.train_start, self.train_end)
-        validation_index = np.arange(self.validation_start, self.validation_end)
-        test_index = np.arange(self.test_start, self.test_end)
-        return train_index, validation_index, test_index
+        train_index, val_index, test_index = self.get_split_indices()
+        if split == "train":
+            return data[train_index, self.output_col]
+        elif split == "validation":
+            return data[val_index, self.output_col]
+        elif split == "test":
+            return data[test_index, self.output_col]
+        elif split == "all":
+            return data[:, self.output_col]
+        else:
+            raise ValueError(
+                "Invalid split type. Choose from 'train', 'validation', 'test', or 'all'."
+            )
+
+    def get_time(self, split: str) -> np.ndarray:
+        """Time gettter"""
+
+        train_index, val_index, test_index = self.get_split_indices()
+        if split == "train":
+            return self.data.index[train_index].to_numpy()
+        elif split == "validation":
+            return self.data.index[val_index].to_numpy()
+        elif split == "test":
+            return self.data.index[test_index].to_numpy()
+        elif split == "all":
+            return self.data.index.to_numpy()
+        else:
+            raise ValueError(
+                "Invalid split type. Choose from 'train', 'validation', 'test', or 'all'."
+            )
 
     @staticmethod
     def add_lagged_columns(df, lags_per_column):
@@ -207,16 +236,16 @@ class DataProcess:
 
     @staticmethod
     def add_synthetic_anomaly(
-        time_series: Dict[str, np.ndarray],
+        data: Dict[str, np.ndarray],
         num_samples: int,
         slope: list[float],
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ):
-        _time_series_with_anomaly = []
-        len_time_series = len(time_series["y"])
-        window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
-        window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
+        _data_with_anomaly = []
+        len_data = len(data["y"])
+        window_anomaly_start = int(np.ceil(len_data * anomaly_start))
+        window_anomaly_end = int(np.ceil(len_data * anomaly_end))
         # np.random.seed(1)
         anomaly_start_history = np.random.randint(
             window_anomaly_start, window_anomaly_end, size=num_samples * len(slope)
@@ -224,22 +253,22 @@ class DataProcess:
 
         for j, _slope in enumerate(slope):
             for i in range(0, num_samples):
-                trend = np.zeros(len_time_series)
+                trend = np.zeros(len_data)
                 change_point = anomaly_start_history[i + j * num_samples]
-                trend_end_value = _slope * (len_time_series - change_point - 1)
+                trend_end_value = _slope * (len_data - change_point - 1)
                 trend[change_point:] = np.linspace(
-                    0, trend_end_value, len_time_series - change_point
+                    0, trend_end_value, len_data - change_point
                 )
 
                 # Add the trend to the original time series
-                _time_series_with_anomaly.append(time_series["y"].flatten() + trend)
+                _data_with_anomaly.append(data["y"].flatten() + trend)
 
-        time_series_with_anomaly = [
+        data_with_anomaly = [
             {
-                "x": time_series["x"],
+                "x": data["x"],
                 "y": ts.reshape(-1, 1),
                 "anomaly_timestep": timestep,
             }
-            for ts, timestep in zip(_time_series_with_anomaly, anomaly_start_history)
+            for ts, timestep in zip(_data_with_anomaly, anomaly_start_history)
         ]
-        return time_series_with_anomaly
+        return data_with_anomaly

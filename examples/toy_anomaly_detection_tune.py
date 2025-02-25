@@ -167,7 +167,7 @@ def main(
 
     # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_split,
+        data_processor.train_data,
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
@@ -178,7 +178,7 @@ def main(
         plot_test_data=False,
         plot_column=output_col,
     )
-    train_time, _, _, _ = data_processor.get_time()
+    train_time = data_processor.get_time("train")
     for ts in synthetic_anomaly_data:
         plt.plot(train_time, ts["y"])
     plt.legend(
@@ -283,12 +283,10 @@ def training(model, data_processor, num_epoch: int = 50):
             data_processor.norm_const_std[data_processor.output_col],
         )
 
+        validation_obs = data_processor.get_data("validation").flatten()
         validation_log_lik = metric.log_likelihood(
             prediction=mu_validation_preds_unnorm,
-            observation=data_processor.data.iloc[
-                data_processor.validation_start : data_processor.validation_end,
-                data_processor.output_col,
-            ].values,
+            observation=validation_obs,
             std=std_validation_preds_unnorm,
         )
 
