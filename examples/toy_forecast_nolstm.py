@@ -46,6 +46,7 @@ local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1, 1e-6], std_error=0)
 # local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
 # local_trend = LocalTrend(mu_states=[10, 0.0], var_states=[25, 1e-12], std_error=0)
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
+
 # # Case 1: regular AR, with process error and phi provided
 # AR = Autoregression(std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05])
 
