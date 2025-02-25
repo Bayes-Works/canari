@@ -33,7 +33,7 @@ SKF_norm_to_abnorm_prob_fix = 1e-5
 
 
 def main(
-    num_trial_optimization: int = 50,
+    num_trial_optimization: int = 20,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
@@ -62,7 +62,7 @@ def main(
         train_split=0.4,
         validation_split=0.1,
         output_col=output_col,
-        normalization=False,
+        normalization=True,
     )
     (
         data_processor.train_split,
@@ -123,22 +123,22 @@ def main(
     plot_data(
         data_processor=data_processor,
         normalization=True,
-        plot_test_data=True,
+        plot_test_data=False,
         plot_column=output_col,
         test_label="y",
     )
-    # plot_prediction(
-    #     data_processor=data_processor,
-    #     mean_validation_pred=mu_validation_preds,
-    #     std_validation_pred=std_validation_preds,
-    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    # )
-    # plot_states(
-    #     data_processor=data_processor,
-    #     states=states_optim,
-    #     states_to_plot=["local level"],
-    #     sub_plot=ax,
-    # )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    )
+    plot_states(
+        data_processor=data_processor,
+        states=states_optim,
+        states_to_plot=["local level"],
+        sub_plot=ax,
+    )
     plt.legend()
     plt.title("Validation predictions")
     plt.show()
@@ -166,7 +166,7 @@ def main(
     slope_upper_bound = 5e-2
     slope_lower_bound = 1e-3
 
-    # # Plot synthetic anomaly
+    # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
         data_processor.train_split,
         num_samples=1,
@@ -179,13 +179,12 @@ def main(
         plot_test_data=False,
         plot_column=output_col,
     )
-    _, train_time, _, _ = data_processor.get_time()
+    train_time, _, _, _ = data_processor.get_time()
     for ts in synthetic_anomaly_data:
         plt.plot(train_time, ts["y"])
     plt.legend(
         ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
     )
-    # plt.legend()
     plt.title("Train data with added synthetic anomalies")
     plt.show()
 

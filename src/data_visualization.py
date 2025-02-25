@@ -12,6 +12,7 @@ from matplotlib.dates import (
     HourLocator,
     DateFormatter,
 )
+import pandas as pd
 
 
 def add_dynamic_grids(ax, time):
@@ -66,14 +67,18 @@ def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
     """
     Determine the appropriate time array based on the length of states.
     """
-
-    if len_states == len(data_processor.time):
-        return data_processor.time
-    elif len_states == len(data_processor.train_time):
-        return data_processor.train_time
+    train_index, val_index, _ = data_processor.generate_split_indices()
+    if len_states == len(data_processor.data):
+        return data_processor.data.index.to_numpy()
+    elif len_states == len(train_index):
+        return data_processor.data.index[train_index].to_numpy()
     else:
         return np.concatenate(
-            [data_processor.train_time, data_processor.validation_time], axis=0
+            [
+                data_processor.data.index[train_index].to_numpy(),
+                data_processor.data.index[val_index].to_numpy(),
+            ],
+            axis=0,
         )
 
 
@@ -108,6 +113,8 @@ def plot_data(
     test_label: Optional[str] = None,
     plot_nan: Optional[bool] = True,
 ):
+    """Plot train, validation, and test data with normalization and NaN filtering"""
+
     if sub_plot is None:
         ax = plt.gca()
     else:
@@ -116,30 +123,32 @@ def plot_data(
     if plot_column is None:
         plot_column = data_processor.output_col
 
-    data_splits = data_processor.get_splits()
+    if normalization:
+        data = data_processor.normalize_data()
+    else:
+        data = data_processor.data.values
 
-    for label, start, end, values, plot_flag in zip(
-        [train_label, validation_label, test_label],
-        [
-            data_processor.train_start,
-            data_processor.validation_start,
-            data_processor.test_start,
-        ],
-        [
-            data_processor.train_end,
-            data_processor.validation_end,
-            len(data_processor.data),
-        ],
-        data_splits[0:3],
-        [plot_train_data, plot_validation_data, plot_test_data],
-    ):
+    labels = [train_label, validation_label, test_label]
+    plot_flags = [plot_train_data, plot_validation_data, plot_test_data]
+    split_indices = list(data_processor.generate_split_indices())
+    total_time = []
+
+    for plot_flag, index, label in zip(plot_flags, split_indices, labels):
         if plot_flag:
-            ax.plot(
-                data_processor.data.index[start:end],
-                values["y"],
-                label=label,
-                color=color,
-            )
+            data_plot = data[index, plot_column]
+            time = data_processor.data.index[index]
+            total_time.extend(list(time))
+            if not plot_nan:
+                mask = ~np.isnan(data).flatten()
+                ax.plot(
+                    time[mask],
+                    data_plot[mask],
+                    label=label,
+                    color=color,
+                    linestyle=linestyle,
+                )
+            else:
+                ax.plot(time, data_plot, label=label, color=color, linestyle=linestyle)
 
     ax.axvspan(
         data_processor.data.index[data_processor.validation_start],
@@ -148,141 +157,7 @@ def plot_data(
         alpha=0.1,
         edgecolor=None,
     )
-
-    # if plot_train_data and len(data_processor.train_time) > 0:
-    #     if normalization:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.train_time,
-    #                 data_processor.train_data_norm[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=train_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(
-    #                 data_processor.train_data_norm[:, plot_column]
-    #             ).flatten()
-    #             ax.plot(
-    #                 data_processor.train_time[mask],
-    #                 data_processor.train_data_norm[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=train_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-    #     else:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.train_time,
-    #                 data_processor.train_data[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=train_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(data_processor.train_data[:, plot_column]).flatten()
-    #             ax.plot(
-    #                 data_processor.train_time[mask],
-    #                 data_processor.train_data[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=train_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-
-    # if plot_validation_data and len(data_processor.validation_time) > 0:
-    #     if normalization:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.validation_time,
-    #                 data_processor.validation_data_norm[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=validation_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(
-    #                 data_processor.validation_data_norm[:, plot_column]
-    #             ).flatten()
-    #             ax.plot(
-    #                 data_processor.validation_time[mask],
-    #                 data_processor.validation_data_norm[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=validation_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-    #     else:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.validation_time,
-    #                 data_processor.validation_data[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=validation_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(
-    #                 data_processor.validation_data[:, plot_column]
-    #             ).flatten()
-    #             ax.plot(
-    #                 data_processor.validation_time[mask],
-    #                 data_processor.validation_data[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=validation_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-
-    # if plot_test_data and len(data_processor.test_time) > 0:
-    #     if normalization:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.test_time,
-    #                 data_processor.test_data_norm[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=test_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(
-    #                 data_processor.test_data_norm[:, plot_column]
-    #             ).flatten()
-    #             ax.plot(
-    #                 data_processor.test_time[mask],
-    #                 data_processor.test_data_norm[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=test_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-    #     else:
-    #         if plot_nan:
-    #             ax.plot(
-    #                 data_processor.test_time,
-    #                 data_processor.test_data[:, plot_column],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=test_label,
-    #             )
-    #         else:
-    #             mask = ~np.isnan(data_processor.test_data[:, plot_column]).flatten()
-    #             ax.plot(
-    #                 data_processor.test_time[mask],
-    #                 data_processor.test_data[:, plot_column][mask],
-    #                 color=color,
-    #                 linestyle=linestyle,
-    #                 label=test_label,
-    #             )
-    #         add_dynamic_grids(ax, data_processor.train_time)
-    #     ax.axvspan(
-    #         data_processor.test_time[0],
-    #         data_processor.test_time[-1],
-    #         color="k",
-    #         alpha=0.1,
-    #         edgecolor=None,
-    #     )
+    add_dynamic_grids(ax, total_time)
 
 
 def plot_prediction(
@@ -301,52 +176,42 @@ def plot_prediction(
     validation_label: Optional[List[str]] = ["", ""],
     test_label: Optional[List[str]] = ["", ""],
 ):
+    """Plot mean and standard deviation for predictions"""
+
     if sub_plot is None:
         ax = plt.gca()
     else:
         ax = sub_plot
 
-    if mean_train_pred is not None:
-        plot_with_uncertainty(
-            time=data_processor.train_time,
-            mu=mean_train_pred,
-            std=std_train_pred,
-            num_std=num_std,
-            color=color,
-            linestyle=linestyle,
-            ax=ax,
-            label=train_label,
-        )
+    split_indices = list(data_processor.generate_split_indices())
+    mean_values = [mean_train_pred, mean_validation_pred, mean_test_pred]
+    std_values = [std_train_pred, std_validation_pred, std_test_pred]
+    labels = [train_label, validation_label, test_label]
+    total_time = []
 
-    if mean_validation_pred is not None:
-        plot_with_uncertainty(
-            time=data_processor.validation_time,
-            mu=mean_validation_pred,
-            std=std_validation_pred,
-            num_std=num_std,
-            color=color,
-            linestyle=linestyle,
-            ax=ax,
-            label=validation_label,
-        )
-
-    if mean_test_pred is not None:
-        plot_with_uncertainty(
-            time=data_processor.test_time,
-            mu=mean_test_pred,
-            std=std_test_pred,
-            num_std=num_std,
-            color=color,
-            linestyle=linestyle,
-            ax=ax,
-            label=test_label,
-        )
+    for index, mean_value, std_value, label in zip(
+        split_indices, mean_values, std_values, labels
+    ):
+        if mean_value is not None:
+            time = data_processor.data.index[index]
+            total_time.extend(list(time))
+            plot_with_uncertainty(
+                time=time,
+                mu=mean_value,
+                std=std_value,
+                num_std=num_std,
+                color=color,
+                linestyle=linestyle,
+                ax=ax,
+                label=label,
+            )
+    add_dynamic_grids(ax, total_time)
 
 
 def plot_states(
     data_processor: DataProcess,
     states: StatesHistory,
-    states_to_plot: Optional[list[str]] = ["all"],
+    states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
@@ -354,6 +219,8 @@ def plot_states(
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
 ):
+    """Plot hidden states"""
+
     # Time determination
     len_states = len(states.mu_prior)
     time = determine_time(data_processor, len_states)
@@ -361,7 +228,7 @@ def plot_states(
     # Mean and variance selection based on states_type
     mu_plot, var_plot = get_mu_and_variance(states, states_type)
 
-    if states_to_plot == ["all"]:
+    if states_to_plot == "all":
         states_to_plot = states.states_name
 
     # Create new figure or use predefined subplot
@@ -416,7 +283,7 @@ def plot_skf_states(
     data_processor: DataProcess,
     states: StatesHistory,
     model_prob: np.ndarray,
-    states_to_plot: Optional[list[str]] = ["all"],
+    states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     color: Optional[str] = "k",
@@ -424,6 +291,8 @@ def plot_skf_states(
     legend_location: Optional[str] = None,
     plot_nan: Optional[bool] = True,
 ):
+    """Plot hidden states along with probability of regime switch"""
+
     # Time determination
     len_states = len(states.mu_prior)
     time = determine_time(data_processor, len_states)
@@ -431,7 +300,7 @@ def plot_skf_states(
     # Mean and variance selection based on states_type
     mu_plot, var_plot = get_mu_and_variance(states, states_type)
 
-    if states_to_plot == ["all"]:
+    if states_to_plot == "all":
         states_to_plot = states.states_name
 
     fig, axes = plt.subplots(len(states_to_plot) + 1, 1, figsize=(10, 8))
@@ -479,7 +348,7 @@ def plot_skf_states(
         )
 
     # Plot abnormal model probability
-    axes[len(states_to_plot)].plot(data_processor.time, model_prob, color="b")
+    axes[len(states_to_plot)].plot(time, model_prob, color="b")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
     add_dynamic_grids(axes[len(states_to_plot)], time)
     axes[len(states_to_plot)].set_ylim(-0.02, 1)
@@ -503,6 +372,7 @@ def plot_with_uncertainty(
     num_std: Optional[int] = 1,
     ax: Optional[plt.Axes] = None,
 ):
+    """Plot mean and std"""
 
     if index is not None:
         mu_plot = mu[:, index]
