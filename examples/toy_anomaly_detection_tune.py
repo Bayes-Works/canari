@@ -62,13 +62,12 @@ def main(
         train_split=0.4,
         validation_split=0.1,
         output_col=output_col,
-        normalization=True,
     )
     (
-        data_processor.train_split,
-        data_processor.validation_split,
-        data_processor.test_split,
-        data_processor.all_data_split,
+        data_processor.train_data,
+        data_processor.validation_data,
+        data_processor.test_data,
+        data_processor.all_data,
     ) = data_processor.get_splits()
 
     # Define model
@@ -223,9 +222,7 @@ def main(
 
     # Detect anomaly
     skf_optim.load_initial_states()
-    filter_marginal_abnorm_prob, states = skf_optim.filter(
-        data=data_processor.all_data_split
-    )
+    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -238,8 +235,12 @@ def main(
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
 
-    print("Model parameters used:", model_optimizer.param_optim)
-    print("SKF model parameters used:", skf_optimizer.param_optim)
+    if param_tune:
+        print("Model parameters used:", model_optimizer.param_optim)
+        print("SKF model parameters used:", skf_optimizer.param_optim)
+    else:
+        print("Model parameters used:", param)
+        print("SKF model parameters used:", skf_param)
     print("-----")
 
 
@@ -248,7 +249,7 @@ def training(model, data_processor, num_epoch: int = 50):
     Training procedure
     """
 
-    model.auto_initialize_baseline_states(data_processor.train_split["y"][0:23])
+    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:23])
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error
@@ -267,8 +268,8 @@ def training(model, data_processor, num_epoch: int = 50):
         model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
         mu_validation_preds, std_validation_preds, states = model.lstm_train(
-            train_data=data_processor.train_split,
-            validation_data=data_processor.validation_split,
+            train_data=data_processor.train_data,
+            validation_data=data_processor.validation_data,
         )
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
