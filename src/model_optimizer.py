@@ -1,8 +1,7 @@
-import logging
+from typing import Callable, Optional
 from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
-from typing import Callable, Optional
 from examples.data_process import DataProcess
 
 
