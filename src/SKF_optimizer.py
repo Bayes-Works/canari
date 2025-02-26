@@ -26,15 +26,15 @@ class CustomLogger(Callback):
 
 class SKFOptimizer:
     """
-    Parameter optimization for model.py
+    Parameter optimization for model_param.py
     """
 
     def __init__(
         self,
         initialize_skf: Callable,
-        model: dict,
+        model_param: dict,
         param_space: dict,
-        data_processor: DataProcess,
+        data: dict,
         detection_threshold: Optional[float] = 0.5,
         false_rate_threshold: Optional[float] = 0.0,
         num_synthetic_anomaly: Optional[int] = 50,
@@ -42,9 +42,9 @@ class SKFOptimizer:
         grid_search: Optional[bool] = False,
     ):
         self.initialize_skf = initialize_skf
-        self.model = model
+        self.model_param = model_param
         self.param_space = param_space
-        self.data_processor = data_processor
+        self.data = data
         self.detection_threshold = detection_threshold
         self.false_rate_threshold = false_rate_threshold
         self.num_optimization_trial = num_optimization_trial
@@ -61,14 +61,14 @@ class SKFOptimizer:
         # Function for optimization
         def objective(
             config,
-            model_param: dict,
+            model_param_param: dict,
         ):
-            skf = self.initialize_skf(config, model_param)
+            skf = self.initialize_skf(config, model_param_param)
             slope = config["slope"]
 
             detection_rate, false_rate, false_alarm_train = (
                 skf.detect_synthetic_anomaly(
-                    data=self.data_processor.train_split,
+                    data=self.data,
                     num_anomaly=self.num_synthetic_anomaly,
                     slope_anomaly=slope,
                 )
@@ -104,7 +104,7 @@ class SKFOptimizer:
             optimizer_runner = tune.run(
                 tune.with_parameters(
                     objective,
-                    model_param=self.model,
+                    model_param_param=self.model_param,
                 ),
                 config=search_config,
                 name="SKF_optimizer",
@@ -138,7 +138,7 @@ class SKFOptimizer:
             optimizer_runner = tune.run(
                 tune.with_parameters(
                     objective,
-                    model_param=self.model,
+                    model_param_param=self.model_param,
                 ),
                 config=search_config,
                 search_alg=OptunaSearch(metric="metric", mode="min"),
@@ -157,7 +157,7 @@ class SKFOptimizer:
         )
 
         # Get the optimal skf
-        self.skf_optim = self.initialize_skf(self.param_optim, self.model)
+        self.skf_optim = self.initialize_skf(self.param_optim, self.model_param)
 
         # Print optimal parameters
         print("-----")
@@ -166,6 +166,6 @@ class SKFOptimizer:
 
     def get_best_model(self):
         """
-        Obtain optim model
+        Obtain optim model_param
         """
         return self.skf_optim

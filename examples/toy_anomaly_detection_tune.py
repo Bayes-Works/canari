@@ -26,16 +26,16 @@ from pytagi import Normalizer as normalizer
 
 
 # Fix parameters grid search
-sigma_v_fix = 0.007701835186574768
-look_back_len_fix = 19
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-5
+sigma_v_fix = 0.03490433808132023
+look_back_len_fix = 10
+SKF_std_transition_error_fix = 0.0006592917968263638
+SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
 
 
 def main(
-    num_trial_optimization: int = 20,
-    param_tune: bool = False,
-    grid_search: bool = False,
+    num_trial_optimization: int = 30,
+    param_tune: bool = True,
+    grid_search: bool = True,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -203,9 +203,9 @@ def main(
         # Define optimizer
         skf_optimizer = SKFOptimizer(
             initialize_skf=initialize_skf,
-            model=model_optim_dict,
+            model_param=model_optim_dict,
             param_space=skf_param,
-            data_processor=data_processor,
+            data=data_processor.train_data,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,
@@ -231,6 +231,11 @@ def main(
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",
+    )
+    ax[0].axvline(
+        x=data_processor.data.index[time_anomaly],
+        color="r",
+        linestyle="--",
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
