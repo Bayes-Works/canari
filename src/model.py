@@ -279,7 +279,7 @@ class Model:
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
         if "AR_error" in self.states_name:
-            cov_states = self.set_zeros_var_ar_error_states(cov_states)
+            cov_states = self.set_zeros_cov_ar_error_states(cov_states)
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
@@ -419,7 +419,7 @@ class Model:
         RTS smoother
         """
         if "AR_error" in self.states_name:
-            var_prior = self.set_zeros_var_ar_error_states(
+            var_prior = self.set_zeros_cov_ar_error_states(
                 self.states.var_prior[time_step + 1]
             )
         else:
@@ -711,8 +711,10 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def set_zeros_var_ar_error_states(self, var_original):
+    def set_zeros_cov_ar_error_states(self, var_original):
         var_prior_modified = copy.deepcopy(var_original)
+        # Keep the diagonal elements
+        diag = np.diag(var_original)
         if "AR_error" in self.states_name:
             ar_error_index = self.states_name.index("AR_error")
             W2_index = self.states_name.index("W2")
@@ -723,6 +725,8 @@ class Model:
             var_prior_modified[:, W2_index] = 0
             var_prior_modified[W2bar_index, :] = 0
             var_prior_modified[:, W2bar_index] = 0
+            # Fill the diagonal elements back
+            np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
 
 
