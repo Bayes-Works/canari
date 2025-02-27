@@ -738,7 +738,7 @@ class SKF:
             anomaly_end=anomaly_end,
         )
 
-        filter_marginal_abnorm_prob, states = self.filter(data=data)
+        filter_marginal_abnorm_prob, _ = self.filter(data=data)
 
         # Check false alarm in the training set
         if any(filter_marginal_abnorm_prob > threshold):
@@ -758,16 +758,6 @@ class SKF:
                 num_anomaly_detected += 1
             if any(filter_marginal_abnorm_prob[:window_start] > threshold):
                 num_false_alarm += 1
-
-            # states_plot = np.array(states.mu_posterior)
-            # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4))
-
-            # axes[0].plot(states_plot[:, 0])
-            # axes[0].plot(synthetic_data[i]["y"])
-            # axes[0].axvline(x=window_start, color="b", linestyle="--")
-            # axes[1].plot(filter_marginal_abnorm_prob, color="r")
-            # axes[1].axvline(x=window_start, color="b", linestyle="--")
-            # plt.show()
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly

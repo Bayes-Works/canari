@@ -5,28 +5,6 @@ from ray.tune.search.optuna import OptunaSearch
 from examples.data_process import DataProcess
 
 
-class CustomLogger(Callback):
-    def __init__(self, total_samples):
-        self.total_samples = total_samples
-        self.current_sample = 0
-        self.trial_sample_map = {}
-
-    def on_trial_result(self, iteration, trial, result, **info):
-        self.current_sample += 1
-        params = trial.config
-        metric = result["metric"]
-
-        # Store sample number mapped to the trial ID
-        self.trial_sample_map[trial.trial_id] = self.current_sample
-
-        # Ensure sample count formatting consistency
-        sample_str = f"{self.current_sample}/{self.total_samples}".rjust(
-            len(f"{self.total_samples}/{self.total_samples}")
-        )
-
-        print(f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}")
-
-
 class ModelOptimizer:
     """
     Parameter optimization for model.py
@@ -134,3 +112,25 @@ class ModelOptimizer:
         Obtain optim model
         """
         return self.model_optim
+
+
+class CustomLogger(Callback):
+    def __init__(self, total_samples):
+        self.total_samples = total_samples
+        self.current_sample = 0
+        self.trial_sample_map = {}
+
+    def on_trial_result(self, iteration, trial, result, **info):
+        self.current_sample += 1
+        params = trial.config
+        metric = result["metric"]
+
+        # Store sample number mapped to the trial ID
+        self.trial_sample_map[trial.trial_id] = self.current_sample
+
+        # Ensure sample count formatting consistency
+        sample_str = f"{self.current_sample}/{self.total_samples}".rjust(
+            len(f"{self.total_samples}/{self.total_samples}")
+        )
+
+        print(f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}")

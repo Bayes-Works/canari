@@ -377,19 +377,3 @@ def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
             ],
             axis=0,
         )
-
-
-def get_mu_and_variance(
-    states: StatesHistory, states_type: str
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Get the mean and variance arrays based on the states type.
-    """
-    if states_type == "posterior":
-        return np.array(states.mu_posterior), np.array(states.var_posterior)
-    elif states_type == "prior":
-        return np.array(states.mu_prior), np.array(states.var_prior)
-    elif states_type == "smooth":
-        return np.array(states.mu_smooth), np.array(states.var_smooth)
-    else:
-        raise ValueError(f"Invalid states_type: {states_type}")
