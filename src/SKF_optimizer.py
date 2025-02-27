@@ -6,24 +6,6 @@ from examples.data_process import DataProcess
 import numpy as np
 
 
-class CustomLogger(Callback):
-    def __init__(self, total_samples):
-        self.total_samples = total_samples
-        self.current_sample = 0
-        self.trial_sample_map = {}
-
-    def on_trial_result(self, iteration, trial, result, **info):
-        self.current_sample += 1
-        params = trial.config
-        self.trial_sample_map[trial.trial_id] = self.current_sample
-        sample_str = f"{self.current_sample}/{self.total_samples}".rjust(
-            len(f"{self.total_samples}/{self.total_samples}")
-        )
-        print(
-            f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
-        )
-
-
 class SKFOptimizer:
     """
     Parameter optimization for model_param.py
@@ -37,6 +19,7 @@ class SKFOptimizer:
         data: dict,
         detection_threshold: Optional[float] = 0.5,
         false_rate_threshold: Optional[float] = 0.0,
+        max_timestep_to_detect: Optional[int] = None,
         num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
@@ -47,6 +30,7 @@ class SKFOptimizer:
         self.data = data
         self.detection_threshold = detection_threshold
         self.false_rate_threshold = false_rate_threshold
+        self.max_timestep_to_detect = max_timestep_to_detect
         self.num_optimization_trial = num_optimization_trial
         self.num_synthetic_anomaly = num_synthetic_anomaly
         self.grid_search = grid_search
@@ -71,6 +55,7 @@ class SKFOptimizer:
                     data=self.data,
                     num_anomaly=self.num_synthetic_anomaly,
                     slope_anomaly=slope,
+                    max_timestep_to_detect=self.max_timestep_to_detect,
                 )
             )
 
@@ -169,3 +154,21 @@ class SKFOptimizer:
         Obtain optim model_param
         """
         return self.skf_optim
+
+
+class CustomLogger(Callback):
+    def __init__(self, total_samples):
+        self.total_samples = total_samples
+        self.current_sample = 0
+        self.trial_sample_map = {}
+
+    def on_trial_result(self, iteration, trial, result, **info):
+        self.current_sample += 1
+        params = trial.config
+        self.trial_sample_map[trial.trial_id] = self.current_sample
+        sample_str = f"{self.current_sample}/{self.total_samples}".rjust(
+            len(f"{self.total_samples}/{self.total_samples}")
+        )
+        print(
+            f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
+        )

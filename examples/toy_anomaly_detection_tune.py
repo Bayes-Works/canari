@@ -33,9 +33,9 @@ SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
 
 
 def main(
-    num_trial_optimization: int = 30,
+    num_trial_optimization: int = 4,
     param_tune: bool = True,
-    grid_search: bool = True,
+    grid_search: bool = False,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -182,7 +182,12 @@ def main(
     for ts in synthetic_anomaly_data:
         plt.plot(train_time, ts["y"])
     plt.legend(
-        ["data without anomaly", "largest anomaly tested", "smallest anomaly tested"]
+        [
+            "data without anomaly",
+            "",
+            "smallest anomaly tested",
+            "largest anomaly tested",
+        ]
     )
     plt.title("Train data with added synthetic anomalies")
     plt.show()
@@ -196,8 +201,8 @@ def main(
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "std_transition_error": [1e-6, 1e-2],
+                "norm_to_abnorm_prob": [1e-6, 1e-2],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
@@ -206,6 +211,7 @@ def main(
             model_param=model_optim_dict,
             param_space=skf_param,
             data=data_processor.train_data,
+            max_timestep_to_detect=8,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,

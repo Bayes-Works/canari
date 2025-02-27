@@ -111,6 +111,7 @@ def prepare_lstm_input(
     """
     Prepare input for lstm network, concatenate lstm output history and the input covariates
     """
+
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     var_lstm_input = np.concatenate(
