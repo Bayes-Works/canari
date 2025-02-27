@@ -360,7 +360,9 @@ class Model:
         )
 
         if "AR_error" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_overwrite_error_states(mu_states_prior, var_states_prior)
+            mu_states_prior, var_states_prior = self.online_AR_overwrite_error_states(
+                mu_states_prior, var_states_prior
+            )
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -417,7 +419,9 @@ class Model:
         RTS smoother
         """
         if "AR_error" in self.states_name:
-            var_prior = self.set_zeros_var_ar_error_states(self.states.var_prior[time_step + 1])
+            var_prior = self.set_zeros_var_ar_error_states(
+                self.states.var_prior[time_step + 1]
+            )
         else:
             var_prior = self.states.var_prior[time_step + 1]
         (
@@ -577,7 +581,6 @@ class Model:
             self.early_stop_init_mu_states = copy.copy(self.mu_states)
             self.early_stop_init_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
-            # self.early_stop_states = copy.copy(self.states)
 
         self._current_epoch += 1
 
@@ -585,8 +588,9 @@ class Model:
         if (self._current_epoch - self.optimal_epoch) >= patience:
             self.stop_training = True
             self.lstm_net.load_state_dict(self.early_stop_lstm_param)
-            self.set_states(self.early_stop_mu_states, self.early_stop_var_states)
-            # self.states = self.early_stop_states
+            self.set_states(
+                self.early_stop_init_mu_states, self.early_stop_init_var_states
+            )
 
         return (
             self.stop_training,
@@ -606,7 +610,7 @@ class Model:
         if self.lstm_net:
             model_dict["lstm_network_params"] = self.lstm_net.state_dict()
         return model_dict
-    
+
     def online_AR_forward_modification(self) -> None:
         """
         Online AR forward modification
@@ -706,7 +710,7 @@ class Model:
         var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
 
         return mu_states_posterior, var_states_posterior
-    
+
     def set_zeros_var_ar_error_states(self, var_original):
         var_prior_modified = copy.deepcopy(var_original)
         if "AR_error" in self.states_name:
