@@ -211,7 +211,6 @@ def main(
             model_param=model_optim_dict,
             param_space=skf_param,
             data=data_processor.train_data,
-            max_timestep_to_detect=8,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,
