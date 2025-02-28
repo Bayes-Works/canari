@@ -278,8 +278,6 @@ class Model:
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
-        if "AR_error" in self.states_name:
-            cov_states = self.set_zeros_cov_ar_error_states(cov_states)
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append([])
         self.states.var_smooth.append([])
@@ -423,18 +421,12 @@ class Model:
         """
         RTS smoother
         """
-        if "AR_error" in self.states_name:
-            var_prior = self.set_zeros_cov_ar_error_states(
-                self.states.var_prior[time_step + 1]
-            )
-        else:
-            var_prior = self.states.var_prior[time_step + 1]
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
         ) = common.rts_smoother(
             self.states.mu_prior[time_step + 1],
-            var_prior,
+            self.states.var_prior[time_step + 1],
             self.states.mu_smooth[time_step + 1],
             self.states.var_smooth[time_step + 1],
             self.states.mu_posterior[time_step],
@@ -731,20 +723,20 @@ class Model:
 
     def set_zeros_cov_ar_error_states(self, var_original):
         var_prior_modified = copy.deepcopy(var_original)
-        # # Keep the diagonal elements
-        # diag = np.diag(var_original)
-        # if "AR_error" in self.states_name:
-        #     ar_error_index = self.states_name.index("AR_error")
-        #     W2_index = self.states_name.index("W2")
-        #     W2bar_index = self.states_name.index("W2bar")
-        #     var_prior_modified[ar_error_index, :] = 0
-        #     var_prior_modified[:, ar_error_index] = 0
-        #     var_prior_modified[W2_index, :] = 0
-        #     var_prior_modified[:, W2_index] = 0
-        #     var_prior_modified[W2bar_index, :] = 0
-        #     var_prior_modified[:, W2bar_index] = 0
-        #     # Fill the diagonal elements back
-        #     np.fill_diagonal(var_prior_modified, diag)
+        # Keep the diagonal elements
+        diag = np.diag(var_original)
+        if "AR_error" in self.states_name:
+            ar_error_index = self.states_name.index("AR_error")
+            W2_index = self.states_name.index("W2")
+            W2bar_index = self.states_name.index("W2bar")
+            var_prior_modified[ar_error_index, :] = 0
+            var_prior_modified[:, ar_error_index] = 0
+            var_prior_modified[W2_index, :] = 0
+            var_prior_modified[:, W2_index] = 0
+            var_prior_modified[W2bar_index, :] = 0
+            var_prior_modified[:, W2bar_index] = 0
+            # Fill the diagonal elements back
+            np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
 
 

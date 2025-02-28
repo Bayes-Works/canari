@@ -49,7 +49,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 3e-2
+sigma_v = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
@@ -58,7 +58,7 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    # manual_seed=1,
+    manual_seed=1,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
