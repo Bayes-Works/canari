@@ -49,6 +49,8 @@ data_processor = DataProcess(
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
+sigma_v = np.sqrt(1e-6)/(data_processor.norm_const_std[output_col].item()+1e-10)
+noise = WhiteNoise(std_error=sigma_v)
 
 def main(
     case: int = 4,
@@ -61,7 +63,7 @@ def main(
 
     elif case == 2:
         # Case 2
-        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0.99, 0], var_states=[1e-06, 0.25, 0])
+        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0.5, 0], var_states=[1e-06, 0.25, 0])
 
     elif case == 3:
         # Case 3
@@ -73,7 +75,7 @@ def main(
         # Case 4
         AR_process_error_var_prior = 1
         var_W2bar_prior = 1
-        AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
+        AR = Autoregression(mu_states=[0, 0.5, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
 
     model = Model(
         LocalTrend(mu_states=[-0.00902307, 0.0], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
@@ -87,6 +89,7 @@ def main(
             device="cpu",
         ),
         AR,
+        noise,
     )
     # model.auto_initialize_baseline_states(train_data["y"][0:52*8])
 
