@@ -16,6 +16,7 @@ from examples import DataProcess
 from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
+import copy
 
 
 # # Read data
@@ -74,7 +75,7 @@ for epoch in range(num_epoch):
     noise_index = model.states_name.index("white noise")
     model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
-    (mu_validation_preds, std_validation_preds, smoother_states) = model.lstm_train(
+    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
@@ -100,6 +101,7 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
+        states_optim = copy.copy(states)    # If we want to plot the states, plot those from optimal epoch
     if model.stop_training:
         break
 

@@ -131,17 +131,11 @@ class Model:
         )
 
         if "autoregression" in self.states_name:
-            self.autoregression_index = self.states_name.index("autoregression")
             self.mu_W2bar = None
             self.var_W2bar = None
             self.mu_W2_prior = None
             self.var_W2_prior = None
-            if "phi" in self.states_name:
-                self.phi_index = self.states_name.index("phi")
             if "AR_error" in self.states_name:
-                self.ar_error_index = self.states_name.index("AR_error")
-                self.W2_index = self.states_name.index("W2")
-                self.W2bar_index = self.states_name.index("W2bar")
                 self.mu_W2bar = autoregression_component.mu_states[-1]
                 self.var_W2bar = autoregression_component.var_states[-1]
 
@@ -344,10 +338,6 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
-        # Autoregression
-        if "autoregression" in self.states_name:
-            self.online_AR_forward_modification()
-
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
@@ -359,8 +349,8 @@ class Model:
             self.lstm_states_index,
         )
 
-        if "AR_error" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_overwrite_error_states(
+        if "autoregression" in self.states_name:
+            mu_states_prior, var_states_prior = self.online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
 
@@ -392,7 +382,7 @@ class Model:
             delta_mu_states, delta_var_states
         )
 
-        if "AR_error" in self.states_name:
+        if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
                 self.online_AR_backward_modification(
                     mu_states_posterior,
@@ -611,55 +601,35 @@ class Model:
             model_dict["lstm_network_params"] = self.lstm_net.state_dict()
         return model_dict
 
-    def online_AR_forward_modification(self) -> None:
-        """
-        Online AR forward modification
-        """
-
-        ar_index = self.states_name.index("autoregression")
-        if "phi" in self.states_name:
-            phi_index = self.states_name.index("phi")
-
-            # GMA operations
-            self.mu_states, self.var_states = GMA(
-                self.mu_states,
-                self.var_states,
-                index1=phi_index,
-                index2=ar_index,
-                replace_index=ar_index,
-            ).get_results()
-
+    def online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         if "AR_error" in self.states_name:
-            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+            ar_index = self.states_name.index("autoregression")
+            ar_error_index = self.states_name.index("AR_error")
+            W2_index = self.states_name.index("W2")
+            W2bar_index = self.states_name.index("W2bar")
 
-    def online_AR_overwrite_error_states(self, mu_states_prior, var_states_prior):
-        ar_index = self.states_name.index("autoregression")
-        ar_error_index = self.states_name.index("AR_error")
-        W2_index = self.states_name.index("W2")
-        W2bar_index = self.states_name.index("W2bar")
+            # Forward path to compute the moments of W
+            # # W2bar
+            mu_states_prior[W2bar_index] = self.mu_W2bar
+            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
 
-        # Forward path to compute the moments of W
-        # # W2bar
-        mu_states_prior[W2bar_index] = self.mu_W2bar
-        var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+            # # From W2bar to W2
+            self.mu_W2_prior = self.mu_W2bar
+            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
+            mu_states_prior[W2_index] = self.mu_W2_prior
+            var_states_prior[W2_index, W2_index] = self.var_W2_prior
 
-        # # From W2bar to W2
-        self.mu_W2_prior = self.mu_W2bar
-        self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-        mu_states_prior[W2_index] = self.mu_W2_prior
-        var_states_prior[W2_index, W2_index] = self.var_W2_prior
-
-        # # From W2 to W
-        mu_states_prior[ar_error_index] = 0
-        var_states_prior[ar_error_index, :] = np.zeros_like(
-            var_states_prior[ar_error_index, :]
-        )
-        var_states_prior[:, ar_error_index] = np.zeros_like(
-            var_states_prior[:, ar_error_index]
-        )
-        var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
-        var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
-        var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+            # # From W2 to W
+            mu_states_prior[ar_error_index] = 0
+            var_states_prior[ar_error_index, :] = np.zeros_like(
+                var_states_prior[ar_error_index, :]
+            )
+            var_states_prior[:, ar_error_index] = np.zeros_like(
+                var_states_prior[:, ar_error_index]
+            )
+            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
         return mu_states_prior, var_states_prior
 
     def online_AR_backward_modification(
@@ -671,62 +641,76 @@ class Model:
         Online AR backwar modification
         """
 
-        ar_error_index = self.states_name.index("AR_error")
-        W2_index = self.states_name.index("W2")
-        W2bar_index = self.states_name.index("W2bar")
+        if "phi" in self.states_name:
+            # GMA operations
+            mu_states_posterior, var_states_posterior = GMA(
+                mu_states_posterior,
+                var_states_posterior,
+                index1=self.states_name.index("phi"),
+                index2=self.states_name.index("autoregression"),
+                replace_index=self.states_name.index("phi_autoregression"),
+            ).get_results()
 
-        # Backward path to update W2 and W2bar
-        # # From W to W2
-        mu_W2_posterior = (
-            mu_states_posterior[ar_error_index] ** 2
-            + var_states_posterior[ar_error_index, ar_error_index]
-        )
-        var_W2_posterior = (
-            2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
-            + 4
-            * var_states_posterior[ar_error_index, ar_error_index]
-            * mu_states_posterior[ar_error_index] ** 2
-        )
-        mu_states_posterior[W2_index] = mu_W2_posterior
-        var_states_posterior[W2_index, :] = np.zeros_like(
-            var_states_posterior[W2_index, :]
-        )
-        var_states_posterior[:, W2_index] = np.zeros_like(
-            var_states_posterior[:, W2_index]
-        )
-        var_states_posterior[W2_index, W2_index] = var_W2_posterior
+        if "AR_error" in self.states_name:
+            ar_index = self.states_name.index("autoregression")
+            ar_error_index = self.states_name.index("AR_error")
+            W2_index = self.states_name.index("W2")
+            W2bar_index = self.states_name.index("W2bar")
 
-        # # From W2 to W2bar
-        K = self.var_W2bar / self.var_W2_prior
-        self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
-        self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
-        mu_states_posterior[W2bar_index] = self.mu_W2bar
-        var_states_posterior[W2bar_index, :] = np.zeros_like(
-            var_states_posterior[W2bar_index, :]
-        )
-        var_states_posterior[:, W2bar_index] = np.zeros_like(
-            var_states_posterior[:, W2bar_index]
-        )
-        var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+            # Backward path to update W2 and W2bar
+            # # From W to W2
+            mu_W2_posterior = (
+                mu_states_posterior[ar_error_index] ** 2
+                + var_states_posterior[ar_error_index, ar_error_index]
+            )
+            var_W2_posterior = (
+                2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
+                + 4
+                * var_states_posterior[ar_error_index, ar_error_index]
+                * mu_states_posterior[ar_error_index] ** 2
+            )
+            mu_states_posterior[W2_index] = mu_W2_posterior
+            var_states_posterior[W2_index, :] = np.zeros_like(
+                var_states_posterior[W2_index, :]
+            )
+            var_states_posterior[:, W2_index] = np.zeros_like(
+                var_states_posterior[:, W2_index]
+            )
+            var_states_posterior[W2_index, W2_index] = var_W2_posterior
+
+            # # From W2 to W2bar
+            K = self.var_W2bar / self.var_W2_prior
+            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
+            self.var_W2bar = self.var_W2bar + K**2 * (var_W2_posterior - self.var_W2_prior)
+            mu_states_posterior[W2bar_index] = self.mu_W2bar
+            var_states_posterior[W2bar_index, :] = np.zeros_like(
+                var_states_posterior[W2bar_index, :]
+            )
+            var_states_posterior[:, W2bar_index] = np.zeros_like(
+                var_states_posterior[:, W2bar_index]
+            )
+            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+
+            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
 
     def set_zeros_cov_ar_error_states(self, var_original):
         var_prior_modified = copy.deepcopy(var_original)
-        # Keep the diagonal elements
-        diag = np.diag(var_original)
-        if "AR_error" in self.states_name:
-            ar_error_index = self.states_name.index("AR_error")
-            W2_index = self.states_name.index("W2")
-            W2bar_index = self.states_name.index("W2bar")
-            var_prior_modified[ar_error_index, :] = 0
-            var_prior_modified[:, ar_error_index] = 0
-            var_prior_modified[W2_index, :] = 0
-            var_prior_modified[:, W2_index] = 0
-            var_prior_modified[W2bar_index, :] = 0
-            var_prior_modified[:, W2bar_index] = 0
-            # Fill the diagonal elements back
-            np.fill_diagonal(var_prior_modified, diag)
+        # # Keep the diagonal elements
+        # diag = np.diag(var_original)
+        # if "AR_error" in self.states_name:
+        #     ar_error_index = self.states_name.index("AR_error")
+        #     W2_index = self.states_name.index("W2")
+        #     W2bar_index = self.states_name.index("W2bar")
+        #     var_prior_modified[ar_error_index, :] = 0
+        #     var_prior_modified[:, ar_error_index] = 0
+        #     var_prior_modified[W2_index, :] = 0
+        #     var_prior_modified[:, W2_index] = 0
+        #     var_prior_modified[W2bar_index, :] = 0
+        #     var_prior_modified[:, W2bar_index] = 0
+        #     # Fill the diagonal elements back
+        #     np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
 
 

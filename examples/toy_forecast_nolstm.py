@@ -47,9 +47,7 @@ def main(
 ):
     # Components
     sigma_v = np.sqrt(1e-6)
-    local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1, 1e-6], std_error=0)
-    # local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-12, 1e-12], std_error=0)
-    # local_trend = LocalTrend(mu_states=[10, 0.0], var_states=[25, 1e-12], std_error=0)
+    local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-1, 1e-6], std_error=0)
     periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
     noise = WhiteNoise(std_error=sigma_v)
 
@@ -62,7 +60,7 @@ def main(
     elif case == 2:
         # Case 2: AR with process error provided, learn phi online. It should converge to ~0.9
         AR = Autoregression(
-            std_error=5, mu_states=[-0.0621, 0.5], var_states=[6.36e-05, 0.25]
+            std_error=5, mu_states=[-0.0621, 0.5, 0], var_states=[6.36e-05, 0.25, 0]
         )
     elif case == 3:
         # Case 3: AR with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
@@ -78,10 +76,11 @@ def main(
         AR_process_error_var_prior = 100
         var_W2bar_prior = 100
         AR = Autoregression(
-            mu_states=[-0.0621, 0.5, 0, 0, AR_process_error_var_prior],
+            mu_states=[-0.0621, 0.5, 0, 0, 0, AR_process_error_var_prior],
             var_states=[
                 6.36e-05,
                 0.25,
+                0,
                 AR_process_error_var_prior,
                 1e-6,
                 var_W2bar_prior,

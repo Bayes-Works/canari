@@ -27,7 +27,7 @@ class Autoregression(BaseComponent):
     def initialize_num_states(self):
         self._num_states = 1
         if self.phi is None:
-            self._num_states += 1
+            self._num_states += 2
         if self.std_error is None:
             self._num_states += 3
 
@@ -35,14 +35,15 @@ class Autoregression(BaseComponent):
         self._states_name = ["autoregression"]
         if self.phi is None:
             self._states_name.append("phi")
+            self._states_name.append("phi_autoregression")  # phi^{AR} times X^{AR}
         if self.std_error is None:
-            self._states_name.append("AR_error")
-            self._states_name.append("W2")
-            self._states_name.append("W2bar")
+            self._states_name.append("AR_error")            # Process error of AR (W variable in AGVI)
+            self._states_name.append("W2")                  # Square of the process error
+            self._states_name.append("W2bar")               # Expected value of W2
 
     def initialize_transition_matrix(self):
         if self.phi is None:
-            self._transition_matrix = np.array([[1, 0], [0, 1]])
+            self._transition_matrix = np.array([[0, 0, 1], [0, 1, 0], [0, 0, 0]])
         else:
             self._transition_matrix = np.array([[self.phi]])
         if self.std_error is None:
@@ -54,7 +55,7 @@ class Autoregression(BaseComponent):
     def initialize_observation_matrix(self):
         self._observation_matrix = np.array([[1]])
         if self.phi is None:
-            self._observation_matrix = np.hstack((self._observation_matrix, np.zeros((1, 1))))
+            self._observation_matrix = np.hstack((self._observation_matrix, np.zeros((1, 2))))
         if self.std_error is None:
             # Add zero at the end of the observation matrix
             self._observation_matrix = np.hstack((self._observation_matrix, np.zeros((1, 3))))
@@ -66,8 +67,8 @@ class Autoregression(BaseComponent):
             self._process_noise_matrix = np.array([[self.mu_states[-1]]]) 
         if self.phi is None:
             self._process_noise_matrix = np.block(
-                [[self._process_noise_matrix, np.zeros((1, 1))],
-                 [np.zeros((1, 2))]]
+                [[self._process_noise_matrix, np.zeros((1, 2))],
+                 [np.zeros((2, 3))]]
             )
         if self.std_error is None:
             self._process_noise_matrix = np.block(
