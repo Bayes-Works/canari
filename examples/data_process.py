@@ -39,7 +39,7 @@ class DataProcess:
         self.time_covariates = time_covariates
         self.output_col = output_col
 
-        self.data = data
+        self.data = data.copy()
         self.norm_const_mean, self.norm_const_std = None, None
 
         self.add_time_covariates()
@@ -165,7 +165,12 @@ class DataProcess:
             },
         )
 
-    def get_data(self, split: str, normalization: Optional[bool] = False) -> np.ndarray:
+    def get_data(
+        self,
+        split: str,
+        normalization: Optional[bool] = False,
+        column: Optional[int] = None,
+    ) -> np.ndarray:
         """Data getter"""
 
         if normalization:
@@ -173,15 +178,20 @@ class DataProcess:
         else:
             data = self.data.values
 
+        if column:
+            data_column = column
+        else:
+            data_column = self.output_col
+
         train_index, val_index, test_index = self.get_split_indices()
         if split == "train":
-            return data[train_index, self.output_col]
+            return data[train_index, data_column]
         elif split == "validation":
-            return data[val_index, self.output_col]
+            return data[val_index, data_column]
         elif split == "test":
-            return data[test_index, self.output_col]
+            return data[test_index, data_column]
         elif split == "all":
-            return data[:, self.output_col]
+            return data[:, data_column]
         else:
             raise ValueError(
                 "Invalid split type. Choose from 'train', 'validation', 'test', or 'all'."
