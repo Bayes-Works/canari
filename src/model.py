@@ -715,6 +715,10 @@ class Model:
         return mu_states_posterior, var_states_posterior
 
     def set_zeros_cov_ar_error_states(self, var_original):
+        """
+        There is no more numerical instability issue in the smoothing of online AR right now,
+        so we don't need this trick anymore. But keep this for future debugging maybe.
+        """
         var_prior_modified = copy.deepcopy(var_original)
         # # Keep the diagonal elements
         # diag = np.diag(var_original)

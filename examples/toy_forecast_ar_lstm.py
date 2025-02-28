@@ -156,6 +156,7 @@ def main(
         states=model.states,
         states_type="prior",
     )
+    print(f"States prior at the last step: ")
     print(model.states.mu_prior[-1])
     plt.show()
 
