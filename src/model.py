@@ -324,6 +324,7 @@ class Model:
         input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
+        skip_AR: Optional[bool] = False
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         One step prediction in states-space model
@@ -338,11 +339,19 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
+        transition_matrix = copy.deepcopy(self.transition_matrix)
+        process_noise_matrix = copy.deepcopy(self.process_noise_matrix)
+        if skip_AR:
+            # Freeze AR component to 0 mean, 0 variance
+            ar_index = self.states_name.index("autoregression")
+            transition_matrix[ar_index, :] = 0
+            process_noise_matrix[ar_index, :] = 0
+
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
-            self.transition_matrix,
-            self.process_noise_matrix,
+            transition_matrix,
+            process_noise_matrix,
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
@@ -350,9 +359,10 @@ class Model:
         )
 
         if "autoregression" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_forward_modification(
-                mu_states_prior, var_states_prior
-            )
+            if not skip_AR:
+                mu_states_prior, var_states_prior = self.online_AR_forward_modification(
+                    mu_states_prior, var_states_prior
+                )
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -364,6 +374,7 @@ class Model:
     def backward(
         self,
         obs: float,
+        skip_AR: Optional[bool] = False
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Update step in states-space model
@@ -383,12 +394,13 @@ class Model:
         )
 
         if "autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self.online_AR_backward_modification(
-                    mu_states_posterior,
-                    var_states_posterior,
+            if not skip_AR:
+                mu_states_posterior, var_states_posterior = (
+                    self.online_AR_backward_modification(
+                        mu_states_posterior,
+                        var_states_posterior,
+                    )
                 )
-            )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
@@ -471,14 +483,18 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        for x, y in zip(data["x"], data["y"]):
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+        for i, (x, y) in enumerate(zip(data["x"], data["y"])):
+            if self.lstm_net and i < self._lstm_look_back_len and "autoregression" in self.states_name:
+                skip_AR = True
+            else:
+                skip_AR = False
+            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x, skip_AR=skip_AR)
             (
                 delta_mu_states,
                 delta_var_states,
                 mu_states_posterior,
                 var_states_posterior,
-            ) = self.backward(y)
+            ) = self.backward(y, skip_AR=skip_AR)
 
             if self.lstm_net:
                 delta_mu_lstm = np.array(
