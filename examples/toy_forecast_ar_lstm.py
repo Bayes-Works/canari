@@ -80,7 +80,6 @@ def main(
     model = Model(
         LocalTrend(mu_states=[-0.00902307, 0.0], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
         # LocalTrend(),
-        # LocalLevel(),
         LstmNetwork(
             look_back_len=52,
             num_features=1,
@@ -91,7 +90,7 @@ def main(
         AR,
         noise,
     )
-    # model.auto_initialize_baseline_states(train_data["y"][0:52*8])
+    # model.auto_initialize_baseline_states(train_data["y"][0:52*6])
 
     # Training
     for epoch in range(num_epoch):
@@ -145,6 +144,13 @@ def main(
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )
     plt.legend()
+    plot_states(
+        data_processor=data_processor,
+        states=model.states,
+        states_type="prior",
+        states_to_plot=['local level'],
+        sub_plot=ax,
+    )
     plot_states(
         data_processor=data_processor,
         states=model.states,
