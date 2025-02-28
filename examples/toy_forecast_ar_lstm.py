@@ -63,19 +63,19 @@ def main(
 
     elif case == 2:
         # Case 2
-        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0.5, 0], var_states=[1e-06, 0.25, 0])
+        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0, 0], var_states=[1e-06, 0.25, 0])
 
     elif case == 3:
         # Case 3
         AR_process_error_var_prior = 1
-        var_W2bar_prior = 0.25
+        var_W2bar_prior = 1
         AR = Autoregression(phi=0.9, mu_states=[0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
 
     elif case == 4:
         # Case 4
         AR_process_error_var_prior = 1
         var_W2bar_prior = 1
-        AR = Autoregression(mu_states=[0, 0.5, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
+        AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 1e-6, var_W2bar_prior])
 
     model = Model(
         LocalTrend(mu_states=[-0.00902307, 0.0], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
