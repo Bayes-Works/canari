@@ -61,7 +61,7 @@ def main(
 
     elif case == 2:
         # Case 2
-        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0, 0], var_states=[1e-06, 0.25, 0])
+        AR = Autoregression(std_error=0.23146312, mu_states=[0, 0.99, 0], var_states=[1e-06, 0.25, 0])
 
     elif case == 3:
         # Case 3
@@ -80,10 +80,10 @@ def main(
         # LocalTrend(),
         # LocalLevel(),
         LstmNetwork(
-            look_back_len=26,
+            look_back_len=52,
             num_features=1,
             num_layer=1,
-            num_hidden_unit=10,
+            num_hidden_unit=50,
             device="cpu",
         ),
         AR,

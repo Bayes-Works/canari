@@ -98,6 +98,22 @@ def main(
     # # #
     model.filter(data=train_data)
     model.smoother(data=train_data)
+    mu_validation_preds, std_validation_preds = model.forecast(validation_data)
+
+    #  Plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_column=output_col,
+        validation_label="y",
+    )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    )
 
     # #  Plot
     plot_states(
@@ -105,16 +121,16 @@ def main(
         states=model.states,
         states_type="prior",
     )
-    plot_states(
-        data_processor=data_processor,
-        states=model.states,
-        states_type="posterior",
-    )
-    plot_states(
-        data_processor=data_processor,
-        states=model.states,
-        states_type="smooth",
-    )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=model.states,
+    #     states_type="posterior",
+    # )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=model.states,
+    #     states_type="smooth",
+    # )
     plt.show()
 
 
