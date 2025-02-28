@@ -120,12 +120,14 @@ def main(
         data_processor=data_processor,
         states=model.states,
         states_type="prior",
+        states_to_plot=['local level'],
+        sub_plot=ax,
     )
-    # plot_states(
-    #     data_processor=data_processor,
-    #     states=model.states,
-    #     states_type="posterior",
-    # )
+    plot_states(
+        data_processor=data_processor,
+        states=model.states,
+        states_type="prior",
+    )
     # plot_states(
     #     data_processor=data_processor,
     #     states=model.states,
