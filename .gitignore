@@ -12,5 +12,3 @@ data/benchmark_data/
 !.vscode/launch.json
 !.vscode/settings.json
 !saved_results/time_series_toy.png
-
-/data/real_time_series
