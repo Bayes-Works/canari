@@ -251,6 +251,9 @@ class Model:
 
         self.mu_states = self.states.mu_smooth[0].copy()
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
+        if self.lstm_net:
+            self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
+            self.var_states = np.diag(np.diag(self.states.var_smooth[self._lstm_look_back_len])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.states_name.index("local level")
             self.mu_states[local_level_index] = self._mu_local_level
