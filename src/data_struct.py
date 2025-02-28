@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 
@@ -33,6 +33,63 @@ class StatesHistory:
         self.var_smooth = []
         self.cov_states = []
         self.states_name = states_name
+
+    def get_mean(
+        self,
+        states_type: Optional[str] = "posterior",
+        states_name: Optional[list[str]] = "all",
+    ) -> dict:
+        """Get mean values for hidden states"""
+        mean = {}
+
+        if states_name == "all":
+            states_name = self.states_name
+
+        if states_type == "prior":
+            values = np.array(self.mu_prior)
+        elif states_type == "posterior":
+            values = np.array(self.mu_posterior)
+        elif states_type == "smooth":
+            values = np.array(self.mu_smooth)
+        else:
+            raise ValueError(
+                f"Incorrect states_types, should choose among 'prior', 'posterior', or 'smooth' ."
+            )
+
+        for state in states_name:
+            idx = self.states_name.index(state)
+            mean[state] = values[:, idx]
+
+        return mean
+
+    def get_std(
+        self,
+        states_type: Optional[str] = "posterior",
+        states_name: Optional[list[str]] = "all",
+    ) -> dict:
+        """Get mean values for hidden states"""
+
+        standard_deviation = {}
+
+        if states_name == "all":
+            states_name = self.states_name
+
+        if states_type == "prior":
+            values = np.array(self.var_prior)
+        elif states_type == "posterior":
+            values = np.array(self.var_posterior)
+        elif states_type == "smooth":
+            values = np.array(self.var_smooth)
+        else:
+            raise ValueError(
+                f"Incorrect states_types, should choose among 'prior', 'posterior', or 'smooth' ."
+            )
+
+        for state in states_name:
+            idx = self.states_name.index(state)
+            standard_deviation[state] = values[:, idx, idx] ** 0.5
+
+        return standard_deviation
 
 
 def initialize_marginal_prob_history(num_time_steps):
