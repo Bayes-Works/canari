@@ -19,20 +19,17 @@ class Model:
         self,
         *components: BaseComponent,
     ):
-        if not components:
-            pass
-        else:
-            self.components = {
-                component.component_name: component for component in components
-            }
-            self.components = {
-                component.component_name: component for component in components
-            }
-            self.define_model()
-            self.initialize_lstm_network()
-            self.initialize_autoregression_component()
-            self.initialize_early_stop()
-            self.states = StatesHistory()
+        self.components = {
+            component.component_name: component for component in components
+        }
+        self.components = {
+            component.component_name: component for component in components
+        }
+        self.define_model()
+        self.initialize_lstm_network()
+        self.initialize_autoregression_component()
+        self.initialize_early_stop()
+        self.states = StatesHistory()
 
     def __deepcopy__(self, memo):
         cls = self.__class__

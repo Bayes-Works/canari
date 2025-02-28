@@ -49,7 +49,6 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-# sigma_v = 1e-2
 sigma_v = 0.0032322250444898116
 model = Model(
     LocalTrend(),
@@ -92,9 +91,8 @@ for epoch in range(num_epoch):
     )
 
     # Calculate the log-likelihood metric
-    mse = metric.mse(
-        mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
-    )
+    validation_obs = data_processor.get_data("validation").flatten()
+    mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")

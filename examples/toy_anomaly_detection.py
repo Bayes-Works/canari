@@ -1,3 +1,4 @@
+import copy
 import pandas as pd
 from pytagi import Normalizer as normalizer
 from pytagi import exponential_scheduler
@@ -31,8 +32,8 @@ df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
 trend = np.linspace(0, 0, num=len(df_raw))
-time_anomaly = 200
-new_trend = np.linspace(0, 2, num=len(df_raw) - time_anomaly)
+time_anomaly = 120
+new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
 trend[time_anomaly:] = trend[time_anomaly:] + new_trend
 df_raw = df_raw.add(trend, axis=0)
 
@@ -41,21 +42,18 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["hour_of_day"],
-    train_start="2000-01-01 00:00:00",
-    train_end="2000-01-09 23:00:00",
-    validation_start="2000-01-10 00:00:00",
-    validation_end="2000-01-10 23:00:00",
-    test_start="2000-01-11 00:00:00",
+    train_split=0.4,
+    validation_split=0.1,
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 1e-2
-local_trend = LocalTrend(var_states=[1e-2, 1e-2])
+sigma_v = 3e-2
+local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
+    look_back_len=10,
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
@@ -92,6 +90,10 @@ skf.auto_initialize_baseline_states(train_data["y"][0:23])
 #  Training
 num_epoch = 50
 scheduled_sigma_v = 1
+states_optim = None
+mu_validation_preds_optim = None
+std_validation_preds_optim = None
+
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(
@@ -103,30 +105,35 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Train the model
-    (mu_validation_preds, std_validation_preds, train_states) = skf.lstm_train(
+    (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
 
     # # Unstandardize the predictions
-    mu_validation_preds = normalizer.unstandardize(
+    mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
-    )
-    std_validation_preds = normalizer.unstandardize_std(
-        std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.norm_const_mean[data_processor.output_col],
+        data_processor.norm_const_std[data_processor.output_col],
     )
 
-    # Calculate the log-likelihood metric
+    std_validation_preds_unnorm = normalizer.unstandardize_std(
+        std_validation_preds,
+        data_processor.norm_const_std[data_processor.output_col],
+    )
+
+    validation_obs = data_processor.get_data("validation").flatten()
     validation_log_lik = metric.log_likelihood(
-        prediction=mu_validation_preds,
-        observation=data_processor.validation_data[:, output_col].flatten(),
-        std=std_validation_preds,
+        prediction=mu_validation_preds_unnorm,
+        observation=validation_obs,
+        std=std_validation_preds_unnorm,
     )
 
     # Early-stopping
-    skf.early_stopping(evaluate_metric=validation_log_lik, mode="max")
+    skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    if epoch == skf.optimal_epoch:
+        mu_validation_preds_optim = mu_validation_preds.copy()
+        std_validation_preds_optim = std_validation_preds.copy()
+        states_optim = copy.copy(states)
     if skf.stop_training:
         break
 
@@ -134,36 +141,32 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-skf.model["norm_abnorm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-skf.model["abnorm_abnorm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-skf.model["abnorm_norm"].process_noise_matrix[noise_index, noise_index] = sigma_v**2
-print(skf._marginal_prob)
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-# fig, ax = plt.subplots(figsize=(10, 6))
-# plot_data(
-#     data_processor=data_processor,
-#     plot_column=output_col,
-#     plot_test_data=False,
-#     sub_plot=ax,
-#     validation_label="y",
-# )
-# plot_prediction(
-#     data_processor=data_processor,
-#     mean_validation_pred=mu_validation_preds,
-#     std_validation_pred=std_validation_preds,
-#     sub_plot=ax,
-#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
-# )
-# ax.set_xlabel("Time")
-# plt.title("Validation predictions")
-# plt.tight_layout()
-# plt.legend()
-# plt.show()
+fig, ax = plt.subplots(figsize=(10, 6))
+plot_data(
+    data_processor=data_processor,
+    plot_column=output_col,
+    normalization=True,
+    plot_test_data=False,
+    sub_plot=ax,
+    validation_label="y",
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
+    sub_plot=ax,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
+)
+ax.set_xlabel("Time")
+plt.title("Validation predictions")
+plt.tight_layout()
+plt.legend()
+plt.show()
 
 
 fig, ax = plot_skf_states(

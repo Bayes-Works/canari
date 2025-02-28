@@ -67,13 +67,14 @@ def plot_data(
             else:
                 ax.plot(time, data_plot, label=label, color=color, linestyle=linestyle)
 
-    ax.axvspan(
-        data_processor.data.index[data_processor.validation_start],
-        data_processor.data.index[data_processor.validation_end],
-        color="green",
-        alpha=0.1,
-        edgecolor=None,
-    )
+    if data_processor.validation_start != data_processor.validation_end:
+        ax.axvspan(
+            data_processor.data.index[data_processor.validation_start],
+            data_processor.data.index[data_processor.validation_end - 1],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
     add_dynamic_grids(ax, total_time)
 
 
@@ -203,6 +204,7 @@ def plot_skf_states(
     states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
+    plot_observation: Optional[bool] = True,
     color: Optional[str] = "k",
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
@@ -247,13 +249,14 @@ def plot_skf_states(
         ax.set_ylabel(plot_state)
         add_dynamic_grids(ax, time)
 
-    plot_data(
-        data_processor=data_processor,
-        plot_column=data_processor.output_col,
-        normalization=True,
-        sub_plot=axes[0],
-        plot_nan=plot_nan,
-    )
+    if plot_observation:
+        plot_data(
+            data_processor=data_processor,
+            plot_column=data_processor.output_col,
+            normalization=True,
+            sub_plot=axes[0],
+            plot_nan=plot_nan,
+        )
     add_dynamic_grids(axes[0], time)
 
     # Add legends for the first subplot
