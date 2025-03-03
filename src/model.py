@@ -547,6 +547,7 @@ class Model:
         mode: Optional[str] = "min",
         patience: Optional[int] = 20,
         evaluate_metric: Optional[float] = None,
+        skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
 
         if self._current_epoch == 0:
@@ -559,9 +560,9 @@ class Model:
 
         # Check for improvement
         improved = False
-        if mode == "max" and evaluate_metric > self.early_stop_metric:
+        if mode == "max" and evaluate_metric > self.early_stop_metric and self._current_epoch > skip_epoch:
             improved = True
-        elif mode == "min" and evaluate_metric < self.early_stop_metric:
+        elif mode == "min" and evaluate_metric < self.early_stop_metric and self._current_epoch > skip_epoch:
             improved = True
 
         # Update metric and parameters if there's an improvement
