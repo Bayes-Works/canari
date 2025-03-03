@@ -99,7 +99,9 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(states)    # If we want to plot the states, plot those from optimal epoch
+        states_optim = copy.copy(
+            states
+        )  # If we want to plot the states, plot those from optimal epoch
     if model.stop_training:
         break
 

@@ -107,9 +107,6 @@ class SKF:
             self.update_lstm_output_history = self.model[
                 "norm_norm"
             ].update_lstm_output_history
-            self.initialize_lstm_output_history = self.model[
-                "norm_norm"
-            ].initialize_lstm_output_history
         else:
             self.lstm_net = None
 
@@ -178,7 +175,7 @@ class SKF:
             transition_model.initialize_states_history()
         self.states.initialize(self.states_name)
 
-    def initialize_smoother_buffers(self):
+    def initialize_smoother(self):
         """
         Set the smoothed estimates at the last time step = posterior
         """
@@ -410,14 +407,15 @@ class SKF:
     def initialize_states_with_smoother_estimates(self, epoch):
         self.model["norm_norm"].initialize_states_with_smoother_estimates_v1(epoch)
 
-    def clear_history(self):
+    def clear_memory(self):
         """
-        Clear history for next SKF run
+        Clear memories for the next run, i.e. clear cell and hidden states,
+        lstm output history, and prior marginal probability
         """
 
         if self.lstm_net:
-            self.lstm_net.reset_lstm_states()
-            self.initialize_lstm_output_history()
+            self.model["norm_norm"].clear_memory()
+
         self._marginal_prob["norm"] = self.norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
@@ -485,6 +483,7 @@ class SKF:
             var_lstm_pred = None
 
         for transit, transition_model in self.model.items():
+            lstm_index = transition_model.lstm_states_index
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
@@ -687,7 +686,7 @@ class SKF:
             )
 
         # clear SKF history for the next filter
-        self.clear_history()
+        self.clear_memory()
         return (
             self.filter_marginal_prob_history["abnorm"],
             self.states,
@@ -704,7 +703,7 @@ class SKF:
         )
 
         # Smoother
-        self.initialize_smoother_buffers()
+        self.initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
 
