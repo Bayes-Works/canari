@@ -110,12 +110,13 @@ class LstmNetwork(BaseComponent):
         )
         # Initialize lstm network
         lstm_network = Sequential(*layers)
+        lstm_network.lstm_look_back_len = self.look_back_len
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
             lstm_network.to_device("cuda")
 
         if self.load_lstm_net:
-            lstm_network.load(filename = self.load_lstm_net)
+            lstm_network.load(filename=self.load_lstm_net)
 
         return lstm_network
