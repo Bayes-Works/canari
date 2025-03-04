@@ -188,8 +188,8 @@ class Model:
         coefficients = np.polyfit(t_no_nan, y_no_nan, 1)
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
-                # self.mu_states[i] = np.nanmean(y_no_nan)
-                self.mu_states[i] = coefficients[-1]
+                self.mu_states[i] = np.nanmean(y_no_nan)
+                # self.mu_states[i] = coefficients[-1]
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
@@ -201,8 +201,8 @@ class Model:
             #     if self.var_states[i, i] == 0:
             #         self.var_states[i, i] = 1e-5
 
-        # self._mu_local_level = np.nanmean(y_no_nan)
-        self._mu_local_level = coefficients[-1]
+        self._mu_local_level = np.nanmean(y_no_nan)
+        # self._mu_local_level = coefficients[-1]
 
     def estimate_posterior_states(
         self,
