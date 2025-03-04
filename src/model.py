@@ -21,7 +21,7 @@ class Model:
         self.components = {
             component.component_name: component for component in components
         }
-        self._define_model()
+        self._initialize_model()
         self.states = StatesHistory()
 
     def _initialize_attributes(self):
@@ -66,8 +66,8 @@ class Model:
         self._current_epoch = 0
         self.stop_training = False
 
-    def _define_model(self):
-        """Assemble components"""
+    def _initialize_model(self):
+        """Initialize model"""
 
         self._assemble_matrices()
         self._assemble_states()
@@ -243,14 +243,6 @@ class Model:
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
 
-    def update_lstm_output_history(self, mu_lstm_pred, var_lstm_pred):
-        """Update lstm output history"""
-
-        self.lstm_output_history.mu = np.roll(self.lstm_output_history.mu, -1)
-        self.lstm_output_history.var = np.roll(self.lstm_output_history.var, -1)
-        self.lstm_output_history.mu[-1] = mu_lstm_pred.item()
-        self.lstm_output_history.var[-1] = var_lstm_pred.item()
-
     def set_states(
         self,
         new_mu_states: np.ndarray,
@@ -285,44 +277,13 @@ class Model:
         """Save states' priors, posteriors and cross-covariances for smoother"""
 
         self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(
-            (self.var_states_prior + self.var_states_prior.T) * 0.5
-        )
+        self.states.var_prior.append(self.var_states_prior)
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append(self.mu_states_posterior)
         self.states.var_smooth.append(self.var_states_posterior)
-
-    def create_compatible_model(self, target_model) -> None:
-        """
-        Create compatiable model by padding zero to states and matrices
-        Using in SKF
-        """
-
-        pad_row = np.zeros((self.num_states)).flatten()
-        pad_col = np.zeros((target_model.num_states)).flatten()
-        for i, state in enumerate(target_model.states_name):
-            if state not in self.states_name:
-                self.mu_states = common.pad_matrix(
-                    self.mu_states, i, pad_row=np.zeros(1)
-                )
-                self.var_states = common.pad_matrix(
-                    self.var_states, i, pad_row, pad_col
-                )
-                self.transition_matrix = common.pad_matrix(
-                    self.transition_matrix, i, pad_row, pad_col
-                )
-                self.process_noise_matrix = common.pad_matrix(
-                    self.process_noise_matrix, i, pad_row, pad_col
-                )
-                self.observation_matrix = common.pad_matrix(
-                    self.observation_matrix, i, pad_col=np.zeros(1)
-                )
-                self.num_states += 1
-                self.states_name.insert(i, state)
-                self.index_pad_state = i
 
     def forward(
         self,
@@ -445,7 +406,7 @@ class Model:
 
             if self.lstm_net:
                 lstm_index = self.lstm_states_index
-                self.update_lstm_output_history(
+                self.lstm_output_history.update(
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
                 )
@@ -494,7 +455,7 @@ class Model:
                     self.lstm_net.update_param(
                         np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
                     )
-                self.update_lstm_output_history(
+                self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
                 )

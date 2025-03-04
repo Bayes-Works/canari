@@ -12,6 +12,14 @@ class LstmOutputHistory:
         self.mu = 0 * np.ones(look_back_len, dtype=np.float32)
         self.var = 1 * np.ones(look_back_len, dtype=np.float32)
 
+    def update(self, mu_lstm, var_lstm):
+        """Update lstm output history"""
+
+        self.mu = np.roll(self.mu, -1)
+        self.var = np.roll(self.var, -1)
+        self.mu[-1] = mu_lstm.item()
+        self.var[-1] = var_lstm.item()
+
 
 @dataclass
 class StatesHistory:
