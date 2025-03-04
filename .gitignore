@@ -8,6 +8,7 @@ saved_results/
 *.png
 data/demo_data.csv
 data/benchmark_data/
+saved_params/
 
 !.vscode/launch.json
 !.vscode/settings.json
