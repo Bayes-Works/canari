@@ -185,22 +185,24 @@ class Model:
         y = y.flatten()
         t_no_nan = t[~np.isnan(y)]
         y_no_nan = y[~np.isnan(y)]
-        coefficients = np.polyfit(t_no_nan, y_no_nan, 2)
+        coefficients = np.polyfit(t_no_nan, y_no_nan, 1)
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
-                self.mu_states[i] = np.nanmean(y_no_nan)
+                # self.mu_states[i] = np.nanmean(y_no_nan)
+                self.mu_states[i] = coefficients[-1]
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
-                self.mu_states[i] = coefficients[1]
-                if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
-            elif _state_name == "local acceleration":
                 self.mu_states[i] = coefficients[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-2
+            # elif _state_name == "local acceleration":
+            #     self.mu_states[i] = coefficients[0]
+            #     if self.var_states[i, i] == 0:
+            #         self.var_states[i, i] = 1e-5
 
-        self._mu_local_level = np.nanmean(y_no_nan)
+        # self._mu_local_level = np.nanmean(y_no_nan)
+        self._mu_local_level = coefficients[-1]
 
     def estimate_posterior_states(
         self,
@@ -249,8 +251,11 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        self.mu_states = self.states.mu_smooth[0].copy()
-        self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
+        self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
+        self.var_states = np.diag(np.diag(self.states.var_smooth[self._lstm_look_back_len])).copy()
+        # self.mu_states[0] = self.states.mu_smooth[self._lstm_look_back_len][0] - self.states.mu_smooth[self._lstm_look_back_len][1] * self._lstm_look_back_len
+        # self.mu_states = self.states.mu_smooth[0].copy()
+        # self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.states_name.index("local level")
             self.mu_states[local_level_index] = self._mu_local_level
