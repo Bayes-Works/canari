@@ -219,6 +219,7 @@ plot_data(
   plot_column=output_col,
   validation_label="y",
   sub_plot=ax0,
+  plot_test_data=False,
 )
 plot_prediction(
   data_processor=data_processor,
