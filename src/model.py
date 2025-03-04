@@ -251,11 +251,11 @@ class Model:
         Set the model initial hidden states = the smoothed estimates
         """
 
-        # self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
-        # self.var_states = np.diag(np.diag(self.states.var_smooth[self._lstm_look_back_len])).copy()
-        # self.mu_states[0] = self.states.mu_smooth[self._lstm_look_back_len][0] - self.states.mu_smooth[self._lstm_look_back_len][1] * self._lstm_look_back_len
-        self.mu_states = self.states.mu_smooth[0].copy()
-        self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
+        self.mu_states = self.states.mu_smooth[self._lstm_look_back_len].copy()
+        self.var_states = np.diag(np.diag(self.states.var_smooth[self._lstm_look_back_len])).copy()
+
+        # self.mu_states = self.states.mu_smooth[0].copy()
+        # self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.states_name.index("local level")
             self.mu_states[local_level_index] = self._mu_local_level
