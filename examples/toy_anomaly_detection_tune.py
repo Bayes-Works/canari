@@ -13,7 +13,6 @@ from src import (
     ModelOptimizer,
     SKF,
     SKFOptimizer,
-    load_model_dict,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -144,7 +143,7 @@ def main(
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
-        norm_model = load_model_dict(model_param)
+        norm_model = Model.load_dict(model_param)
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(),

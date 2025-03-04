@@ -65,9 +65,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
         )
 
     # Validation metric
-    mse = metric.mse(
-        mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
-    )
+    validation_obs = data_processor.get_data("validation").flatten()
+    mse = metric.mse(mu_validation_preds, validation_obs)
 
     if plot:
         plot_data(

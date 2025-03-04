@@ -73,11 +73,8 @@ def SKF_anomaly_detection_runner(
     # Data processing
     data_processor = DataProcess(
         data=df_raw,
-        train_start="2000-01-01 00:00:00",
-        train_end="2000-01-09 23:00:00",
-        validation_start="2000-01-10 00:00:00",
-        validation_end="2000-01-10 23:00:00",
-        test_start="2000-01-11 00:00:00",
+        train_split=0.8,
+        validation_split=0.2,
         output_col=output_col,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
