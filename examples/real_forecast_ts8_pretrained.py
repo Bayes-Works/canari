@@ -22,15 +22,14 @@ from matplotlib import gridspec
 
 
 # # Read data
-data_file = "./data/benchmark_data/CASC_LGA007PIAP_E010_2024_07_obs.csv"
+data_file = "./data/benchmark_data/test_8_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 
-data_file_time = "./data/benchmark_data/CASC_LGA007PIAP_E010_2024_07_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
 
 # # Skip resampling data
 df = df_raw
@@ -40,61 +39,59 @@ output_col = [0]
 num_epoch = 100
 
 data_processor = DataProcess(
-    data=df,
-    train_split=0.28,
-    validation_split=0.07,
+    data=df_raw,
+    time_covariates=["week_of_year"],
+    train_split=0.3,
+    validation_split=0.074,
     output_col=output_col,
 )
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-AR = Autoregression(std_error=np.sqrt(3.40805912e-02), phi=8.55374273e-01, mu_states=[2.92968407e-01], var_states=[5.76243099e-02])
+AR = Autoregression(std_error=np.sqrt(0.00438643), phi=0.41399227, mu_states=[0.01074491], var_states=[6.24768401e-03])
 
 model = Model(
     # LocalTrend(mu_states=[1.70606055e-01, -7.50761283e-04], var_states=[7.91547954e-03, 7.06413244e-07]),
-    LocalTrend(mu_states=[1.70606055e-01, -7.50761283e-04], var_states=[1e-12, 1e-12]),
+    LocalTrend(mu_states=[-0.65344852, 0.00199401], var_states=[2.00830872e-04, 1.66426896e-08]),
     LstmNetwork(
-        look_back_len=26,
-        num_features=1,
+        look_back_len=22,
+        num_features=5,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        load_lstm_net='saved_params/lstm_CASC_LGA007EFAPRG910_2024_07.pth',
+        load_lstm_net="saved_params/lstm_ts08.pth",
     ),
     AR,
 )
-# # model.auto_initialize_baseline_states(train_data["y"][10:10+52+52+52])
-# model.auto_initialize_baseline_states(train_data["y"][10:52*4])
 
-model.filter(train_data)
-model.smoother(train_data)
-mu_validation_preds, std_validation_preds = model.forecast(validation_data)
+model.filter(normalized_data)
+model.smoother(normalized_data)
+# mu_validation_preds, std_validation_preds = model.forecast(validation_data)
 
-# Unstandardize the predictions
-mu_validation_preds_unnorm = normalizer.unstandardize(
-    mu_validation_preds,
-    data_processor.norm_const_mean[output_col],
-    data_processor.norm_const_std[output_col],
-)
-std_validation_preds_unnorm = normalizer.unstandardize_std(
-    std_validation_preds,
-    data_processor.norm_const_std[output_col],
-)
+# # Unstandardize the predictions
+# mu_validation_preds_unnorm = normalizer.unstandardize(
+#     mu_validation_preds,
+#     data_processor.norm_const_mean[output_col],
+#     data_processor.norm_const_std[output_col],
+# )
+# std_validation_preds_unnorm = normalizer.unstandardize_std(
+#     std_validation_preds,
+#     data_processor.norm_const_std[output_col],
+# )
 
-mse = metric.mse(
-    mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
-)
+# mse = metric.mse(
+#     mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
+# )
 
-validation_log_lik = metric.log_likelihood(
-    prediction=mu_validation_preds_unnorm,
-    observation=data_processor.validation_data[:, output_col].flatten(),
-    std=std_validation_preds_unnorm,
-)
+# validation_log_lik = metric.log_likelihood(
+#     prediction=mu_validation_preds_unnorm,
+#     observation=data_processor.validation_data[:, output_col].flatten(),
+#     std=std_validation_preds_unnorm,
+# )
 
-
-# print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation LL      :{validation_log_lik: 0.4f}")
+# # print(f"Optimal epoch       : {model.optimal_epoch}")
+# print(f"Validation LL      :{validation_log_lik: 0.4f}")
 
 #  Plot
 state_type = "prior"
@@ -114,13 +111,13 @@ plot_data(
     validation_label="y",
     sub_plot=ax0,
 )
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    sub_plot=ax0,
-)
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds,
+#     std_validation_pred=std_validation_preds,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+#     sub_plot=ax0,
+# )
 plot_states(
     data_processor=data_processor,
     states=model.states,

@@ -121,7 +121,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # # Saved the trained lstm network
-# params_path = 'saved_params/lstm_CASC_LGA007EFAPRG910_2024_07.pth'
+# params_path = 'saved_params/lstm_ts05.pth'
 # model.lstm_net.load_state_dict(model.early_stop_lstm_param)
 # model.lstm_net.save(filename = params_path)
 
