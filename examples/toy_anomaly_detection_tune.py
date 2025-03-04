@@ -33,7 +33,7 @@ SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
 
 def main(
     num_trial_optimization: int = 5,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data

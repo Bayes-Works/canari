@@ -35,100 +35,132 @@ class SKF:
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
         self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
-        self.create_transition_model(
-            norm_model,
-            abnorm_model,
-        )
-        self.transition_coef = initialize_transition()
-        self.define_lstm_network()
+        self._initialize_attributes()
+        self._initialize_model(norm_model, abnorm_model)
         self.states = StatesHistory()
+
+    def _initialize_attributes(self):
+        """Initialize attribute"""
+
+        # General attributes
+        self.num_states = 0
+        self.states_name = []
+
+        # SKF-related attributes
+        self.model = initialize_transition()
+        self.transition_prob = initialize_transition()
+        self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
+        self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
+        self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
+        self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
+        self.transition_coef = initialize_transition()
         self.filter_marginal_prob_history = None
         self.smooth_marginal_prob_history = None
         self.marginal_list = {"norm", "abnorm"}
         self._marginal_prob = initialize_marginal()
         self._marginal_prob["norm"] = self.norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
-        self.initialize_early_stop()
 
-    def create_transition_model(
-        self,
-        norm_model: Model,
-        abnorm_model: Model,
-    ):
-        """
-        Create transitional models
-        """
+        # LSTM-related attributes
+        self.lstm_net = None
+        self.lstm_output_history = None
 
-        # Create transitional model
-        norm_norm = copy.deepcopy(norm_model)
-        norm_norm.lstm_net = norm_model.lstm_net
-        norm_norm.create_compatible_model(abnorm_model)
-        if "white noise" in norm_norm.states_name:
-            index_noise = norm_norm.states_name.index("white noise")
-            abnorm_model.process_noise_matrix[index_noise, index_noise] = (
-                norm_norm.process_noise_matrix[index_noise, index_noise]
-            )
-        abnorm_norm = copy.deepcopy(norm_norm)
-        norm_abnorm = copy.deepcopy(abnorm_model)
-        abnorm_abnorm = copy.deepcopy(abnorm_model)
-
-        # Add transition noise to norm_abnorm.process_noise_matrix
-        index_pad_state = norm_norm.index_pad_state
-        norm_abnorm.process_noise_matrix[index_pad_state, index_pad_state] = (
-            self.std_transition_error**2
-        )
-
-        # Store transitional models in a dictionary
-        self.model = initialize_transition()
-        self.model["norm_norm"] = norm_norm
-        self.model["abnorm_abnorm"] = abnorm_abnorm
-        self.model["norm_abnorm"] = norm_abnorm
-        self.model["abnorm_norm"] = abnorm_norm
-
-        # Transition probability
-        self.transition_prob = initialize_transition()
-        self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
-        self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
-        self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
-        self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
-
-        self.num_states = self.model["norm_norm"].num_states
-        self.states_name = self.model["norm_norm"].states_name
-
-    def define_lstm_network(self):
-        """
-        Assign self.lstm_net using self.model["norm_norm"].lstm_net
-        """
-        if self.model["norm_norm"].lstm_net is not None:
-            self.lstm_net = self.model["norm_norm"].lstm_net
-            self.lstm_output_history = self.model["norm_norm"].lstm_output_history
-            self.update_lstm_output_history = self.model[
-                "norm_norm"
-            ].update_lstm_output_history
-        else:
-            self.lstm_net = None
-
-    def initialize_early_stop(self):
-        """
-        Initialize for early stopping
-        """
-
+        # Early stopping attributes
         self.stop_training = False
         self.optimal_epoch = 0
         self.early_stop_metric_history = []
         self.early_stop_metric = None
 
-    def auto_initialize_baseline_states(self, y: np.ndarray):
+    def _initialize_model(self, norm_model: Model, abnorm_model: Model):
+        """Initialize model"""
+
+        self._create_transition_model(
+            norm_model,
+            abnorm_model,
+        )
+        self._link_skf_to_model()
+
+    @staticmethod
+    def _create_compatible_models(soure_model, target_model) -> None:
         """
-        Automatically initialize baseline states from data for normal model
+        Create compatiable model by padding zero to states and matrices
         """
 
+        pad_row = np.zeros((soure_model.num_states)).flatten()
+        pad_col = np.zeros((target_model.num_states)).flatten()
+        states_diff = []
+        for i, state in enumerate(target_model.states_name):
+            if state not in soure_model.states_name:
+                soure_model.mu_states = common.pad_matrix(
+                    soure_model.mu_states, i, pad_row=np.zeros(1)
+                )
+                soure_model.var_states = common.pad_matrix(
+                    soure_model.var_states, i, pad_row, pad_col
+                )
+                soure_model.transition_matrix = common.pad_matrix(
+                    soure_model.transition_matrix, i, pad_row, pad_col
+                )
+                soure_model.process_noise_matrix = common.pad_matrix(
+                    soure_model.process_noise_matrix, i, pad_row, pad_col
+                )
+                soure_model.observation_matrix = common.pad_matrix(
+                    soure_model.observation_matrix, i, pad_col=np.zeros(1)
+                )
+                soure_model.num_states += 1
+                soure_model.states_name.insert(i, state)
+                states_diff.append(state)
+
+        if "white noise" in soure_model.states_name:
+            index_noise = soure_model.states_name.index("white noise")
+            target_model.process_noise_matrix[index_noise, index_noise] = (
+                soure_model.process_noise_matrix[index_noise, index_noise]
+            )
+        return soure_model, target_model, states_diff
+
+    def _create_transition_model(
+        self,
+        norm_model: Model,
+        abnorm_model: Model,
+    ):
+        """Create transitional models from normal and abnormal models"""
+
+        # Create transitional model
+        norm_norm = copy.deepcopy(norm_model)
+        norm_norm.lstm_net = norm_model.lstm_net
+        abnorm_abnorm = copy.deepcopy(abnorm_model)
+        norm_norm, abnorm_abnorm, states_diff = self._create_compatible_models(
+            norm_norm, abnorm_abnorm
+        )
+        abnorm_norm = copy.deepcopy(norm_norm)
+        norm_abnorm = copy.deepcopy(abnorm_abnorm)
+
+        # Add transition noise to norm_abnorm.process_noise_matrix
+        index_states_diff = norm_norm.get_state_index(states_diff[-1])
+        norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
+            self.std_transition_error**2
+        )
+
+        # Store transitional models in a dictionary
+        self.model["norm_norm"] = norm_norm
+        self.model["abnorm_abnorm"] = abnorm_abnorm
+        self.model["norm_abnorm"] = norm_abnorm
+        self.model["abnorm_norm"] = abnorm_norm
+
+    def _link_skf_to_model(self):
+        """Link SKF's attributes to norm_norm model's attributes"""
+
+        self.num_states = self.model["norm_norm"].num_states
+        self.states_name = self.model["norm_norm"].states_name
+        if self.model["norm_norm"].lstm_net is not None:
+            self.lstm_net = self.model["norm_norm"].lstm_net
+            self.lstm_output_history = self.model["norm_norm"].lstm_output_history
+
+    def auto_initialize_baseline_states(self, y: np.ndarray):
+        """Automatically initialize baseline states from data for normal model"""
         self.model["norm_norm"].auto_initialize_baseline_states(y)
 
     def set_same_states_transition_model(self):
-        """
-        Copy the states from self.model["norm_norm"] to all other transition models
-        """
+        """Copy the states from self.model["norm_norm"] to all other transition models"""
 
         for transition_model in self.model.values():
             transition_model.set_states(
@@ -136,19 +168,17 @@ class SKF:
             )
 
     def save_states_history(self):
-        """
-        Save states' priors, posteriors and cross-covariances at one time step
-        """
+        """Save states' priors, posteriors and cross-covariances at one time step"""
 
         for transition_model in self.model.values():
             transition_model.save_states_history()
 
-        self.states.mu_prior.append(self.mu_states_prior.flatten())
+        self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior.flatten())
+        self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
-        self.states.mu_smooth.append([])
-        self.states.var_smooth.append([])
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
 
     def save_initial_states(self):
         """
@@ -391,9 +421,6 @@ class SKF:
 
         return transition_coef
 
-    def initialize_states_with_smoother_estimates(self, epoch):
-        self.model["norm_norm"].initialize_states_with_smoother_estimates_v1(epoch)
-
     def clear_memory(self):
         """
         Clear memories for the next run, i.e. clear cell and hidden states,
@@ -471,19 +498,17 @@ class SKF:
         evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
-        self.model["norm_norm"].early_stopping(
+        (
+            self.stop_training,
+            self.optimal_epoch,
+            self.early_stop_metric_history,
+            self.early_stop_metric,
+        ) = self.model["norm_norm"].early_stopping(
             mode=mode,
             patience=patience,
             evaluate_metric=evaluate_metric,
             skip_epoch=skip_epoch,
         )
-        self.stop_training = self.model["norm_norm"].stop_training
-        self.optimal_epoch = self.model["norm_norm"].optimal_epoch
-        self.early_stop_metric_history = self.model[
-            "norm_norm"
-        ].early_stop_metric_history
-        self.early_stop_metric = self.model["norm_norm"].early_stop_metric
-
         return (
             self.stop_training,
             self.optimal_epoch,
@@ -698,7 +723,7 @@ class SKF:
 
             if self.lstm_net:
                 lstm_index = self.model["norm_norm"].get_state_index("lstm")
-                self.update_lstm_output_history(
+                self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[
                         lstm_index,
