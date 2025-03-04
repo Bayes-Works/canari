@@ -35,7 +35,8 @@ df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
 # Change the trend of data
-df_raw.values+=np.arange(len(df_raw.values),dtype="float64").reshape(-1, 1)*0.1
+trend_true = 0.1
+df_raw.values+=np.arange(len(df_raw.values),dtype="float64").reshape(-1, 1)*trend_true
 
 # # Skip resampling data
 df = df_raw
@@ -54,6 +55,8 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
+trend_true_norm = trend_true/(data_processor.norm_const_std[output_col].item() + 1e-10)
+level_true_norm = (5.0 - data_processor.norm_const_mean[output_col].item())/(data_processor.norm_const_std[output_col].item() + 1e-10)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Define AR model
@@ -69,13 +72,13 @@ LSTM = LstmNetwork(
     )
 
 model = Model(
-    # LocalTrend(mu_states=[-0.00902307, 0.0], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
-    LocalTrend(),
+    LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
+    # LocalTrend(),
     LSTM,
     AR,
 )
-# model._mu_local_level = -0.00902307
-model.auto_initialize_baseline_states(train_data["y"][0:51])
+model._mu_local_level = level_true_norm
+# model.auto_initialize_baseline_states(train_data["y"][0:51])
 
 
 # Training
@@ -108,8 +111,8 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
-    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
+    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -133,8 +136,9 @@ model_dict['states_optimal'] = states_optim
 print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
 pretrained_model = Model(
+    LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-    LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
@@ -273,9 +277,4 @@ if "W2bar" in model.states_name:
     states_to_plot=['W2bar'],
     sub_plot=ax5,
   )
-print(f"Initial states for optimal epoch: ")
-print(model.early_stop_init_mu_states)
-print(model.early_stop_init_var_states)
-print(f"States prior at the last step: ")
-print(states_optim.mu_prior[-1])
 plt.show()
