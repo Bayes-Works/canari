@@ -581,7 +581,7 @@ class Model:
         self._current_epoch += 1
 
         # Check stop condition and assign optimal values
-        if (self._current_epoch - self.optimal_epoch) >= patience:
+        if (self._current_epoch - self.optimal_epoch) >= patience and self._current_epoch > skip_epoch + 1:
             self.stop_training = True
             self.lstm_net.load_state_dict(self.early_stop_lstm_param)
             self.set_states(
