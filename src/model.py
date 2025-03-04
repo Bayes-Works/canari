@@ -40,13 +40,14 @@ class Model:
         self.var_states_prior = None
         self.mu_states_posterior = None
         self.var_states_posterior = None
+        self._mu_obs_predict = None
+        self._var_obs_predict = None
         self.transition_matrix = None
         self.process_noise_matrix = None
         self.observation_matrix = None
 
         # LSTM-related attributes
         self.lstm_net = None
-        self.lstm_states_index = None
         self.lstm_output_history = LstmOutputHistory()
 
         # Autoregression-related attributes
@@ -76,19 +77,17 @@ class Model:
     def _assemble_matrices(self):
         """Assemble_matrices"""
 
-        # Global transition matrix
-        transition_matrices = [
-            component.transition_matrix for component in self.components.values()
-        ]
-        self.transition_matrix = common.create_block_diag(*transition_matrices)
+        # Assemble transition matrices
+        self.transition_matrix = common.create_block_diag(
+            *(component.transition_matrix for component in self.components.values())
+        )
 
-        # Global process_noise_matrix
-        process_noise_matrices = [
-            component.process_noise_matrix for component in self.components.values()
-        ]
-        self.process_noise_matrix = common.create_block_diag(*process_noise_matrices)
+        # Assemble process noise matrices
+        self.process_noise_matrix = common.create_block_diag(
+            *(component.process_noise_matrix for component in self.components.values())
+        )
 
-        # Glolabl observation noise matrix
+        # Assemble observation matrices
         global_observation_matrix = np.array([])
         for component in self.components.values():
             global_observation_matrix = np.concatenate(
@@ -131,7 +130,7 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            self.lstm_net.update_param = self.update_lstm_param
+            self.lstm_net.update_param = self._update_lstm_param
             self.lstm_states_index = self.get_state_index("lstm")
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
@@ -150,6 +149,18 @@ class Model:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
 
+    def _update_lstm_param(
+        self,
+        delta_mu_lstm: np.ndarray,
+        delta_var_lstm: np.ndarray,
+    ):
+        """Update lstm network's parameters"""
+
+        self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
+        self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
+        self.lstm_net.backward()
+        self.lstm_net.step()
+
     def __deepcopy__(self, memo):
         """Copy a model object, but do not copy "lstm_net" attribute"""
 
@@ -162,21 +173,43 @@ class Model:
             setattr(obj, k, copy.deepcopy(v, memo))
         return obj
 
+    def save_model_dict(self) -> dict:
+        """
+        Save the model as a dict.
+        """
+
+        model_dict = {}
+        model_dict["components"] = self.components
+        model_dict["mu_states"] = self.mu_states
+        model_dict["var_states"] = self.var_states
+        if self.lstm_net:
+            model_dict["lstm_network_params"] = self.lstm_net.state_dict()
+
+        return model_dict
+
+    @staticmethod
+    def load_dict(save_dict: dict):
+        """
+        Create a model from a saved dict
+        """
+
+        components = list(save_dict["components"].values())
+        model = Model(*components)
+        model.set_states(save_dict["mu_states"], save_dict["var_states"])
+        if model.lstm_net:
+            model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+        return model
+
     def get_state_index(self, states_name: str):
         """Get state index in the state vector"""
-        return self.states_name.index(states_name)
 
-    def update_lstm_param(
-        self,
-        delta_mu_lstm: np.ndarray,
-        delta_var_lstm: np.ndarray,
-    ):
-        """Update lstm network's parameters"""
-
-        self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
-        self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
-        self.lstm_net.backward()
-        self.lstm_net.step()
+        index = (
+            self.states_name.index(states_name)
+            if states_name in self.states_name
+            else None
+        )
+        return index
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """Automatically initialize baseline states from data"""
@@ -199,17 +232,6 @@ class Model:
                     self.var_states[i, i] = 1e-2
         self._mu_local_level = np.nanmean(y_no_nan)
         # self._mu_local_level = coefficients[-1]
-
-    def estimate_posterior_states(
-        self,
-        delta_mu_states: np.ndarray,
-        delta_var_states: np.ndarray,
-    ):
-        """Estimate the posterirors for the states"""
-
-        mu_states_posterior = self.mu_states_prior + delta_mu_states
-        var_states_posterior = self.var_states_prior + delta_var_states
-        return mu_states_posterior, var_states_posterior
 
     def set_posterior_states(
         self,
@@ -250,7 +272,6 @@ class Model:
 
     def initialize_states_history(self):
         """Initialize states history including prior, posterior, and smoother states"""
-
         self.states.initialize(self.states_name)
 
     def clear_memory(self):
@@ -271,14 +292,8 @@ class Model:
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
         self.states.cov_states.append(cov_states)
-        self.states.mu_smooth.append([])
-        self.states.var_smooth.append([])
-
-    def initialize_smoother(self):
-        """Set the smoothed estimates at the last time step = posterior"""
-
-        self.states.mu_smooth[-1] = self.states.mu_posterior[-1].copy()
-        self.states.var_smooth[-1] = self.states.var_posterior[-1].copy()
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
 
     def create_compatible_model(self, target_model) -> None:
         """
@@ -308,8 +323,6 @@ class Model:
                 self.num_states += 1
                 self.states_name.insert(i, state)
                 self.index_pad_state = i
-        if "lstm" in self.states_name:
-            self.lstm_states_index = target_model.get_state_index("lstm")
 
     def forward(
         self,
@@ -322,16 +335,16 @@ class Model:
         """
 
         # LSTM prediction:
-        # lstm_state_index = None
-        if self.lstm_net and input_covariates is not None:
+        lstm_states_index = self.get_state_index("lstm")
+        if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, input_covariates
             )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
-            # lstm_state_index = self.get_state_index("lstm")
 
+        # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
@@ -340,9 +353,10 @@ class Model:
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
-            self.lstm_states_index,
+            lstm_states_index,
         )
 
+        # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self.online_AR_forward_modification(
                 mu_states_prior, var_states_prior
@@ -350,8 +364,8 @@ class Model:
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
-        self.mu_obs_prior = mu_obs_pred
-        self.var_obs_prior = var_obs_pred
+        self._mu_obs_predict = mu_obs_pred
+        self._var_obs_predict = var_obs_pred
 
         return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
 
@@ -365,16 +379,15 @@ class Model:
 
         delta_mu_states, delta_var_states = common.backward(
             obs,
-            self.mu_obs_prior,
-            self.var_obs_prior,
+            self._mu_obs_predict,
+            self._var_obs_predict,
             self.var_states_prior,
             self.observation_matrix,
         )
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
-        mu_states_posterior, var_states_posterior = self.estimate_posterior_states(
-            delta_mu_states, delta_var_states
-        )
+        mu_states_posterior = self.mu_states_prior + delta_mu_states
+        var_states_posterior = self.var_states_prior + delta_var_states
 
         if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
@@ -499,8 +512,6 @@ class Model:
         """
 
         num_time_steps = len(data["y"])
-        # Smoother
-        self.initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
 
@@ -716,17 +727,3 @@ class Model:
             # Fill the diagonal elements back
             np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
-
-
-def load_model_dict(save_dict: dict) -> Model:
-    """
-    Create a model from a saved dict
-    """
-
-    components = list(save_dict["components"].values())
-    model = Model(*components)
-    model.set_states(save_dict["mu_states"], save_dict["var_states"])
-    if model.lstm_net:
-        model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-
-    return model

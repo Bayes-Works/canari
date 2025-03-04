@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Optional
 import copy
 import numpy as np
 from pytagi import metric
-from src.model import Model, load_model_dict
+from src.model import Model
 from src import common
 import copy
 from src.data_struct import (
@@ -94,7 +94,6 @@ class SKF:
 
         self.num_states = self.model["norm_norm"].num_states
         self.states_name = self.model["norm_norm"].states_name
-        self.index_pad_state = self.model["norm_norm"].index_pad_state
 
     def define_lstm_network(self):
         """
@@ -102,7 +101,6 @@ class SKF:
         """
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
-            self.lstm_states_index = self.model["norm_norm"].lstm_states_index
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
             self.update_lstm_output_history = self.model[
                 "norm_norm"
@@ -179,17 +177,6 @@ class SKF:
         """
         Set the smoothed estimates at the last time step = posterior
         """
-
-        for origin_state in self.marginal_list:
-            for arrival_state in self.marginal_list:
-                transit = f"{origin_state}_{arrival_state}"
-                marginal_arrival = f"{arrival_state}_{arrival_state}"
-                self.model[transit].states.mu_smooth[-1] = self.model[
-                    marginal_arrival
-                ].states.mu_posterior[-1]
-                self.model[transit].states.var_smooth[-1] = self.model[
-                    marginal_arrival
-                ].states.var_posterior[-1]
 
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
@@ -419,6 +406,53 @@ class SKF:
         self._marginal_prob["norm"] = self.norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
+    def save_dict(self) -> dict:
+        """
+        Save the SKF model as a dict.
+        """
+
+        SKF_dict = {}
+        SKF_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
+        SKF_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
+        SKF_dict["std_transition_error"] = self.std_transition_error
+        SKF_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
+        SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
+        SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
+        if self.lstm_net:
+            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
+
+        return SKF_dict
+
+    @staticmethod
+    def load_dict(save_dict: dict):
+        """
+        Create a model from a saved dict
+        """
+
+        # Create normal model
+        norm_components = list(save_dict["norm_model"]["components"].values())
+        norm_model = Model(*norm_components)
+        if norm_model.lstm_net:
+            norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+
+        # Create abnormal model
+        ab_components = list(save_dict["abnorm_model"]["components"].values())
+        ab_model = Model(*ab_components)
+
+        skf = SKF(
+            norm_model=norm_model,
+            abnorm_model=ab_model,
+            std_transition_error=save_dict["std_transition_error"],
+            norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
+            abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
+            norm_model_prior_prob=save_dict["norm_model_prior_prob"],
+        )
+        skf.model["norm_norm"].set_states(
+            save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"]
+        )
+
+        return skf
+
     def lstm_train(
         self,
         train_data: Dict[str, np.ndarray],
@@ -483,7 +517,6 @@ class SKF:
             var_lstm_pred = None
 
         for transit, transition_model in self.model.items():
-            lstm_index = transition_model.lstm_states_index
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
@@ -654,8 +687,6 @@ class SKF:
         self.filter_marginal_prob_history = initialize_marginal_prob_history(
             num_time_steps
         )
-        if self.lstm_net:
-            lstm_index = self.lstm_states_index
 
         # Initialize hidden states
         self.set_same_states_transition_model()
@@ -666,6 +697,7 @@ class SKF:
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
+                lstm_index = self.model["norm_norm"].get_state_index("lstm")
                 self.update_lstm_output_history(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[
@@ -701,8 +733,6 @@ class SKF:
         self.smooth_marginal_prob_history = initialize_marginal_prob_history(
             num_time_steps
         )
-
-        # Smoother
         self.initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
@@ -722,7 +752,7 @@ class SKF:
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ) -> Tuple[float, float]:
-        """ """
+        """Detect anomaly"""
 
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
@@ -762,53 +792,3 @@ class SKF:
         false_rate = num_false_alarm / num_anomaly
 
         return detection_rate, false_rate, false_alarm_train
-
-    def save_model_dict(self) -> dict:
-        """
-        Save the SKF model as a dict.
-        """
-
-        SKF_dict = {}
-        SKF_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
-        SKF_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
-        SKF_dict["std_transition_error"] = self.std_transition_error
-        SKF_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
-        SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
-        SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
-        if self.lstm_net:
-            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
-
-        return SKF_dict
-
-
-def load_SKF_dict(save_dict: dict) -> SKF:
-    """
-    Create a model from a saved dict
-    """
-
-    # Create normal model
-    norm_components = list(save_dict["norm_model"]["components"].values())
-    norm_model = Model(*norm_components)
-    if norm_model.lstm_net:
-        norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-
-    # Create abnormal model
-    ab_components = list(save_dict["abnorm_model"]["components"].values())
-    ab_model = Model(*ab_components)
-
-    skf = SKF(
-        norm_model=norm_model,
-        abnorm_model=ab_model,
-        std_transition_error=save_dict["std_transition_error"],
-        norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
-        abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
-        norm_model_prior_prob=save_dict["norm_model_prior_prob"],
-    )
-    skf.model["norm_norm"].set_states(
-        save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"]
-    )
-
-    if skf.lstm_net:
-        skf.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-
-    return skf
