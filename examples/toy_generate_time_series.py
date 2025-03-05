@@ -67,7 +67,6 @@ validation_data_x_unnorm = normalizer.unstandardize(
 time_covariate_info = {'initial_time_covariate': validation_data_x_unnorm[-1].item(),
                         'mu': data_processor.norm_const_mean[1], 
                         'std': data_processor.norm_const_std[1]}
-print(validation_data['x'][-54:])
 
 LSTM = LstmNetwork(
         look_back_len=52,
@@ -174,7 +173,7 @@ pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_pa
 
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts = pretrained_model.generate(num_time_series=5, num_time_steps=len(normalized_data['y']), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
+generated_ts = pretrained_model.generate(num_time_series=3, num_time_steps=len(normalized_data['y'])*2, time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
 # generated_ts = pretrained_model.generate(num_time_series=3, num_time_steps=5)
 
 # Plot generated_ts[0]
