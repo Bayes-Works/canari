@@ -468,7 +468,6 @@ class Model:
         Generate time series data
         """
         time_series_all = []
-        lstm_index = self.lstm_states_index
         mu_states_temp = copy.deepcopy(self.mu_states)
         var_states_temp = copy.deepcopy(self.var_states)
         
@@ -499,7 +498,6 @@ class Model:
                 self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
             else:
                 self.initialize_lstm_output_history()
-            obs_gen = self.mu_states[0].item()
             if "autoregression" in self.states_name:
                 ar_sample = np.random.normal(0, sigma_AR)
             for x in input_covariates:
@@ -513,12 +511,13 @@ class Model:
                     obs_gen += ar_sample
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
-                    obs_gen += np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-
-                if self.lstm_net:
+                    lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
+                    obs_gen += lstm_noise_sample
                     self.update_lstm_output_history(
                         mu_states_prior[lstm_index],
                         var_states_prior[lstm_index, lstm_index],
+                        # mu_states_prior[lstm_index]+lstm_noise_sample,
+                        # np.zeros_like(var_states_prior[lstm_index, lstm_index]),
                     )
                 self.set_states(mu_states_prior, var_states_prior)
                 one_time_series.append(obs_gen)
@@ -800,14 +799,20 @@ class Model:
         """
         Prepare covariates for synthetic data generation
         """
-        # self.covariates_generation = []
         covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":
-                covariates_generation = covariates_generation % 24
+                covariates_generation = (initial_covariate + covariates_generation) % 24 + 1
+            elif time_cov == "day_of_week":
+                covariates_generation = (initial_covariate + covariates_generation) % 7 + 1
+            elif time_cov == "day_of_year":
+                covariates_generation = (initial_covariate + covariates_generation) % 365 + 1
             elif time_cov == "week_of_year":
-                covariates_generation = initial_covariate + covariates_generation
-                covariates_generation = covariates_generation % 52 + 1
+                covariates_generation = (initial_covariate + covariates_generation) % 52 + 1
+            elif time_cov == "month_of_year":
+                covariates_generation = (initial_covariate + covariates_generation) % 12 + 1
+            elif time_cov == "quarter_of_year":
+                covariates_generation = (initial_covariate + covariates_generation) % 4 + 1
         return covariates_generation
 
 
