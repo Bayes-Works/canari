@@ -477,7 +477,7 @@ class Model:
             input_covariates = self.prepare_covariates_generation(initial_time_covariate, num_time_steps, time_covariates)
             input_covariates = normalizer.standardize(input_covariates, time_covariate_info["mu"], time_covariate_info["std"])
         else:
-            input_covariates = np.nan(num_time_steps) * np.nan
+            input_covariates = np.empty((num_time_steps, 0))
 
         # Get the autoregression component in the model
         if "autoregression" in self.components:
@@ -503,7 +503,7 @@ class Model:
             if "autoregression" in self.states_name:
                 ar_sample = np.random.normal(0, sigma_AR)
             for x in input_covariates:
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([x])
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
                 # Generate observation samples
                 obs_gen = mu_obs_pred.item()
@@ -540,6 +540,11 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
+
+        # print(type(data["x"]))
+        # print(data["x"].shape)
+        # print(type(data["x"][0]))
+        # print(len(data["x"][0]))
 
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
@@ -796,7 +801,7 @@ class Model:
         Prepare covariates for synthetic data generation
         """
         # self.covariates_generation = []
-        covariates_generation = np.arange(0, num_generated_samples)
+        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":
                 covariates_generation = covariates_generation % 24
