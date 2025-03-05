@@ -463,7 +463,7 @@ class Model:
             self.states,
         )
     
-    def generate(self, num_time_series: int, num_time_steps: int) -> np.ndarray:
+    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None) -> np.ndarray:
         """
         Generate time series data
         """
@@ -471,6 +471,13 @@ class Model:
         lstm_index = self.lstm_states_index
         mu_states_temp = copy.deepcopy(self.mu_states)
         var_states_temp = copy.deepcopy(self.var_states)
+        
+        if time_covariates is not None:
+            initial_time_covariate = time_covariate_info["initial_time_covariate"]
+            input_covariates = self.prepare_covariates_generation(initial_time_covariate, num_time_steps, time_covariates)
+            input_covariates = normalizer.standardize(input_covariates, time_covariate_info["mu"], time_covariate_info["std"])
+        else:
+            input_covariates = np.nan(num_time_steps) * np.nan
 
         # Get the autoregression component in the model
         if "autoregression" in self.components:
@@ -484,25 +491,24 @@ class Model:
 
         for _ in range(num_time_series):
             one_time_series = []
+            # Reset lstm cell states
+            self.lstm_net.reset_lstm_states()
+            # Reset lstm output history
             if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
                 self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
                 self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
             else:
                 self.initialize_lstm_output_history()
             obs_gen = self.mu_states[0].item()
-            ar_sample = 0
-            LL_pred_mu = 0
-            for _ in range(num_time_steps):
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([obs_gen-LL_pred_mu])
-                
-                LL_pred_mu = mu_states_prior[0].item()
-                # forward_input = mu_obs_pred.item()-LL_pred_mu
-
-                # print(mu_states_prior[-2])
+            if "autoregression" in self.states_name:
+                ar_sample = np.random.normal(0, sigma_AR)
+            for x in input_covariates:
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([x])
 
                 # Generate observation samples
                 obs_gen = mu_obs_pred.item()
                 if "autoregression" in self.states_name:
+                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
                     ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
                     obs_gen += ar_sample
                 if "lstm" in self.states_name:
@@ -784,6 +790,21 @@ class Model:
             # Fill the diagonal elements back
             np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
+    
+    def prepare_covariates_generation(self, initial_covariate, num_generated_samples: int, time_covariates: List[str]):
+        """
+        Prepare covariates for synthetic data generation
+        """
+        # self.covariates_generation = []
+        covariates_generation = np.arange(0, num_generated_samples)
+        for time_cov in time_covariates:
+            if time_cov == "hour_of_day":
+                covariates_generation = covariates_generation % 24
+            elif time_cov == "week_of_year":
+                covariates_generation = initial_covariate + covariates_generation
+                covariates_generation = covariates_generation % 52 + 1
+        return covariates_generation
+
 
     def generate_synthetic_data(self, data, num_time_series: int):
         """Generate synthetic data"""
