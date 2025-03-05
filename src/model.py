@@ -503,16 +503,21 @@ class Model:
             for x in input_covariates:
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
-                # Generate observation samples
+                # obs_gen = np.random.normal(mu_obs_pred, var_obs_pred**0.5).item()
+
+                # # Generate observation samples
                 obs_gen = mu_obs_pred.item()
-                if "autoregression" in self.states_name:
-                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
-                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
-                    obs_gen += ar_sample
+                # if "autoregression" in self.states_name:
+                #     obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
+                #     ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
+                #     obs_gen += ar_sample
+                # if "lstm" in self.states_name:
+                #     lstm_index = self.states_name.index("lstm")
+                #     lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
+                #     obs_gen += lstm_noise_sample
+
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
-                    lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-                    obs_gen += lstm_noise_sample
                     self.update_lstm_output_history(
                         mu_states_prior[lstm_index],
                         var_states_prior[lstm_index, lstm_index],
