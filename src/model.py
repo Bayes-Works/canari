@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from typing import Optional, List, Tuple, Dict
+from pytagi import Normalizer as normalizer
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
