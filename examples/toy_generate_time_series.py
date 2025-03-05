@@ -164,7 +164,7 @@ pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_pa
 
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts = pretrained_model.generate(num_time_series=1, num_time_steps=len(normalized_data['y'])*2)
+generated_ts = pretrained_model.generate(num_time_series=5, num_time_steps=len(normalized_data['y']))
 # generated_ts = pretrained_model.generate(num_time_series=3, num_time_steps=5)
 
 # Plot generated_ts[0]
