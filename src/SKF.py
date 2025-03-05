@@ -47,16 +47,25 @@ class SKF:
         self.states_name = []
 
         # SKF-related attributes
+        self.mu_states_init = None
+        self.var_states_init = None
+        self.mu_states_prior = None
+        self.var_states_prior = None
+        self.mu_states_posterior = None
+        self.var_states_posterior = None
+
         self.model = initialize_transition()
+        self.transition_coef = initialize_transition()
+        self.filter_marginal_prob_history = None
+        self.smooth_marginal_prob_history = None
+        self.marginal_list = {"norm", "abnorm"}
+
         self.transition_prob = initialize_transition()
         self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
         self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
         self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
         self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
-        self.transition_coef = initialize_transition()
-        self.filter_marginal_prob_history = None
-        self.smooth_marginal_prob_history = None
-        self.marginal_list = {"norm", "abnorm"}
+
         self._marginal_prob = initialize_marginal()
         self._marginal_prob["norm"] = self.norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
@@ -79,12 +88,11 @@ class SKF:
             abnorm_model,
         )
         self._link_skf_to_model()
+        self.save_initial_states()
 
     @staticmethod
     def _create_compatible_models(soure_model, target_model) -> None:
-        """
-        Create compatiable model by padding zero to states and matrices
-        """
+        """Create compatiable model by padding zero to states and matrices"""
 
         pad_row = np.zeros((soure_model.num_states)).flatten()
         pad_col = np.zeros((target_model.num_states)).flatten()
@@ -155,11 +163,7 @@ class SKF:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
-    def auto_initialize_baseline_states(self, y: np.ndarray):
-        """Automatically initialize baseline states from data for normal model"""
-        self.model["norm_norm"].auto_initialize_baseline_states(y)
-
-    def set_same_states_transition_model(self):
+    def _set_same_states_transition_models(self):
         """Copy the states from self.model["norm_norm"] to all other transition models"""
 
         for transition_model in self.model.values():
@@ -167,46 +171,8 @@ class SKF:
                 self.model["norm_norm"].mu_states, self.model["norm_norm"].var_states
             )
 
-    def save_states_history(self):
-        """Save states' priors, posteriors and cross-covariances at one time step"""
-
-        for transition_model in self.model.values():
-            transition_model.save_states_history()
-
-        self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior)
-        self.states.var_posterior.append(self.var_states_posterior)
-        self.states.mu_smooth.append(self.mu_states_posterior)
-        self.states.var_smooth.append(self.var_states_posterior)
-
-    def save_initial_states(self):
-        """
-        save initial states at time = 0 for reuse SKF
-        """
-
-        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
-        self.var_states_init = self.model["norm_norm"].var_states.copy()
-
-    def load_initial_states(self):
-        """ """
-
-        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
-        self.model["norm_norm"].var_states = self.var_states_init.copy()
-
-    def initialize_states_history(self):
-        """
-        Initialize history for all time steps for the combined states and each transition model
-        """
-
-        for transition_model in self.model.values():
-            transition_model.initialize_states_history()
-        self.states.initialize(self.states_name)
-
-    def initialize_smoother(self):
-        """
-        Set the smoothed estimates at the last time step = posterior
-        """
+    def _initialize_smoother(self):
+        """Set the smoothed estimates at the last time step = posterior"""
 
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
@@ -224,16 +190,18 @@ class SKF:
             self.filter_marginal_prob_history["abnorm"][-1]
         )
 
-    def set_states(self):
-        """
-        Assign new values for the states of each transition model
-        """
+    def _save_states_history(self):
+        """Save states' priors, posteriors and cross-covariances at one time step"""
 
         for transition_model in self.model.values():
-            transition_model.set_states(
-                transition_model.mu_states_posterior,
-                transition_model.var_states_posterior,
-            )
+            transition_model._save_states_history()
+
+        self.states.mu_prior.append(self.mu_states_prior)
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior)
+        self.states.var_posterior.append(self.var_states_posterior)
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
 
     def _compute_transition_likelihood(
         self,
@@ -371,7 +339,7 @@ class SKF:
             var_states_marginal,
         )
 
-    def estimate_transition_coef(
+    def _estimate_transition_coef(
         self,
         obs,
         mu_pred_transit,
@@ -421,6 +389,41 @@ class SKF:
 
         return transition_coef
 
+    def auto_initialize_baseline_states(self, y: np.ndarray):
+        """Automatically initialize baseline states from data for normal model"""
+        self.model["norm_norm"].auto_initialize_baseline_states(y)
+        self.save_initial_states()
+
+    def save_initial_states(self):
+        """
+        save initial states at time = 0 for reuse SKF
+        """
+
+        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
+        self.var_states_init = self.model["norm_norm"].var_states.copy()
+
+    def load_initial_states(self):
+        """ """
+
+        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
+        self.model["norm_norm"].var_states = self.var_states_init.copy()
+
+    def initialize_states_history(self):
+        """Initialize history for all time steps for the combined states and each transition model"""
+
+        for transition_model in self.model.values():
+            transition_model.initialize_states_history()
+        self.states.initialize(self.states_name)
+
+    def set_states(self):
+        """Assign new values for the states of each transition model"""
+
+        for transition_model in self.model.values():
+            transition_model.set_states(
+                transition_model.mu_states_posterior,
+                transition_model.var_states_posterior,
+            )
+
     def clear_memory(self):
         """
         Clear memories for the next run, i.e. clear cell and hidden states,
@@ -433,22 +436,22 @@ class SKF:
         self._marginal_prob["norm"] = self.norm_model_prior_prob
         self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
-    def save_dict(self) -> dict:
+    def get_dict(self) -> dict:
         """
         Save the SKF model as a dict.
         """
 
-        SKF_dict = {}
-        SKF_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
-        SKF_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
-        SKF_dict["std_transition_error"] = self.std_transition_error
-        SKF_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
-        SKF_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
-        SKF_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
+        save_dict = {}
+        save_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
+        save_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
+        save_dict["std_transition_error"] = self.std_transition_error
+        save_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
+        save_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
+        save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
-            SKF_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
+            save_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
 
-        return SKF_dict
+        return save_dict
 
     @staticmethod
     def load_dict(save_dict: dict):
@@ -501,8 +504,8 @@ class SKF:
         (
             self.stop_training,
             self.optimal_epoch,
-            self.early_stop_metric_history,
             self.early_stop_metric,
+            self.early_stop_metric_history,
         ) = self.model["norm_norm"].early_stopping(
             mode=mode,
             patience=patience,
@@ -551,7 +554,7 @@ class SKF:
                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
 
-        self.transition_coef = self.estimate_transition_coef(
+        self.transition_coef = self._estimate_transition_coef(
             obs,
             mu_pred_transit,
             var_pred_transit,
@@ -705,7 +708,7 @@ class SKF:
         """
         Filtering
         """
-        data = common.set_default_input_covariates(data)
+
         num_time_steps = len(data["y"])
         mu_obs_preds = []
         var_obs_preds = []
@@ -714,7 +717,7 @@ class SKF:
         )
 
         # Initialize hidden states
-        self.set_same_states_transition_model()
+        self._set_same_states_transition_models()
         self.initialize_states_history()
 
         for time_step, (x, y) in enumerate(zip(data["x"], data["y"])):
@@ -731,7 +734,7 @@ class SKF:
                     ],
                 )
 
-            self.save_states_history()
+            self._save_states_history()
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
@@ -758,7 +761,7 @@ class SKF:
         self.smooth_marginal_prob_history = initialize_marginal_prob_history(
             num_time_steps
         )
-        self.initialize_smoother()
+        self._initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
 

@@ -131,7 +131,6 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_net.update_param = self._update_lstm_param
-            self.lstm_states_index = self.get_state_index("lstm")
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
@@ -173,19 +172,19 @@ class Model:
             setattr(obj, k, copy.deepcopy(v, memo))
         return obj
 
-    def save_model_dict(self) -> dict:
+    def get_dict(self) -> dict:
         """
         Save the model as a dict.
         """
 
-        model_dict = {}
-        model_dict["components"] = self.components
-        model_dict["mu_states"] = self.mu_states
-        model_dict["var_states"] = self.var_states
+        save_dict = {}
+        save_dict["components"] = self.components
+        save_dict["mu_states"] = self.mu_states
+        save_dict["var_states"] = self.var_states
         if self.lstm_net:
-            model_dict["lstm_network_params"] = self.lstm_net.state_dict()
+            save_dict["lstm_network_params"] = self.lstm_net.state_dict()
 
-        return model_dict
+        return save_dict
 
     @staticmethod
     def load_dict(save_dict: dict):
@@ -273,7 +272,7 @@ class Model:
             self.lstm_net.reset_lstm_states()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
-    def save_states_history(self):
+    def _save_states_history(self):
         """Save states' priors, posteriors and cross-covariances for smoother"""
 
         self.states.mu_prior.append(self.mu_states_prior)
@@ -395,7 +394,6 @@ class Model:
         Forecast for whole time series data
         """
 
-        data = common.set_default_input_covariates(data)
         mu_obs_preds = []
         std_obs_preds = []
 
@@ -405,14 +403,14 @@ class Model:
             )
 
             if self.lstm_net:
-                lstm_index = self.lstm_states_index
+                lstm_index = self.get_state_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
                 )
 
             self.set_posterior_states(mu_states_prior, var_states_prior)
-            self.save_states_history()
+            self._save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
@@ -427,7 +425,6 @@ class Model:
         Filter for whole time series data
         """
 
-        data = common.set_default_input_covariates(data)
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
@@ -442,7 +439,7 @@ class Model:
             ) = self.backward(y)
 
             if self.lstm_net:
-                lstm_index = self.lstm_states_index
+                lstm_index = self.get_state_index("lstm")
                 delta_mu_lstm = np.array(
                     delta_mu_states[lstm_index]
                     / var_states_prior[lstm_index, lstm_index]
@@ -460,7 +457,7 @@ class Model:
                     var_states_posterior[lstm_index, lstm_index],
                 )
 
-            self.save_states_history()
+            self._save_states_history()
             self.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)

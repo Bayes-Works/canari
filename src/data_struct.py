@@ -9,8 +9,8 @@ class LstmOutputHistory:
     var: np.ndarray = field(init=False)
 
     def initialize(self, look_back_len: int):
-        self.mu = 0 * np.ones(look_back_len, dtype=np.float32)
-        self.var = 1 * np.ones(look_back_len, dtype=np.float32)
+        self.mu = np.zeros(look_back_len, dtype=np.float32)
+        self.var = np.ones(look_back_len, dtype=np.float32)
 
     def update(self, mu_lstm, var_lstm):
         """Update lstm output history"""
@@ -32,7 +32,7 @@ class StatesHistory:
     cov_states: List[np.ndarray] = field(init=False)
     states_name: List[str] = field(init=False)
 
-    def initialize(self, states_name: List[str]) -> None:
+    def initialize(self, states_name: List[str]):
         self.mu_prior = []
         self.var_prior = []
         self.mu_posterior = []
@@ -98,6 +98,24 @@ class StatesHistory:
             standard_deviation[state] = values[:, idx, idx] ** 0.5
 
         return standard_deviation
+
+
+@dataclass
+class ProbHistory:
+    mu: np.ndarray = np.array([])
+    var: np.ndarray = np.array([])
+
+    def initialize(self, look_back_len: int):
+        self.mu = np.zeros(look_back_len, dtype=np.float32)
+        self.var = np.ones(look_back_len, dtype=np.float32)
+
+    def update(self, mu_lstm, var_lstm):
+        """Update lstm output history"""
+
+        self.mu = np.roll(self.mu, -1)
+        self.var = np.roll(self.var, -1)
+        self.mu[-1] = mu_lstm.item()
+        self.var[-1] = var_lstm.item()
 
 
 def initialize_marginal_prob_history(num_time_steps):

@@ -33,7 +33,7 @@ SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
 
 def main(
     num_trial_optimization: int = 5,
-    param_tune: bool = False,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data
@@ -114,7 +114,7 @@ def main(
     )
 
     # Save best model for SKF analysis later
-    model_optim_dict = model_optim.save_model_dict()
+    model_optim_dict = model_optim.get_dict()
 
     # Plot
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -157,7 +157,6 @@ def main(
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
-        skf.save_initial_states()
         return skf
 
     # Define parameter search space
@@ -225,7 +224,6 @@ def main(
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
     # Detect anomaly
-    skf_optim.load_initial_states()
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
 
     fig, ax = plot_skf_states(

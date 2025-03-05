@@ -162,18 +162,6 @@ def gaussian_mixture(
     return mu_mixture, var_mixture
 
 
-def set_default_input_covariates(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-    """
-    Ensure that 'x' is initialized in the data dictionary.
-    If 'x' is missing, initialize it with NaNs.
-    """
-
-    num_time_steps = len(data["y"])
-    if "x" not in data:
-        data["x"] = np.full(num_time_steps, np.nan)
-    return data
-
-
 class GMA(object):
     """
     Gaussian Multiplicative Approximation of two variables in a vector
