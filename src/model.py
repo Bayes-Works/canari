@@ -462,6 +462,57 @@ class Model:
             np.array(std_obs_preds).flatten(),
             self.states,
         )
+    
+    def generate(self, num_time_series: int, num_time_steps: int) -> np.ndarray:
+        """
+        Generate time series data
+        """
+        time_series_all = []
+        lstm_index = self.lstm_states_index
+        mu_states_temp = copy.deepcopy(self.mu_states)
+        var_states_temp = copy.deepcopy(self.var_states)
+
+        # Get the autoregression component in the model
+        if "autoregression" in self.components:
+            autoregression_component = self.components["autoregression"]
+            phi_AR = autoregression_component.phi
+            sigma_AR = autoregression_component.std_error
+
+        for _ in range(num_time_series):
+            one_time_series = []
+            # self.initialize_lstm_output_history()
+            obs_gen = self.mu_states[0].item()
+            ar_sample = 0
+            LL_pred_mu = 0
+            for _ in range(num_time_steps):
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([obs_gen-LL_pred_mu])
+                
+                LL_pred_mu = mu_states_prior[0].item()
+                # forward_input = mu_obs_pred.item()-LL_pred_mu
+
+                # print(mu_states_prior[-2])
+
+                # Generate observation samples
+                obs_gen = mu_obs_pred.item()
+                if "autoregression" in self.states_name:
+                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
+                    obs_gen += ar_sample
+                if "lstm" in self.states_name:
+                    lstm_index = self.states_name.index("lstm")
+                    obs_gen += np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
+
+                if self.lstm_net:
+                    self.update_lstm_output_history(
+                        mu_states_prior[lstm_index],
+                        var_states_prior[lstm_index, lstm_index],
+                    )
+                self.set_states(mu_states_prior, var_states_prior)
+                one_time_series.append(obs_gen)
+
+            self.set_states(mu_states_temp, var_states_temp)
+            time_series_all.append(one_time_series)
+            
+        return np.array(time_series_all)
 
     def filter(
         self,
