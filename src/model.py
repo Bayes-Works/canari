@@ -478,9 +478,17 @@ class Model:
             phi_AR = autoregression_component.phi
             sigma_AR = autoregression_component.std_error
 
+        if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+            lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
+            lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
+
         for _ in range(num_time_series):
             one_time_series = []
-            # self.initialize_lstm_output_history()
+            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+            else:
+                self.initialize_lstm_output_history()
             obs_gen = self.mu_states[0].item()
             ar_sample = 0
             LL_pred_mu = 0
