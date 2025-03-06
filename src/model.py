@@ -463,14 +463,18 @@ class Model:
             self.states,
         )
     
-    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None) -> np.ndarray:
+    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None) -> np.ndarray:
         """
         Generate time series data
         """
+        if generation_seed is not None:
+            np.random.seed(generation_seed)
+        
         time_series_all = []
         mu_states_temp = copy.deepcopy(self.mu_states)
         var_states_temp = copy.deepcopy(self.var_states)
-        
+
+        # Prepare time covariates
         if time_covariates is not None:
             initial_time_covariate = time_covariate_info["initial_time_covariate"]
             input_covariates = self.prepare_covariates_generation(initial_time_covariate, num_time_steps, time_covariates)
@@ -484,6 +488,7 @@ class Model:
             phi_AR = autoregression_component.phi
             sigma_AR = autoregression_component.std_error
 
+        # Get LSTM initializations
         if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
             lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
             lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
@@ -503,26 +508,19 @@ class Model:
             for x in input_covariates:
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
-                # obs_gen = np.random.normal(mu_obs_pred, var_obs_pred**0.5).item()
-
-                # # Generate observation samples
+                # Generate observation samples
                 obs_gen = mu_obs_pred.item()
-                # if "autoregression" in self.states_name:
-                #     obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
-                #     ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
-                #     obs_gen += ar_sample
-                # if "lstm" in self.states_name:
-                #     lstm_index = self.states_name.index("lstm")
-                #     lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-                #     obs_gen += lstm_noise_sample
-
+                if "autoregression" in self.states_name:
+                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
+                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
+                    obs_gen += ar_sample
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
+                    lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
+                    obs_gen += lstm_noise_sample
                     self.update_lstm_output_history(
-                        mu_states_prior[lstm_index],
-                        var_states_prior[lstm_index, lstm_index],
-                        # mu_states_prior[lstm_index]+lstm_noise_sample,
-                        # np.zeros_like(var_states_prior[lstm_index, lstm_index]),
+                        mu_states_prior[lstm_index]+lstm_noise_sample,
+                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
                     )
                 self.set_states(mu_states_prior, var_states_prior)
                 one_time_series.append(obs_gen)
