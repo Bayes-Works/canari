@@ -38,7 +38,7 @@ class SKF:
 
     @staticmethod
     def prob_history():
-        """Create a dictionary saving marginal probability history"""
+        """Create a dictionary to save marginal probability history"""
         return {
             "norm": [],
             "abnorm": [],
@@ -756,8 +756,6 @@ class SKF:
                 self._marginal_prob["abnorm"]
             )
 
-        # clear SKF history for the next filter
-        self.clear_memory()
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
@@ -814,6 +812,7 @@ class SKF:
         for i in range(0, num_anomaly):
             self.load_initial_states()
             filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            self.clear_memory()
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
