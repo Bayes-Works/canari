@@ -543,11 +543,6 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        # print(type(data["x"]))
-        # print(data["x"].shape)
-        # print(type(data["x"][0]))
-        # print(len(data["x"][0]))
-
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
