@@ -539,7 +539,6 @@ class Model:
                 self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
             else:
                 self.initialize_lstm_output_history()
-            obs_gen = self.mu_states[0].item()
             if "autoregression" in self.states_name:
                 ar_sample = np.random.normal(0, sigma_AR)
             for x in input_covariates:
@@ -845,33 +844,36 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def set_zeros_cov_ar_error_states(self, var_original):
-        var_prior_modified = copy.deepcopy(var_original)
-        # Keep the diagonal elements
-        diag = np.diag(var_original)
-        if "AR_error" in self.states_name:
-            ar_error_index = self.get_states_index("AR_error")
-            W2_index = self.get_states_index("W2")
-            W2bar_index = self.get_states_index("W2bar")
-            var_prior_modified[ar_error_index, :] = 0
-            var_prior_modified[:, ar_error_index] = 0
-            var_prior_modified[W2_index, :] = 0
-            var_prior_modified[:, W2_index] = 0
-            var_prior_modified[W2bar_index, :] = 0
-            var_prior_modified[:, W2bar_index] = 0
-            # Fill the diagonal elements back
-            np.fill_diagonal(var_prior_modified, diag)
-        return var_prior_modified
-
-
-def load_model_dict(save_dict: dict) -> Model:
-    """
-    Create a model from a saved dict
-    """
-    components = list(save_dict["components"].values())
-    model = Model(*components)
-    model.set_states(save_dict["mu_states"], save_dict["var_states"])
-    if model.lstm_net:
-        model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-
-    return model
+    def prepare_covariates_generation(
+        self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
+    ):
+        """
+        Prepare covariates for synthetic data generation
+        """
+        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
+        for time_cov in time_covariates:
+            if time_cov == "hour_of_day":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 24 + 1
+            elif time_cov == "day_of_week":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 7 + 1
+            elif time_cov == "day_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 365 + 1
+            elif time_cov == "week_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 52 + 1
+            elif time_cov == "month_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 12 + 1
+            elif time_cov == "quarter_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 4 + 1
+        return covariates_generation
