@@ -214,30 +214,29 @@ with open("saved_params/toy_model_dict.pkl", "rb") as f:
     pretrained_model_dict = pickle.load(f)
 print("phi_AR =", pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['phi_index']].item())
 print("sigma_AR =", np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['W2bar_index']].item()))
+
+train_val_data = np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1)))
+
 pretrained_model = Model(
-    LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
-    # LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2])),
+    # LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
+    LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2])),
     # LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(
         std_error=np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['W2bar_index']].item()), 
         phi=pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['phi_index']].item(), 
-        # std_error = 0.23146312, # True error
-        # phi=0.9,                # True phi
         mu_states=[pretrained_model_dict["mu_states"][pretrained_model_dict['autoregression_index']].item()], 
         var_states=[pretrained_model_dict["var_states"][pretrained_model_dict['autoregression_index'], pretrained_model_dict['autoregression_index']].item()]),
 )
-
 pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_params"])
 
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts = pretrained_model.generate(num_time_series=5, num_time_steps=len(normalized_data['y'])*2, time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
+generated_ts = pretrained_model.generate(num_time_series=5, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
 
 time_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1), generated_ts[0]))))
-train_val_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1)))))
-train_end_idx = int(train_val_split[0]/np.sum(train_val_split)*len(train_val_idx))
-val_end_idx = len(train_val_idx)
+val_end_idx = len(train_val_data)
+train_end_idx = int(train_val_split[0]/np.sum(train_val_split)*val_end_idx)
 # Plot generated_ts[0]
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(1, 1)
