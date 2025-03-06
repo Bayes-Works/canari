@@ -13,9 +13,7 @@ import matplotlib.pyplot as plt
 
 
 class SKF:
-    """ "
-    Switching Kalman Filter
-    """
+    """Switching Kalman Filter"""
 
     def __init__(
         self,
@@ -32,9 +30,10 @@ class SKF:
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
         self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
+        self.model = self.transition()
+        self.states = StatesHistory()
         self._initialize_attributes()
         self._initialize_model(norm_model, abnorm_model)
-        self.states = StatesHistory()
 
     @staticmethod
     def prob_history():
@@ -77,7 +76,6 @@ class SKF:
         self.mu_states_posterior = None
         self.var_states_posterior = None
 
-        self.model = self.transition()
         self.transition_coef = self.transition()
         self.filter_marginal_prob_history = self.prob_history()
         self.smooth_marginal_prob_history = self.prob_history()
