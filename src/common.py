@@ -283,3 +283,13 @@ class GMA(object):
 
     def get_results(self):
         return self.mu, self.var
+
+def gaussian_pdf(mu: float, std:float) -> None:
+    """Gaussian probability density function"""
+    pdf = lambda x: np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
+    return pdf
+
+def likelihood(mu: np.ndarray, std: np.ndarray, observation: np.ndarray) -> None:
+    """Compute the likelihood"""
+    pdf = gaussian_pdf(mu, std)
+    return pdf(observation)

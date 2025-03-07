@@ -338,14 +338,16 @@ class Model:
         """
 
         # LSTM prediction:
-        lstm_states_index = self.get_states_index("lstm")
-        if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
-            )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-            )
+        if self.lstm_net and input_covariates is not None:
+            if mu_lstm_pred is None and var_lstm_pred is None:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+                )
+        self.mu_lstm_pred = mu_lstm_pred
+        self.var_lstm_pred = var_lstm_pred
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -356,7 +358,7 @@ class Model:
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
-            lstm_states_index,
+            self.lstm_states_index,
         )
 
         # Modification after SSM's prediction:
