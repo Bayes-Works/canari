@@ -359,7 +359,7 @@ class Model:
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
-            lstm_states_index,
+            self.lstm_states_index,
         )
 
         # Modification after SSM's prediction:
