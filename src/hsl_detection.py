@@ -68,14 +68,6 @@ class hsl_detection:
             ) = self.base_model.backward(y)
 
             if self.base_model.lstm_net:
-                delta_mu_lstm = np.array(
-                    delta_mu_states[lstm_index]
-                    / var_states_prior[lstm_index, lstm_index]
-                )
-                delta_var_lstm = np.array(
-                    delta_var_states[lstm_index, lstm_index]
-                    / var_states_prior[lstm_index, lstm_index] ** 2
-                )
                 self.base_model.update_lstm_output_history(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
@@ -86,13 +78,13 @@ class hsl_detection:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        # TDO
+        # TODO
         if run_drift_model:
             self.drift_model.initialize_states_history()
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
-    def compute_likelihoods(self):
+    def estimate_likelihoods(self):
         """
         Compute the likelihood of observation and hidden states given action
         """
