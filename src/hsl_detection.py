@@ -15,6 +15,7 @@ from typing import Tuple, Dict, Optional
 import src.common as common
 import numpy as np
 import copy
+from src.model import load_model_dict
 
 class hsl_detection:
     """
