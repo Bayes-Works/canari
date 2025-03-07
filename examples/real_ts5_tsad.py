@@ -15,8 +15,8 @@ from src import (
     plot_data,
     plot_prediction,
     plot_states,
-    hsl_detection,
 )
+from src.hsl_detection import hsl_detection
 from examples import DataProcess
 from pytagi import exponential_scheduler
 import pytagi.metric as metric
@@ -77,8 +77,10 @@ pretrained_model = Model(
 
 pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
-hsl_tsad_agent = hsl_detection(pretrained_model)
-hsl_tsad_agent.filter(normalized_data)
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model)
+hsl_tsad_agent.filter(train_data)
+hsl_tsad_agent.filter(validation_data)
+hsl_tsad_agent.filter(test_data)
 
 # pretrained_model.filter(normalized_data,train_lstm=False)
 # pretrained_model.smoother(normalized_data)
@@ -101,7 +103,8 @@ plot_data(
 )
 plot_states(
     data_processor=data_processor,
-    states=pretrained_model.states,
+    # states=pretrained_model.states,
+    states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['local level'],
     sub_plot=ax0,
@@ -110,7 +113,7 @@ ax0.set_xticklabels([])
 ax0.set_title("Hidden states estimated by the pre-trained model")
 plot_states(
     data_processor=data_processor,
-    states=pretrained_model.states,
+    states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
     sub_plot=ax1,
@@ -118,7 +121,7 @@ plot_states(
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    states=pretrained_model.states,
+    states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
     sub_plot=ax2,
@@ -126,7 +129,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    states=pretrained_model.states,
+    states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
     sub_plot=ax3,

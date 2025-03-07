@@ -11,6 +11,9 @@ from src import (
     plot_prediction,
     plot_states,
 )
+from typing import Tuple, Dict, Optional
+import src.common as common
+import numpy as np
 
 class hsl_detection:
     """
@@ -19,16 +22,16 @@ class hsl_detection:
 
     def __init__(
             self, 
-            base_model, 
-            drift_model_process_error_std=1e-8,
+            base_model: Model,
+            drift_model_process_error_std: Optional[float] = 0.0,
             ):
         self.base_model = base_model
-
         self._create_drift_model(drift_model_process_error_std)
+        self.base_model.initialize_states_history()
+        self.drift_model.initialize_states_history()
         pass
 
     def _create_drift_model(self, baseline_process_error_std):
-        # Get AR component from the base model
         ar_component = self.base_model.components["autoregression"]
         self.drift_model = Model(
             LocalTrend(
@@ -43,11 +46,51 @@ class hsl_detection:
                    var_states=ar_component.var_states
                 ),
         )
-        pass
 
-    def filter(self, data):
-        self.base_model.filter(data, train_lstm=False)
-        pass
+    def filter(
+            self, 
+            data, 
+            run_drift_model=False
+            ):
+        # Base model filter process, same as in model.py
+        data = common.set_default_input_covariates(data)
+        lstm_index = self.base_model.lstm_states_index
+        mu_obs_preds = []
+        std_obs_preds = []
+
+        for x, y in zip(data["x"], data["y"]):
+            mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x)
+            (
+                delta_mu_states,
+                delta_var_states,
+                mu_states_posterior,
+                var_states_posterior,
+            ) = self.base_model.backward(y)
+
+            if self.base_model.lstm_net:
+                delta_mu_lstm = np.array(
+                    delta_mu_states[lstm_index]
+                    / var_states_prior[lstm_index, lstm_index]
+                )
+                delta_var_lstm = np.array(
+                    delta_var_states[lstm_index, lstm_index]
+                    / var_states_prior[lstm_index, lstm_index] ** 2
+                )
+                self.base_model.update_lstm_output_history(
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
+                )
+
+            self.base_model.save_states_history()
+            self.base_model.set_states(mu_states_posterior, var_states_posterior)
+            mu_obs_preds.append(mu_obs_pred)
+            std_obs_preds.append(var_obs_pred**0.5)
+
+        # TDO
+        if run_drift_model:
+            self.drift_model.initialize_states_history()
+
+        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
 
     def compute_likelihoods(self):
         """
