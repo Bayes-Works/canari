@@ -83,6 +83,20 @@ def backward(
     delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
     return delta_mu_states, delta_var_states
 
+def distribution_update(
+    obs: float,
+    obs_var: float,
+    mu_obs_predicted: np.ndarray,
+    var_obs_predicted: np.ndarray,
+    var_states_prior: np.ndarray,
+    observation_matrix: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    cov_obs_states = observation_matrix @ var_states_prior
+    jacobian = cov_obs_states.T / var_obs_predicted
+    delta_mu_states = jacobian @ (obs - mu_obs_predicted)
+    delta_var_states = jacobian @ (obs_var - var_obs_predicted) @ jacobian.T
+    return delta_mu_states, delta_var_states
+
 
 def rts_smoother(
     mu_states_prior: np.ndarray,
