@@ -14,6 +14,7 @@ from src import (
 from typing import Tuple, Dict, Optional
 import src.common as common
 import numpy as np
+import copy
 
 class hsl_detection:
     """
@@ -23,12 +24,13 @@ class hsl_detection:
     def __init__(
             self, 
             base_model: Model,
-            drift_model_process_error_std: Optional[float] = 0.0,
+            drift_model_process_error_std: Optional[float] = 1e-4,
             ):
         self.base_model = base_model
         self._create_drift_model(drift_model_process_error_std)
         self.base_model.initialize_states_history()
         self.drift_model.initialize_states_history()
+        self.AR_index = base_model.states_name.index("autoregression")
         pass
 
     def _create_drift_model(self, baseline_process_error_std):
@@ -50,15 +52,14 @@ class hsl_detection:
     def filter(
             self, 
             data, 
-            run_drift_model=False
             ):
-        # Base model filter process, same as in model.py
         data = common.set_default_input_covariates(data)
         lstm_index = self.base_model.lstm_states_index
-        mu_obs_preds = []
-        std_obs_preds = []
+        mu_obs_preds, std_obs_preds = [], []
+        mu_ar_preds, std_ar_preds = [], []
 
         for x, y in zip(data["x"], data["y"]):
+            # Base model filter process, same as in model.py
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x)
             (
                 delta_mu_states,
@@ -78,11 +79,19 @@ class hsl_detection:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        # TODO
-        if run_drift_model:
-            self.drift_model.initialize_states_history()
 
-        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
+            # Drift model filter process
+            mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
+            _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
+                obs=self.base_model.mu_states_prior[self.AR_index], 
+                obs_var=self.base_model.var_states_prior[self.AR_index, self.AR_index])
+            self.drift_model.save_states_history()
+            self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+            mu_ar_preds.append(mu_ar_pred)
+            std_ar_preds.append(var_ar_pred**0.5)
+            
+
+        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
 
     def estimate_likelihoods(self):
         """
