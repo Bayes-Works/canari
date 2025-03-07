@@ -1,29 +1,26 @@
-import fire
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import copy
 from src import (
-    LocalLevel,
     LocalTrend,
-    LocalAcceleration,
     LstmNetwork,
-    Periodic,
     Autoregression,
-    WhiteNoise,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
 from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 
 
-# # Read data
+###########################
+###########################
+#  Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 
@@ -34,248 +31,192 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
-# Change the trend of data
+# Add trend
 trend_true = 0.1
-df_raw.values+=np.arange(len(df_raw.values),dtype="float64").reshape(-1, 1)*trend_true
+df_raw["values"] += np.arange(len(df_raw)) * trend_true
 
-# # Skip resampling data
-df = df_raw
-
-# Define parameters
+# Data processor initialization
 output_col = [0]
-num_epoch = 200
-
 data_processor = DataProcess(
-    data=df,
+    data=df_raw,
     time_covariates=["week_of_year"],
     train_split=0.6,
     validation_split=0.2,
-    # train_split=1,
-    # validation_split=0,
     output_col=output_col,
 )
 
-trend_true_norm = trend_true/(data_processor.norm_const_std[output_col].item() + 1e-10)
-level_true_norm = (5.0 - data_processor.norm_const_mean[output_col].item())/(data_processor.norm_const_std[output_col].item() + 1e-10)
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+train_data, val_data, test_data, normalized_data = data_processor.get_splits()
 
-# Define AR model
-AR_process_error_var_prior = 1e4
+# Normalization constants
+norm_const_mean = data_processor.norm_const_mean[output_col].item()
+norm_const_std = data_processor.norm_const_std[output_col].item()
+
+# Define model components
+trend_norm = trend_true / (norm_const_std + 1e-10)
+level_norm = (5.0 - norm_const_mean) / (norm_const_std + 1e-10)
+mu_W2bar_prior = 1e4
+var_AR_prior = 1e4
 var_W2bar_prior = 1e4
-AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
-LSTM = LstmNetwork(
-        look_back_len=52,
-        num_features=2,
-        num_layer=1,
-        num_hidden_unit=50,
-        device="cpu",
-    )
+
+lstm = LstmNetwork(
+    look_back_len=52,
+    num_features=2,
+    num_layer=1,
+    num_hidden_unit=50,
+    device="cpu",
+    # manual_seed=1,
+)
+ar = Autoregression(
+    mu_states=[0, 0, 0, 0, 0, mu_W2bar_prior],
+    var_states=[1e-6, 0.01, 0, var_AR_prior, 0, var_W2bar_prior],
+)
 
 model = Model(
-    LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
-    # LocalTrend(),
-    LSTM,
-    AR,
+    LocalTrend(
+        mu_states=[level_norm, trend_norm], var_states=[1e-12, 1e-12], std_error=0
+    ),
+    lstm,
+    ar,
 )
-model._mu_local_level = level_true_norm
-# model.auto_initialize_baseline_states(train_data["y"][0:51])
+model._mu_local_level = level_norm
 
-
-# Training
-for epoch in range(num_epoch):
+###########################
+###########################
+# Training model
+num_epochs = 200
+states_optim = None
+optimal_mu_val_preds = None
+optimal_std_val_preds = None
+for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     mu_validation_preds, std_validation_preds, states = model.lstm_train(
         train_data=train_data,
-        validation_data=validation_data,
+        validation_data=val_data,
     )
 
     # Unstandardize the predictions
-    mu_validation_preds_unnorm = normalizer.unstandardize(
-        mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+    mu_pred_unnorm = normalizer.unstandardize(
+        mu_validation_preds, norm_const_mean, norm_const_std
     )
-    std_validation_preds_unnorm = normalizer.unstandardize_std(
-        std_validation_preds,
-        data_processor.norm_const_std[output_col],
-    )
+    std_pred_unnorm = normalizer.unstandardize_std(std_validation_preds, norm_const_std)
 
     # Calculate the evaluation metric
-    mse = metric.mse(
-        mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
-    )
-
-    validation_log_lik = metric.log_likelihood(
-        prediction=mu_validation_preds_unnorm,
-        observation=data_processor.validation_data[:, output_col].flatten(),
-        std=std_validation_preds_unnorm,
-    )
+    obs_validation = data_processor.validation_data[:, output_col].flatten()
+    mse = metric.mse(mu_pred_unnorm, obs_validation)
+    val_log_lik = metric.log_likelihood(mu_pred_unnorm, obs_validation, std_pred_unnorm)
 
     # Early-stopping
-    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
-    # model.early_stopping(evaluate_metric=mse, mode="min")
-
-
+    model.early_stopping(evaluate_metric=-val_log_lik, mode="min")
     if epoch == model.optimal_epoch:
-        mu_validation_preds_optim = mu_validation_preds.copy()
-        std_validation_preds_optim = std_validation_preds.copy()
+        optimal_mu_val_preds = mu_validation_preds.copy()
+        optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
+
     if model.stop_training:
         break
 
-print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
-
-
+# save model
 model_dict = model.save_model_dict()
-model_dict['states_optimal'] = states_optim
+model_dict["mu_states_optimal"] = states_optim.mu_prior[-1]
 
-####################################################################
-######################### Pretrained model #########################
-####################################################################
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
+print(f"Optimal epoch: {model.optimal_epoch}")
+print(f"Validation MSE: {model.early_stop_metric:.4f}")
+
+
+###########################
+###########################
+# Reload pretrained model
+# Load learned parameters from the saved trained model
+phi_index = model_dict["phi_index"]
+W2bar_index = model_dict["W2bar_index"]
+autoregression_index = model_dict["autoregression_index"]
+mu_W2bar_learn = model_dict["mu_states_optimal"][W2bar_index].item()
+phi_AR_learn = model_dict["mu_states_optimal"][phi_index].item()
+mu_AR = model_dict["mu_states"][autoregression_index].item()
+var_AR = model_dict["var_states"][autoregression_index, autoregression_index].item()
+
+print("Learned phi_AR =", phi_AR_learn)
+print("Learned sigma_AR =", np.sqrt(mu_W2bar_learn))
+
+# # # # # # #
+# Define pretrained model:
 pretrained_model = Model(
-    LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
-    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
-    LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-                   mu_states=[model_dict["mu_states"][model_dict['autoregression_index']].item()], 
-                   var_states=[model_dict["var_states"][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
+    LocalTrend(
+        mu_states=[level_norm, trend_norm], var_states=[1e-12, 1e-12], std_error=0
+    ),
+    lstm,
+    Autoregression(
+        std_error=np.sqrt(mu_W2bar_learn),
+        phi=phi_AR_learn,
+        mu_states=[mu_AR],
+        var_states=[var_AR],
+    ),
 )
 
+# load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 
-pretrained_model.filter(normalized_data,train_lstm=False)
+# filter and smoother
+pretrained_model.filter(normalized_data, train_lstm=False)
 pretrained_model.smoother(normalized_data)
 
-#  Plot
+
+# # Plotting results at the optimal epoch when training model
 state_type = "prior"
-#  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(4, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
+fig, ax = plot_states(
+    data_processor=data_processor,
+    states=states_optim,
+    states_type=state_type,
+    states_to_plot=[
+        "local level",
+        "local trend",
+        "lstm",
+        "autoregression",
+        "phi",
+        "W2bar",
+    ],
+)
 plot_data(
     data_processor=data_processor,
     normalization=True,
     plot_column=output_col,
     validation_label="y",
-    sub_plot=ax0,
-)
-plot_states(
-    data_processor=data_processor,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['local level'],
-    sub_plot=ax0,
-)
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states estimated by the pre-trained model")
-plot_states(
-    data_processor=data_processor,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['local trend'],
-    sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['lstm'],
-    sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax3,
-)
-ax3.set_xticklabels([])
-# plt.show()
-
-
-state_type = "prior"
-# Plot states from AR learner
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(6, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
-ax4 = plt.subplot(gs[4])
-ax5 = plt.subplot(gs[5])
-plot_data(
-  data_processor=data_processor,
-  normalization=True,
-  plot_column=output_col,
-  validation_label="y",
-  sub_plot=ax0,
-  plot_test_data=False,
+    sub_plot=ax[0],
+    plot_test_data=False,
 )
 plot_prediction(
-  data_processor=data_processor,
-  mean_validation_pred=mu_validation_preds_optim,
-  std_validation_pred=std_validation_preds_optim,
-#   validation_label=[r"$\mu$", f"$\pm\sigma$"],
-  sub_plot=ax0,
-)
-plot_states(
-  data_processor=data_processor,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['local level'],
-  sub_plot=ax0,
-)
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states at the optimal epoch in training")
-plot_states(
-  data_processor=data_processor,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['local trend'],
-  sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-  data_processor=data_processor,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['lstm'],
-  sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-  data_processor=data_processor,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['autoregression'],
-  sub_plot=ax3,
-)
-ax3.set_xticklabels([])
-if "phi" in model.states_name:
-  plot_states(
     data_processor=data_processor,
-    states=states_optim,
-    states_type=state_type,
-    states_to_plot=['phi'],
-    sub_plot=ax4,
-  )
-  ax4.set_xticklabels([])
-if "W2bar" in model.states_name:
-  plot_states(
+    mean_validation_pred=optimal_mu_val_preds,
+    std_validation_pred=optimal_std_val_preds,
+    sub_plot=ax[0],
+)
+fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
+plt.show()
+
+# # Plotting results from pre-trained model
+fig, ax = plot_states(
     data_processor=data_processor,
-    states=states_optim,
+    states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['W2bar'],
-    sub_plot=ax5,
-  )
+    states_to_plot=[
+        "local level",
+        "local trend",
+        "lstm",
+        "autoregression",
+    ],
+)
+plot_data(
+    data_processor=data_processor,
+    normalization=True,
+    plot_column=output_col,
+    validation_label="y",
+    sub_plot=ax[0],
+    plot_test_data=False,
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=optimal_mu_val_preds,
+    std_validation_pred=optimal_std_val_preds,
+    sub_plot=ax[0],
+)
+fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()
