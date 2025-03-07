@@ -337,12 +337,15 @@ class Model:
 
         # LSTM prediction:
         if self.lstm_net and input_covariates is not None:
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
-            )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-            )
+            if mu_lstm_pred is None and var_lstm_pred is None:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+                )
+        self.mu_lstm_pred = mu_lstm_pred
+        self.var_lstm_pred = var_lstm_pred
 
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
@@ -350,8 +353,8 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred,
-            var_lstm_pred,
+            self.mu_lstm_pred,
+            self.var_lstm_pred,
             self.lstm_states_index,
         )
 

@@ -15,7 +15,7 @@ from typing import Tuple, Dict, Optional
 import src.common as common
 import numpy as np
 import copy
-from src.model import load_model_dict
+from src.common import likelihood
 
 class hsl_detection:
     """
@@ -52,16 +52,29 @@ class hsl_detection:
 
     def filter(
             self, 
-            data, 
+            data,
+            state_dist_estimate_window: Optional[np.ndarray] = None,
             ):
         data = common.set_default_input_covariates(data)
         lstm_index = self.base_model.lstm_states_index
         mu_obs_preds, std_obs_preds = [], []
         mu_ar_preds, std_ar_preds = [], []
+        LTd_buffer = []
 
-        for x, y in zip(data["x"], data["y"]):
+        for i, (x, y) in enumerate(zip(data["x"], data["y"])):
+
+            # Estimate likelihoods
+            # This step should be done only when user wants to detect anomaly
+            mu_obs_pred2, var_obs_pred2, mu_ar_pred2, var_ar_pred2, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x)
+            mu_obs_pred3, var_obs_pred3, mu_ar_pred3, var_ar_pred3, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
+                                                                                                                             input_covariates=x, 
+                                                                                                                             mu_lstm_pred=mu_lstm_pred,
+                                                                                                                             var_lstm_pred=var_lstm_pred)
+
             # Base model filter process, same as in model.py
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x)
+            mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x,
+                                                                                    mu_lstm_pred=mu_lstm_pred,
+                                                                                    var_lstm_pred=var_lstm_pred,)
             (
                 delta_mu_states,
                 delta_var_states,
@@ -80,7 +93,6 @@ class hsl_detection:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
@@ -90,12 +102,43 @@ class hsl_detection:
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
             std_ar_preds.append(var_ar_pred**0.5)
-            
+
+            if state_dist_estimate_window is not None:
+                if i >= state_dist_estimate_window[0] and i < state_dist_estimate_window[1]:
+                    LTd_buffer.append(mu_drift_states_prior[1].item())
+                if i == state_dist_estimate_window[1]:
+                    LTd_pdf = common.gaussian_pdf(mu = np.mean(LTd_buffer), std = np.std(LTd_buffer))
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
 
-    def estimate_likelihoods(self):
+    def _estimate_likelihoods(
+            self, 
+            obs: float,
+            input_covariates: Optional[np.ndarray] = None,
+            mu_lstm_pred: Optional[np.ndarray] = None,
+            var_lstm_pred: Optional[np.ndarray] = None,
+            ):
         """
         Compute the likelihood of observation and hidden states given action
         """
-        pass
+        base_model_copy = copy.deepcopy(self.base_model)
+        drift_model_copy = copy.deepcopy(self.drift_model)
+        base_model_copy.lstm_net = self.base_model.lstm_net
+        # TODO
+        # if intervention == True:
+        #     base_model_copy.mu_states = base_model_prior['mu']
+        #     base_model_copy.var_states = base_model_prior['var']
+        #     drift_model_copy.mu_states = drift_model_prior['mu']
+        #     drift_model_copy.var_states = drift_model_prior['var']
+
+        if mu_lstm_pred is not None and var_lstm_pred is not None:
+            mu_obs_pred, var_obs_pred, _, var_states_prior = base_model_copy.forward(input_covariates = input_covariates, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred)
+        else:
+            mu_obs_pred, var_obs_pred, _, var_states_prior = base_model_copy.forward(input_covariates = input_covariates)
+
+        y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred), obs)
+
+        # # TODO
+        mu_ar_pred, var_ar_pred, mu_d_states_prior, _ = drift_model_copy.forward()
+        # x_likelihood = dist_hidden_state(mu_d_states_prior[1].item())
+        return mu_obs_pred, var_obs_pred, mu_ar_pred, var_ar_pred, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
