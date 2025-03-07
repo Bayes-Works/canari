@@ -38,11 +38,13 @@ df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
+train_split=0.289
+validation_split=0.0693
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.289,
-    validation_split=0.0693,
+    train_split=train_split,
+    validation_split=validation_split,
     output_col=output_col,
 )
 
@@ -102,7 +104,7 @@ hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(normalized_data)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(normalized_data, state_dist_estimate_window = [int(train_split*len(normalized_data["y"])), int((train_split+validation_split)*len(normalized_data["y"]))])
 
 # pretrained_model.filter(normalized_data,train_lstm=False)
 # pretrained_model.smoother(normalized_data)
@@ -135,7 +137,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("Hidden states estimated by the pre-trained model")
+ax0.set_title("Hidden states likelihood")
 plot_states(
     data_processor=data_processor,
     states=hsl_tsad_agent.base_model.states,
