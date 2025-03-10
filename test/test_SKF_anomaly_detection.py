@@ -130,4 +130,4 @@ def test_anomaly_detection(plot_mode):
         anomaly_threshold=0.5,
         plot=plot_mode,
     )
-    assert detection == True, "Anomaly detection failed to detect anomaly."
+    assert detection is True, "Anomaly detection failed to detect anomaly."
