@@ -57,12 +57,7 @@ data_processor = DataProcess(
 trend_true_norm = trend_true/(data_processor.norm_const_std[output_col].item() + 1e-10)
 level_true_norm = (5.0 - data_processor.norm_const_mean[output_col].item())/(data_processor.norm_const_std[output_col].item() + 1e-10)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
-validation_data_x_unnorm = normalizer.unstandardize(
-    validation_data['x'],
-    data_processor.norm_const_mean[1],
-    data_processor.norm_const_std[1],
-)
-time_covariate_info = {'initial_time_covariate': validation_data_x_unnorm[-1].item(),
+time_covariate_info = {'initial_time_covariate': data_processor.validation_data[-1, data_processor.covariates_col].item(),
                         'mu': data_processor.norm_const_mean[1], 
                         'std': data_processor.norm_const_std[1]}
 
