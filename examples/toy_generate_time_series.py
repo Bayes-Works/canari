@@ -53,13 +53,17 @@ data_processor = DataProcess(
     validation_split=train_val_split[1],
     output_col=output_col,
 )
+obs_norm_const_mean = data_processor.norm_const_mean[output_col].item()
+obs_norm_const_std = data_processor.norm_const_std[output_col].item()
+time_covariate_norm_const_mean = data_processor.norm_const_mean[data_processor.covariates_col].item()
+time_covariate_norm_const_std = data_processor.norm_const_std[data_processor.covariates_col].item()
 
-trend_true_norm = trend_true/(data_processor.norm_const_std[output_col].item() + 1e-10)
-level_true_norm = (5.0 - data_processor.norm_const_mean[output_col].item())/(data_processor.norm_const_std[output_col].item() + 1e-10)
+trend_true_norm = trend_true/(obs_norm_const_std + 1e-10)
+level_true_norm = (5.0 - obs_norm_const_mean)/(obs_norm_const_std + 1e-10)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 time_covariate_info = {'initial_time_covariate': data_processor.validation_data[-1, data_processor.covariates_col].item(),
-                        'mu': data_processor.norm_const_mean[1], 
-                        'std': data_processor.norm_const_std[1]}
+                        'mu': time_covariate_norm_const_mean, 
+                        'std': time_covariate_norm_const_std}
 
 LSTM = LstmNetwork(
         look_back_len=52,
@@ -92,12 +96,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        obs_norm_const_mean,
+        obs_norm_const_std,
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        obs_norm_const_std,
     )
 
     # Calculate the evaluation metric
@@ -139,8 +143,12 @@ with open("saved_params/toy_model_dict.pkl", "wb") as f:
 import pickle
 with open("saved_params/toy_model_dict.pkl", "rb") as f:
     pretrained_model_dict = pickle.load(f)
-print("phi_AR =", pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['W2bar_index']].item()))
+phi_index = pretrained_model_dict['phi_index']
+W2bar_index = pretrained_model_dict['W2bar_index']
+autoregression_index = pretrained_model_dict['autoregression_index']
+
+print("phi_AR =", pretrained_model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+print("sigma_AR =", np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 
 train_val_data = np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1)))
 
@@ -148,17 +156,17 @@ pretrained_model = Model(
     LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2])),
     LSTM,
     Autoregression(
-        std_error=np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['W2bar_index']].item()), 
-        phi=pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['phi_index']].item(), 
-        mu_states=[pretrained_model_dict["mu_states"][pretrained_model_dict['autoregression_index']].item()], 
-        var_states=[pretrained_model_dict["var_states"][pretrained_model_dict['autoregression_index'], pretrained_model_dict['autoregression_index']].item()]),
+        std_error=np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+        phi=pretrained_model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+        mu_states=[pretrained_model_dict["mu_states"][autoregression_index].item()], 
+        var_states=[pretrained_model_dict["var_states"][autoregression_index, autoregression_index].item()]),
 )
 pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_params"])
 
 # Generate data
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
+generated_ts, _ = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
 
 time_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1), generated_ts[0]))))
 val_end_idx = len(train_val_data)
@@ -167,59 +175,28 @@ train_end_idx = int(train_val_split[0]/np.sum(train_val_split)*val_end_idx)
 # Plot
 # # Plot states from training
 state_type = "prior"
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(4, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
+fig, ax = plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type=state_type,
+    states_to_plot=['local level', 'local trend', 'lstm', 'autoregression'],
+)
 plot_data(
     data_processor=data_processor,
     normalization=True,
     plot_column=output_col,
     validation_label="y",
-    sub_plot=ax0,
+    sub_plot=ax[0],
     plot_test_data=False,
 )
 plot_prediction(
   data_processor=data_processor,
   mean_validation_pred=mu_validation_preds_optim,
   std_validation_pred=std_validation_preds_optim,
-  sub_plot=ax0,
+  sub_plot=ax[0],
 )
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type=state_type,
-    states_to_plot=['local level'],
-    sub_plot=ax0,
-)
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states in training and validation forecast")
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type=state_type,
-    states_to_plot=['local trend'],
-    sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type=state_type,
-    states_to_plot=['lstm'],
-    sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax3,
-)
-ax3.set_xticklabels([])
+ax[0].set_xticklabels([])
+ax[0].set_title("Hidden states in training and validation forecast")
 
 # # Plot generated time series
 fig = plt.figure(figsize=(10, 6))
