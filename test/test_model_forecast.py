@@ -66,6 +66,15 @@ def model_test_runner(model: Model, plot: bool) -> float:
             data_processor.norm_const_std[output_col],
         )
 
+        # Calculate the log-likelihood metric
+        validation_obs = data_processor.get_data("validation").flatten()
+        mse = metric.mse(mu_validation_preds, validation_obs)
+
+        # Early-stopping
+        model.early_stopping(evaluate_metric=mse, mode="min")
+        if model.stop_training:
+            break
+
     # Validation metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)

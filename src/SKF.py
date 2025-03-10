@@ -87,9 +87,9 @@ class SKF:
         self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
         self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
 
-        self._marginal_prob = self.marginal()
-        self._marginal_prob["norm"] = self.norm_model_prior_prob
-        self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
+        self.marginal_prob_current = self.marginal()
+        self.marginal_prob_current["norm"] = self.norm_model_prior_prob
+        self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
 
         # LSTM-related attributes
         self.lstm_net = None
@@ -164,7 +164,7 @@ class SKF:
         norm_abnorm = copy.deepcopy(abnorm_abnorm)
 
         # Add transition noise to norm_abnorm.process_noise_matrix
-        index_states_diff = norm_norm.get_state_index(states_diff[-1])
+        index_states_diff = norm_norm.get_states_index(states_diff[-1])
         norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
             self.std_transition_error**2
         )
@@ -184,7 +184,7 @@ class SKF:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
-    def _set_same_states_transition_models(self):
+    def set_same_states_transition_models(self):
         """Copy the states from self.model["norm_norm"] to all other transition models"""
 
         for transition_model in self.model.values():
@@ -340,10 +340,10 @@ class SKF:
         mu_states_combined, var_states_combined = common.gaussian_mixture(
             mu_states_marginal["norm"],
             var_states_marginal["norm"],
-            self._marginal_prob["norm"],
+            self.marginal_prob_current["norm"],
             mu_states_marginal["abnorm"],
             var_states_marginal["abnorm"],
-            self._marginal_prob["abnorm"],
+            self.marginal_prob_current["abnorm"],
         )
 
         return (
@@ -378,7 +378,7 @@ class SKF:
                 trans_prob[transit] = (
                     transition_likelihood[transit]
                     * self.transition_prob[transit]
-                    * self._marginal_prob[origin_state]
+                    * self.marginal_prob_current[origin_state]
                 )
                 sum_trans_prob += trans_prob[transit]
         for transit in trans_prob:
@@ -387,10 +387,10 @@ class SKF:
             )
 
         #
-        self._marginal_prob["norm"] = (
+        self.marginal_prob_current["norm"] = (
             trans_prob["norm_norm"] + trans_prob["abnorm_norm"]
         )
-        self._marginal_prob["abnorm"] = (
+        self.marginal_prob_current["abnorm"] = (
             trans_prob["abnorm_abnorm"] + trans_prob["norm_abnorm"]
         )
         #
@@ -398,7 +398,7 @@ class SKF:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
                 transition_coef[transit] = trans_prob[transit] / np.maximum(
-                    self._marginal_prob[arrival_state], epsilon
+                    self.marginal_prob_current[arrival_state], epsilon
                 )
 
         return transition_coef
@@ -447,8 +447,8 @@ class SKF:
         if self.lstm_net:
             self.model["norm_norm"].clear_memory()
 
-        self._marginal_prob["norm"] = self.norm_model_prior_prob
-        self._marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
+        self.marginal_prob_current["norm"] = self.norm_model_prior_prob
+        self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
         """
@@ -670,23 +670,25 @@ class SKF:
                     * self.smooth_marginal_prob_history[arrival_state][time_step + 1]
                 )
 
-        self._marginal_prob["norm"] = (
+        self.marginal_prob_current["norm"] = (
             joint_future_prob["norm_norm"] + joint_future_prob["norm_abnorm"]
         )
-        self._marginal_prob["abnorm"] = (
+        self.marginal_prob_current["abnorm"] = (
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.smooth_marginal_prob_history["norm"].append(self._marginal_prob["norm"])
+        self.smooth_marginal_prob_history["norm"].append(
+            self.marginal_prob_current["norm"]
+        )
         self.smooth_marginal_prob_history["abnorm"].append(
-            self._marginal_prob["abnorm"]
+            self.marginal_prob_current["abnorm"]
         )
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
                 self.transition_coef[transit] = joint_future_prob[transit] / np.maximum(
-                    self._marginal_prob[origin_state], epsilon
+                    self.marginal_prob_current[origin_state], epsilon
                 )
 
         mu_states_transit, var_states_transit = self._get_smooth_states_transition(
@@ -726,7 +728,7 @@ class SKF:
         self.filter_marginal_prob_history = self.prob_history()
 
         # Initialize hidden states
-        self._set_same_states_transition_models()
+        self.set_same_states_transition_models()
         self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
@@ -734,7 +736,7 @@ class SKF:
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
-                lstm_index = self.model["norm_norm"].get_state_index("lstm")
+                lstm_index = self.model["norm_norm"].get_states_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[
@@ -748,12 +750,13 @@ class SKF:
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
             self.filter_marginal_prob_history["norm"].append(
-                self._marginal_prob["norm"]
+                self.marginal_prob_current["norm"]
             )
             self.filter_marginal_prob_history["abnorm"].append(
-                self._marginal_prob["abnorm"]
+                self.marginal_prob_current["abnorm"]
             )
 
+        self.clear_memory()
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
@@ -810,7 +813,6 @@ class SKF:
         for i in range(0, num_anomaly):
             self.load_initial_states()
             filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
-            self.clear_memory()
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:

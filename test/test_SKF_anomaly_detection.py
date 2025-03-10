@@ -95,6 +95,18 @@ def SKF_anomaly_detection_runner(
             data_processor.norm_const_std[output_col],
         )
 
+        validation_obs = data_processor.get_data("validation").flatten()
+        validation_log_lik = metric.log_likelihood(
+            prediction=mu_validation_preds,
+            observation=validation_obs,
+            std=std_validation_preds,
+        )
+
+        # Early-stopping
+        skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        if skf.stop_training:
+            break
+
     # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
