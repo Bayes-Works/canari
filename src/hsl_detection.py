@@ -134,15 +134,23 @@ class hsl_detection:
                     LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
                     # Collect samples from synthetic time series
                     # TODO
-                    validation_data_x_unnorm = normalizer.unstandardize(
-                                                    self.data_processor.validation_data_norm[:, self.data_processor.covariates_col],
-                                                    self.data_processor.norm_const_mean[1],
-                                                    data_processor.norm_const_std[1],
-                                                )
-                    time_covariate_info = {'initial_time_covariate': validation_data_x_unnorm[-1].item(),
-                                            'mu': data_processor.norm_const_mean[1], 
-                                            'std': data_processor.norm_const_std[1]}
+                    time_covariate_info = {'initial_time_covariate': self.data_processor.validation_data[-1, self.data_processor.covariates_col].item(),
+                                            'mu': self.data_processor.norm_const_mean[self.data_processor.covariates_col], 
+                                            'std': self.data_processor.norm_const_std[self.data_processor.covariates_col]}
                     generated_ts = self.base_model.generate(num_time_series=1, num_time_steps=52*6, time_covariates=self.data_processor.time_covariates, time_covariate_info=time_covariate_info)
+                    # Plot generated time series
+                    import matplotlib.pyplot as plt
+                    from matplotlib import gridspec
+                    fig = plt.figure(figsize=(10, 6))
+                    gs = gridspec.GridSpec(1, 1)
+                    ax0 = plt.subplot(gs[0])
+                    for i in range(len(generated_ts)):
+                        ax0.plot(np.concatenate((self.data_processor.train_data_norm[:, self.data_processor.output_col].reshape(-1), 
+                                                 self.data_processor.validation_data_norm[:, self.data_processor.output_col].reshape(-1), 
+                                                 generated_ts[i])))
+                    ax0.axvline(x=len(self.data_processor.train_data_norm[:, self.data_processor.output_col].reshape(-1))+len(self.data_processor.validation_data_norm[:, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
+                    ax0.set_title("Data generation")
+                    plt.show()
                     # Train neural network to learn intervention
                     # TODO
 
