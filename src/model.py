@@ -476,7 +476,8 @@ class Model:
             std_obs_preds.append(var_obs_pred**0.5)
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
     
-    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None) -> np.ndarray:
+    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None, 
+                 add_anomaly=False, anomaly_mag_range=None, anomaly_begin_range=None) -> np.ndarray:
         """
         Generate time series data
         """
@@ -484,6 +485,8 @@ class Model:
             np.random.seed(generation_seed)
         
         time_series_all = []
+        anm_mag_all = []
+        anm_begin_all = []
         mu_states_temp = copy.deepcopy(self.mu_states)
         var_states_temp = copy.deepcopy(self.var_states)
 
@@ -519,7 +522,15 @@ class Model:
                 self.initialize_lstm_output_history()
             if "autoregression" in self.states_name:
                 ar_sample = np.random.normal(0, sigma_AR)
-            for x in input_covariates:
+            
+            # Get the anomaly features
+            if add_anomaly:
+                anomaly_mag = np.random.uniform(anomaly_mag_range[0], anomaly_mag_range[1])
+                anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
+                anm_mag_all.append(anomaly_mag)
+                anm_begin_all.append(anomaly_time)
+            print(anomaly_time, anomaly_mag)
+            for i, x in enumerate(input_covariates):
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
                 # Generate observation samples
@@ -538,13 +549,16 @@ class Model:
                         mu_states_prior[lstm_index],
                         var_states_prior[lstm_index, lstm_index],
                     )
+                if add_anomaly:
+                    if i > anomaly_time:
+                        obs_gen += anomaly_mag * (i - anomaly_time)
                 self.set_states(mu_states_prior, var_states_prior)
                 one_time_series.append(obs_gen)
 
             self.set_states(mu_states_temp, var_states_temp)
             time_series_all.append(one_time_series)
             
-        return np.array(time_series_all), input_covariates
+        return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
     def filter(
         self,
