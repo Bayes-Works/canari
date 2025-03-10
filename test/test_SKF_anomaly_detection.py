@@ -15,30 +15,28 @@ from src import (
     WhiteNoise,
     Model,
     SKF,
-    plot_data,
-    plot_prediction,
     plot_skf_states,
 )
 from examples import DataProcess
 
 # Components
-local_trend = LocalTrend(var_states=[1e-4, 1e-4])
+local_trend = LocalTrend(var_states=[1e-3, 1e-3])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
-    num_features=1,
+    look_back_len=10,
+    num_features=2,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
 )
-noise = WhiteNoise(std_error=1e-3)
+noise = WhiteNoise(std_error=1e-2)
 
 # Switching Kalman filter
 skf = SKF(
     norm_model=Model(local_trend, lstm_network, noise),
     abnorm_model=Model(local_acceleration, lstm_network, noise),
-    std_transition_error=1e-3,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
@@ -65,7 +63,7 @@ def SKF_anomaly_detection_runner(
     df_raw.index = time_series
 
     # Add synthetic anomaly
-    trend = np.linspace(0, 2, num=len(df_raw))
+    trend = np.linspace(0, 0, num=len(df_raw))
     anomaly_trend = np.linspace(0, slope_anomaly, num=len(df_raw) - time_step_anomaly)
     trend[time_step_anomaly:] = trend[time_step_anomaly:] + anomaly_trend
     df_raw = df_raw.add(trend, axis=0)
@@ -73,14 +71,15 @@ def SKF_anomaly_detection_runner(
     # Data processing
     data_processor = DataProcess(
         data=df_raw,
-        train_split=0.8,
-        validation_split=0.2,
+        time_covariates=["hour_of_day"],
+        train_split=0.4,
+        validation_split=0.1,
         output_col=output_col,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
 
     # Training
-    test_model.auto_initialize_baseline_states(train_data["y"][0:23])
+    test_model.auto_initialize_baseline_states(train_data["y"][0:48])
     for _ in range(2):
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
@@ -123,11 +122,13 @@ def SKF_anomaly_detection_runner(
 
 
 def test_anomaly_detection(plot_mode):
+    """Test anomaly detection with lstm component"""
+
     detection = SKF_anomaly_detection_runner(
         skf,
-        time_step_anomaly=200,
-        slope_anomaly=2,
+        time_step_anomaly=120,
+        slope_anomaly=1,
         anomaly_threshold=0.5,
         plot=plot_mode,
     )
-    assert detection is True, "Anomaly detection failed to detect anomaly."
+    assert detection == True, "Anomaly not detected."
