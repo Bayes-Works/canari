@@ -531,10 +531,12 @@ class Model:
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
                     lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-                    obs_gen += lstm_noise_sample
+                    # obs_gen += lstm_noise_sample
                     self.update_lstm_output_history(
-                        mu_states_prior[lstm_index]+lstm_noise_sample,
-                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
+                        # mu_states_prior[lstm_index]+lstm_noise_sample,
+                        # np.zeros_like(var_states_prior[lstm_index, lstm_index]),
+                        mu_states_prior[lstm_index],
+                        var_states_prior[lstm_index, lstm_index],
                     )
                 self.set_states(mu_states_prior, var_states_prior)
                 one_time_series.append(obs_gen)
@@ -542,7 +544,7 @@ class Model:
             self.set_states(mu_states_temp, var_states_temp)
             time_series_all.append(one_time_series)
             
-        return np.array(time_series_all)
+        return np.array(time_series_all), input_covariates
 
     def filter(
         self,

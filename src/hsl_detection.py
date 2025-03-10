@@ -134,23 +134,71 @@ class hsl_detection:
                     LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
                     # Collect samples from synthetic time series
                     # TODO
+                    # # Generate synthetic time series
                     time_covariate_info = {'initial_time_covariate': self.data_processor.validation_data[-1, self.data_processor.covariates_col].item(),
                                             'mu': self.data_processor.norm_const_mean[self.data_processor.covariates_col], 
                                             'std': self.data_processor.norm_const_std[self.data_processor.covariates_col]}
-                    generated_ts = self.base_model.generate(num_time_series=1, num_time_steps=52*6, time_covariates=self.data_processor.time_covariates, time_covariate_info=time_covariate_info)
+                    generated_ts, time_covariate = self.base_model.generate(num_time_series=10, num_time_steps=52*6, time_covariates=self.data_processor.time_covariates, time_covariate_info=time_covariate_info)
                     # Plot generated time series
                     import matplotlib.pyplot as plt
                     from matplotlib import gridspec
                     fig = plt.figure(figsize=(10, 6))
                     gs = gridspec.GridSpec(1, 1)
                     ax0 = plt.subplot(gs[0])
-                    for i in range(len(generated_ts)):
+                    for j in range(len(generated_ts)):
                         ax0.plot(np.concatenate((self.data_processor.train_data_norm[:, self.data_processor.output_col].reshape(-1), 
                                                  self.data_processor.validation_data_norm[:, self.data_processor.output_col].reshape(-1), 
-                                                 generated_ts[i])))
+                                                 generated_ts[j])))
                     ax0.axvline(x=len(self.data_processor.train_data_norm[:, self.data_processor.output_col].reshape(-1))+len(self.data_processor.validation_data_norm[:, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
                     ax0.set_title("Data generation")
                     plt.show()
+                    # # Run the current model on the synthetic time series
+                    for k in range(len(generated_ts)):
+                        base_model_copy = copy.deepcopy(self.base_model)
+                        drift_model_copy = copy.deepcopy(self.drift_model)
+                        base_model_copy.lstm_net = self.base_model.lstm_net
+                        base_model_copy.lstm_net.reset_lstm_states()
+
+                        syn_data = {'x': time_covariate, 'y': generated_ts[k]}
+
+                        base_model_copy.filter(syn_data)
+
+                        states_mu_prior = np.array(base_model_copy.states.mu_prior)
+                        states_var_prior = np.array(base_model_copy.states.var_prior)
+
+                        fig = plt.figure(figsize=(10, 6))
+                        gs = gridspec.GridSpec(4, 1)
+                        ax0 = plt.subplot(gs[0])
+                        ax1 = plt.subplot(gs[1])
+                        ax2 = plt.subplot(gs[2])
+                        ax3 = plt.subplot(gs[3])
+                        # print(base_model_copy.states.mu_prior)
+                        ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
+                        ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
+                                        states_mu_prior[:, 0].flatten() - states_var_prior[:, 0, 0]**0.5,
+                                        states_mu_prior[:, 0].flatten() + states_var_prior[:, 0, 0]**0.5,
+                                        alpha=0.5)
+                        ax0.plot(generated_ts[k])
+
+                        ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
+                        ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),
+                                        states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
+                                        states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
+                                        alpha=0.5)
+                        
+                        ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
+                        ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
+                                        states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
+                                        states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
+                                        alpha=0.5)
+                        
+                        ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
+                        ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
+                                        states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
+                                        states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
+                                        alpha=0.5)
+                        plt.show()
+                    1/0
                     # Train neural network to learn intervention
                     # TODO
 
