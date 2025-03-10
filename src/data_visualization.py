@@ -205,7 +205,7 @@ def plot_skf_states(
     states_type: Optional[str] = "posterior",
     num_std: Optional[int] = 1,
     plot_observation: Optional[bool] = True,
-    color: Optional[str] = "k",
+    color: Optional[str] = "b",
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
     plot_nan: Optional[bool] = True,

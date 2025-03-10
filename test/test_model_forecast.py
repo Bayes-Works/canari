@@ -1,3 +1,4 @@
+import os
 import fire
 import pandas as pd
 import numpy as np
@@ -39,6 +40,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
     # Data processing
     data_processor = DataProcess(
         data=df_raw,
+        time_covariates=["hour_of_day"],
         train_split=0.8,
         validation_split=0.2,
         output_col=output_col,
@@ -84,70 +86,37 @@ def model_test_runner(model: Model, plot: bool) -> float:
     return mse
 
 
-# @pytest.fixture(scope="module")
-# def threshold_setup(run_mode):
-#     """
-#     Fixture to handle threshold loading or saving based on run_mode.
-#     """
-
-#     path_metric = "test/saved_metric/test_model_forecast_metric.csv"
-#     threshold = None
-
-#     if run_mode == "save_threshold":
-#         yield threshold
-#     else:
-#         # load_threshold mode
-#         if os.path.exists(path_metric):
-#             df = pd.read_csv(path_metric)
-#             threshold = float(df["mse"].iloc[0])
-#         yield threshold
-
-
-# def test_model_forecast(run_mode, plot_mode, threshold_setup):
-#     # Model
-#     model = Model(
-#         LocalTrend(var_states=[1e-4, 1e-4]),
-#         LstmNetwork(
-#             look_back_len=12,
-#             num_features=1,
-#             num_layer=1,
-#             num_hidden_unit=50,
-#             device="cpu",
-#             manual_seed=1,
-#         ),
-#         WhiteNoise(std_error=1e-3),
-#     )
-#     mse = model_test_runner(model, plot=plot_mode)
-
-#     path_metric = "test/saved_metric/test_model_forecast_metric.csv"
-#     if run_mode == "save_threshold":
-#         pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
-#         print(f"Saved MSE to {path_metric}: {mse}")
-#     else:
-#         threshold = threshold_setup
-#         assert (
-#             threshold is not None
-#         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
-#         assert (
-#             abs(mse - threshold) < 1e-6
-#         ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
-
-
-def main():
+def test_model_forecast(run_mode, plot_mode):
+    """Test model forecastin with lstm component"""
+    # Model
     model = Model(
-        LocalTrend(var_states=[1e-4, 1e-4]),
+        LocalTrend(var_states=[1e-2, 1e-2]),
         LstmNetwork(
-            look_back_len=12,
-            num_features=1,
+            look_back_len=19,
+            num_features=2,
             num_layer=1,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
         ),
-        WhiteNoise(std_error=1e-2),
+        WhiteNoise(std_error=1e-3),
     )
-    mse = model_test_runner(model, plot=False)
+    mse = model_test_runner(model, plot=plot_mode)
 
+    path_metric = "test/saved_metric/test_model_forecast_metric.csv"
+    if run_mode == "save_threshold":
+        pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
+        print(f"Saved MSE to {path_metric}: {mse}")
+    else:
+        # load threshold
+        threshold = None
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+            threshold = float(df["mse"].iloc[0])
 
-if __name__ == "__main__":
-    fire.Fire(main)
+        assert (
+            threshold is not None
+        ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
+        assert (
+            abs(mse - threshold) < 1e-6
+        ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
