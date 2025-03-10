@@ -63,18 +63,32 @@ class hsl_detection:
         LTd_pdf = None
         mu_lstm_pred, var_lstm_pred = None, None
 
-        for i, (x, y) in enumerate(zip(data["x"], data["y"])):
+        self.p_anm_all = []
+        prior_na, prior_a = 0.998, 0.002
 
+        for i, (x, y) in enumerate(zip(data["x"], data["y"])):
             # Estimate likelihoods
             # This step should be done only when user wants to detect anomaly
             if LTd_pdf is not None:
-                y_likelihood, x_likelihood, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x, state_dist=LTd_pdf)
-                y_likelihood, x_likelihood, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
+                # Estimate likelihood without intervention
+                y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x, state_dist=LTd_pdf)
+                # Estimate likelihood with intervention
+                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors()
+                y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
                                                                                                     input_covariates=x, 
                                                                                                     state_dist=LTd_pdf,
                                                                                                     mu_lstm_pred=mu_lstm_pred,
-                                                                                                    var_lstm_pred=var_lstm_pred)
-                print(y_likelihood, x_likelihood)
+                                                                                                    var_lstm_pred=var_lstm_pred,
+                                                                                                    base_model_prior=itv_base_model_prior,
+                                                                                                    drift_model_prior=itv_drift_model_prior
+                                                                                                    )
+                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * prior_na + y_likelihood_a * x_likelihood_a * prior_a
+                # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
+                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * prior_a / p_yt_I_Yt1).item()
+            else:
+                y_likelihood_na, x_likelihood_na, y_likelihood_a, x_likelihood_a = None, None, None, None
+                p_a_I_Yt = 0
+            self.p_anm_all.append(p_a_I_Yt)
 
             # Base model filter process, same as in model.py
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x,
@@ -112,7 +126,12 @@ class hsl_detection:
                 if i >= state_dist_estimate_window[0] and i < state_dist_estimate_window[1]:
                     LTd_buffer.append(mu_drift_states_prior[1].item())
                 if i == state_dist_estimate_window[1]:
-                    LTd_pdf = common.gaussian_pdf(mu = np.mean(LTd_buffer), std = np.std(LTd_buffer))
+                    self.mu_LTd = np.mean(LTd_buffer)
+                    LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
+                    # Collect samples from synthetic time series
+                    # TODO
+                    # Train neural network to learn intervention
+                    # TODO
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
 
@@ -123,6 +142,8 @@ class hsl_detection:
             input_covariates: Optional[np.ndarray] = None,
             mu_lstm_pred: Optional[np.ndarray] = None,
             var_lstm_pred: Optional[np.ndarray] = None,
+            base_model_prior: Optional[Dict] = None,
+            drift_model_prior: Optional[Dict] = None,
             ):
         """
         Compute the likelihood of observation and hidden states given action
@@ -130,12 +151,12 @@ class hsl_detection:
         base_model_copy = copy.deepcopy(self.base_model)
         drift_model_copy = copy.deepcopy(self.drift_model)
         base_model_copy.lstm_net = self.base_model.lstm_net
-        # TODO
-        # if intervention == True:
-        #     base_model_copy.mu_states = base_model_prior['mu']
-        #     base_model_copy.var_states = base_model_prior['var']
-        #     drift_model_copy.mu_states = drift_model_prior['mu']
-        #     drift_model_copy.var_states = drift_model_prior['var']
+
+        if base_model_prior is not None and drift_model_prior is not None:
+            base_model_copy.mu_states = base_model_prior['mu']
+            base_model_copy.var_states = base_model_prior['var']
+            drift_model_copy.mu_states = drift_model_prior['mu']
+            drift_model_copy.var_states = drift_model_prior['var']
 
         if mu_lstm_pred is not None and var_lstm_pred is not None:
             mu_obs_pred, var_obs_pred, _, var_states_prior = base_model_copy.forward(input_covariates = input_covariates, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred)
@@ -147,3 +168,26 @@ class hsl_detection:
         mu_ar_pred, var_ar_pred, mu_d_states_prior, _ = drift_model_copy.forward()
         x_likelihood = state_dist(mu_d_states_prior[1].item())
         return y_likelihood.item(), x_likelihood, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
+    
+    def _intervene_current_priors(self):
+        base_model_prior = {
+            'mu': copy.deepcopy(self.base_model.mu_states),
+            'var': copy.deepcopy(self.base_model.var_states)
+        }
+        drift_model_prior = {
+            'mu': copy.deepcopy(self.drift_model.mu_states),
+            'var': copy.deepcopy(self.drift_model.var_states)
+        }
+
+        LL_index = self.base_model.states_name.index("local level")
+        LT_index = self.base_model.states_name.index("local trend")
+        AR_index = self.base_model.states_name.index("autoregression")
+        base_model_prior['mu'][LL_index] += drift_model_prior['mu'][0]
+        base_model_prior['mu'][LT_index] += drift_model_prior['mu'][1]
+        base_model_prior['mu'][AR_index] = drift_model_prior['mu'][2]
+        base_model_prior['var'][LL_index, LL_index] += drift_model_prior['var'][0, 0]
+        base_model_prior['var'][LT_index, LT_index] += drift_model_prior['var'][1, 1]
+        base_model_prior['var'][AR_index, AR_index] = drift_model_prior['var'][2, 2]
+        drift_model_prior['mu'][0] = 0
+        drift_model_prior['mu'][1] = self.mu_LTd
+        return base_model_prior, drift_model_prior
