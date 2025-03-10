@@ -106,14 +106,11 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(normalized_data, state_dist_estimate_window = [int(train_split*len(normalized_data["y"])), int((train_split+validation_split)*len(normalized_data["y"]))])
 
-# pretrained_model.filter(normalized_data,train_lstm=False)
-# pretrained_model.smoother(normalized_data)
-
 #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 10))
-gs = gridspec.GridSpec(7, 1)
+fig = plt.figure(figsize=(10, 8))
+gs = gridspec.GridSpec(8, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -121,6 +118,9 @@ ax3 = plt.subplot(gs[3])
 ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
 ax6 = plt.subplot(gs[6])
+ax7 = plt.subplot(gs[7])
+from src.data_visualization import determine_time
+time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
     data_processor=data_processor,
     normalization=True,
@@ -185,4 +185,8 @@ plot_states(
     states_to_plot=['autoregression'],
     sub_plot=ax6,
 )
+ax6.set_xticklabels([])
+ax7.plot(time, hsl_tsad_agent.p_anm_all)
+ax7.set_ylabel("p_anm")
+ax7.set_xlim(ax0.get_xlim())
 plt.show()
