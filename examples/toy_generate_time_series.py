@@ -51,15 +51,12 @@ data_processor = DataProcess(
     time_covariates=["week_of_year"],
     train_split=train_val_split[0],
     validation_split=train_val_split[1],
-    # train_split=1,
-    # validation_split=0,
     output_col=output_col,
 )
 
 trend_true_norm = trend_true/(data_processor.norm_const_std[output_col].item() + 1e-10)
 level_true_norm = (5.0 - data_processor.norm_const_mean[output_col].item())/(data_processor.norm_const_std[output_col].item() + 1e-10)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
-# Unstandardize the validation_data['x']
 validation_data_x_unnorm = normalizer.unstandardize(
     validation_data['x'],
     data_processor.norm_const_mean[1],
@@ -84,12 +81,10 @@ AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_st
 
 model = Model(
     LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
-    # LocalTrend(),
     LSTM,
     AR,
 )
 model._mu_local_level = level_true_norm
-# model.auto_initialize_baseline_states(train_data["y"][0:51])
 
 
 # Training
@@ -134,7 +129,6 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-
 model_dict = model.save_model_dict()
 model_dict['states_optimal'] = states_optim
 
@@ -143,9 +137,8 @@ import pickle
 with open("saved_params/toy_model_dict.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
-
 ####################################################################
-######################### Pretrained model #########################
+############ Use pretrained model to generate data #################
 ####################################################################
 # Load model_dict from local
 import pickle
@@ -157,9 +150,7 @@ print("sigma_AR =", np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1]
 train_val_data = np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1)))
 
 pretrained_model = Model(
-    # LocalTrend(mu_states=[level_true_norm, trend_true_norm], var_states=[1e-12, 1e-12], std_error=0), # True baseline values
     LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2])),
-    # LocalTrend(mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(
         std_error=np.sqrt(pretrained_model_dict['states_optimal'].mu_prior[-1][pretrained_model_dict['W2bar_index']].item()), 
@@ -169,6 +160,7 @@ pretrained_model = Model(
 )
 pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_params"])
 
+# Generate data
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
 generated_ts = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
@@ -177,9 +169,9 @@ time_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation
 val_end_idx = len(train_val_data)
 train_end_idx = int(train_val_split[0]/np.sum(train_val_split)*val_end_idx)
 
-#  Plot states from training
+# Plot
+# # Plot states from training
 state_type = "prior"
-#  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[0])
@@ -234,7 +226,7 @@ plot_states(
 )
 ax3.set_xticklabels([])
 
-# Plot generated time series
+# # Plot generated time series
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(1, 1)
 ax0 = plt.subplot(gs[0])
