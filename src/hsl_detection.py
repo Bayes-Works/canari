@@ -11,7 +11,7 @@ from src import (
     plot_prediction,
     plot_states,
 )
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Callable
 import src.common as common
 import numpy as np
 import copy
@@ -60,16 +60,21 @@ class hsl_detection:
         mu_obs_preds, std_obs_preds = [], []
         mu_ar_preds, std_ar_preds = [], []
         LTd_buffer = []
+        LTd_pdf = None
+        mu_lstm_pred, var_lstm_pred = None, None
 
         for i, (x, y) in enumerate(zip(data["x"], data["y"])):
 
             # Estimate likelihoods
             # This step should be done only when user wants to detect anomaly
-            mu_obs_pred2, var_obs_pred2, mu_ar_pred2, var_ar_pred2, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x)
-            mu_obs_pred3, var_obs_pred3, mu_ar_pred3, var_ar_pred3, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
-                                                                                                                             input_covariates=x, 
-                                                                                                                             mu_lstm_pred=mu_lstm_pred,
-                                                                                                                             var_lstm_pred=var_lstm_pred)
+            if LTd_pdf is not None:
+                y_likelihood, x_likelihood, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x, state_dist=LTd_pdf)
+                y_likelihood, x_likelihood, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
+                                                                                                    input_covariates=x, 
+                                                                                                    state_dist=LTd_pdf,
+                                                                                                    mu_lstm_pred=mu_lstm_pred,
+                                                                                                    var_lstm_pred=var_lstm_pred)
+                print(y_likelihood, x_likelihood)
 
             # Base model filter process, same as in model.py
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.base_model.forward(x,
@@ -114,6 +119,7 @@ class hsl_detection:
     def _estimate_likelihoods(
             self, 
             obs: float,
+            state_dist: Optional[Callable] = None,
             input_covariates: Optional[np.ndarray] = None,
             mu_lstm_pred: Optional[np.ndarray] = None,
             var_lstm_pred: Optional[np.ndarray] = None,
@@ -138,7 +144,6 @@ class hsl_detection:
 
         y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred), obs)
 
-        # # TODO
         mu_ar_pred, var_ar_pred, mu_d_states_prior, _ = drift_model_copy.forward()
-        # x_likelihood = dist_hidden_state(mu_d_states_prior[1].item())
-        return mu_obs_pred, var_obs_pred, mu_ar_pred, var_ar_pred, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
+        x_likelihood = state_dist(mu_d_states_prior[1].item())
+        return y_likelihood.item(), x_likelihood, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
