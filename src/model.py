@@ -40,8 +40,8 @@ class Model:
         self.var_states_prior = None
         self.mu_states_posterior = None
         self.var_states_posterior = None
-        self._mu_obs_predict = None
-        self._var_obs_predict = None
+        self.mu_obs_predict = None
+        self.var_obs_predict = None
         self.transition_matrix = None
         self.process_noise_matrix = None
         self.observation_matrix = None
@@ -200,7 +200,7 @@ class Model:
 
         return model
 
-    def get_state_index(self, states_name: str):
+    def get_states_index(self, states_name: str):
         """Get state index in the state vector"""
 
         index = (
@@ -258,7 +258,7 @@ class Model:
         self.mu_states = self.states.mu_smooth[0].copy()
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
         if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
-            local_level_index = self.get_state_index("local level")
+            local_level_index = self.get_states_index("local level")
             self.mu_states[local_level_index] = self._mu_local_level
 
     def initialize_states_history(self):
@@ -295,7 +295,7 @@ class Model:
         """
 
         # LSTM prediction:
-        lstm_states_index = self.get_state_index("lstm")
+        lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, input_covariates
@@ -324,8 +324,8 @@ class Model:
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
-        self._mu_obs_predict = mu_obs_pred
-        self._var_obs_predict = var_obs_pred
+        self.mu_obs_predict = mu_obs_pred
+        self.var_obs_predict = var_obs_pred
 
         return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
 
@@ -339,8 +339,8 @@ class Model:
 
         delta_mu_states, delta_var_states = common.backward(
             obs,
-            self._mu_obs_predict,
-            self._var_obs_predict,
+            self.mu_obs_predict,
+            self.var_obs_predict,
             self.var_states_prior,
             self.observation_matrix,
         )
@@ -403,7 +403,7 @@ class Model:
             )
 
             if self.lstm_net:
-                lstm_index = self.get_state_index("lstm")
+                lstm_index = self.get_states_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_prior[lstm_index],
                     var_states_prior[lstm_index, lstm_index],
@@ -439,7 +439,7 @@ class Model:
             ) = self.backward(y)
 
             if self.lstm_net:
-                lstm_index = self.get_state_index("lstm")
+                lstm_index = self.get_states_index("lstm")
                 delta_mu_lstm = np.array(
                     delta_mu_states[lstm_index]
                     / var_states_prior[lstm_index, lstm_index]
@@ -574,10 +574,10 @@ class Model:
 
     def online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         if "AR_error" in self.states_name:
-            ar_index = self.get_state_index("autoregression")
-            ar_error_index = self.get_state_index("AR_error")
-            W2_index = self.get_state_index("W2")
-            W2bar_index = self.get_state_index("W2bar")
+            ar_index = self.get_states_index("autoregression")
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
 
             # Forward path to compute the moments of W
             # # W2bar
@@ -617,16 +617,16 @@ class Model:
             mu_states_posterior, var_states_posterior = GMA(
                 mu_states_posterior,
                 var_states_posterior,
-                index1=self.get_state_index("phi"),
-                index2=self.get_state_index("autoregression"),
-                replace_index=self.get_state_index("phi_autoregression"),
+                index1=self.get_states_index("phi"),
+                index2=self.get_states_index("autoregression"),
+                replace_index=self.get_states_index("phi_autoregression"),
             ).get_results()
 
         if "AR_error" in self.states_name:
-            ar_index = self.get_state_index("autoregression")
-            ar_error_index = self.get_state_index("AR_error")
-            W2_index = self.get_state_index("W2")
-            W2bar_index = self.get_state_index("W2bar")
+            ar_index = self.get_states_index("autoregression")
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
 
             # Backward path to update W2 and W2bar
             # # From W to W2
@@ -673,9 +673,9 @@ class Model:
         # Keep the diagonal elements
         diag = np.diag(var_original)
         if "AR_error" in self.states_name:
-            ar_error_index = self.get_state_index("AR_error")
-            W2_index = self.get_state_index("W2")
-            W2bar_index = self.get_state_index("W2bar")
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
             var_prior_modified[ar_error_index, :] = 0
             var_prior_modified[:, ar_error_index] = 0
             var_prior_modified[W2_index, :] = 0
