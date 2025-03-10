@@ -69,20 +69,6 @@ LSTM = LstmNetwork(
 print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
 
-# # Prepare for pretrained model: get the drift model initial variance: flexible to drift from the beginning
-# pretrained_model_pre = Model(
-#     # LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=np.diag(model_dict['early_stop_init_var_states'][0:2, 0:2])),
-#     LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
-#     LSTM,
-#     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-#                    phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-#                    mu_states=[model_dict['early_stop_init_mu_states'][model_dict['autoregression_index']].item()], 
-#                    var_states=[model_dict['early_stop_init_var_states'][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
-# )
-# pretrained_model_pre.lstm_net.load_state_dict(model_dict["lstm_network_params"])
-# hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model_pre)
-# hsl_tsad_agent_pre.filter(train_data)
-# hsl_tsad_agent_pre.filter(validation_data)
 
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=np.diag(model_dict['early_stop_init_var_states'][0:2, 0:2])),
@@ -99,7 +85,7 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()))
+hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
