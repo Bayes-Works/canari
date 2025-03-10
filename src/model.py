@@ -489,11 +489,13 @@ class Model:
         anomaly_mag_range=None,
         anomaly_begin_range=None,
         anomaly_type="trend",
-    ) -> np.ndarray:
+        ) -> np.ndarray:
         """
         Generate time series data
         """
         time_series_all = []
+        anm_mag_all = []
+        anm_begin_all = []
         anm_mag_all = []
         anm_begin_all = []
         mu_states_temp = copy.deepcopy(self.mu_states)
@@ -541,7 +543,15 @@ class Model:
                 self.initialize_lstm_output_history()
             if "autoregression" in self.states_name:
                 ar_sample = np.random.normal(0, sigma_AR)
-            for x in input_covariates:
+            
+            # Get the anomaly features
+            if add_anomaly:
+                anomaly_mag = np.random.uniform(anomaly_mag_range[0], anomaly_mag_range[1])
+                anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
+                anm_mag_all.append(anomaly_mag)
+                anm_begin_all.append(anomaly_time)
+            print(anomaly_time, anomaly_mag)
+            for i, x in enumerate(input_covariates):
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([x])
 
                 # Generate observation samples
