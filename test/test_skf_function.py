@@ -148,3 +148,34 @@ def test_skf_filter():
     npt.assert_allclose(skf.lstm_output_history.var, lstm_output_history_init.var)
     assert skf.marginal_prob_current["norm"] == skf.norm_model_prior_prob
     assert skf.marginal_prob_current["abnorm"] == 1 - skf.norm_model_prior_prob
+
+
+def test_detect_synthetic_anomaly():
+    """Test detect_synthetic_anomaly function"""
+
+    data = {}
+    data["x"] = np.array([[0.1]])
+    data["x"] = np.tile(data["x"], (10, 1))
+    data["y"] = np.array([[0.1]])
+    data["y"] = np.tile(data["y"], (10, 1))
+
+    np.random.seed(1)
+    skf.detect_synthetic_anomaly(
+        data=data,
+        num_anomaly=1,
+        slope_anomaly=0.01,
+    )
+    mu_1 = skf.model["norm_norm"].mu_states.copy()
+
+    np.random.seed(1)
+    skf.detect_synthetic_anomaly(
+        data=data,
+        num_anomaly=1,
+        slope_anomaly=0.01,
+    )
+    mu_2 = skf.model["norm_norm"].mu_states.copy()
+
+    npt.assert_allclose(
+        mu_1,
+        mu_2,
+    )
