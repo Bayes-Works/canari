@@ -96,7 +96,7 @@ pretrained_model = Model(
 
 pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
-hsl_tsad_agent = hsl_detection(base_model=pretrained_model)
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor)
 
 # Get flexible drift model from the beginning
 hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()))

@@ -11,6 +11,8 @@ from src import (
     plot_prediction,
     plot_states,
 )
+from examples import DataProcess
+from pytagi import Normalizer as normalizer
 from typing import Tuple, Dict, Optional, Callable
 import src.common as common
 import numpy as np
@@ -25,9 +27,11 @@ class hsl_detection:
     def __init__(
             self, 
             base_model: Model,
+            data_processor: DataProcess,
             drift_model_process_error_std: Optional[float] = 1e-4,
             ):
         self.base_model = base_model
+        self.data_processor = data_processor
         self._create_drift_model(drift_model_process_error_std)
         self.base_model.initialize_states_history()
         self.drift_model.initialize_states_history()
@@ -130,6 +134,15 @@ class hsl_detection:
                     LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
                     # Collect samples from synthetic time series
                     # TODO
+                    validation_data_x_unnorm = normalizer.unstandardize(
+                                                    self.data_processor.validation_data_norm[:, self.data_processor.covariates_col],
+                                                    self.data_processor.norm_const_mean[1],
+                                                    data_processor.norm_const_std[1],
+                                                )
+                    time_covariate_info = {'initial_time_covariate': validation_data_x_unnorm[-1].item(),
+                                            'mu': data_processor.norm_const_mean[1], 
+                                            'std': data_processor.norm_const_std[1]}
+                    generated_ts = self.base_model.generate(num_time_series=1, num_time_steps=52*6, time_covariates=self.data_processor.time_covariates, time_covariate_info=time_covariate_info)
                     # Train neural network to learn intervention
                     # TODO
 
