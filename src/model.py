@@ -530,7 +530,8 @@ class Model:
         
         for _ in range(num_time_series):
             one_time_series = []
-            # Reset lstm cell states
+            # Reset lstm cell states, we do not have a way to retrieve lstm cell states yet
+            # To be implemented in the future
             self.lstm_net.reset_lstm_states()
             # Reset lstm output history
             if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
