@@ -64,31 +64,30 @@ class hsl_detection:
         mu_obs_preds, std_obs_preds = [], []
         mu_ar_preds, std_ar_preds = [], []
         LTd_buffer = []
-        LTd_pdf = None
+        self.LTd_pdf = None
         mu_lstm_pred, var_lstm_pred = None, None
 
         self.p_anm_all = []
-        prior_na, prior_a = 0.998, 0.002
+        self.prior_na, self.prior_a = 0.998, 0.002
 
         for i, (x, y) in enumerate(zip(data["x"], data["y"])):
             # Estimate likelihoods
             # This step should be done only when user wants to detect anomaly
-            if LTd_pdf is not None:
+            if self.LTd_pdf is not None:
                 # Estimate likelihood without intervention
-                y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, input_covariates=x, state_dist=LTd_pdf)
+                y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                                                                                                           obs=y, input_covariates=x, state_dist=self.LTd_pdf)
                 # Estimate likelihood with intervention
-                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors()
-                y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(obs=y, 
-                                                                                                    input_covariates=x, 
-                                                                                                    state_dist=LTd_pdf,
-                                                                                                    mu_lstm_pred=mu_lstm_pred,
-                                                                                                    var_lstm_pred=var_lstm_pred,
-                                                                                                    base_model_prior=itv_base_model_prior,
-                                                                                                    drift_model_prior=itv_drift_model_prior
+                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
+                y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(
+                                                                                                    base_model=self.base_model, drift_model=self.drift_model,
+                                                                                                    obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                                                    mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,
+                                                                                                    base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
                                                                                                     )
-                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * prior_na + y_likelihood_a * x_likelihood_a * prior_a
+                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
                 # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
-                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * prior_a / p_yt_I_Yt1).item()
+                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
             else:
                 y_likelihood_na, x_likelihood_na, y_likelihood_a, x_likelihood_a = None, None, None, None
                 p_a_I_Yt = 0
@@ -127,11 +126,15 @@ class hsl_detection:
             std_ar_preds.append(var_ar_pred**0.5)
 
             if state_dist_estimate_window is not None:
-                if i >= state_dist_estimate_window[0] and i < state_dist_estimate_window[1]:
+                # if i >= state_dist_estimate_window[0] and i < state_dist_estimate_window[1]:
+                if i < state_dist_estimate_window[1]:
                     LTd_buffer.append(mu_drift_states_prior[1].item())
                 if i == state_dist_estimate_window[1]:
                     self.mu_LTd = np.mean(LTd_buffer)
-                    LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
+                    self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(LTd_buffer))
+                    print('LTd_mean:', self.mu_LTd)
+                    print('LTd_std:', np.std(LTd_buffer))
+
                     # Collect samples from synthetic time series
                     # TODO
                     self._collect_synthetic_samples()
@@ -142,6 +145,8 @@ class hsl_detection:
 
     def _estimate_likelihoods(
             self, 
+            base_model: Model,
+            drift_model: Model,
             obs: float,
             state_dist: Optional[Callable] = None,
             input_covariates: Optional[np.ndarray] = None,
@@ -153,9 +158,9 @@ class hsl_detection:
         """
         Compute the likelihood of observation and hidden states given action
         """
-        base_model_copy = copy.deepcopy(self.base_model)
-        drift_model_copy = copy.deepcopy(self.drift_model)
-        base_model_copy.lstm_net = self.base_model.lstm_net
+        base_model_copy = copy.deepcopy(base_model)
+        drift_model_copy = copy.deepcopy(drift_model)
+        base_model_copy.lstm_net = base_model.lstm_net
 
         if base_model_prior is not None and drift_model_prior is not None:
             base_model_copy.mu_states = base_model_prior['mu']
@@ -174,19 +179,19 @@ class hsl_detection:
         x_likelihood = state_dist(mu_d_states_prior[1].item())
         return y_likelihood.item(), x_likelihood, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
     
-    def _intervene_current_priors(self):
+    def _intervene_current_priors(self, base_model, drift_model):
         base_model_prior = {
-            'mu': copy.deepcopy(self.base_model.mu_states),
-            'var': copy.deepcopy(self.base_model.var_states)
+            'mu': copy.deepcopy(base_model.mu_states),
+            'var': copy.deepcopy(base_model.var_states)
         }
         drift_model_prior = {
-            'mu': copy.deepcopy(self.drift_model.mu_states),
-            'var': copy.deepcopy(self.drift_model.var_states)
+            'mu': copy.deepcopy(drift_model.mu_states),
+            'var': copy.deepcopy(drift_model.var_states)
         }
 
-        LL_index = self.base_model.states_name.index("local level")
-        LT_index = self.base_model.states_name.index("local trend")
-        AR_index = self.base_model.states_name.index("autoregression")
+        LL_index = base_model.states_name.index("local level")
+        LT_index = base_model.states_name.index("local trend")
+        AR_index = base_model.states_name.index("autoregression")
         base_model_prior['mu'][LL_index] += drift_model_prior['mu'][0]
         base_model_prior['mu'][LT_index] += drift_model_prior['mu'][1]
         base_model_prior['mu'][AR_index] = drift_model_prior['mu'][2]
@@ -202,7 +207,7 @@ class hsl_detection:
         # Anomly feature range define
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
-        anm_mag_range = [-stationary_ar_std/13, stationary_ar_std/13]
+        anm_mag_range = [-stationary_ar_std/8, stationary_ar_std/8]
         anm_begin_range = [int(ts_len/3), ts_len]
 
         # # Generate synthetic time series
@@ -238,10 +243,33 @@ class hsl_detection:
 
             mu_obs_preds, std_obs_preds = [], []
             mu_ar_preds, std_ar_preds = [], []
+            p_anm_one_syn_ts = []
+            y_likelihood_a_one_ts, y_likelihood_na_one_ts = [], []
+            x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
             for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
-                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x)
+                # Estimate likelihood without intervention
+                y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                                           obs=y, input_covariates=x, state_dist=self.LTd_pdf)
+                # Estimate likelihood with intervention
+                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=base_model_copy, drift_model=drift_model_copy,)
+                y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(
+                                                                                                    base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                                    obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                                                    mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,
+                                                                                                    base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                                                    )
+                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
+                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
+                p_anm_one_syn_ts.append(p_a_I_Yt)
+                y_likelihood_a_one_ts.append(y_likelihood_a)
+                y_likelihood_na_one_ts.append(y_likelihood_na)
+                x_likelihood_a_one_ts.append(x_likelihood_a)
+                x_likelihood_na_one_ts.append(x_likelihood_na)
+
+
+                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
                 (
                     _, _,
                     mu_states_posterior,
@@ -278,7 +306,7 @@ class hsl_detection:
             states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
 
             fig = plt.figure(figsize=(10, 9))
-            gs = gridspec.GridSpec(7, 1)
+            gs = gridspec.GridSpec(10, 1)
             ax0 = plt.subplot(gs[0])
             ax1 = plt.subplot(gs[1])
             ax2 = plt.subplot(gs[2])
@@ -286,6 +314,9 @@ class hsl_detection:
             ax4 = plt.subplot(gs[4])
             ax5 = plt.subplot(gs[5])
             ax6 = plt.subplot(gs[6])
+            ax7 = plt.subplot(gs[7])
+            ax8 = plt.subplot(gs[8])
+            ax9 = plt.subplot(gs[9])
             # print(base_model_copy.states.mu_prior)
             ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
             ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
@@ -334,4 +365,13 @@ class hsl_detection:
                             states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
                             alpha=0.5)
             ax6.set_ylabel('ARd')
+            ax7.plot(p_anm_one_syn_ts)
+            ax7.set_ylim(-0.05, 1.05)
+            ax7.set_ylabel('p_anm')
+            ax8.plot(y_likelihood_a_one_ts, label='itv')
+            ax8.plot(y_likelihood_na_one_ts, label='no itv')
+            ax8.set_ylabel('y_likelihood')
+            ax9.plot(x_likelihood_a_one_ts, label='itv')
+            ax9.plot(x_likelihood_na_one_ts, label='no itv')
+            ax9.set_ylabel('x_likelihood')
             plt.show()
