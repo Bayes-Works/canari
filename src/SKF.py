@@ -456,14 +456,14 @@ class SKF:
         """
 
         save_dict = {}
-        save_dict["norm_model"] = self.model["norm_norm"].save_model_dict()
-        save_dict["abnorm_model"] = self.model["abnorm_abnorm"].save_model_dict()
+        save_dict["norm_model"] = self.model["norm_norm"].get_dict()
+        save_dict["abnorm_model"] = self.model["abnorm_abnorm"].get_dict()
         save_dict["std_transition_error"] = self.std_transition_error
         save_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
         save_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
-            save_dict["lstm_network_params"] = self.lstm_net.get_state_dict()
+            save_dict["lstm_network_params"] = self.lstm_net.state_dict()
 
         return save_dict
 

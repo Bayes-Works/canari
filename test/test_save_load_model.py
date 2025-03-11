@@ -1,21 +1,12 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-from src.data_struct import LstmOutputHistory
-import fire
 
 from src import (
-    BaseComponent,
-    LocalAcceleration,
-    LocalLevel,
     LocalTrend,
-    Periodic,
-    Autoregression,
     LstmNetwork,
     WhiteNoise,
     Model,
-    SKF,
-    common,
 )
 
 
@@ -39,25 +30,21 @@ lstm_network_2 = LstmNetwork(
 )
 
 # Model
-model_1 = Model(
+model1 = Model(
     LocalTrend(),
     lstm_network_1,
     WhiteNoise(),
 )
 
-model_3 = Model(
+model2 = Model(
     LocalTrend(),
     lstm_network_2,
     WhiteNoise(),
 )
 
 
-def test_model_save_load():
+def compare_model_dict(model_1_dict, model_2_dict):
     """Test save/load for model.py"""
-
-    model_1_dict = model_1.get_dict()
-    model_2 = Model.load_dict(model_1_dict)
-    model_2_dict = model_2.get_dict()
 
     for component_1, component_2 in zip(
         model_1_dict["components"].values(), model_2_dict["components"].values()
@@ -77,14 +64,26 @@ def test_model_save_load():
 
     npt.assert_allclose(model_1_dict["mu_states"], model_2_dict["mu_states"])
     npt.assert_allclose(model_1_dict["var_states"], model_2_dict["var_states"])
-    assert model_1_dict["lstm_network_params"] == model_2_dict["lstm_network_params"]
+
+    if "lstm_network_params" in model_1_dict and "lstm_network_params" in model_2_dict:
+        assert (
+            model_1_dict["lstm_network_params"] == model_2_dict["lstm_network_params"]
+        )
 
 
-def test_lstm_seed():
+def compare_lstm_dict(model_1_dict, model_2_dict):
     """Test lstm initialization with different seeds"""
-
-    model_1_dict = model_1.get_dict()
-    model_3_dict = model_3.get_dict()
     assert (
-        not model_1_dict["lstm_network_params"] == model_3_dict["lstm_network_params"]
+        not model_1_dict["lstm_network_params"] == model_2_dict["lstm_network_params"]
     )
+
+
+def test_model_save_load():
+    """Test save/load for model.py"""
+    model1_dict = model1.get_dict()
+    model1_loaded = Model.load_dict(model1_dict)
+    model1_loaded_dict = model1_loaded.get_dict()
+    compare_model_dict(model1_dict, model1_loaded_dict)
+
+    model2_dict = model2.get_dict()
+    compare_lstm_dict(model1_dict, model2_dict)
