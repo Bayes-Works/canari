@@ -90,7 +90,12 @@ hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(normalized_data, state_dist_estimate_window = [int(train_split*len(normalized_data["y"])), int((train_split+validation_split)*len(normalized_data["y"]))])
+
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
+hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.collect_synthetic_samples()
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data)
 
 #  Plot
 state_type = "prior"
