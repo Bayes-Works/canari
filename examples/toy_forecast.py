@@ -12,7 +12,7 @@ from src import (
     plot_data,
     plot_prediction,
 )
-from examples import DataProcess
+from examples import DataProcess, TimeSeriesDecomposition
 from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
@@ -62,7 +62,21 @@ model = Model(
     ),
     WhiteNoise(std_error=sigma_v),
 )
-model.auto_initialize_baseline_states(train_data["y"][1:24])
+# model.auto_initialize_baseline_states(train_data["y"][1:24])
+index_start = 0
+index_end = 52
+y1 = train_data["y"][index_start:index_end].flatten()
+decomposer = TimeSeriesDecomposition(y1)
+trend, seasonality, residual, slope = decomposer.decompose()
+t_plot = data_processor.data.index[index_start:index_end].to_numpy()
+plt.plot(t_plot, trend, color="b")
+plt.plot(t_plot, seasonality, color="k")
+plt.plot(
+    data_processor.get_time("train"),
+    data_processor.get_data("train", normalization=True),
+    color="r",
+)
+plt.show()
 
 # Training
 scheduled_sigma_v = 1
