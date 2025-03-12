@@ -62,7 +62,9 @@ class DataProcess:
                 elif time_cov == "day_of_year":
                     self.data["day_of_year"] = self.data.index.dayofyear
                 elif time_cov == "week_of_year":
-                    self.data["week_of_year"] = self.data.index.isocalendar().week
+                    self.data["week_of_year"] = np.array(
+                        self.data.index.isocalendar().week, dtype=np.float64
+                    )
                 elif time_cov == "month_of_year":
                     self.data["month"] = self.data.index.month
                 elif time_cov == "quarter_of_year":

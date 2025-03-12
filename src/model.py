@@ -685,3 +685,35 @@ class Model:
             # Fill the diagonal elements back
             np.fill_diagonal(var_prior_modified, diag)
         return var_prior_modified
+
+    def generate_synthetic_data(self, data, num_time_series: int):
+        """Generate synthetic data"""
+
+        syn_data = [[]]
+        lstm_index = self.get_states_index("lstm")
+
+        for i in range(0, num_time_series):
+            ts = []
+            for x in data["x"]:
+                # x = np.array([])
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = (
+                    self.forward(x)
+                )
+                x_sample = np.random.multivariate_normal(
+                    mu_states_prior.flatten(), var_states_prior
+                )
+                var_states_prior_zero = np.zeros(var_states_prior.shape)
+                y_sample = self.observation_matrix @ x_sample.reshape(-1, 1)
+                ts.append(y_sample.item())
+
+                if self.lstm_net:
+                    # self.lstm_output_history.update(
+                    #     mu_states_prior[lstm_index],
+                    #     var_states_prior[lstm_index, lstm_index],
+                    # )
+                    self.lstm_output_history.update(
+                        x_sample[lstm_index],
+                        var_states_prior_zero[lstm_index, lstm_index],
+                    )
+                self.set_states(mu_states_prior, var_states_prior_zero)
+        return ts
