@@ -550,7 +550,6 @@ class Model:
                 anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
                 anm_mag_all.append(anomaly_mag)
                 anm_begin_all.append(anomaly_time)
-            print(anomaly_time, anomaly_mag)
             for i, x in enumerate(input_covariates):
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([x])
 
