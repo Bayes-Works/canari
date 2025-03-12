@@ -337,26 +337,26 @@ class hsl_detection:
                     itv_LT = anm_mag_list[k]
                     itv_anm_dev_time = i - anm_begin_list[k]
                     itv_LL = itv_LT * itv_anm_dev_time
-                    # Change labels when anomaly is detected
-                    if anomaly_detected:
-                        itv_LT = 0
-                        itv_LL = 0
-                        itv_anm_dev_time = 0
+                    # # Change labels when anomaly is detected
+                    # if anomaly_detected:
+                    #     itv_LT = 0
+                    #     itv_LL = 0
+                    #     itv_anm_dev_time = 0
                     samples['LTd_history'].append(mu_LTd_history.tolist())
                     samples['itv_LT'].append(itv_LT)
                     samples['itv_LL'].append(itv_LL)
                     samples['anm_develop_time'].append(itv_anm_dev_time)
 
-                if p_a_I_Yt > self.detection_threshold:
-                    anomaly_detected = True
-                    # Intervene the model using true anomaly features
-                    LL_index = base_model_copy.states_name.index("local level")
-                    LT_index = base_model_copy.states_name.index("local trend")
-                    base_model_copy.mu_states[LT_index] += anm_mag_list[k]
-                    base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
-                    base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
-                    drift_model_copy.mu_states[0] = 0
-                    drift_model_copy.mu_states[1] = self.mu_LTd
+                # if p_a_I_Yt > self.detection_threshold:
+                #     anomaly_detected = True
+                #     # Intervene the model using true anomaly features
+                #     LL_index = base_model_copy.states_name.index("local level")
+                #     LT_index = base_model_copy.states_name.index("local trend")
+                #     base_model_copy.mu_states[LT_index] += anm_mag_list[k]
+                #     base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
+                #     base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
+                #     drift_model_copy.mu_states[0] = 0
+                #     drift_model_copy.mu_states[1] = self.mu_LTd
 
                 mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
                 (
@@ -591,9 +591,9 @@ class hsl_detection:
         y_pred_denorm = test_pred_y_mu * self.std_target + self.mean_target
         y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
         y_test_denorm = test_y_batch * self.std_target + self.mean_target
-        # print(y_test_denorm.tolist())
-        # print(y_pred_denorm.tolist())
-        # print(np.sqrt(y_pred_var_denorm))
+        print(y_test_denorm.tolist())
+        print(y_pred_denorm.tolist())
+        print(np.sqrt(y_pred_var_denorm))
 
 
 class TAGI_Net():
