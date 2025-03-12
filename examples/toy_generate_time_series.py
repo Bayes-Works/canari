@@ -166,7 +166,7 @@ pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_pa
 
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
+generated_ts,_,_,_ = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
 
 time_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1), generated_ts[0]))))
 val_end_idx = len(train_val_data)

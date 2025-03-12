@@ -498,30 +498,23 @@ class Model:
         else:
             input_covariates = np.empty((num_time_steps, 0))
 
-        # Get the autoregression component in the model
-        if "autoregression" in self.components:
-            autoregression_component = self.components["autoregression"]
-            phi_AR = autoregression_component.phi
-            sigma_AR = autoregression_component.std_error
-
         # Get LSTM initializations
-        if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-            lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
-            lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
+        if "lstm" in self.states_name:
+            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
+                lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
 
         for _ in range(num_time_series):
             one_time_series = []
-            # Reset lstm cell states, we do not have a way to retrieve lstm cell states yet
-            # To be implemented in the future
-            self.lstm_net.reset_lstm_states()
-            # Reset lstm output history
-            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-                self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
-            else:
-                self.initialize_lstm_output_history()
-            if "autoregression" in self.states_name:
-                ar_sample = np.random.normal(0, sigma_AR)
+
+            if "lstm" in self.states_name:
+                self.lstm_net.reset_lstm_states()
+                # Reset lstm output history
+                if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                    self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+                    self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                else:
+                    self.initialize_lstm_output_history()
             
             # Get the anomaly features
             if add_anomaly:
@@ -529,29 +522,30 @@ class Model:
                 anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
                 anm_mag_all.append(anomaly_mag)
                 anm_begin_all.append(anomaly_time)
+            
             for i, x in enumerate(input_covariates):
                 mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
-                # Generate observation samples
-                obs_gen = mu_obs_pred.item()
-                if "autoregression" in self.states_name:
-                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
-                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
-                    obs_gen += ar_sample
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
                     lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-                    # obs_gen += lstm_noise_sample
+                    var_states_prior[lstm_index, :] = 0
+                    var_states_prior[:, lstm_index] = 0
                     self.update_lstm_output_history(
                         mu_states_prior[lstm_index]+lstm_noise_sample,
                         np.zeros_like(var_states_prior[lstm_index, lstm_index]),
                         # mu_states_prior[lstm_index],
                         # var_states_prior[lstm_index, lstm_index],
                     )
+
+                state_sample = np.random.multivariate_normal(mu_states_prior.flatten(), var_states_prior).reshape(-1, 1)
+                obs_gen = self.observation_matrix @ state_sample
+                obs_gen = obs_gen.item()
+
                 if add_anomaly:
                     if i > anomaly_time:
                         obs_gen += anomaly_mag * (i - anomaly_time)
-                self.set_states(mu_states_prior, var_states_prior)
+                self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 
             self.set_states(mu_states_temp, var_states_temp)
