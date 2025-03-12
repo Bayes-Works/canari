@@ -532,17 +532,15 @@ class Model:
         
         for _ in range(num_time_series):
             one_time_series = []
-            # Reset lstm cell states, we do not have a way to retrieve lstm cell states yet
-            # To be implemented in the future
-            self.lstm_net.reset_lstm_states()
-            # Reset lstm output history
-            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-                self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
-            else:
-                self.initialize_lstm_output_history()
-            if "autoregression" in self.states_name:
-                ar_sample = np.random.normal(0, sigma_AR)
+
+            if "lstm" in self.states_name:
+                self.lstm_net.reset_lstm_states()
+                # Reset lstm output history
+                if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                    self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+                    self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                else:
+                    self.initialize_lstm_output_history()
             
             # Get the anomaly features
             if add_anomaly:
@@ -550,8 +548,9 @@ class Model:
                 anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
                 anm_mag_all.append(anomaly_mag)
                 anm_begin_all.append(anomaly_time)
+            
             for i, x in enumerate(input_covariates):
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward([x])
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
                 # Generate observation samples
                 obs_gen = mu_obs_pred.item()
