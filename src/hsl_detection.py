@@ -20,6 +20,7 @@ import copy
 from src.common import likelihood
 import pandas as pd
 from tqdm import tqdm
+from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp
 
 class hsl_detection:
     """
@@ -140,6 +141,33 @@ class hsl_detection:
             # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
             p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
             self.p_anm_all.append(p_a_I_Yt)
+
+            if p_a_I_Yt > self.detection_threshold:
+                # Get LTd history
+                LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
+                LTd_history = (LTd_history - self.mean_train) / self.std_train
+                LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+                # LTd_history = np.tile(LTd_history, (10, 1))
+
+                output_pred_mu, output_pred_var = self.model.net(LTd_history)
+                output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+                itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+
+                # Apply intervention on base_model hidden states
+                LL_index = self.base_model.states_name.index("local level")
+                LT_index = self.base_model.states_name.index("local trend")
+                AR_index = self.base_model.states_name.index("autoregression")
+                self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+                self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+                self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
             # Base model filter process, same as in model.py
             mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(x,
@@ -314,7 +342,7 @@ class hsl_detection:
                         itv_LT = 0
                         itv_LL = 0
                         itv_anm_dev_time = 0
-                    samples['LTd_history'].append(mu_LTd_history)
+                    samples['LTd_history'].append(mu_LTd_history.tolist())
                     samples['itv_LT'].append(itv_LT)
                     samples['itv_LL'].append(itv_LL)
                     samples['anm_develop_time'].append(itv_anm_dev_time)
@@ -451,3 +479,138 @@ class hsl_detection:
         look_back_steps_list = self._get_look_back_time_steps(current_step)
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
+    
+    def learn_intervention(self, training_samples_path):
+        samples = pd.read_csv(training_samples_path)
+        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        # Convert samples['anm_develop_time'] to float
+        samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
+
+        # Shuffle samples
+        samples = samples.sample(frac=1).reset_index(drop=True)
+
+        # Target list8
+        self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
+
+        self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
+
+        # Train the model using 50% of the samples
+        n_samples = len(samples)
+        n_train = int(n_samples * 0.5)
+        train_samples = samples.iloc[:n_train]
+        train_X = np.array(train_samples['LTd_history'].values.tolist(), dtype=np.float32)
+        train_y = np.array(train_samples[self.target_list].values, dtype=np.float32)
+        # Get the moments of training set, and use them to normalize the validation set and test set
+        self.mean_train = train_X.mean()
+        self.std_train = train_X.std()
+        train_X = (train_X - self.mean_train) / self.std_train
+        self.mean_target = train_y.mean(axis=0)
+        self.std_target = train_y.std(axis=0)
+        # # Remove when using time series with different anomaly magnitude
+        # std_target[0] = 1
+        # mean_target[0] = 0
+        train_y = (train_y - self.mean_target) / self.std_target
+
+        # Validation set 10% of the samples
+        n_val = int(n_samples * 0.1)
+        val_samples = samples.iloc[n_train:n_train+n_val]
+        val_X = np.array(val_samples['LTd_history'].values.tolist(), dtype=np.float32)
+        val_y = np.array(val_samples[self.target_list].values, dtype=np.float32)
+        val_X = (val_X - self.mean_train) / self.std_train
+        val_y = (val_y - self.mean_target) / self.std_target
+
+        # Train the model with batch size 20
+        self.batch_size = 20
+        n_batch_train = n_train // self.batch_size
+        n_batch_val = n_val // self.batch_size
+        patience = 10
+        best_loss = float('inf')
+        max_training_epoch = 10
+        # for epoch in range(max_training_epoch):
+        for epoch in range(max_training_epoch):
+            for i in range(n_batch_train):
+                prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
+                prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
+
+                # Update model
+                out_updater = OutputUpdater(self.model.net.device)
+                out_updater.update_heteros(
+                    output_states = self.model.net.output_z_buffer,
+                    mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                    # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                    # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                    delta_states = self.model.net.input_delta_z_buffer,
+                )
+                self.model.net.backward()
+                self.model.net.step()
+
+            loss_val = 0
+            for j in range(n_batch_val):
+                val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
+                val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
+                val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
+                # Compute the mse between val_pred_y_mu and val_y_batch
+                loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
+            loss_val /= n_batch_val
+
+            print(f'Epoch {epoch}: {loss_val}')
+            # Early stopping with patience 10
+            if loss_val < best_loss:
+                best_loss = loss_val
+                patience = 10
+            else:
+                patience -= 1
+                if patience == 0:
+                    break
+
+        # Test the model using 10% of the samples
+        n_test = int(n_samples * 0.1)
+        test_samples = samples.iloc[n_train+n_val:n_train+n_val+n_test]
+        test_X = np.array(test_samples['LTd_history'].tolist(), dtype=np.float32)
+        test_y = np.array(test_samples[self.target_list].values, dtype=np.float32)
+        test_X = (test_X - self.mean_train) / self.std_train
+        test_y = (test_y - self.mean_target) / self.std_target
+
+        n_batch_test = n_test // self.batch_size
+
+        loss_test = 0
+        for j in range(n_batch_val):
+            test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
+            test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+            test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
+            test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
+            test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
+            # Compute the mse between test_pred_y_mu and test_y_batch
+            loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+        loss_test /= n_batch_test
+
+        print(f'Test loss {loss_test.item()}')
+
+        # Denormalize the prediction
+        y_pred_denorm = test_pred_y_mu * self.std_target + self.mean_target
+        y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
+        y_test_denorm = test_y_batch * self.std_target + self.mean_target
+        # print(y_test_denorm.tolist())
+        # print(y_pred_denorm.tolist())
+        # print(np.sqrt(y_pred_var_denorm))
+
+
+class TAGI_Net():
+    def __init__(self, n_observations, n_actions):
+        super(TAGI_Net, self).__init__()
+        self.net = Sequential(
+                    Linear(n_observations, 64),
+                    # Linear(n_observations, 64, gain_weight=0.1, gain_bias=0.1),
+                    ReLU(),
+                    Linear(64, 32),
+                    # Linear(64, 32, gain_weight=0.1, gain_bias=0.1),
+                    ReLU(),
+                    Linear(32, n_actions * 2),
+                    # Linear(32, n_actions * 2, gain_weight=0.1, gain_bias=0.1),
+                    EvenExp()
+                    )
+        self.n_actions = n_actions
+        self.n_observations = n_observations
+    def forward(self, mu_x, var_x):
+        return self.net.forward(mu_x, var_x)
