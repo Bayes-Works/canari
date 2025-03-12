@@ -543,10 +543,10 @@ class Model:
                     lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
                     # obs_gen += lstm_noise_sample
                     self.update_lstm_output_history(
-                        # mu_states_prior[lstm_index]+lstm_noise_sample,
-                        # np.zeros_like(var_states_prior[lstm_index, lstm_index]),
-                        mu_states_prior[lstm_index],
-                        var_states_prior[lstm_index, lstm_index],
+                        mu_states_prior[lstm_index]+lstm_noise_sample,
+                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
+                        # mu_states_prior[lstm_index],
+                        # var_states_prior[lstm_index, lstm_index],
                     )
                 if add_anomaly:
                     if i > anomaly_time:
