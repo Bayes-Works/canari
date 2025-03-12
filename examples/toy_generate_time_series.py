@@ -4,13 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 from src import (
-    LocalLevel,
     LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
     Periodic,
     Autoregression,
-    WhiteNoise,
     Model,
     plot_data,
     plot_prediction,
