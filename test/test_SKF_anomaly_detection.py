@@ -79,7 +79,7 @@ def SKF_anomaly_detection_runner(
     train_data, validation_data, _, all_data = data_processor.get_splits()
 
     # Training
-    test_model.auto_initialize_baseline_states(train_data["y"][0:48])
+    test_model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 3])
     for _ in range(2):
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
