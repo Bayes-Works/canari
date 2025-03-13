@@ -48,7 +48,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
     train_data, validation_data, _, _ = data_processor.get_splits()
 
     # Initialize model
-    model.auto_initialize_baseline_states(train_data["y"][0:23])
+    model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 3])
 
     for _ in range(2):
         (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
