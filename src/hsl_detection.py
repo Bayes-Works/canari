@@ -46,6 +46,7 @@ class hsl_detection:
         self.p_anm_all = []
         self.prior_na, self.prior_a = 0.998, 0.002
         self.detection_threshold = 0.5
+        self.mu_itv_all, self.std_itv_all = [], []
         pass
 
     def _create_drift_model(self, baseline_process_error_std):
@@ -108,6 +109,8 @@ class hsl_detection:
             
             # Dummy values for p_anm when it is not in detect mode
             self.p_anm_all.append(0)
+            self.mu_itv_all.append([np.nan, np.nan, np.nan])
+            self.std_itv_all.append([np.nan, np.nan, np.nan])
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
@@ -261,6 +264,25 @@ class hsl_detection:
             p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
             self.p_anm_all.append(p_a_I_Yt)
 
+            # TO DEBUG: Track what NN learns
+            LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+            LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+            LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+            LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
+            LTd_history = (LTd_history - self.mean_train) / self.std_train
+            LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+
+            output_pred_mu, output_pred_var = self.model.net(LTd_history)
+            output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+            output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+            itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+            itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+            itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+            itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+
+            self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
+            self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
+
             if apply_intervention:
                 if p_a_I_Yt > self.detection_threshold:
                     # Get LTd history
@@ -283,7 +305,6 @@ class hsl_detection:
                     LL_index = self.base_model.states_name.index("local level")
                     LT_index = self.base_model.states_name.index("local trend")
                     AR_index = self.base_model.states_name.index("autoregression")
-                    print(itv_pred_mu_denorm)
                     self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
                     self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
                     self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
@@ -663,7 +684,7 @@ class hsl_detection:
             n_batch_val = n_val // self.batch_size
             patience = 10
             best_loss = float('inf')
-            max_training_epoch = 10
+            max_training_epoch = 50
             # for epoch in range(max_training_epoch):
             for epoch in range(max_training_epoch):
                 for i in range(n_batch_train):

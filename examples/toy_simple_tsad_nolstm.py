@@ -87,15 +87,15 @@ hsl_tsad_agent.estimate_LTd_dist()
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=300, save_to_path= 'data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv')
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
                                   save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
-# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv', 
-#                                   load_model_path='saved_params/NN_detection_model_process_error_e5.pkl')
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
+#                                   load_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(8, 1)
+gs = gridspec.GridSpec(11, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -104,6 +104,9 @@ ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
 ax6 = plt.subplot(gs[6])
 ax7 = plt.subplot(gs[7])
+ax8 = plt.subplot(gs[8])
+ax9 = plt.subplot(gs[9])
+ax10 = plt.subplot(gs[10])
 from src.data_visualization import determine_time
 time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
@@ -177,4 +180,28 @@ ax7.set_ylabel("p_anm")
 ax7.set_xlim(ax0.get_xlim())
 ax7.axvline(x=time[anm_start_index], color='r', linestyle='--')
 ax7.set_ylim(-0.05, 1.05)
+
+mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
+std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
+print(mu_itv_all.shape)
+print(time.shape)
+
+ax8.plot(time, mu_itv_all[:, 0])
+ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
+ax8.set_ylabel("itv_LT")
+ax8.set_xlim(ax0.get_xlim())
+ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
+
+ax9.plot(time, mu_itv_all[:, 1])
+ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
+ax9.set_ylabel("itv_LL")
+ax9.set_xlim(ax0.get_xlim())
+ax9.axvline(x=time[anm_start_index], color='r', linestyle='--')
+
+ax10.plot(time, mu_itv_all[:, 2])
+ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
+ax10.set_ylabel("itv_time")
+ax10.set_xlim(ax0.get_xlim())
+ax10.axvline(x=time[anm_start_index], color='r', linestyle='--')
+
 plt.show()
