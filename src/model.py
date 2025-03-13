@@ -712,5 +712,5 @@ class Model:
                         x_sample[lstm_index],
                         var_states_prior_zero[lstm_index, lstm_index],
                     )
-                self.set_states(mu_states_prior, var_states_prior_zero)
+                self.set_states(x_sample.reshape(-1, 1), var_states_prior_zero)
         return ts
