@@ -1,1 +1,1 @@
-from examples.data_process import DataProcess, TimeSeriesDecomposition
+from examples.data_process import DataProcess
