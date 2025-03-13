@@ -31,14 +31,14 @@ SKF_std_transition_error_fix = 1e-3
 SKF_norm_to_abnorm_prob_fix = 1e-3
 
 # Fix parameters
-# sigma_v_fix = 0.3819414484717393
-# look_back_len_fix = 12
-# SKF_std_transition_error_fix = 0.000966524465635005
-# SKF_norm_to_abnorm_prob_fix = 0.00030791478102889456
+# sigma_v_fix = 0.2520409419499989
+# look_back_len_fix = 16
+# SKF_std_transition_error_fix = 8.594317638285895e-05
+# SKF_norm_to_abnorm_prob_fix = 2.7356125169260927e-06
 
 
 def main(
-    num_trial_optimization: int = 100,
+    num_trial_optimization: int = 20,
     param_tune: bool = True,
     grid_search: bool = False,
 ):
@@ -211,7 +211,7 @@ def main(
             param_space=skf_param,
             data=data_processor.train_data,
             num_synthetic_anomaly=50,
-            num_optimization_trial=num_trial_optimization,
+            num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,
         )
         skf_optimizer.optimize()
@@ -262,8 +262,8 @@ def training(model, data_processor, num_epoch: int = 50):
     # plt.plot(t_plot, seasonality, color="orange")
     # plt.scatter(t_plot, y1, color="k")
     # plt.plot(
-    #     data_processor.train_time,
-    #     data_processor.train_data["y"].flatten(),
+    #     data_processor.get_time("train"),
+    #     data_processor.get_data("train", normalization=True),
     #     color="r",
     # )
     # plt.show()
