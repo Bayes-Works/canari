@@ -54,42 +54,22 @@ data_processor = DataProcess(
     train_split=train_split,
     validation_split=validation_split,
     output_col=output_col,
+    normalization = False,
 )
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 
 ####################################################################
-######################### Pretrained model #########################
+######################### True model #########################
 ####################################################################
-# Load model_dict from local
-with open("saved_params/toy_simple_model.pkl", "rb") as f:
-    model_dict = pickle.load(f)
-
-LSTM = LstmNetwork(
-        look_back_len=19,
-        num_features=2,
-        num_layer=1,
-        num_hidden_unit=50,
-        device="cpu",
-    )
-
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
-
-
 pretrained_model = Model(
-    LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
-    LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-                   mu_states=[model_dict['early_stop_init_mu_states'][model_dict['autoregression_index']].item()], 
-                   var_states=[model_dict['early_stop_init_var_states'][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
+    LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12], std_error=0),
+    Periodic(period=52, mu_states=[0.5, 1], var_states=[1e-12, 1e-12]),
+    Autoregression(std_error=0.05, phi=0.8, mu_states=[0], var_states=[0.08]),
 )
 
-pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
-
-ltd_error = 1e-5
+ltd_error = 1e-6
 
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
@@ -103,11 +83,12 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=300)
+# print('start collecting NN training samples')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=300, save_to_path= 'data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv')
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
+                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv', 
-#                                   save_model_path='saved_params/NN_detection_model.pkl')
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv', 
-                                  load_model_path='saved_params/NN_detection_model_process_error_e5.pkl')
+#                                   load_model_path='saved_params/NN_detection_model_process_error_e5.pkl')
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 #  Plot
@@ -155,7 +136,7 @@ plot_states(
     data_processor=data_processor,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['lstm'],
+    states_to_plot=['periodic 1'],
     sub_plot=ax2,
 )
 ax2.set_xticklabels([])
