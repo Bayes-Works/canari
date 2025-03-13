@@ -21,6 +21,7 @@ from src.common import likelihood
 import pandas as pd
 from tqdm import tqdm
 from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp
+import pickle
 
 class hsl_detection:
     """
@@ -111,12 +112,11 @@ class hsl_detection:
     def estimate_LTd_dist(self):
         self.mu_LTd = np.mean(self.LTd_buffer)
         self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(self.LTd_buffer))
-        print('LTd_mean:', self.mu_LTd)
-        print('LTd_std:', np.std(self.LTd_buffer))
 
     def detect(
             self, 
             data,
+            apply_intervention: Optional[bool] = False,
             ):
         data = common.set_default_input_covariates(data)
         lstm_index = self.base_model.lstm_states_index
@@ -142,32 +142,37 @@ class hsl_detection:
             p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
             self.p_anm_all.append(p_a_I_Yt)
 
-            if p_a_I_Yt > self.detection_threshold:
-                # Get LTd history
-                LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-                LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
-                LTd_history = (LTd_history - self.mean_train) / self.std_train
-                LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
-                # LTd_history = np.tile(LTd_history, (10, 1))
+            if apply_intervention:
+                if p_a_I_Yt > self.detection_threshold:
+                    # Get LTd history
+                    LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                    LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                    LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
+                    LTd_history = (LTd_history - self.mean_train) / self.std_train
+                    LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+                    # LTd_history = np.tile(LTd_history, (10, 1))
 
-                output_pred_mu, output_pred_var = self.model.net(LTd_history)
-                output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                itv_pred_var = output_pred_mu[0, [1, 3, 5]]
-                itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-                itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+                    output_pred_mu, output_pred_var = self.model.net(LTd_history)
+                    output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                    output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+                    itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                    itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                    itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                    itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-                # Apply intervention on base_model hidden states
-                LL_index = self.base_model.states_name.index("local level")
-                LT_index = self.base_model.states_name.index("local trend")
-                AR_index = self.base_model.states_name.index("autoregression")
-                self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-                self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
-                self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-                self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+                    # Apply intervention on base_model hidden states
+                    LL_index = self.base_model.states_name.index("local level")
+                    LT_index = self.base_model.states_name.index("local trend")
+                    AR_index = self.base_model.states_name.index("autoregression")
+                    print(itv_pred_mu_denorm)
+                    self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                    self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+                    self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+                    self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                    self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+
+                    self.drift_model.mu_states[0] = 0
+                    self.drift_model.mu_states[1] = self.mu_LTd        
 
             # Base model filter process, same as in model.py
             mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(x,
@@ -480,7 +485,7 @@ class hsl_detection:
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
     
-    def learn_intervention(self, training_samples_path):
+    def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
@@ -489,10 +494,8 @@ class hsl_detection:
         # Shuffle samples
         samples = samples.sample(frac=1).reset_index(drop=True)
 
-        # Target list8
+        # Target list
         self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
-
-        self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
 
         # Train the model using 50% of the samples
         n_samples = len(samples)
@@ -519,51 +522,6 @@ class hsl_detection:
         val_X = (val_X - self.mean_train) / self.std_train
         val_y = (val_y - self.mean_target) / self.std_target
 
-        # Train the model with batch size 20
-        self.batch_size = 20
-        n_batch_train = n_train // self.batch_size
-        n_batch_val = n_val // self.batch_size
-        patience = 10
-        best_loss = float('inf')
-        max_training_epoch = 10
-        # for epoch in range(max_training_epoch):
-        for epoch in range(max_training_epoch):
-            for i in range(n_batch_train):
-                prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
-                prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
-
-                # Update model
-                out_updater = OutputUpdater(self.model.net.device)
-                out_updater.update_heteros(
-                    output_states = self.model.net.output_z_buffer,
-                    mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
-                    # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                    # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                    delta_states = self.model.net.input_delta_z_buffer,
-                )
-                self.model.net.backward()
-                self.model.net.step()
-
-            loss_val = 0
-            for j in range(n_batch_val):
-                val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
-                val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
-                val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
-                # Compute the mse between val_pred_y_mu and val_y_batch
-                loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
-            loss_val /= n_batch_val
-
-            print(f'Epoch {epoch}: {loss_val}')
-            # Early stopping with patience 10
-            if loss_val < best_loss:
-                best_loss = loss_val
-                patience = 10
-            else:
-                patience -= 1
-                if patience == 0:
-                    break
-
         # Test the model using 10% of the samples
         n_test = int(n_samples * 0.1)
         test_samples = samples.iloc[n_train+n_val:n_train+n_val+n_test]
@@ -572,28 +530,89 @@ class hsl_detection:
         test_X = (test_X - self.mean_train) / self.std_train
         test_y = (test_y - self.mean_target) / self.std_target
 
-        n_batch_test = n_test // self.batch_size
+        self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
+        self.batch_size = 20
 
-        loss_test = 0
-        for j in range(n_batch_val):
-            test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
-            test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-            test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
-            test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
-            test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
-            # Compute the mse between test_pred_y_mu and test_y_batch
-            loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
-        loss_test /= n_batch_test
+        if load_model_path is not None:
+            with open(load_model_path, 'rb') as f:
+                param_dict = pickle.load(f)
+            self.model.net.load_state_dict(param_dict)
+        else:
 
-        print(f'Test loss {loss_test.item()}')
+            # Train the model with batch size 20
+            n_batch_train = n_train // self.batch_size
+            n_batch_val = n_val // self.batch_size
+            patience = 10
+            best_loss = float('inf')
+            max_training_epoch = 10
+            # for epoch in range(max_training_epoch):
+            for epoch in range(max_training_epoch):
+                for i in range(n_batch_train):
+                    prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
+                    prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
 
-        # Denormalize the prediction
-        y_pred_denorm = test_pred_y_mu * self.std_target + self.mean_target
-        y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
-        y_test_denorm = test_y_batch * self.std_target + self.mean_target
-        print(y_test_denorm.tolist())
-        print(y_pred_denorm.tolist())
-        print(np.sqrt(y_pred_var_denorm))
+                    # Update model
+                    out_updater = OutputUpdater(self.model.net.device)
+                    out_updater.update_heteros(
+                        output_states = self.model.net.output_z_buffer,
+                        mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                        # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                        # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                        delta_states = self.model.net.input_delta_z_buffer,
+                    )
+                    self.model.net.backward()
+                    self.model.net.step()
+
+                loss_val = 0
+                for j in range(n_batch_val):
+                    val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
+                    val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                    val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
+                    val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
+                    # Compute the mse between val_pred_y_mu and val_y_batch
+                    loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
+                loss_val /= n_batch_val
+
+                print(f'Epoch {epoch}: {loss_val}')
+                # Early stopping with patience 10
+                if loss_val < best_loss:
+                    best_loss = loss_val
+                    patience = 10
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        break
+
+            n_batch_test = n_test // self.batch_size
+
+            loss_test = 0
+            for j in range(n_batch_val):
+                test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
+                test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
+                test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
+                test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
+                # Compute the mse between test_pred_y_mu and test_y_batch
+                loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+            loss_test /= n_batch_test
+
+            print(f'Test loss {loss_test.item()}')
+
+        # # Denormalize the prediction
+        # y_pred_denorm = test_pred_y_mu * self.std_target + self.mean_target
+        # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
+        # y_test_denorm = test_y_batch * self.std_target + self.mean_target
+        # print(y_test_denorm.tolist())
+        # print(y_pred_denorm.tolist())
+        # print(np.sqrt(y_pred_var_denorm))
+
+        if save_model_path is not None:
+            param_dict = self.model.net.state_dict()
+            # Save dictionary to file
+            with open(save_model_path, 'wb') as f:
+                pickle.dump(param_dict, f)
+
+            
 
 
 class TAGI_Net():
