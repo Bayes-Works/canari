@@ -1,13 +1,11 @@
 import numpy as np
 import copy
 from typing import Optional, List, Tuple, Dict
-from collections import deque
-from pytagi.nn import Sequential
-import pytagi.metric as metric
 from src.base_component import BaseComponent
 import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
 from src.common import GMA
+from examples import DataProcess
 
 
 class Model:
@@ -213,24 +211,23 @@ class Model:
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """Automatically initialize baseline states from data"""
 
-        t = np.arange(len(y))
-        y = y.flatten()
-        t_no_nan = t[~np.isnan(y)]
-        y_no_nan = y[~np.isnan(y)]
-        coefficients = np.polyfit(t_no_nan, y_no_nan, 1)
-        coefficients = np.polyfit(t_no_nan, y_no_nan, 1)
+        trend, slope, _, _ = DataProcess.decompose_data(y.flatten())
+
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
-                self.mu_states[i] = np.nanmean(y_no_nan)
-                # self.mu_states[i] = coefficients[-1]
+                self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
             elif _state_name == "local trend":
-                self.mu_states[i] = coefficients[0]
+                self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
-        self._mu_local_level = np.nanmean(y_no_nan)
-        # self._mu_local_level = coefficients[-1]
+            elif _state_name == "local acceleration":
+                self.mu_states[i] = 0
+                if self.var_states[i, i] == 0:
+                    self.var_states[i, i] = 1e-5
+
+        self._mu_local_level = trend[0]
 
     def set_posterior_states(
         self,

@@ -12,7 +12,7 @@ from src import (
     plot_data,
     plot_prediction,
 )
-from examples import DataProcess, TimeSeriesDecomposition
+from examples import DataProcess
 from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer

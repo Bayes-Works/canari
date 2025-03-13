@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pytagi import exponential_scheduler
-from pytagi import metric
+import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from src import (
     LocalTrend,
@@ -25,41 +25,40 @@ from examples import DataProcess
 
 
 # Fix parameters grid search
-sigma_v_fix = 0.03490433808132023
-look_back_len_fix = 10
-SKF_std_transition_error_fix = 0.0006592917968263638
-SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
+sigma_v_fix = 0.3819414484717393
+look_back_len_fix = 12
+SKF_std_transition_error_fix = 1e-3
+SKF_norm_to_abnorm_prob_fix = 1e-3
+
+# Fix parameters
+# sigma_v_fix = 0.3819414484717393
+# look_back_len_fix = 12
+# SKF_std_transition_error_fix = 0.000966524465635005
+# SKF_norm_to_abnorm_prob_fix = 0.00030791478102889456
 
 
 def main(
-    num_trial_optimization: int = 5,
+    num_trial_optimization: int = 100,
     param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
-    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
-    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(time_series[0])
-    df_raw.index = time_series
-    df_raw.index.name = "date_time"
-    df_raw.columns = ["values"]
-
-    # Add synthetic anomaly to data
-    trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 120
-    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
-    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-    df_raw = df_raw.add(trend, axis=0)
-
+    data_file = "./data/benchmark_data/test_1_data.csv"
+    df = pd.read_csv(data_file, skiprows=0, delimiter=",")
+    date_time = pd.to_datetime(df["timestamp"])
+    df = df.drop("timestamp", axis=1)
+    df.index = date_time
+    df.index.name = "date_time"
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
-        data=df_raw,
-        time_covariates=["hour_of_day"],
-        train_split=0.4,
-        validation_split=0.1,
+        data=df,
+        time_covariates=["week_of_year"],
+        train_start="2011-02-06 00:00:00",
+        train_end="2014-02-02 00:00:00",
+        validation_start="2014-02-09 00:00:00",
+        validation_end="2015-02-01 00:00:00",
+        test_start="2015-02-08 00:00:00",
         output_col=output_col,
     )
     (
@@ -87,8 +86,8 @@ def main(
     # Define parameter search space
     if param_tune:
         param = {
-            "look_back_len": [10, 30],
-            "sigma_v": [1e-3, 2e-1],
+            "look_back_len": [12, 52],
+            "sigma_v": [1e-1, 4e-1],
         }
         # Define optimizer
         model_optimizer = ModelOptimizer(
@@ -123,7 +122,7 @@ def main(
         normalization=True,
         plot_test_data=False,
         plot_column=output_col,
-        test_label="y",
+        validation_label="y",
     )
     plot_prediction(
         data_processor=data_processor,
@@ -157,13 +156,13 @@ def main(
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
+        skf.save_initial_states()
         return skf
 
     # Define parameter search space
     slope_upper_bound = 5e-2
     slope_lower_bound = 1e-3
-
-    # Plot synthetic anomaly
+    # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
         data_processor.train_data,
         num_samples=1,
@@ -175,7 +174,9 @@ def main(
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
+        train_label="data without anomaly",
     )
+
     train_time = data_processor.get_time("train")
     for ts in synthetic_anomaly_data:
         plt.plot(train_time, ts["y"])
@@ -193,14 +194,14 @@ def main(
     if param_tune:
         if grid_search:
             skf_param = {
-                "std_transition_error": [1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-5, 1e-4, 1e-3],
-                "slope": [0.006, 0.008, 0.01, 0.02],
+                "std_transition_error": [1e-6, 1e-5, 1e-4, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4, 1e-3],
+                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-2],
-                "norm_to_abnorm_prob": [1e-6, 1e-2],
+                "std_transition_error": [1e-6, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-3],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
@@ -210,7 +211,7 @@ def main(
             param_space=skf_param,
             data=data_processor.train_data,
             num_synthetic_anomaly=50,
-            num_optimization_trial=num_trial_optimization * 2,
+            num_optimization_trial=num_trial_optimization,
             grid_search=grid_search,
         )
         skf_optimizer.optimize()
@@ -234,21 +235,17 @@ def main(
         color="b",
         legend_location="upper left",
     )
-    ax[0].axvline(
-        x=data_processor.data.index[time_anomaly],
-        color="r",
-        linestyle="--",
-    )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
 
     if param_tune:
         print("Model parameters used:", model_optimizer.param_optim)
         print("SKF model parameters used:", skf_optimizer.param_optim)
+        print("-----")
     else:
         print("Model parameters used:", param)
         print("SKF model parameters used:", skf_param)
-    print("-----")
+        print("-----")
 
 
 def training(model, data_processor, num_epoch: int = 50):
@@ -256,7 +253,22 @@ def training(model, data_processor, num_epoch: int = 50):
     Training procedure
     """
 
-    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:23])
+    # index_start = 0
+    # index_end = 52 * 3
+    # y1 = data_processor.train_data["y"][index_start:index_end].flatten()
+    # trend, _, seasonality, _ = DataProcess.decompose_data(y1)
+    # t_plot = data_processor.data.index[index_start:index_end].to_numpy()
+    # plt.plot(t_plot, trend, color="b")
+    # plt.plot(t_plot, seasonality, color="orange")
+    # plt.scatter(t_plot, y1, color="k")
+    # plt.plot(
+    #     data_processor.train_time,
+    #     data_processor.train_data["y"].flatten(),
+    #     color="r",
+    # )
+    # plt.show()
+
+    model.auto_initialize_baseline_states(data_processor.train_data["y"][0 : 52 * 3])
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error

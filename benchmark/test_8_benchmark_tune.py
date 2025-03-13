@@ -4,9 +4,6 @@ from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pytagi import exponential_scheduler
-from pytagi import metric
-from pytagi import Normalizer as normalizer
 from src import (
     LocalTrend,
     LocalAcceleration,
@@ -16,58 +13,52 @@ from src import (
     ModelOptimizer,
     SKF,
     SKFOptimizer,
+    load_model_dict,
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
 from examples import DataProcess
-
+from pytagi import exponential_scheduler
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
 
 # Fix parameters grid search
-sigma_v_fix = 0.03490433808132023
-look_back_len_fix = 10
-SKF_std_transition_error_fix = 0.0006592917968263638
-SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
+sigma_v_fix = 0.0178919637745888
+look_back_len_fix = 22
+SKF_std_transition_error_fix = 1e-4
+SKF_norm_to_abnorm_prob_fix = 1e-4
+
+# Fix parameters
+# sigma_v_fix = 0.011954086437448691
+# look_back_len_fix = 15
+# SKF_std_transition_error_fix = 2.1623509985936086e-05
+# SKF_norm_to_abnorm_prob_fix = 1.3992298521194894e-06
 
 
 def main(
-    num_trial_optimization: int = 5,
-    param_tune: bool = True,
+    num_trial_optimization: int = 50,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = "./data/benchmark_data/test_8_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
-    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(time_series[0])
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["values"]
-
-    # Add synthetic anomaly to data
-    trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 120
-    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
-    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-    df_raw = df_raw.add(trend, axis=0)
-
+    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
         data=df_raw,
-        time_covariates=["hour_of_day"],
-        train_split=0.4,
-        validation_split=0.1,
+        time_covariates=["week_of_year"],
+        train_split=0.3,
+        validation_split=0.074,
         output_col=output_col,
     )
-    (
-        data_processor.train_data,
-        data_processor.validation_data,
-        data_processor.test_data,
-        data_processor.all_data,
-    ) = data_processor.get_splits()
 
     # Define model
     def initialize_model(param):
@@ -75,7 +66,7 @@ def main(
             LocalTrend(),
             LstmNetwork(
                 look_back_len=param["look_back_len"],
-                num_features=2,
+                num_features=5,
                 num_layer=1,
                 num_hidden_unit=50,
                 device="cpu",
@@ -87,7 +78,7 @@ def main(
     # Define parameter search space
     if param_tune:
         param = {
-            "look_back_len": [10, 30],
+            "look_back_len": [10, 65],
             "sigma_v": [1e-3, 2e-1],
         }
         # Define optimizer
@@ -114,7 +105,7 @@ def main(
     )
 
     # Save best model for SKF analysis later
-    model_optim_dict = model_optim.get_dict()
+    model_optim_dict = model_optim.save_model_dict()
 
     # Plot
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -123,7 +114,7 @@ def main(
         normalization=True,
         plot_test_data=False,
         plot_column=output_col,
-        test_label="y",
+        validation_label="y",
     )
     plot_prediction(
         data_processor=data_processor,
@@ -143,7 +134,7 @@ def main(
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
-        norm_model = Model.load_dict(model_param)
+        norm_model = load_model_dict(model_param)
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(),
@@ -157,15 +148,15 @@ def main(
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
+        skf.save_initial_states()
         return skf
 
     # Define parameter search space
     slope_upper_bound = 5e-2
     slope_lower_bound = 1e-3
-
-    # Plot synthetic anomaly
+    # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_data,
+        data_processor.train_split,
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
@@ -175,40 +166,33 @@ def main(
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
+        train_label="data without anomaly",
     )
-    train_time = data_processor.get_time("train")
     for ts in synthetic_anomaly_data:
-        plt.plot(train_time, ts["y"])
-    plt.legend(
-        [
-            "data without anomaly",
-            "",
-            "smallest anomaly tested",
-            "largest anomaly tested",
-        ]
-    )
+        plt.plot(data_processor.train_time, ts["y"])
+    plt.legend()
     plt.title("Train data with added synthetic anomalies")
     plt.show()
 
     if param_tune:
         if grid_search:
             skf_param = {
-                "std_transition_error": [1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-5, 1e-4, 1e-3],
-                "slope": [0.006, 0.008, 0.01, 0.02],
+                "std_transition_error": [1e-6, 1e-5, 1e-4, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4, 1e-3],
+                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-2],
-                "norm_to_abnorm_prob": [1e-6, 1e-2],
+                "std_transition_error": [1e-6, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-3],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
         skf_optimizer = SKFOptimizer(
             initialize_skf=initialize_skf,
-            model_param=model_optim_dict,
+            model=model_optim_dict,
             param_space=skf_param,
-            data=data_processor.train_data,
+            data_processor=data_processor,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,
@@ -224,7 +208,9 @@ def main(
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
     # Detect anomaly
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    filter_marginal_abnorm_prob, states = skf_optim.filter(
+        data=data_processor.all_data_split
+    )
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -234,21 +220,17 @@ def main(
         color="b",
         legend_location="upper left",
     )
-    ax[0].axvline(
-        x=data_processor.data.index[time_anomaly],
-        color="r",
-        linestyle="--",
-    )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
 
     if param_tune:
         print("Model parameters used:", model_optimizer.param_optim)
         print("SKF model parameters used:", skf_optimizer.param_optim)
+        print("-----")
     else:
         print("Model parameters used:", param)
         print("SKF model parameters used:", skf_param)
-    print("-----")
+        print("-----")
 
 
 def training(model, data_processor, num_epoch: int = 50):
@@ -256,7 +238,7 @@ def training(model, data_processor, num_epoch: int = 50):
     Training procedure
     """
 
-    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:23])
+    model.auto_initialize_baseline_states(data_processor.train_split["y"][20:72])
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error
@@ -275,8 +257,8 @@ def training(model, data_processor, num_epoch: int = 50):
         model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
         mu_validation_preds, std_validation_preds, states = model.lstm_train(
-            train_data=data_processor.train_data,
-            validation_data=data_processor.validation_data,
+            train_data=data_processor.train_split,
+            validation_data=data_processor.validation_split,
         )
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -290,10 +272,11 @@ def training(model, data_processor, num_epoch: int = 50):
             data_processor.norm_const_std[data_processor.output_col],
         )
 
-        validation_obs = data_processor.get_data("validation").flatten()
         validation_log_lik = metric.log_likelihood(
             prediction=mu_validation_preds_unnorm,
-            observation=validation_obs,
+            observation=data_processor.validation_data[
+                :, data_processor.output_col
+            ].flatten(),
             std=std_validation_preds_unnorm,
         )
 
