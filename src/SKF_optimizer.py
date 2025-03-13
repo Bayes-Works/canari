@@ -4,6 +4,7 @@ from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 from examples.data_process import DataProcess
 import numpy as np
+from ray.tune.schedulers import ASHAScheduler
 
 
 class SKFOptimizer:
@@ -23,6 +24,7 @@ class SKFOptimizer:
         num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
+        algorithm: Optional[str] = "default",
     ):
         self.initialize_skf = initialize_skf
         self.model_param = model_param
@@ -34,6 +36,7 @@ class SKFOptimizer:
         self.num_optimization_trial = num_optimization_trial
         self.num_synthetic_anomaly = num_synthetic_anomaly
         self.grid_search = grid_search
+        self.algorithm = algorithm
         self.skf_optim = None
         self.param_optim = None
 
@@ -120,19 +123,35 @@ class SKFOptimizer:
 
             # Run optimization
             custom_logger = CustomLogger(total_samples=self.num_optimization_trial)
-            optimizer_runner = tune.run(
-                tune.with_parameters(
-                    objective,
-                    model_param_param=self.model_param,
-                ),
-                config=search_config,
-                search_alg=OptunaSearch(metric="metric", mode="min"),
-                name="SKF_optimizer",
-                num_samples=self.num_optimization_trial,
-                verbose=0,
-                raise_on_failed_trial=False,
-                callbacks=[custom_logger],
-            )
+            if self.algorithm == "optuna":
+                optimizer_runner = tune.run(
+                    tune.with_parameters(
+                        objective,
+                        model_param_param=self.model_param,
+                    ),
+                    config=search_config,
+                    search_alg=OptunaSearch(metric="metric", mode="min"),
+                    name="SKF_optimizer",
+                    num_samples=self.num_optimization_trial,
+                    verbose=0,
+                    raise_on_failed_trial=False,
+                    callbacks=[custom_logger],
+                )
+            elif self.algorithm == "default":
+                scheduler = ASHAScheduler(metric="metric", mode="min")
+                optimizer_runner = tune.run(
+                    tune.with_parameters(
+                        objective,
+                        model_param_param=self.model_param,
+                    ),
+                    config=search_config,
+                    name="SKF_optimizer",
+                    num_samples=self.num_optimization_trial,
+                    scheduler=scheduler,
+                    verbose=0,
+                    raise_on_failed_trial=False,
+                    callbacks=[custom_logger],
+                )
 
         # Get the optimal parameters
         self.param_optim = optimizer_runner.get_best_config(metric="metric", mode="min")
