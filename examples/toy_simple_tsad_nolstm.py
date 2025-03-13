@@ -29,7 +29,8 @@ from src.model import load_model_dict
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic_2.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 3, num=len(df_raw))
+# linear_space = np.linspace(0, 4, num=len(df_raw))
+linear_space = np.arange(len(df_raw)) * 0.010416667
 # Set the first 52*12 values in linear_space to be 0
 anm_start_index = 52*12
 linear_space[anm_start_index:] -= linear_space[anm_start_index]
@@ -69,7 +70,7 @@ pretrained_model = Model(
     Autoregression(std_error=0.05, phi=0.8, mu_states=[0], var_states=[0.08]),
 )
 
-ltd_error = 1e-6
+ltd_error = 1e-8
 
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
@@ -84,9 +85,10 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(t
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
 # print('start collecting NN training samples')
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=300, save_to_path= 'data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv')
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
-                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=300, save_to_path= 'data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300_fix_anm_mag_small_ltd_error.csv')
+hsl_tsad_agent.nn_train_with = 'tagiv'
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300_fix_anm_mag_small_ltd_error.csv', 
+                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl', max_training_epoch=20)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
@@ -183,8 +185,16 @@ ax7.set_ylim(-0.05, 1.05)
 
 mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
 std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
-print(mu_itv_all.shape)
-print(time.shape)
+# Set all the values before anm_start_index to be nan
+mu_itv_all[:anm_start_index] = np.nan
+std_itv_all[:anm_start_index] = np.nan
+anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
+print('anm_detect_index:' , anm_detected_index)
+# Set all the values after anm_detected to be nan
+mu_itv_all[anm_detected_index:] = np.nan
+std_itv_all[anm_detected_index:] = np.nan
+# print(mu_itv_all.shape)
+# print(time.shape)
 
 ax8.plot(time, mu_itv_all[:, 0])
 ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
