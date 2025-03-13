@@ -24,6 +24,8 @@ from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import torch
+
 
 class hsl_detection:
     """
@@ -47,6 +49,7 @@ class hsl_detection:
         self.prior_na, self.prior_a = 0.998, 0.002
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
+        self.nn_train_with = 'tagiv'
         pass
 
     def _create_drift_model(self, baseline_process_error_std):
@@ -267,16 +270,22 @@ class hsl_detection:
             # TO DEBUG: Track what NN learns
             LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
             LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-            LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
             LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
             LTd_history = (LTd_history - self.mean_train) / self.std_train
-            LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+            if self.nn_train_with == 'tagiv':
+                LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
 
-            output_pred_mu, output_pred_var = self.model.net(LTd_history)
-            output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-            output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-            itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-            itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                output_pred_mu, output_pred_var = self.model.net(LTd_history)
+                output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+                itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+            elif self.nn_train_with == 'backprop':
+                LTd_history = torch.tensor(LTd_history)
+                itv_pred_mu = self.model(LTd_history)
+                itv_pred_mu = itv_pred_mu.detach().numpy()
+                itv_pred_var = np.zeros_like(itv_pred_mu)
+                
             itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
             itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
@@ -285,22 +294,6 @@ class hsl_detection:
 
             if apply_intervention:
                 if p_a_I_Yt > self.detection_threshold:
-                    # Get LTd history
-                    LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-                    LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                    LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
-                    LTd_history = (LTd_history - self.mean_train) / self.std_train
-                    LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
-                    # LTd_history = np.tile(LTd_history, (10, 1))
-
-                    output_pred_mu, output_pred_var = self.model.net(LTd_history)
-                    output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                    output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                    itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                    itv_pred_var = output_pred_mu[0, [1, 3, 5]]
-                    itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-                    itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
-
                     # Apply intervention on base_model hidden states
                     LL_index = self.base_model.states_name.index("local level")
                     LT_index = self.base_model.states_name.index("local trend")
@@ -414,7 +407,7 @@ class hsl_detection:
         # Anomly feature range define
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
-        anm_mag_range = [-stationary_ar_std/8, stationary_ar_std/8]
+        anm_mag_range = [stationary_ar_std/8, stationary_ar_std/8]
         anm_begin_range = [int(ts_len/3), int(ts_len/3*2)]
 
         # # Generate synthetic time series
@@ -454,6 +447,7 @@ class hsl_detection:
             x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
+            anomaly_detected = False
             for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
                 # Estimate likelihood without intervention
                 y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
@@ -491,8 +485,9 @@ class hsl_detection:
                     samples['itv_LL'].append(itv_LL)
                     samples['anm_develop_time'].append(itv_anm_dev_time)
 
-                # if p_a_I_Yt > self.detection_threshold:
-                #     anomaly_detected = True
+                if p_a_I_Yt > self.detection_threshold:
+                    anomaly_detected = True
+                    break
                 #     # Intervene the model using true anomaly features
                 #     LL_index = base_model_copy.states_name.index("local level")
                 #     LT_index = base_model_copy.states_name.index("local trend")
@@ -625,7 +620,7 @@ class hsl_detection:
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
     
-    def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None):
+    def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
@@ -650,8 +645,10 @@ class hsl_detection:
         self.mean_target = train_y.mean(axis=0)
         self.std_target = train_y.std(axis=0)
         # # Remove when using time series with different anomaly magnitude
-        # std_target[0] = 1
-        # mean_target[0] = 0
+        self.mean_target[0] = 0
+        self.std_target[0] = 1
+        # self.mean_target = np.zeros_like(self.mean_target)
+        # self.std_target = np.ones_like(self.std_target)
         train_y = (train_y - self.mean_target) / self.std_target
 
         # Validation set 10% of the samples
@@ -670,48 +667,73 @@ class hsl_detection:
         test_X = (test_X - self.mean_train) / self.std_train
         test_y = (test_y - self.mean_target) / self.std_target
 
-        self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
+
+        if self.nn_train_with == 'tagiv':
+            self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
+        elif self.nn_train_with == 'backprop':
+            self.model = NN(input_size = len(samples['LTd_history'][0]), output_size = len(self.target_list))
+            loss_fn = torch.nn.MSELoss()
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+            train_X = torch.tensor(train_X)
+            train_y = torch.tensor(train_y)
+            val_X = torch.tensor(val_X)
+            val_y = torch.tensor(val_y)
+            test_X = torch.tensor(test_X)
+            test_y = torch.tensor(test_y)
+
         self.batch_size = 20
 
         if load_model_path is not None:
-            with open(load_model_path, 'rb') as f:
-                param_dict = pickle.load(f)
-            self.model.net.load_state_dict(param_dict)
+            if self.nn_train_with == 'tagiv':
+                with open(load_model_path, 'rb') as f:
+                    param_dict = pickle.load(f)
+                self.model.net.load_state_dict(param_dict)
+            elif self.nn_train_with == 'backprop':
+                pass    # TODO
         else:
-
             # Train the model with batch size 20
             n_batch_train = n_train // self.batch_size
             n_batch_val = n_val // self.batch_size
             patience = 10
             best_loss = float('inf')
-            max_training_epoch = 50
             # for epoch in range(max_training_epoch):
             for epoch in range(max_training_epoch):
                 for i in range(n_batch_train):
-                    prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
-                    prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
+                    if self.nn_train_with == 'tagiv':
+                        prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
+                        prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
 
-                    # Update model
-                    out_updater = OutputUpdater(self.model.net.device)
-                    out_updater.update_heteros(
-                        output_states = self.model.net.output_z_buffer,
-                        mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
-                        # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                        # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                        delta_states = self.model.net.input_delta_z_buffer,
-                    )
-                    self.model.net.backward()
-                    self.model.net.step()
+                        # Update model
+                        out_updater = OutputUpdater(self.model.net.device)
+                        out_updater.update_heteros(
+                            output_states = self.model.net.output_z_buffer,
+                            mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
+                            delta_states = self.model.net.input_delta_z_buffer,
+                        )
+                        self.model.net.backward()
+                        self.model.net.step()
+                    elif self.nn_train_with == 'backprop':
+                        optimizer.zero_grad()
+                        y_pred = self.model(train_X[i*self.batch_size:(i+1)*self.batch_size].float())
+                        loss_train = loss_fn(y_pred, train_y[i*self.batch_size:(i+1)*self.batch_size].float())
+                        loss_train.backward()
+                        optimizer.step()
 
                 loss_val = 0
-                for j in range(n_batch_val):
-                    val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
-                    val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                    val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
-                    val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
-                    # Compute the mse between val_pred_y_mu and val_y_batch
-                    loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
-                loss_val /= n_batch_val
+                if self.nn_train_with == 'tagiv':
+                    for j in range(n_batch_val):
+                        val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
+                        val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                        val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
+                        val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
+                        # Compute the mse between val_pred_y_mu and val_y_batch
+                        loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
+                    loss_val /= n_batch_val
+                elif self.nn_train_with == 'backprop':
+                    y_pred = self.model(val_X.float())
+                    loss_val = loss_fn(y_pred, val_y.float())
 
                 print(f'Epoch {epoch}: {loss_val}')
                 # Early stopping with patience 10
@@ -726,33 +748,42 @@ class hsl_detection:
             n_batch_test = n_test // self.batch_size
 
             loss_test = 0
-            for j in range(n_batch_val):
-                test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
-                test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
-                test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
-                test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
-                # Compute the mse between test_pred_y_mu and test_y_batch
-                loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
-            loss_test /= n_batch_test
+            if self.nn_train_with == 'tagiv':
+                for j in range(n_batch_val):
+                    test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
+                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                    test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
+                    test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
+                    test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
+                    # Compute the mse between test_pred_y_mu and test_y_batch
+                    loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+                loss_test /= n_batch_test
+            elif self.nn_train_with == 'backprop':
+                y_pred = self.model(test_X.float())
+                loss_test = loss_fn(y_pred, test_y.float())
+                # difference = y_pred - test_y.float()
+                # # Convert to numpy
+                # difference = difference.detach().numpy()
 
             print(f'Test loss {loss_test.item()}')
 
         # # Denormalize the prediction
-        # y_pred_denorm = test_pred_y_mu * self.std_target + self.mean_target
-        # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
-        # y_test_denorm = test_y_batch * self.std_target + self.mean_target
+        # y_pred = y_pred.detach().numpy()
+        # y_pred_denorm = y_pred * self.std_target + self.mean_target
+        # # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
+        # y_test_denorm = test_y * self.std_target + self.mean_target
         # print(y_test_denorm.tolist())
         # print(y_pred_denorm.tolist())
-        # print(np.sqrt(y_pred_var_denorm))
+        # # print(np.sqrt(y_pred_var_denorm))
 
         if save_model_path is not None:
-            param_dict = self.model.net.state_dict()
-            # Save dictionary to file
-            with open(save_model_path, 'wb') as f:
-                pickle.dump(param_dict, f)
-
-            
+            if self.nn_train_with == 'tagiv':
+                param_dict = self.model.net.state_dict()
+                # Save dictionary to file
+                with open(save_model_path, 'wb') as f:
+                    pickle.dump(param_dict, f)
+            elif self.nn_train_with == 'backprop':
+                pass    # TODO
 
 
 class TAGI_Net():
@@ -773,3 +804,16 @@ class TAGI_Net():
         self.n_observations = n_observations
     def forward(self, mu_x, var_x):
         return self.net.forward(mu_x, var_x)
+    
+class NN(torch.nn.Module):
+    def __init__(self, input_size, output_size):
+        super(NN, self).__init__()
+        self.fc1 = torch.nn.Linear(input_size, 64)
+        self.fc2 = torch.nn.Linear(64, 32)
+        self.fc3 = torch.nn.Linear(32, output_size)
+
+    def forward(self, x):
+        x = torch.nn.functional.relu(self.fc1(x))
+        x = torch.nn.functional.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
