@@ -25,15 +25,15 @@ from examples import DataProcess
 
 
 # Fix parameters grid search
-sigma_v_fix = 0.03490433808132023
-look_back_len_fix = 10
-SKF_std_transition_error_fix = 0.0006592917968263638
-SKF_norm_to_abnorm_prob_fix = 0.00026171781570286345
+sigma_v_fix = 0.015519087402266298
+look_back_len_fix = 11
+SKF_std_transition_error_fix = 0.0006733112773884772
+SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 
 def main(
-    num_trial_optimization: int = 5,
-    param_tune: bool = True,
+    num_trial_optimization: int = 20,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
@@ -252,11 +252,23 @@ def main(
 
 
 def training(model, data_processor, num_epoch: int = 50):
-    """
-    Training procedure
-    """
+    """ """
+    # index_start = 0
+    # index_end = 24 * 3 + 1
+    # y1 = data_processor.train_data["y"][:-1].flatten()
+    # trend, _, seasonality, _ = DataProcess.decompose_data(y1)
+    # t_plot = data_processor.data.index[index_start:index_end].to_numpy()
+    # plt.plot(t_plot, trend, color="b")
+    # plt.plot(t_plot, seasonality, color="orange")
+    # plt.scatter(t_plot, y1, color="k")
+    # plt.plot(
+    #     data_processor.get_time("train"),
+    #     data_processor.get_data("train", normalization=True),
+    #     color="r",
+    # )
+    # plt.show()
 
-    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:23])
+    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:24])
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error

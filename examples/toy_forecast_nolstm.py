@@ -51,31 +51,31 @@ def main(
     periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
     noise = WhiteNoise(std_error=sigma_v)
 
-    # Different cases for AR components
+    # Different cases for ar components
     if case == 1:
-        # Case 1: regular AR, with process error and phi provided
-        AR = Autoregression(
+        # Case 1: regular ar, with process error and phi provided
+        ar = Autoregression(
             std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05]
         )
     elif case == 2:
-        # Case 2: AR with process error provided, learn phi online. It should converge to ~0.9
-        AR = Autoregression(
+        # Case 2: ar with process error provided, learn phi online. It should converge to ~0.9
+        ar = Autoregression(
             std_error=5, mu_states=[-0.0621, 0.5, 0], var_states=[6.36e-05, 0.25, 0]
         )
     elif case == 3:
-        # Case 3: AR with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
+        # Case 3: ar with phi provided, learn process error online. W2bar (variance of process error) should converge to ~25.
         AR_process_error_var_prior = 100
         var_W2bar_prior = 100
-        AR = Autoregression(
+        ar = Autoregression(
             phi=0.9,
             mu_states=[-0.0621, 0, 0, AR_process_error_var_prior],
             var_states=[6.36e-05, AR_process_error_var_prior, 1e-6, var_W2bar_prior],
         )
     elif case == 4:
-        # Case 4: Fully online AR, learn both phi and process error online. phi should converge to ~0.9, W2bar should converge to ~25.
+        # Case 4: Fully online ar, learn both phi and process error online. phi should converge to ~0.9, W2bar should converge to ~25.
         AR_process_error_var_prior = 100
         var_W2bar_prior = 100
-        AR = Autoregression(
+        ar = Autoregression(
             mu_states=[-0.0621, 0.5, 0, 0, 0, AR_process_error_var_prior],
             var_states=[
                 6.36e-05,
@@ -91,7 +91,7 @@ def main(
     model = Model(
         local_trend,
         periodic,
-        AR,
+        ar,
         noise,
     )
 

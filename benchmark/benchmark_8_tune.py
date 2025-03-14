@@ -1,9 +1,12 @@
 import fire
+import time
 import copy
-from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from pytagi import exponential_scheduler
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
 from src import (
     LocalTrend,
     LocalAcceleration,
@@ -13,16 +16,12 @@ from src import (
     ModelOptimizer,
     SKF,
     SKFOptimizer,
-    load_model_dict,
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
 from examples import DataProcess
-from pytagi import exponential_scheduler
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
 
 # Fix parameters grid search
 sigma_v_fix = 0.0178919637745888
@@ -38,8 +37,8 @@ SKF_norm_to_abnorm_prob_fix = 1e-4
 
 
 def main(
-    num_trial_optimization: int = 50,
-    param_tune: bool = False,
+    num_trial_optimization: int = 100,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data
@@ -59,6 +58,12 @@ def main(
         validation_split=0.074,
         output_col=output_col,
     )
+    (
+        data_processor.train_data,
+        data_processor.validation_data,
+        data_processor.test_data,
+        data_processor.all_data,
+    ) = data_processor.get_splits()
 
     # Define model
     def initialize_model(param):
@@ -105,7 +110,7 @@ def main(
     )
 
     # Save best model for SKF analysis later
-    model_optim_dict = model_optim.save_model_dict()
+    model_optim_dict = model_optim.get_dict()
 
     # Plot
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -134,7 +139,7 @@ def main(
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
-        norm_model = load_model_dict(model_param)
+        norm_model = Model.load_dict(model_param)
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(),
@@ -148,7 +153,6 @@ def main(
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
-        skf.save_initial_states()
         return skf
 
     # Define parameter search space
@@ -156,7 +160,7 @@ def main(
     slope_lower_bound = 1e-3
     # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_split,
+        data_processor.train_data,
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
@@ -168,11 +172,18 @@ def main(
         plot_column=output_col,
         train_label="data without anomaly",
     )
+
+    train_time = data_processor.get_time("train")
     for ts in synthetic_anomaly_data:
-        plt.plot(data_processor.train_time, ts["y"])
-    plt.legend()
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
+        plt.plot(train_time, ts["y"])
+    plt.legend(
+        [
+            "data without anomaly",
+            "",
+            "smallest anomaly tested",
+            "largest anomaly tested",
+        ]
+    )
 
     if param_tune:
         if grid_search:
@@ -190,9 +201,9 @@ def main(
         # Define optimizer
         skf_optimizer = SKFOptimizer(
             initialize_skf=initialize_skf,
-            model=model_optim_dict,
+            model_param=model_optim_dict,
             param_space=skf_param,
-            data_processor=data_processor,
+            data=data_processor.train_data,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=grid_search,
@@ -208,9 +219,7 @@ def main(
         skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
     # Detect anomaly
-    filter_marginal_abnorm_prob, states = skf_optim.filter(
-        data=data_processor.all_data_split
-    )
+    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -238,7 +247,22 @@ def training(model, data_processor, num_epoch: int = 50):
     Training procedure
     """
 
-    model.auto_initialize_baseline_states(data_processor.train_split["y"][20:72])
+    # index_start = 0
+    # index_end = 52 * 3
+    # y1 = data_processor.train_data["y"][index_start:index_end].flatten()
+    # trend, _, seasonality, _ = DataProcess.decompose_data(y1)
+    # t_plot = data_processor.data.index[index_start:index_end].to_numpy()
+    # plt.plot(t_plot, trend, color="b")
+    # plt.plot(t_plot, seasonality, color="orange")
+    # plt.scatter(t_plot, y1, color="k")
+    # plt.plot(
+    #     data_processor.get_time("train"),
+    #     data_processor.get_data("train", normalization=True),
+    #     color="r",
+    # )
+    # plt.show()
+
+    model.auto_initialize_baseline_states(data_processor.train_data["y"][0 : 52 * 3])
     noise_index = model.states_name.index("white noise")
     scheduled_sigma_v = 5
     sigma_v = model.components["white noise"].std_error
@@ -257,8 +281,8 @@ def training(model, data_processor, num_epoch: int = 50):
         model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
         mu_validation_preds, std_validation_preds, states = model.lstm_train(
-            train_data=data_processor.train_split,
-            validation_data=data_processor.validation_split,
+            train_data=data_processor.train_data,
+            validation_data=data_processor.validation_data,
         )
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -272,11 +296,10 @@ def training(model, data_processor, num_epoch: int = 50):
             data_processor.norm_const_std[data_processor.output_col],
         )
 
+        validation_obs = data_processor.get_data("validation").flatten()
         validation_log_lik = metric.log_likelihood(
             prediction=mu_validation_preds_unnorm,
-            observation=data_processor.validation_data[
-                :, data_processor.output_col
-            ].flatten(),
+            observation=validation_obs,
             std=std_validation_preds_unnorm,
         )
 
@@ -298,4 +321,7 @@ def training(model, data_processor, num_epoch: int = 50):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     fire.Fire(main)
+    end_time = time.time()
+    print(f"Run time: {end_time-start_time:.2f} seconds")

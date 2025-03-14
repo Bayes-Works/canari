@@ -4,7 +4,6 @@ import numpy.testing as npt
 from src.data_struct import LstmOutputHistory
 
 from src import (
-    BaseComponent,
     LocalAcceleration,
     LocalLevel,
     LocalTrend,

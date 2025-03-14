@@ -3,9 +3,8 @@ import pandas as pd
 import numpy as np
 import pytest
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-
 from pytagi import Normalizer as normalizer
+from pytagi import exponential_scheduler
 import pytagi.metric as metric
 
 from src import (
@@ -20,7 +19,8 @@ from src import (
 from examples import DataProcess
 
 # Components
-local_trend = LocalTrend(var_states=[1e-3, 1e-3])
+sigma_v = 5e-2
+local_trend = LocalTrend(var_states=[1e-4, 1e-4])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=10,
@@ -30,7 +30,7 @@ lstm_network = LstmNetwork(
     device="cpu",
     manual_seed=1,
 )
-noise = WhiteNoise(std_error=1e-2)
+noise = WhiteNoise(std_error=sigma_v)
 
 # Switching Kalman filter
 skf = SKF(
@@ -79,8 +79,22 @@ def SKF_anomaly_detection_runner(
     train_data, validation_data, _, all_data = data_processor.get_splits()
 
     # Training
-    test_model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 3])
-    for _ in range(2):
+    num_epoch = 30
+    scheduled_sigma_v = 1
+    test_model.auto_initialize_baseline_states(train_data["y"][0:23])
+    for epoch in range(num_epoch):
+        # # Decaying observation's variance
+        scheduled_sigma_v = exponential_scheduler(
+            curr_v=scheduled_sigma_v,
+            min_v=sigma_v,
+            decaying_factor=0.9,
+            curr_iter=epoch,
+        )
+        noise_index = skf.states_name.index("white noise")
+        skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
+            scheduled_sigma_v**2
+        )
+
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )

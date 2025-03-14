@@ -48,9 +48,9 @@ def model_test_runner(model: Model, plot: bool) -> float:
     train_data, validation_data, _, _ = data_processor.get_splits()
 
     # Initialize model
-    model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 3])
+    model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 2])
 
-    for _ in range(2):
+    for _ in range(5):
         (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )
@@ -99,7 +99,7 @@ def test_model_forecast(run_mode, plot_mode):
     """Test model forecastin with lstm component"""
     # Model
     model = Model(
-        LocalTrend(var_states=[1e-2, 1e-2]),
+        LocalTrend(),
         LstmNetwork(
             look_back_len=19,
             num_features=2,

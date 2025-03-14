@@ -1,6 +1,6 @@
 import fire
+import time
 import copy
-from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -327,4 +327,7 @@ def training(model, data_processor, num_epoch: int = 50):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     fire.Fire(main)
+    end_time = time.time()
+    print(f"Elapsed time: {end_time-start_time:.2f} seconds")

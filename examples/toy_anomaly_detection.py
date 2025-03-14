@@ -88,7 +88,7 @@ skf = SKF(
 skf.auto_initialize_baseline_states(train_data["y"][0:23])
 
 #  Training
-num_epoch = 50
+num_epoch = 30
 scheduled_sigma_v = 1
 states_optim = None
 mu_validation_preds_optim = None

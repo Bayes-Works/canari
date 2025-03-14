@@ -62,28 +62,14 @@ model = Model(
     ),
     WhiteNoise(std_error=sigma_v),
 )
-# model.auto_initialize_baseline_states(train_data["y"][1:24])
-index_start = 0
-index_end = 52
-y1 = train_data["y"][index_start:index_end].flatten()
-decomposer = TimeSeriesDecomposition(y1)
-trend, seasonality, residual, slope = decomposer.decompose()
-t_plot = data_processor.data.index[index_start:index_end].to_numpy()
-plt.plot(t_plot, trend, color="b")
-plt.plot(t_plot, seasonality, color="k")
-plt.plot(
-    data_processor.get_time("train"),
-    data_processor.get_data("train", normalization=True),
-    color="r",
-)
-plt.show()
+model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 scheduled_sigma_v = 1
 for epoch in range(num_epoch):
     # Decaying observation's variance
     scheduled_sigma_v = exponential_scheduler(
-        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.99, curr_iter=epoch
+        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
     )
     noise_index = model.states_name.index("white noise")
     model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
