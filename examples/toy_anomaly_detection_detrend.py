@@ -117,7 +117,7 @@ skf = SKF(
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
-skf.auto_initialize_baseline_states(all_data["y"][0:23])
+skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
 
 #  Training
 num_epoch = 50
@@ -171,6 +171,7 @@ print(f"Optimal epoch       : {model_lstm.optimal_epoch}")
 print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
+skf.model["norm_norm"].lstm_net = model_lstm.lstm_net
 skf.lstm_net = model_lstm.lstm_net
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
