@@ -30,9 +30,9 @@ from src.model import load_model_dict
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic_2.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # linear_space = np.linspace(0, 4, num=len(df_raw))
-linear_space = np.arange(len(df_raw)) * 0.010416667
+linear_space = np.arange(len(df_raw)) * 0.010416667/10
 # Set the first 52*12 values in linear_space to be 0
-anm_start_index = 52*12
+anm_start_index = 52*10
 linear_space[anm_start_index:] -= linear_space[anm_start_index]
 linear_space[:anm_start_index] = 0
 
@@ -70,27 +70,25 @@ pretrained_model = Model(
     Autoregression(std_error=0.05, phi=0.8, mu_states=[0], var_states=[0.08]),
 )
 
-ltd_error = 1e-8
+ltd_error = 1e-5
 
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
-# Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
-hsl_tsad_agent_pre.filter(train_data)
-hsl_tsad_agent_pre.filter(validation_data)
-hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
+# # Get flexible drift model from the beginning
+# hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+# hsl_tsad_agent_pre.filter(train_data)
+# hsl_tsad_agent_pre.filter(validation_data)
+# hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
 # print('start collecting NN training samples')
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=300, save_to_path= 'data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300_fix_anm_mag_small_ltd_error.csv')
-hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300_fix_anm_mag_small_ltd_error.csv', 
-                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl', max_training_epoch=20)
-# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples_simpleTS_fourrier_300.csv', 
-#                                   load_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_same_small_anm_mag_simple_complet_1000_rigid.csv')
+hsl_tsad_agent.nn_train_with = 'backprop'
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_same_small_anm_mag_simple_complet_1000_rigid.csv', 
+                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl', max_training_epoch=100)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 #  Plot
@@ -196,22 +194,28 @@ std_itv_all[anm_detected_index:] = np.nan
 # print(mu_itv_all.shape)
 # print(time.shape)
 
+true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
+true_anm_dev_time[anm_start_index:anm_detected_index] += np.arange(anm_detected_index - anm_start_index)
+true_LL = true_anm_dev_time * 0.00104166666666666
+
 ax8.plot(time, mu_itv_all[:, 0])
 ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
 ax8.set_ylabel("itv_LT")
 ax8.set_xlim(ax0.get_xlim())
 ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
+ax8.axhline(y=0.00104166666666666, color='r', linestyle='--')
 
 ax9.plot(time, mu_itv_all[:, 1])
 ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
+ax9.plot(time, true_LL, color='k', linestyle='--')
 ax9.set_ylabel("itv_LL")
 ax9.set_xlim(ax0.get_xlim())
 ax9.axvline(x=time[anm_start_index], color='r', linestyle='--')
 
 ax10.plot(time, mu_itv_all[:, 2])
 ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
+ax10.plot(time, true_anm_dev_time, color='k', linestyle='--')
 ax10.set_ylabel("itv_time")
 ax10.set_xlim(ax0.get_xlim())
 ax10.axvline(x=time[anm_start_index], color='r', linestyle='--')
-
 plt.show()
