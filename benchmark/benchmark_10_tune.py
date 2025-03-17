@@ -241,23 +241,11 @@ def training(model, data_processor, num_epoch: int = 50):
     """
 
     model.auto_initialize_baseline_states(data_processor.train_split["y"][0:51])
-    noise_index = model.states_name.index("white noise")
-    scheduled_sigma_v = 5
-    sigma_v = model.components["white noise"].std_error
     states_optim = None
     mu_validation_preds_optim = None
     std_validation_preds_optim = None
 
     for epoch in range(num_epoch):
-        # Decaying observation's variance
-        scheduled_sigma_v = exponential_scheduler(
-            curr_v=scheduled_sigma_v,
-            min_v=sigma_v,
-            decaying_factor=0.9,
-            curr_iter=epoch,
-        )
-        model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
         mu_validation_preds, std_validation_preds, states = model.lstm_train(
             train_data=data_processor.train_split,
             validation_data=data_processor.validation_split,
