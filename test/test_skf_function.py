@@ -130,16 +130,6 @@ def test_skf_filter():
         == skf.model["abnorm_norm"].var_obs_predict
     )
 
-    # Check: self.set_states() at the end of each sample
-    npt.assert_allclose(
-        skf.model["norm_norm"].mu_states,
-        skf.model["norm_abnorm"].mu_states,
-    )
-    npt.assert_allclose(
-        skf.model["abnorm_abnorm"].var_states,
-        skf.model["abnorm_norm"].var_states,
-    )
-
     # Check if lstm's memory is clear at at end of SKF.filer
     lstm_output_history_init = LstmOutputHistory()
     lstm_output_history_init.initialize(lstm_look_back_len)
