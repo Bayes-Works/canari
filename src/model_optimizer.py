@@ -4,6 +4,10 @@ from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
 from examples.data_process import DataProcess
 from ray.tune.schedulers import ASHAScheduler
+import signal
+
+# Ignore segmentation fault signals
+signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 
 class ModelOptimizer:
