@@ -30,16 +30,10 @@ look_back_len_fix = 12
 SKF_std_transition_error_fix = 1e-3
 SKF_norm_to_abnorm_prob_fix = 1e-3
 
-# Fix parameters
-# sigma_v_fix = 0.2520409419499989
-# look_back_len_fix = 16
-# SKF_std_transition_error_fix = 8.594317638285895e-05
-# SKF_norm_to_abnorm_prob_fix = 2.7356125169260927e-06
-
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
