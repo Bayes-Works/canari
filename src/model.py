@@ -264,7 +264,8 @@ class Model:
 
     def set_memory(self, states: StatesHistory, time_step: int):
         """
-        Set memory at a specific time step, i.e., mu_states, var_states, cell and hidden states, and lstm output history
+        Set memory at a specific time step, i.e., mu_states, var_states,
+        cell and hidden states, and lstm output history
         """
 
         if time_step == 0:

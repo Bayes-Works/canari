@@ -438,17 +438,18 @@ class SKF:
                 transition_model.var_states_posterior,
             )
 
-    def clear_memory(self):
+    def set_memory(self, states: StatesHistory, time_step: int):
         """
-        Clear memories for the next run, i.e. clear cell and hidden states,
-        lstm output history, and prior marginal probability
+        Set memory at a specific time step
         """
 
-        if self.lstm_net:
-            self.model["norm_norm"].clear_memory()
-
-        self.marginal_prob_current["norm"] = self.norm_model_prior_prob
-        self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
+        self.model["norm_norm"].set_memory(
+            states=self.model["norm_norm"].states, time_step=0
+        )
+        if time_step == 0:
+            self.load_initial_states()
+            self.marginal_prob_current["norm"] = self.norm_model_prior_prob
+            self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
         """
@@ -756,7 +757,7 @@ class SKF:
                 self.marginal_prob_current["abnorm"]
             )
 
-        self.clear_memory()
+        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
@@ -811,7 +812,6 @@ class SKF:
 
         # Iterate over data with synthetic anomalies
         for i in range(0, num_anomaly):
-            self.load_initial_states()
             filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
