@@ -80,21 +80,8 @@ def SKF_anomaly_detection_runner(
 
     # Training
     num_epoch = 30
-    scheduled_sigma_v = 1
     test_model.auto_initialize_baseline_states(train_data["y"][0:23])
     for epoch in range(num_epoch):
-        # # Decaying observation's variance
-        scheduled_sigma_v = exponential_scheduler(
-            curr_v=scheduled_sigma_v,
-            min_v=sigma_v,
-            decaying_factor=0.9,
-            curr_iter=epoch,
-        )
-        noise_index = skf.states_name.index("white noise")
-        skf.model["norm_norm"].process_noise_matrix[noise_index, noise_index] = (
-            scheduled_sigma_v**2
-        )
-
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )

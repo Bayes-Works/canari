@@ -502,12 +502,21 @@ class SKF:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
+        white_noise_decay: Optional[bool] = True,
+        white_noise_max_std: Optional[float] = 5,
+        white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the LstmNetwork of the normal model
         """
 
-        return self.model["norm_norm"].lstm_train(train_data, validation_data)
+        return self.model["norm_norm"].lstm_train(
+            train_data,
+            validation_data,
+            white_noise_decay,
+            white_noise_max_std,
+            white_noise_decay_factor,
+        )
 
     def early_stopping(
         self,

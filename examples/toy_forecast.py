@@ -65,15 +65,7 @@ model = Model(
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
-scheduled_sigma_v = 1
 for epoch in range(num_epoch):
-    # Decaying observation's variance
-    scheduled_sigma_v = exponential_scheduler(
-        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.9, curr_iter=epoch
-    )
-    noise_index = model.states_name.index("white noise")
-    model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,

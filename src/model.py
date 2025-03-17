@@ -158,6 +158,29 @@ class Model:
         self.lstm_net.backward()
         self.lstm_net.step()
 
+    def _white_noise_decay(
+        self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
+    ):
+        noise_index = self.get_states_index("white noise")
+        scheduled_sigma_v = white_noise_max_std * np.exp(
+            -white_noise_decay_factor * epoch
+        )
+        if scheduled_sigma_v < self.components["white noise"].std_error:
+            scheduled_sigma_v = self.components["white noise"].std_error
+        self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
+    def _save_states_history(self):
+        """Save states' priors, posteriors and cross-covariances for smoother"""
+
+        self.states.mu_prior.append(self.mu_states_prior)
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior)
+        self.states.var_posterior.append(self.var_states_posterior)
+        cov_states = self.var_states @ self.transition_matrix.T
+        self.states.cov_states.append(cov_states)
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
+
     def __deepcopy__(self, memo):
         """Copy a model object, but do not copy "lstm_net" attribute"""
 
@@ -295,18 +318,6 @@ class Model:
 
                 # TODO: load lstm's cell and hidden states, for now, reset to 0
                 self.lstm_net.reset_lstm_states()
-
-    def _save_states_history(self):
-        """Save states' priors, posteriors and cross-covariances for smoother"""
-
-        self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior)
-        self.states.var_posterior.append(self.var_states_posterior)
-        cov_states = self.var_states @ self.transition_matrix.T
-        self.states.cov_states.append(cov_states)
-        self.states.mu_smooth.append(self.mu_states_posterior)
-        self.states.var_smooth.append(self.var_states_posterior)
 
     def forward(
         self,
@@ -501,11 +512,19 @@ class Model:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
+        white_noise_decay: Optional[bool] = True,
+        white_noise_max_std: Optional[float] = 5,
+        white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train LstmNetwork
         """
 
+        # Decaying observation's variance
+        if white_noise_decay and self.get_states_index("white noise") is not None:
+            self._white_noise_decay(
+                self._current_epoch, white_noise_max_std, white_noise_decay_factor
+            )
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)

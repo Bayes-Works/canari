@@ -52,7 +52,9 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
     for _ in range(5):
         (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
-            train_data=train_data, validation_data=validation_data
+            train_data=train_data,
+            validation_data=validation_data,
+            white_noise_decay=False,
         )
 
         # Unstandardize
