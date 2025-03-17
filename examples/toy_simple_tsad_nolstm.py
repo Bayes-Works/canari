@@ -74,22 +74,44 @@ ltd_error = 1e-5
 
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
-# # Get flexible drift model from the beginning
-# hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
-# hsl_tsad_agent_pre.filter(train_data)
-# hsl_tsad_agent_pre.filter(validation_data)
-# hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
-
+# Get flexible drift model from the beginning
+hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent_pre.filter(train_data)
+hsl_tsad_agent_pre.filter(validation_data)
+hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
 # print('start collecting NN training samples')
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_same_small_anm_mag_simple_complet_1000_rigid.csv')
-hsl_tsad_agent.nn_train_with = 'backprop'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_same_small_anm_mag_simple_complet_1000_rigid.csv', 
-                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_300.pkl', max_training_epoch=100)
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_different_anm_mag_simple_complet_1000_.csv')
+hsl_tsad_agent.nn_train_with = 'tagiv'
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_different_anm_mag_simple_complet_1000.csv', 
+                                  save_model_path='saved_params/NN_detection_model_simpleTS_fourrier_1000.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+
+anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
+
+# Plot to debug
+# Delete in hsl_tsad_agent.LTd_history_all all the samples before and after anm_start_index and anm_detected_index
+hsl_tsad_agent.LTd_history_all = np.array(hsl_tsad_agent.LTd_history_all[anm_start_index:anm_detected_index])
+print(hsl_tsad_agent.LTd_history_all.shape)
+grayscale_anm_dev_time = (hsl_tsad_agent.train_y[:, 2] - hsl_tsad_agent.train_y[:, 2].min()) / (hsl_tsad_agent.train_y[:, 2].max() - hsl_tsad_agent.train_y[:, 2].min())
+# Plot all samples input
+fig = plt.figure(figsize=(10, 6))
+gs = gridspec.GridSpec(1, 1)
+ax = fig.add_subplot(gs[0])
+# ax.plot(samples_input.T, color='black', alpha=0.1)
+# Plot samples_input with color based on grayscale_anm_dev_time
+for i in range(1000):
+    ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
+for i in range(len(hsl_tsad_agent.LTd_history_all)):
+    ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('LTd')
+# Plot the color map
+fig.colorbar(plt.cm.ScalarMappable(cmap='viridis_r'), ax=ax, orientation='horizontal', label='anm_develop_time')
 
 #  Plot
 state_type = "prior"
@@ -186,7 +208,6 @@ std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
 # Set all the values before anm_start_index to be nan
 mu_itv_all[:anm_start_index] = np.nan
 std_itv_all[:anm_start_index] = np.nan
-anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
 print('anm_detect_index:' , anm_detected_index)
 # Set all the values after anm_detected to be nan
 mu_itv_all[anm_detected_index:] = np.nan
