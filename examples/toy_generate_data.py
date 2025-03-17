@@ -99,18 +99,18 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# time_step = len(train_data["y"]) + len(validation_data["y"])
-# model.set_memory(states=states_optim, time_step=time_step)
-# syn_data = model.generate_synthetic_data(
-#     data=test_data,
-#     num_time_series=1,
-# )
-
-model.set_memory(states=states_optim, time_step=0)
+time_step = len(train_data["y"]) + len(validation_data["y"])
+model.set_memory(states=states_optim, time_step=time_step)
 syn_data = model.generate_synthetic_data(
-    data=normalized_data,
+    data=test_data,
     num_time_series=1,
 )
+
+# model.set_memory(states=states_optim, time_step=0)
+# syn_data = model.generate_synthetic_data(
+#     data=normalized_data,
+#     num_time_series=1,
+# )
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -126,7 +126,7 @@ plot_data(
 #     std_validation_pred=std_validation_preds,
 #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 # )
-plt.plot(data_processor.get_time("all"), syn_data, color="b")
-# plt.plot(data_processor.get_time("test"), syn_data, color="b")
+# plt.plot(data_processor.get_time("all"), syn_data, color="b")
+plt.plot(data_processor.get_time("test"), syn_data, color="b")
 plt.legend()
 plt.show()

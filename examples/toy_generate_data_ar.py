@@ -39,7 +39,7 @@ data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
     train_split=0.5,
-    validation_split=0.1,
+    validation_split=0.2,
     output_col=output_col,
 )
 
@@ -56,7 +56,7 @@ ar = Autoregression(
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=52,
+        look_back_len=26,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -65,7 +65,22 @@ model = Model(
     ),
     ar,
 )
-model.auto_initialize_baseline_states(train_data["y"][0 : 52 * 2])
+
+# index_start = 0
+# index_end = 52
+# y1 = train_data["y"][index_start:index_end].flatten()
+# trend, _, seasonality, _ = DataProcess.decompose_data(y1)
+# t_plot = data_processor.data.index[index_start:index_end].to_numpy()
+# plt.plot(t_plot, trend, color="b")
+# plt.plot(t_plot, seasonality, color="orange")
+# plt.scatter(t_plot, y1, color="k")
+# plt.plot(
+#     data_processor.get_time("train"),
+#     data_processor.get_data("train", normalization=True),
+#     color="r",
+# )
+# plt.show()
+# model.auto_initialize_baseline_states(train_data["y"][0:52])
 
 # Training
 for epoch in range(num_epoch):
@@ -101,31 +116,24 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
-        lstm_output_optim = copy.copy(model.lstm_output_history)
-        mu_states_optim = model.mu_states.copy()
-        var_states_optim = model.var_states.copy()
-
     if model.stop_training:
         break
-    # else:
-    #     model.initialize_states_with_smoother_estimates()
-    #     model.clear_memory()
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# model.lstm_output_history = lstm_output_optim
-# model.set_states(mu_states_optim, var_states_optim)
-# syn_data = model.generate_synthetic_data(
-#     data=test_data,
-#     num_time_series=1,
-# )
-
-model.clear_memory()
+time_step = len(train_data["y"]) + len(validation_data["y"])
+model.set_memory(states=states_optim, time_step=time_step)
 syn_data = model.generate_synthetic_data(
-    data=normalized_data,
+    data=test_data,
     num_time_series=1,
 )
+
+# model.set_memory(states=states_optim, time_step=0)
+# syn_data = model.generate_synthetic_data(
+#     data=normalized_data,
+#     num_time_series=1,
+# )
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -141,6 +149,7 @@ plot_data(
 #     std_validation_pred=std_validation_preds,
 #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 # )
-plt.plot(data_processor.get_time("all"), syn_data, color="b")
+# plt.plot(data_processor.get_time("all"), syn_data, color="b")
+plt.plot(data_processor.get_time("test"), syn_data, color="b")
 plt.legend()
 plt.show()
