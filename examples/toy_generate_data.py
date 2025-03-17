@@ -41,6 +41,7 @@ num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
+    time_covariates=["hour_of_day"],
     train_split=0.5,
     validation_split=0.1,
     output_col=output_col,
@@ -54,7 +55,7 @@ model = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=19,
-        num_features=1,
+        num_features=2,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -99,29 +100,21 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
-        lstm_output_optim = copy.copy(model.lstm_output_history)
-        mu_states_optim = model.mu_states.copy()
-        var_states_optim = model.var_states.copy()
+        states_optim = copy.copy(states)
     if model.stop_training:
         break
-    # else:
-    #     model.initialize_states_with_smoother_estimates()
-    #     model.clear_memory()
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# model.lstm_output_history = lstm_output_optim
-# model.set_states(mu_states_optim, var_states_optim)
+# time_step = len(train_data["y"]) + len(validation_data["y"])
+# model.set_memory(states=states_optim, time_step=time_step)
 # syn_data = model.generate_synthetic_data(
 #     data=test_data,
 #     num_time_series=1,
 # )
 
-model.clear_memory()
+model.set_memory(states=states_optim, time_step=0)
 syn_data = model.generate_synthetic_data(
     data=normalized_data,
     num_time_series=1,
@@ -142,5 +135,6 @@ plot_data(
 #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 # )
 plt.plot(data_processor.get_time("all"), syn_data, color="b")
+# plt.plot(data_processor.get_time("test"), syn_data, color="b")
 plt.legend()
 plt.show()

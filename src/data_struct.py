@@ -50,7 +50,7 @@ class StatesHistory:
         self,
         states_type: Optional[str] = "posterior",
         states_name: Optional[list[str]] = "all",
-    ) -> dict:
+    ) -> dict[str, np.ndarray]:
         """Get mean values for hidden states"""
         mean = {}
 
@@ -70,7 +70,7 @@ class StatesHistory:
 
         for state in states_name:
             idx = self.states_name.index(state)
-            mean[state] = values[:, idx]
+            mean[state] = values[:, idx].flatten()
 
         return mean
 
