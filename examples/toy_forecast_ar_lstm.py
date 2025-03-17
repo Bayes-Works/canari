@@ -100,7 +100,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     std_pred_unnorm = normalizer.unstandardize_std(std_validation_preds, norm_const_std)
 
     # Calculate the evaluation metric
-    obs_validation = data_processor.validation_data[:, output_col].flatten()
+    obs_validation = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_pred_unnorm, obs_validation)
     val_log_lik = metric.log_likelihood(mu_pred_unnorm, obs_validation, std_pred_unnorm)
 
