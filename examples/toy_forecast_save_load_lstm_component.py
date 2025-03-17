@@ -66,16 +66,8 @@ model = Model(
 model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 # Training
-scheduled_sigma_v = 1
 for epoch in range(num_epoch):
-    # Decaying observation's variance
-    scheduled_sigma_v = exponential_scheduler(
-        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.99, curr_iter=epoch
-    )
-    noise_index = model.states_name.index("white noise")
-    model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
-    (mu_validation_preds, std_validation_preds, smoother_states) = model.lstm_train(
+    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
@@ -97,6 +89,10 @@ for epoch in range(num_epoch):
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")
+    if epoch == model.optimal_epoch:
+        mu_validation_preds_optim = mu_validation_preds
+        std_validation_preds_optim = std_validation_preds
+        states_optim = copy.copy(states)
     if model.stop_training:
         break
 
@@ -126,7 +122,6 @@ model2 = Model(
 # Provide model #2 the initial values from where model #1 stop
 model2.mu_states = model.early_stop_init_mu_states
 model2.var_states = model.early_stop_init_var_states
-model2.clear_memory()
 lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 
 # # #
