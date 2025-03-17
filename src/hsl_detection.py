@@ -50,6 +50,9 @@ class hsl_detection:
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
         self.nn_train_with = 'tagiv'
+        # TO DEBUG
+        self.LTd_history_all = []
+        self.current_time_step = 0
         pass
 
     def _create_drift_model(self, baseline_process_error_std):
@@ -114,6 +117,11 @@ class hsl_detection:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
+
+            # TO DEBUG
+            self.LTd_history_all.append(np.array([]))
+
+            self.current_time_step += 1
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
@@ -249,8 +257,11 @@ class hsl_detection:
         mu_ar_preds, std_ar_preds = [], []
         mu_lstm_pred, var_lstm_pred = None, None
 
-        # # Set drift model rigid prior
-        self.drift_model.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
+        # # # Set drift model rigid prior
+        # self.drift_model.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
+
+        # TO DEBUG
+        self.LTd_history_test = []
 
         for i, (x, y) in enumerate(zip(data["x"], data["y"])):
             # Estimate likelihoods
@@ -272,9 +283,13 @@ class hsl_detection:
 
             # Track what NN learns
             LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-            LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+            # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+            LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
             LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
             LTd_history = (LTd_history - self.mean_train) / self.std_train
+            # TO DEBUG
+            self.LTd_history_all.append(LTd_history)
+            self.LTd_history_test.append(LTd_history)
             if self.nn_train_with == 'tagiv':
                 LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
 
@@ -340,6 +355,8 @@ class hsl_detection:
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
             std_ar_preds.append(var_ar_pred**0.5)
+
+            self.current_time_step += 1
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
 
@@ -410,7 +427,8 @@ class hsl_detection:
         # Anomly feature range define
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
-        anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]
+        # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
+        anm_mag_range = [-stationary_ar_std/20, stationary_ar_std/20]       # Different anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
         # # Generate synthetic time series
@@ -450,8 +468,8 @@ class hsl_detection:
             x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
-            # # Set drift model rigid prior
-            drift_model_copy.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
+            # # # Set drift model rigid prior
+            # drift_model_copy.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
             anomaly_detected = False
             for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
                 # Estimate likelihood without intervention
@@ -678,6 +696,10 @@ class hsl_detection:
         # self.mean_target = np.zeros_like(self.mean_target)
         # self.std_target = np.ones_like(self.std_target)
         train_y = (train_y - self.mean_target) / self.std_target
+        
+        # TO DEBUG
+        self.train_X = train_X
+        self.train_y = train_y
 
         # Validation set 10% of the samples
         n_val = int(n_samples * 0.1)
@@ -795,13 +817,13 @@ class hsl_detection:
 
             print(f'Test loss {loss_test}')
 
-        # Denormalize the prediction
-        y_pred = y_pred.detach().numpy()
-        y_pred_denorm = y_pred * self.std_target + self.mean_target
-        # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
-        y_test_denorm = test_y * self.std_target + self.mean_target
-        print(y_test_denorm.tolist()[:100])
-        print(y_pred_denorm.tolist()[:100])
+        # # Denormalize the prediction
+        # y_pred = y_pred.detach().numpy()
+        # y_pred_denorm = y_pred * self.std_target + self.mean_target
+        # # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
+        # y_test_denorm = test_y * self.std_target + self.mean_target
+        # print(y_test_denorm.tolist()[:20])
+        # print(y_pred_denorm.tolist()[:20])
         # print(np.sqrt(y_pred_var_denorm))
 
         if save_model_path is not None:
