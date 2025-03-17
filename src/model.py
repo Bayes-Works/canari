@@ -262,12 +262,38 @@ class Model:
         """Initialize states history including prior, posterior, and smoother states"""
         self.states.initialize(self.states_name)
 
-    def clear_memory(self):
-        """Clear lstm's memory for the next run, i.e. clear cell and hidden states, and lstm output history"""
+    def set_memory(self, states: StatesHistory, time_step: int):
+        """
+        Set memory at a specific time step, i.e., mu_states, var_states, cell and hidden states, and lstm output history
+        """
 
-        if self.lstm_net:
-            self.lstm_net.reset_lstm_states()
-            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+        if time_step == 0:
+            self.initialize_states_with_smoother_estimates()
+            if self.lstm_net:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+                self.lstm_net.reset_lstm_states()
+        else:
+            mu_states_to_set = states.mu_smooth[time_step - 1]
+            var_states_to_set = states.var_smooth[time_step - 1]
+            self.set_states(mu_states_to_set, var_states_to_set)
+            if self.lstm_net:
+                mu_lstm_to_set = states.get_mean(
+                    states_name=["lstm"], states_type="smooth"
+                )
+                mu_lstm_to_set = mu_lstm_to_set["lstm"][
+                    time_step - self.lstm_net.lstm_look_back_len : time_step
+                ]
+                std_lstm_to_set = states.get_std(
+                    states_name=["lstm"], states_type="smooth"
+                )
+                std_lstm_to_set = std_lstm_to_set["lstm"][
+                    time_step - self.lstm_net.lstm_look_back_len : time_step
+                ]
+                self.lstm_output_history.mu = mu_lstm_to_set
+                self.lstm_output_history.var = std_lstm_to_set**2
+
+                # TODO: load lstm's cell and hidden states, for now, reset to 0
+                self.lstm_net.reset_lstm_states()
 
     def _save_states_history(self):
         """Save states' priors, posteriors and cross-covariances for smoother"""
@@ -482,8 +508,7 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds = self.forecast(validation_data)
-        self.initialize_states_with_smoother_estimates()
-        self.clear_memory()
+        self.set_memory(states=self.states, time_step=0)
 
         return (
             np.array(mu_validation_preds).flatten(),
