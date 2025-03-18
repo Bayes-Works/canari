@@ -3,9 +3,8 @@ import pandas as pd
 import numpy as np
 import pytest
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-
 from pytagi import Normalizer as normalizer
+from pytagi import exponential_scheduler
 import pytagi.metric as metric
 
 from src import (
@@ -15,30 +14,29 @@ from src import (
     WhiteNoise,
     Model,
     SKF,
-    plot_data,
-    plot_prediction,
     plot_skf_states,
 )
 from examples import DataProcess
 
 # Components
+sigma_v = 5e-2
 local_trend = LocalTrend(var_states=[1e-4, 1e-4])
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=12,
-    num_features=1,
+    look_back_len=10,
+    num_features=2,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
 )
-noise = WhiteNoise(std_error=1e-3)
+noise = WhiteNoise(std_error=sigma_v)
 
 # Switching Kalman filter
 skf = SKF(
     norm_model=Model(local_trend, lstm_network, noise),
     abnorm_model=Model(local_acceleration, lstm_network, noise),
-    std_transition_error=1e-3,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
@@ -65,7 +63,7 @@ def SKF_anomaly_detection_runner(
     df_raw.index = time_series
 
     # Add synthetic anomaly
-    trend = np.linspace(0, 2, num=len(df_raw))
+    trend = np.linspace(0, 0, num=len(df_raw))
     anomaly_trend = np.linspace(0, slope_anomaly, num=len(df_raw) - time_step_anomaly)
     trend[time_step_anomaly:] = trend[time_step_anomaly:] + anomaly_trend
     df_raw = df_raw.add(trend, axis=0)
@@ -73,18 +71,17 @@ def SKF_anomaly_detection_runner(
     # Data processing
     data_processor = DataProcess(
         data=df_raw,
-        train_start="2000-01-01 00:00:00",
-        train_end="2000-01-09 23:00:00",
-        validation_start="2000-01-10 00:00:00",
-        validation_end="2000-01-10 23:00:00",
-        test_start="2000-01-11 00:00:00",
+        time_covariates=["hour_of_day"],
+        train_split=0.4,
+        validation_split=0.1,
         output_col=output_col,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
 
     # Training
+    num_epoch = 30
     test_model.auto_initialize_baseline_states(train_data["y"][0:23])
-    for _ in range(2):
+    for epoch in range(num_epoch):
         (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )
@@ -98,6 +95,18 @@ def SKF_anomaly_detection_runner(
             std_validation_preds,
             data_processor.norm_const_std[output_col],
         )
+
+        validation_obs = data_processor.get_data("validation").flatten()
+        validation_log_lik = metric.log_likelihood(
+            prediction=mu_validation_preds,
+            observation=validation_obs,
+            std=std_validation_preds,
+        )
+
+        # Early-stopping
+        skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        if skf.stop_training:
+            break
 
     # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
@@ -126,11 +135,13 @@ def SKF_anomaly_detection_runner(
 
 
 def test_anomaly_detection(plot_mode):
+    """Test anomaly detection with lstm component"""
+
     detection = SKF_anomaly_detection_runner(
         skf,
-        time_step_anomaly=200,
-        slope_anomaly=2,
+        time_step_anomaly=120,
+        slope_anomaly=1,
         anomaly_threshold=0.5,
         plot=plot_mode,
     )
-    assert detection == True, "Anomaly detection failed to detect anomaly."
+    assert detection == True, "Anomaly not detected."

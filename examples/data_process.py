@@ -18,6 +18,7 @@ class DataProcess:
         validation_start: Optional[str] = None,
         validation_end: Optional[str] = None,
         test_start: Optional[str] = None,
+        test_end: Optional[str] = None,
         train_split: Optional[float] = None,
         validation_split: Optional[float] = 0.0,
         test_split: Optional[float] = 0.0,
@@ -25,54 +26,32 @@ class DataProcess:
         output_col: list[int] = [0],
         normalization: Optional[bool] = True,
     ) -> None:
-        self._train_start = train_start
-        self._train_end = train_end
-        self._validation_start = validation_start
-        self._validation_end = validation_end
-        self._test_start = test_start
-        self._normalization = normalization
+        self.train_start = train_start
+        self.train_end = train_end
+        self.validation_start = validation_start
+        self.validation_end = validation_end
+        self.test_start = test_start
+        self.test_end = test_end
+        self.normalization = normalization
         self.train_split = train_split
         self.validation_split = validation_split
         self.test_split = test_split
         self.time_covariates = time_covariates
         self.output_col = output_col
 
-        self.data = data
-        self.data_norm = None
-        self.train_data = None
-        self.validation_data = None
-        self.test_data = None
-        self.train_data_norm = None
-        self.validation_data_norm = None
-        self.test_data_norm = None
-        self.norm_const_mean = 0
-        self.norm_const_std = 1
+        self.data = data.copy()
+        self.norm_const_mean, self.norm_const_std = None, None
 
-        # Add time covariates if needed
         self.add_time_covariates()
+        self.get_split_start_end_indices()
+        self.compute_normalization_constants()
 
         # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
 
-        # Split data
-        self.split_data()
-
-        #  Normalize data if needed
-        self.normalization()
-
-        # Get data splits
-        (
-            self.train_split,
-            self.validation_split,
-            self.test_split,
-            self.all_data_split,
-        ) = self.get_splits()
-
     def add_time_covariates(self):
-        """
-        Add time covariates to the data
-        """
+        """Add time covariates to the data"""
 
         if self.time_covariates is not None:
             for time_cov in self.time_covariates:
@@ -83,136 +62,159 @@ class DataProcess:
                 elif time_cov == "day_of_year":
                     self.data["day_of_year"] = self.data.index.dayofyear
                 elif time_cov == "week_of_year":
-                    self.data["week_of_year"] = self.data.index.isocalendar().week
+                    self.data["week_of_year"] = np.array(
+                        self.data.index.isocalendar().week, dtype=np.float64
+                    )
                 elif time_cov == "month_of_year":
                     self.data["month"] = self.data.index.month
                 elif time_cov == "quarter_of_year":
                     self.data["quarter"] = self.data.index.quarter
 
-    def split_data(self):
-        """
-        Split data into train, validation, and test sets.
-        """
-        num_data = len(self.data)
+    def get_split_start_end_indices(self):
+        """Get indices for train, validation, and test sets"""
 
-        # Case 1: Splits are defined using ratios
-        if self.train_split:
+        num_data = len(self.data)
+        if self.train_split is not None:
             self.test_split = 1 - self.train_split - self.validation_split
-            self._train_end = int(np.floor(self.train_split * num_data))
-            self._validation_end = self._train_end + int(
+            self.train_start = 0
+            self.validation_start = int(np.floor(self.train_split * num_data))
+            self.test_start = self.validation_start + int(
                 np.ceil(self.validation_split * num_data)
             )
-
-            # Extract train, validation, and test data and corresponding times
-            self.train_data = self.data.iloc[: self._train_end].values.astype(
-                np.float32
+            self.train_end, self.validation_end, self.test_end = (
+                self.validation_start,
+                self.test_start,
+                num_data,
             )
-            self.train_time = self.data.iloc[: self._train_end].index
-
-            self.validation_data = self.data.iloc[
-                self._train_end : self._validation_end
-            ].values.astype(np.float32)
-            self.validation_time = self.data.iloc[
-                self._train_end : self._validation_end
-            ].index
-
-            self.test_data = self.data.iloc[self._validation_end :].values.astype(
-                np.float32
-            )
-            self.test_time = self.data.iloc[self._validation_end :].index
-
-        # Case 2: Splits are explicitly defined using indices
         else:
-            if self._train_start is not None and self._train_end is not None:
-                self.train_data = self.data.loc[
-                    self._train_start : self._train_end
-                ].values.astype(np.float32)
-                self.train_time = self.data.loc[
-                    self._train_start : self._train_end
-                ].index
-
-            if self._validation_start is not None and self._validation_end is not None:
-                self.validation_data = self.data.loc[
-                    self._validation_start : self._validation_end
-                ].values.astype(np.float32)
-                self.validation_time = self.data.loc[
-                    self._validation_start : self._validation_end
-                ].index
-
-            if self._test_start is not None:
-                self.test_data = self.data.loc[self._test_start :].values.astype(
-                    np.float32
-                )
-                self.test_time = self.data.loc[self._test_start :].index
-
-        # Store the overall time index
-        self.time = self.data.index
-
-    def normalization(self):
-        """
-        Nomalize data
-        """
-
-        if self._normalization:
-            self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
-                self.train_data
+            self.train_start = (
+                self.data.index.get_loc(self.train_start) if self.train_start else 0
             )
-            self.data_norm = Normalizer.standardize(
-                data=self.data.values.astype(np.float32),
+            self.validation_start = self.data.index.get_loc(self.validation_start)
+            self.test_start = self.data.index.get_loc(self.test_start)
+            if self.train_end is None:
+                self.train_end = self.validation_start
+            else:
+                self.train_end = self.data.index.get_loc(self.train_end)
+            if self.validation_end is None:
+                self.validation_end = self.test_start
+            else:
+                self.validation_end = self.data.index.get_loc(self.validation_end)
+            if self.test_end is None:
+                self.test_end = num_data
+            else:
+                self.test_end = self.data.index.get_loc(self.test_end)
+
+    def compute_normalization_constants(self):
+        """Compute normalization constants"""
+        if self.normalization:
+            self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
+                self.data.iloc[self.train_start : self.train_end].values
+            )
+        else:
+            self.norm_const_mean = np.zeros(self.data.shape[1])
+            self.norm_const_std = np.ones(self.data.shape[1])
+
+    def normalize_data(self) -> np.ndarray:
+        """Apply normalization"""
+
+        return (
+            Normalizer.standardize(
+                data=self.data.values,
                 mu=self.norm_const_mean,
                 std=self.norm_const_std,
             )
-            self.train_data_norm = Normalizer.standardize(
-                data=self.train_data, mu=self.norm_const_mean, std=self.norm_const_std
-            )
+            if self.normalization
+            else self.data.values
+        )
 
-            if self.validation_data is not None:
-                self.validation_data_norm = Normalizer.standardize(
-                    data=self.validation_data,
-                    mu=self.norm_const_mean,
-                    std=self.norm_const_std,
-                )
+    def get_split_indices(self) -> Tuple[np.array, np.array, np.array]:
+        """Get train, validation, and test indices"""
 
-            if self.test_data is not None:
-                self.test_data_norm = Normalizer.standardize(
-                    data=self.test_data,
-                    mu=self.norm_const_mean,
-                    std=self.norm_const_std,
-                )
-
-        else:
-            self.train_data_norm = self.train_data
-            self.validation_data_norm = self.validation_data
-            self.test_data_norm = self.test_data
-            self.data_norm = self.data.values
-            self.norm_const_mean = np.zeros(self.train_data.shape[1]).flatten()
-            self.norm_const_std = np.ones(self.train_data.shape[1]).flatten()
+        train_index = np.arange(self.train_start, self.train_end)
+        validation_index = np.arange(self.validation_start, self.validation_end)
+        test_index = np.arange(self.test_start, self.test_end)
+        return train_index, validation_index, test_index
 
     def get_splits(
         self,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """
-        Get the train, valiation, test splits
-        """
+        """Return training, validation, and test splits"""
 
+        data = self.normalize_data()
         return (
+            # Train split
             {
-                "x": self.train_data_norm[:, self.covariates_col],
-                "y": self.train_data_norm[:, self.output_col],
+                "x": data[self.train_start : self.train_end, self.covariates_col],
+                "y": data[self.train_start : self.train_end, self.output_col],
             },
+            # Validation split
             {
-                "x": self.validation_data_norm[:, self.covariates_col],
-                "y": self.validation_data_norm[:, self.output_col],
+                "x": data[
+                    self.validation_start : self.validation_end, self.covariates_col
+                ],
+                "y": data[self.validation_start : self.validation_end, self.output_col],
             },
+            # Test split
             {
-                "x": self.test_data_norm[:, self.covariates_col],
-                "y": self.test_data_norm[:, self.output_col],
+                "x": data[self.test_start : self.test_end, self.covariates_col],
+                "y": data[self.test_start : self.test_end, self.output_col],
             },
+            # All data
             {
-                "x": self.data_norm[:, self.covariates_col],
-                "y": self.data_norm[:, self.output_col],
+                "x": data[: self.test_end, self.covariates_col],
+                "y": data[: self.test_end, self.output_col],
             },
         )
+
+    def get_data(
+        self,
+        split: str,
+        normalization: Optional[bool] = False,
+        column: Optional[int] = None,
+    ) -> np.ndarray:
+        """Data getter"""
+
+        if normalization:
+            data = self.normalize_data()
+        else:
+            data = self.data.values
+
+        if column:
+            data_column = column
+        else:
+            data_column = self.output_col
+
+        train_index, val_index, test_index = self.get_split_indices()
+        if split == "train":
+            return data[train_index, data_column]
+        elif split == "validation":
+            return data[val_index, data_column]
+        elif split == "test":
+            return data[test_index, data_column]
+        elif split == "all":
+            return data[:, data_column]
+        else:
+            raise ValueError(
+                "Invalid split type. Choose from 'train', 'validation', 'test', or 'all'."
+            )
+
+    def get_time(self, split: str) -> np.ndarray:
+        """Time gettter"""
+
+        train_index, val_index, test_index = self.get_split_indices()
+        if split == "train":
+            return self.data.index[train_index].to_numpy()
+        elif split == "validation":
+            return self.data.index[val_index].to_numpy()
+        elif split == "test":
+            return self.data.index[test_index].to_numpy()
+        elif split == "all":
+            return self.data.index.to_numpy()
+        else:
+            raise ValueError(
+                "Invalid split type. Choose from 'train', 'validation', 'test', or 'all'."
+            )
 
     @staticmethod
     def add_lagged_columns(df, lags_per_column):
@@ -246,39 +248,89 @@ class DataProcess:
 
     @staticmethod
     def add_synthetic_anomaly(
-        time_series: Dict[str, np.ndarray],
+        data: Dict[str, np.ndarray],
         num_samples: int,
         slope: list[float],
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
-    ):
-        _time_series_with_anomaly = []
-        len_time_series = len(time_series["y"])
-        window_anomaly_start = int(np.ceil(len_time_series * anomaly_start))
-        window_anomaly_end = int(np.ceil(len_time_series * anomaly_end))
-        # np.random.seed(1)
+    ) -> dict:
+        """Add synthetic anomalies on top of a normal data"""
+
+        _data_with_anomaly = []
+        len_data = len(data["y"])
+        window_anomaly_start = int(np.ceil(len_data * anomaly_start))
+        window_anomaly_end = int(np.ceil(len_data * anomaly_end))
         anomaly_start_history = np.random.randint(
             window_anomaly_start, window_anomaly_end, size=num_samples * len(slope)
         )
 
         for j, _slope in enumerate(slope):
             for i in range(0, num_samples):
-                trend = np.zeros(len_time_series)
+                trend = np.zeros(len_data)
                 change_point = anomaly_start_history[i + j * num_samples]
-                trend_end_value = _slope * (len_time_series - change_point - 1)
+                trend_end_value = _slope * (len_data - change_point - 1)
                 trend[change_point:] = np.linspace(
-                    0, trend_end_value, len_time_series - change_point
+                    0, trend_end_value, len_data - change_point
                 )
 
                 # Add the trend to the original time series
-                _time_series_with_anomaly.append(time_series["y"].flatten() + trend)
+                _data_with_anomaly.append(data["y"].flatten() + trend)
 
-        time_series_with_anomaly = [
+        data_with_anomaly = [
             {
-                "x": time_series["x"],
+                "x": data["x"],
                 "y": ts.reshape(-1, 1),
                 "anomaly_timestep": timestep,
             }
-            for ts, timestep in zip(_time_series_with_anomaly, anomaly_start_history)
+            for ts, timestep in zip(_data_with_anomaly, anomaly_start_history)
         ]
-        return time_series_with_anomaly
+        return data_with_anomaly
+
+    @staticmethod
+    def decompose_data(data):
+        """Decompose data into a linear trend, seasonality and residual using Fourier Transform"""
+
+        def handle_missing_data(data):
+            """Fill missing values using linear interpolation."""
+            if np.isnan(data).any():
+                data = (
+                    pd.Series(data)
+                    .interpolate(method="linear", limit_direction="both")
+                    .to_numpy()
+                )
+            return data
+
+        def estimate_window(data):
+            """Using Fourier Transform to determine dominant frequency."""
+            fft_spectrum = np.fft.fft(data - np.mean(data))
+            frequencies = np.fft.fftfreq(len(data))
+            power = np.abs(fft_spectrum)
+            peak_frequency = frequencies[
+                np.argmax(power[1:]) + 1
+            ]  # Ignore DC component
+            period = int(1 / peak_frequency) if peak_frequency > 0 else len(data) // 10
+            return max(3, period)  # Ensure a minimum window size
+
+        def estimate_seasonality(data, window):
+            """Estimate seasonality with zero mean."""
+            period = window  # Use detected period from Fourier Transform
+            seasonality = np.zeros_like(data)
+            for i in range(period):
+                seasonality[i::period] = np.mean(data[i::period])
+            return seasonality - np.mean(seasonality)  # Zero mean seasonality
+
+        def estimate_trend(deseasonalized_data):
+            """Estimate linear trend using least squares regression."""
+            x = np.arange(len(deseasonalized_data))
+            slope, intercept = np.polyfit(x, deseasonalized_data, 1)
+            trend = slope * x + intercept
+            return trend, slope
+
+        data = handle_missing_data(np.array(data))
+        window = estimate_window(data)
+        seasonality = estimate_seasonality(data, window)
+        deseasonalized_data = data - seasonality
+        trend, slope = estimate_trend(deseasonalized_data)
+        residual = data - trend - seasonality
+
+        return trend, slope, seasonality, residual
