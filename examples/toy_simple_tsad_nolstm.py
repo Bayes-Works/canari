@@ -107,7 +107,6 @@ for i in range(1000):
     ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
 for i in range(len(hsl_tsad_agent.LTd_history_all)):
     ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
-
 ax.set_xlabel('Time')
 ax.set_ylabel('LTd')
 # Plot the color map

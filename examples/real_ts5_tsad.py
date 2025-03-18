@@ -24,6 +24,7 @@ from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
 from src.model import load_model_dict
+import src.common as common
 
 
 # # Read data
@@ -82,10 +83,12 @@ pretrained_model = Model(
 
 pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
-hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor)
+ltd_error = 1e-5
+
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor)
+hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
@@ -93,16 +96,39 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.estimate_LTd_dist()
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv')
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data)
+# hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.mu_LTd = -2.364220602956517e-06
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 3.923759887625181e-05)
 
-#  Plot
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real.csv')
+hsl_tsad_agent.nn_train_with = 'tagiv'
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real.csv', 
+                                  save_model_path='saved_params/NN_detection_model_realTS_lstm_1000.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+
+# Plot to debug
+# Delete in hsl_tsad_agent.LTd_history_all all the samples before and after anm_start_index and anm_detected_index
+grayscale_anm_dev_time = (hsl_tsad_agent.train_y[:, 2] - hsl_tsad_agent.train_y[:, 2].min()) / (hsl_tsad_agent.train_y[:, 2].max() - hsl_tsad_agent.train_y[:, 2].min())
+# Plot all samples input
+fig = plt.figure(figsize=(10, 6))
+gs = gridspec.GridSpec(1, 1)
+ax = fig.add_subplot(gs[0])
+# ax.plot(samples_input.T, color='black', alpha=0.1)
+# Plot samples_input with color based on grayscale_anm_dev_time
+for i in range(1000):
+    ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
+for i in range(len(hsl_tsad_agent.LTd_history_all)):
+    ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
+ax.set_xlabel('Time')
+ax.set_ylabel('LTd')
+# Plot the color map
+fig.colorbar(plt.cm.ScalarMappable(cmap='viridis_r'), ax=ax, orientation='horizontal', label='anm_develop_time')
+
+# #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(8, 1)
+gs = gridspec.GridSpec(11, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -111,6 +137,9 @@ ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
 ax6 = plt.subplot(gs[6])
 ax7 = plt.subplot(gs[7])
+ax8 = plt.subplot(gs[8])
+ax9 = plt.subplot(gs[9])
+ax10 = plt.subplot(gs[10])
 from src.data_visualization import determine_time
 time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
@@ -182,4 +211,22 @@ ax7.plot(time, hsl_tsad_agent.p_anm_all)
 ax7.set_ylabel("p_anm")
 ax7.set_xlim(ax0.get_xlim())
 ax7.set_ylim(-0.05, 1.05)
+
+mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
+std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
+
+ax8.plot(time, mu_itv_all[:, 0])
+ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
+ax8.set_ylabel("itv_LT")
+ax8.set_xlim(ax0.get_xlim())
+
+ax9.plot(time, mu_itv_all[:, 1])
+ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
+ax9.set_ylabel("itv_LL")
+ax9.set_xlim(ax0.get_xlim())
+
+ax10.plot(time, mu_itv_all[:, 2])
+ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
+ax10.set_ylabel("itv_time")
+ax10.set_xlim(ax0.get_xlim())
 plt.show()
