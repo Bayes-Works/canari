@@ -5,16 +5,28 @@ import numpy as np
 
 @dataclass
 class LstmOutputHistory:
+    """LSTM output history"""
+
     mu: np.ndarray = field(init=False)
     var: np.ndarray = field(init=False)
 
     def initialize(self, look_back_len: int):
-        self.mu = 0 * np.ones(look_back_len, dtype=np.float32)
-        self.var = 1 * np.ones(look_back_len, dtype=np.float32)
+        self.mu = np.zeros(look_back_len, dtype=np.float32)
+        self.var = np.ones(look_back_len, dtype=np.float32)
+
+    def update(self, mu_lstm, var_lstm):
+        """Update lstm output history"""
+
+        self.mu = np.roll(self.mu, -1)
+        self.var = np.roll(self.var, -1)
+        self.mu[-1] = mu_lstm.item()
+        self.var[-1] = var_lstm.item()
 
 
 @dataclass
 class StatesHistory:
+    """States history: prior, posterior, smoother and cross-covariance matrix"""
+
     mu_prior: List[np.ndarray] = field(init=False)
     var_prior: List[np.ndarray] = field(init=False)
     mu_posterior: List[np.ndarray] = field(init=False)
@@ -24,7 +36,7 @@ class StatesHistory:
     cov_states: List[np.ndarray] = field(init=False)
     states_name: List[str] = field(init=False)
 
-    def initialize(self, states_name: List[str]) -> None:
+    def initialize(self, states_name: List[str]):
         self.mu_prior = []
         self.var_prior = []
         self.mu_posterior = []
@@ -38,7 +50,7 @@ class StatesHistory:
         self,
         states_type: Optional[str] = "posterior",
         states_name: Optional[list[str]] = "all",
-    ) -> dict:
+    ) -> dict[str, np.ndarray]:
         """Get mean values for hidden states"""
         mean = {}
 
@@ -58,7 +70,7 @@ class StatesHistory:
 
         for state in states_name:
             idx = self.states_name.index(state)
-            mean[state] = values[:, idx]
+            mean[state] = values[:, idx].flatten()
 
         return mean
 
@@ -90,35 +102,3 @@ class StatesHistory:
             standard_deviation[state] = values[:, idx, idx] ** 0.5
 
         return standard_deviation
-
-
-def initialize_marginal_prob_history(num_time_steps):
-    """
-    Create a dictionary saving marginal probability
-    """
-    return {
-        "norm": np.zeros(num_time_steps, dtype=np.float32),
-        "abnorm": np.zeros(num_time_steps, dtype=np.float32),
-    }
-
-
-def initialize_transition():
-    """
-    Create a dictionary for model transition
-    """
-    return {
-        "norm_norm": None,
-        "abnorm_abnorm": None,
-        "norm_abnorm": None,
-        "abnorm_norm": None,
-    }
-
-
-def initialize_marginal():
-    """
-    Create a dictionary for models
-    """
-    return {
-        "norm": None,
-        "abnorm": None,
-    }

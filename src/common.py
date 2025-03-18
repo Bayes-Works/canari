@@ -37,9 +37,9 @@ def calc_observation(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    mu_obs_predicted = observation_matrix @ mu_states
-    var_obs_predicted = observation_matrix @ var_states @ observation_matrix.T
-    return mu_obs_predicted, var_obs_predicted
+    mu_obs_predict = observation_matrix @ mu_states
+    var_obs_predict = observation_matrix @ var_states @ observation_matrix.T
+    return mu_obs_predict, var_obs_predict
 
 
 def forward(
@@ -63,24 +63,24 @@ def forward(
         mu_states_prior[lstm_indice] = mu_lstm_pred.item()
         var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
 
-    mu_obs_predicted, var_obs_predicted = calc_observation(
+    mu_obs_predict, var_obs_predict = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix
     )
-    return mu_obs_predicted, var_obs_predicted, mu_states_prior, var_states_prior
+    return mu_obs_predict, var_obs_predict, mu_states_prior, var_states_prior
 
 
 def backward(
     obs: float,
-    mu_obs_predicted: np.ndarray,
-    var_obs_predicted: np.ndarray,
+    mu_obs_predict: np.ndarray,
+    var_obs_predict: np.ndarray,
     var_states_prior: np.ndarray,
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    # var_obs_predicted = var_obs_predicted + 1e-20
+    # var_obs_predict = var_obs_predict + 1e-20
     cov_obs_states = observation_matrix @ var_states_prior
-    delta_mu_states = cov_obs_states.T / var_obs_predicted @ (obs - mu_obs_predicted)
-    delta_var_states = -cov_obs_states.T / var_obs_predicted @ cov_obs_states
+    delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
+    delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
     return delta_mu_states, delta_var_states
 
 
@@ -111,6 +111,7 @@ def prepare_lstm_input(
     """
     Prepare input for lstm network, concatenate lstm output history and the input covariates
     """
+
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     var_lstm_input = np.concatenate(
@@ -159,18 +160,6 @@ def gaussian_mixture(
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
     return mu_mixture, var_mixture
-
-
-def set_default_input_covariates(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-    """
-    Ensure that 'x' is initialized in the data dictionary.
-    If 'x' is missing, initialize it with NaNs.
-    """
-
-    num_time_steps = len(data["y"])
-    if "x" not in data:
-        data["x"] = np.full(num_time_steps, np.nan)
-    return data
 
 
 class GMA(object):

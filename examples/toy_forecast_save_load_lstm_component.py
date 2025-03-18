@@ -66,16 +66,8 @@ model = Model(
 model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 # Training
-scheduled_sigma_v = 1
 for epoch in range(num_epoch):
-    # Decaying observation's variance
-    scheduled_sigma_v = exponential_scheduler(
-        curr_v=scheduled_sigma_v, min_v=sigma_v, decaying_factor=0.99, curr_iter=epoch
-    )
-    noise_index = model.states_name.index("white noise")
-    model.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
-    (mu_validation_preds, std_validation_preds, smoother_states) = model.lstm_train(
+    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
@@ -92,12 +84,15 @@ for epoch in range(num_epoch):
     )
 
     # Calculate the log-likelihood metric
-    mse = metric.mse(
-        mu_validation_preds, data_processor.validation_data[:, output_col].flatten()
-    )
+    validation_obs = data_processor.get_data("validation").flatten()
+    mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")
+    if epoch == model.optimal_epoch:
+        mu_validation_preds_optim = mu_validation_preds
+        std_validation_preds_optim = std_validation_preds
+        states_optim = copy.copy(states)
     if model.stop_training:
         break
 
@@ -106,9 +101,9 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 
 # Saved the trained lstm network
-params_path = 'saved_params/lstm_net_test.pth'
+params_path = "saved_params/lstm_net_test.pth"
 model.lstm_net.load_state_dict(model.early_stop_lstm_param)
-model.lstm_net.save(filename = params_path)
+model.lstm_net.save(filename=params_path)
 
 # Define a new model that takes the trained lstm network
 model2 = Model(
@@ -119,7 +114,7 @@ model2 = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        load_lstm_net = params_path, # Load the pre-trained LSTM network   
+        load_lstm_net=params_path,  # Load the pre-trained LSTM network
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -127,7 +122,6 @@ model2 = Model(
 # Provide model #2 the initial values from where model #1 stop
 model2.mu_states = model.early_stop_init_mu_states
 model2.var_states = model.early_stop_init_var_states
-model2.initialize_lstm_output_history()
 lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 
 # # #
@@ -137,7 +131,9 @@ mu_validation_preds2, std_validation_preds2 = model2.forecast(validation_data)
 
 lstm_params_after_filter = copy.deepcopy(model2.lstm_net.state_dict())
 assert lstm_params_before_filter == lstm_params_after_filter
-print("LSTM network parameters are the same before and after filtering, smoothing, and forecasting.")
+print(
+    "LSTM network parameters are the same before and after filtering, smoothing, and forecasting."
+)
 
 # Unstandardize the predictions
 mu_validation_preds2 = normalizer.unstandardize(
