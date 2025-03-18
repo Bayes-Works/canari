@@ -50,8 +50,6 @@ class hsl_detection:
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
         self.nn_train_with = 'tagiv'
-        # TO DEBUG
-        self.LTd_history_all = []
         self.current_time_step = 0
         pass
 
@@ -117,9 +115,6 @@ class hsl_detection:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
-
-            # TO DEBUG
-            self.LTd_history_all.append(np.array([]))
 
             self.current_time_step += 1
 
@@ -260,9 +255,6 @@ class hsl_detection:
         # # # Set drift model rigid prior
         # self.drift_model.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
 
-        # TO DEBUG
-        self.LTd_history_test = []
-
         for i, (x, y) in enumerate(zip(data["x"], data["y"])):
             # Estimate likelihoods
             # Estimate likelihood without intervention
@@ -287,9 +279,6 @@ class hsl_detection:
             LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
             LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
             LTd_history = (LTd_history - self.mean_train) / self.std_train
-            # TO DEBUG
-            self.LTd_history_all.append(LTd_history)
-            self.LTd_history_test.append(LTd_history)
             if self.nn_train_with == 'tagiv':
                 LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
 
@@ -698,10 +687,6 @@ class hsl_detection:
         # self.mean_target = np.zeros_like(self.mean_target)
         # self.std_target = np.ones_like(self.std_target)
         train_y = (train_y - self.mean_target) / self.std_target
-        
-        # TO DEBUG
-        self.train_X = train_X
-        self.train_y = train_y
 
         # Validation set 10% of the samples
         n_val = int(n_samples * 0.1)
@@ -783,7 +768,6 @@ class hsl_detection:
                     loss_val /= n_batch_val
                 elif self.nn_train_with == 'backprop':
                     y_pred = self.model(val_X.float())
-                    debug_y_pred = y_pred.detach().numpy()
                     loss_val = loss_fn(y_pred, val_y.float())
 
                 print(f'Epoch {epoch}: {loss_val}')
@@ -811,7 +795,6 @@ class hsl_detection:
                 loss_test /= n_batch_test
             elif self.nn_train_with == 'backprop':
                 y_pred = self.model(test_X.float())
-                debug_y_pred = y_pred.detach().numpy()
                 loss_test = loss_fn(y_pred, test_y.float())
                 # difference = y_pred - test_y.float()
                 # # Convert to numpy
