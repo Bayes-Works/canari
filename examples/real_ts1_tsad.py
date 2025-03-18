@@ -98,29 +98,11 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 hsl_tsad_agent.mu_LTd = -2.349822374567304e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 4.3994537681948525e-05)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts1.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts1.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts1.csv', 
-                                  save_model_path='saved_params/NN_detection_model_realTS1_lstm_1000.pkl', max_training_epoch=50)
+                                  load_model_path='saved_params/NN_detection_model_realTS1_lstm_1000.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
-
-# Plot to debug
-# Delete in hsl_tsad_agent.LTd_history_all all the samples before and after anm_start_index and anm_detected_index
-grayscale_anm_dev_time = (hsl_tsad_agent.train_y[:, 2] - hsl_tsad_agent.train_y[:, 2].min()) / (hsl_tsad_agent.train_y[:, 2].max() - hsl_tsad_agent.train_y[:, 2].min())
-# Plot all samples input
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(1, 1)
-ax = fig.add_subplot(gs[0])
-# ax.plot(samples_input.T, color='black', alpha=0.1)
-# Plot samples_input with color based on grayscale_anm_dev_time
-for i in range(1000):
-    ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
-for i in range(len(hsl_tsad_agent.LTd_history_all)):
-    ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
-ax.set_xlabel('Time')
-ax.set_ylabel('LTd')
-# Plot the color map
-fig.colorbar(plt.cm.ScalarMappable(cmap='viridis_r'), ax=ax, orientation='horizontal', label='anm_develop_time')
 
 # #  Plot
 state_type = "prior"
