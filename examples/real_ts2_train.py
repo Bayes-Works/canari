@@ -25,22 +25,23 @@ import pickle
 
 
 # # Read data
-data_file = "./data/benchmark_data/test_5_data.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(df_raw.iloc[:, 0])
-df_raw = df_raw.iloc[:, 1:]
+data_file = "./data/benchmark_data/test_2_data.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=";", header=None)
+time_series = pd.to_datetime(df_raw.iloc[:, 4])
+df_raw = df_raw.iloc[:, 6].to_frame()
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["values"]
+df = df_raw.resample("W").mean()
+df = df.iloc[30:, :]
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
-    data=df_raw,
+    data=df,
     time_covariates=["week_of_year"],
-    train_split=0.289,
-    validation_split=0.0693,
+    train_split=0.25,
+    validation_split=0.08,
     output_col=output_col,
 )
 
@@ -53,7 +54,7 @@ AR_process_error_var_prior = 1e4
 var_W2bar_prior = 1e4
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=19,
+        look_back_len=65,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -66,7 +67,7 @@ model = Model(
     AR,
 )
 # model._mu_local_level = -0.00902307
-model.auto_initialize_baseline_states(train_data["y"][0:103])
+model.auto_initialize_baseline_states(train_data["y"][0:52])
 
 
 # Training
@@ -122,7 +123,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # # Save model_dict to local
 # import pickle
-# with open("saved_params/real_ts5_model.pkl", "wb") as f:
+# with open("saved_params/real_ts2_model.pkl", "wb") as f:
 #     pickle.dump(model_dict, f)
 
 ####################################################################
