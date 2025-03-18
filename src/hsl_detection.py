@@ -428,7 +428,7 @@ class hsl_detection:
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
         # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        anm_mag_range = [-stationary_ar_std/20, stationary_ar_std/20]       # Different anm mag
+        anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # Different anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
         # # Generate synthetic time series
