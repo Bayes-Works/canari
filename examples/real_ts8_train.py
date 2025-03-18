@@ -113,6 +113,13 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 model_dict = model.save_model_dict()
 model_dict['states_optimal'] = states_optim
+model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
+model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
+
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/real_ts8_model.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
