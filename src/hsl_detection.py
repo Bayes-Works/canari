@@ -428,7 +428,8 @@ class hsl_detection:
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
         # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # Different anm mag
+        anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # LT anm mag
+        # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
         # # Generate synthetic time series
@@ -502,14 +503,15 @@ class hsl_detection:
                     samples['anm_develop_time'].append(0.)
                     samples['p_anm'].append(0.)
                 elif i >= anm_begin_list[k]:
+                    # LT anomaly label
                     itv_LT = anm_mag_list[k]
                     itv_anm_dev_time = i - anm_begin_list[k]
                     itv_LL = itv_LT * itv_anm_dev_time
-                    # # Change labels when anomaly is detected
-                    # if anomaly_detected:
-                    #     itv_LT = 0
-                    #     itv_LL = 0
-                    #     itv_anm_dev_time = 0
+                    # # LL anomaly label
+                    # itv_LT = 0
+                    # itv_anm_dev_time = i - anm_begin_list[k]
+                    # itv_LL = anm_mag_list[k]
+                    
                     samples['itv_LT'].append(itv_LT)
                     samples['itv_LL'].append(itv_LL)
                     samples['anm_develop_time'].append(itv_anm_dev_time)
