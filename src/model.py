@@ -544,7 +544,8 @@ class Model:
 
                 if add_anomaly:
                     if i > anomaly_time:
-                        obs_gen += anomaly_mag * (i - anomaly_time)
+                        obs_gen += anomaly_mag * (i - anomaly_time)     # LT anomaly
+                        # obs_gen += anomaly_mag                        # LL anomaly
                 self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 
