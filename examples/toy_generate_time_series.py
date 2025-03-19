@@ -44,7 +44,7 @@ df = df_raw
 # Define parameters
 output_col = [0]
 num_epoch = 200
-train_val_split = [0.6, 0.2]
+train_val_split = [0.6, 0.23]
 
 data_processor = DataProcess(
     data=df,
@@ -131,7 +131,7 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-model_dict = model.save_model_dict()
+model_dict = model.get_dict()
 model_dict['states_optimal'] = states_optim
 
 # Save model_dict to local
@@ -169,7 +169,7 @@ pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_pa
 # Generate data
 pretrained_model.filter(train_data,train_lstm=False)
 pretrained_model.filter(validation_data,train_lstm=False)
-generated_ts, _ = pretrained_model.generate(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
+generated_ts, _, _, _ = pretrained_model.generate_time_series(num_time_series=1, num_time_steps=len(train_val_data), time_covariates=data_processor.time_covariates, time_covariate_info=time_covariate_info)
 
 time_idx = np.arange(len(np.concatenate((train_data['y'].reshape(-1), validation_data['y'].reshape(-1), generated_ts[0]))))
 val_end_idx = len(train_val_data)
