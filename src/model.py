@@ -464,14 +464,13 @@ class Model:
             self.states,
         )
     
-    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None, add_lstm_noise=True) -> np.ndarray:
+    def generate_time_series(self, num_time_series: int, num_time_steps: int, add_lstm_pred_noise = True, time_covariates=None, time_covariate_info=None, add_anomaly=False, anomaly_mag_range=None, anomaly_begin_range=None, anomaly_type = 'trend') -> np.ndarray:
         """
         Generate time series data
         """
-        if generation_seed is not None:
-            np.random.seed(generation_seed)
-        
         time_series_all = []
+        anm_mag_all = []
+        anm_begin_all = []
         mu_states_temp = copy.deepcopy(self.mu_states)
         var_states_temp = copy.deepcopy(self.var_states)
 
@@ -483,54 +482,64 @@ class Model:
         else:
             input_covariates = np.empty((num_time_steps, 0))
 
-        # Get the autoregression component in the model
-        if "autoregression" in self.components:
-            autoregression_component = self.components["autoregression"]
-            phi_AR = autoregression_component.phi
-            sigma_AR = autoregression_component.std_error
-
         # Get LSTM initializations
-        if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-            lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
-            lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
+        if "lstm" in self.states_name:
+            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
+                lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
 
         for _ in range(num_time_series):
             one_time_series = []
-            # Reset lstm cell states
-            self.lstm_net.reset_lstm_states()
-            # Reset lstm output history
-            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-                self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
-            else:
-                self.initialize_lstm_output_history()
-            if "autoregression" in self.states_name:
-                ar_sample = np.random.normal(0, sigma_AR)
-            for x in input_covariates:
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
-                # Generate observation samples
-                obs_gen = mu_obs_pred.item()
-                if "autoregression" in self.states_name:
-                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
-                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
-                    obs_gen += ar_sample
+            if "lstm" in self.states_name:
+                self.lstm_net.reset_lstm_states()
+                # Reset lstm output history
+                if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                    self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+                    self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                else:
+                    self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            
+            # Get the anomaly features
+            if add_anomaly:
+                anomaly_mag = np.random.uniform(anomaly_mag_range[0], anomaly_mag_range[1])
+                anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
+                anm_mag_all.append(anomaly_mag)
+                anm_begin_all.append(anomaly_time)
+
+            for i, x in enumerate(input_covariates):
+                _, _, mu_states_prior, var_states_prior = self.forward(x)
+
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
-                    lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
-                    self.update_lstm_output_history(
-                        mu_states_prior[lstm_index]+lstm_noise_sample,
+                    if not add_lstm_pred_noise:
+                        var_states_prior[lstm_index, :] = 0
+                        var_states_prior[:, lstm_index] = 0
+
+                state_sample = np.random.multivariate_normal(mu_states_prior.flatten(), var_states_prior).reshape(-1, 1)
+
+                if "lstm" in self.states_name:
+                    self.lstm_output_history.update(
+                        state_sample[lstm_index],
                         np.zeros_like(var_states_prior[lstm_index, lstm_index]),
                     )
-                    if add_lstm_noise:
-                        obs_gen += lstm_noise_sample
-                self.set_states(mu_states_prior, var_states_prior)
+
+                obs_gen = self.observation_matrix @ state_sample
+                obs_gen = obs_gen.item()
+
+                if add_anomaly:
+                    if i > anomaly_time:
+                        if anomaly_type == 'trend':
+                            obs_gen += anomaly_mag * (i - anomaly_time)     # LT anomaly
+                        elif anomaly_type == 'level':
+                            obs_gen += anomaly_mag                          # LL anomaly
+                self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 
             self.set_states(mu_states_temp, var_states_temp)
             time_series_all.append(one_time_series)
             
-        return np.array(time_series_all), input_covariates
+        return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
     def filter(
         self,
@@ -796,36 +805,3 @@ class Model:
             elif time_cov == "quarter_of_year":
                 covariates_generation = (initial_covariate + covariates_generation) % 4 + 1
         return covariates_generation
-
-
-    def generate_synthetic_data(self, data, num_time_series: int):
-        """Generate synthetic data"""
-
-        syn_data = [[]]
-        lstm_index = self.get_states_index("lstm")
-
-        for i in range(0, num_time_series):
-            ts = []
-            for x in data["x"]:
-                # x = np.array([])
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = (
-                    self.forward(x)
-                )
-                x_sample = np.random.multivariate_normal(
-                    mu_states_prior.flatten(), var_states_prior
-                )
-                var_states_prior_zero = np.zeros(var_states_prior.shape)
-                y_sample = self.observation_matrix @ x_sample.reshape(-1, 1)
-                ts.append(y_sample.item())
-
-                if self.lstm_net:
-                    # self.lstm_output_history.update(
-                    #     mu_states_prior[lstm_index],
-                    #     var_states_prior[lstm_index, lstm_index],
-                    # )
-                    self.lstm_output_history.update(
-                        x_sample[lstm_index],
-                        var_states_prior_zero[lstm_index, lstm_index],
-                    )
-                self.set_states(x_sample.reshape(-1, 1), var_states_prior_zero)
-        return ts

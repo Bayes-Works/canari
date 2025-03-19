@@ -212,13 +212,7 @@ plot_data(
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
-    plot_test_data=False,
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=optimal_mu_val_preds,
-    std_validation_pred=optimal_std_val_preds,
-    sub_plot=ax[0],
+    plot_test_data=True,
 )
 fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()
