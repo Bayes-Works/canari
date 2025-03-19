@@ -6,7 +6,6 @@ import src.common as common
 from src.data_struct import LstmOutputHistory, StatesHistory
 from src.common import GMA
 from examples import DataProcess
-from pytagi import Normalizer as normalizer
 
 
 class Model:
@@ -776,6 +775,24 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
+
+    def set_zeros_cov_ar_error_states(self, var_original):
+        var_prior_modified = copy.deepcopy(var_original)
+        # Keep the diagonal elements
+        diag = np.diag(var_original)
+        if "AR_error" in self.states_name:
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
+            var_prior_modified[ar_error_index, :] = 0
+            var_prior_modified[:, ar_error_index] = 0
+            var_prior_modified[W2_index, :] = 0
+            var_prior_modified[:, W2_index] = 0
+            var_prior_modified[W2bar_index, :] = 0
+            var_prior_modified[:, W2bar_index] = 0
+            # Fill the diagonal elements back
+            np.fill_diagonal(var_prior_modified, diag)
+        return var_prior_modified
     
     def prepare_covariates_generation(self, initial_covariate, num_generated_samples: int, time_covariates: List[str]):
         """
