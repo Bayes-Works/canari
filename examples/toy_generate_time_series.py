@@ -61,7 +61,9 @@ time_covariate_norm_const_std = data_processor.norm_const_std[data_processor.cov
 trend_true_norm = trend_true/(obs_norm_const_std + 1e-10)
 level_true_norm = (5.0 - obs_norm_const_mean)/(obs_norm_const_std + 1e-10)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
-time_covariate_info = {'initial_time_covariate': data_processor.validation_data[-1, data_processor.covariates_col].item(),
+
+train_index, val_index, test_index = data_processor.get_split_indices()
+time_covariate_info = {'initial_time_covariate': data_processor.data.values[val_index[-1], data_processor.covariates_col].item(),
                         'mu': time_covariate_norm_const_mean, 
                         'std': time_covariate_norm_const_std}
 
@@ -105,13 +107,14 @@ for epoch in range(num_epoch):
     )
 
     # Calculate the evaluation metric
+    validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(
-        mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
+        mu_validation_preds_unnorm, validation_obs
     )
 
     validation_log_lik = metric.log_likelihood(
         prediction=mu_validation_preds_unnorm,
-        observation=data_processor.validation_data[:, output_col].flatten(),
+        observation=validation_obs,
         std=std_validation_preds_unnorm,
     )
 
