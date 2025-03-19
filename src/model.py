@@ -204,6 +204,12 @@ class Model:
         save_dict["var_states"] = self.var_states
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
+        if "phi" in self.states_name:
+            save_dict["phi_index"] = self.states_name.index("phi")
+        if "autoregression" in self.states_name:
+            save_dict["autoregression_index"] = self.states_name.index("autoregression")
+        if "W2bar" in self.states_name:
+            save_dict["W2bar_index"] = self.states_name.index("W2bar")
 
         return save_dict
 
@@ -593,26 +599,6 @@ class Model:
             self.early_stop_metric,
             self.early_stop_metric_history,
         )
-
-    def save_model_dict(self) -> dict:
-        """
-        Save the model as a dict.
-        """
-        model_dict = {}
-        model_dict["components"] = self.components
-        model_dict["mu_states"] = self.mu_states
-        model_dict["var_states"] = self.var_states
-        if self.lstm_net:
-            model_dict["lstm_network_params"] = self.lstm_net.state_dict()
-        if "phi" in self.states_name:
-            model_dict["phi_index"] = self.states_name.index("phi")
-        if "autoregression" in self.states_name:
-            model_dict["autoregression_index"] = self.states_name.index(
-                "autoregression"
-            )
-        if "W2bar" in self.states_name:
-            model_dict["W2bar_index"] = self.states_name.index("W2bar")
-        return model_dict
 
     def online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         if "AR_error" in self.states_name:
