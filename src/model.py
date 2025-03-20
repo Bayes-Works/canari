@@ -487,6 +487,9 @@ class Model:
             if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
                 lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
                 lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
+                lstm_output_history_exist = True
+            else:
+                lstm_output_history_exist = False
 
         for _ in range(num_time_series):
             one_time_series = []
@@ -494,7 +497,7 @@ class Model:
             if "lstm" in self.states_name:
                 self.lstm_net.reset_lstm_states()
                 # Reset lstm output history
-                if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+                if lstm_output_history_exist:
                     self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
                     self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
                 else:
@@ -538,6 +541,14 @@ class Model:
 
             self.set_states(mu_states_temp, var_states_temp)
             time_series_all.append(one_time_series)
+
+        # Change lstm output history back to the original
+        if "lstm" in self.states_name:
+            if lstm_output_history_exist:
+                self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+            else:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
             
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
