@@ -99,7 +99,7 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 hsl_tsad_agent.mu_LTd = -3.8793766203133e-06
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.9933596919925453e-05)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts2_.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv', 
                                   load_model_path='saved_params/NN_detection_model_realTS2_lstm_1000.pkl', max_training_epoch=50)

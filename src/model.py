@@ -528,17 +528,17 @@ class Model:
 
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
-                    lstm_noise_sample = np.random.normal(0, var_states_prior[lstm_index, lstm_index]**0.5)
                     var_states_prior[lstm_index, :] = 0
                     var_states_prior[:, lstm_index] = 0
-                    self.update_lstm_output_history(
-                        mu_states_prior[lstm_index]+lstm_noise_sample,
-                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
-                        # mu_states_prior[lstm_index],
-                        # var_states_prior[lstm_index, lstm_index],
-                    )
 
                 state_sample = np.random.multivariate_normal(mu_states_prior.flatten(), var_states_prior).reshape(-1, 1)
+
+                if "lstm" in self.states_name:
+                    self.update_lstm_output_history(
+                        state_sample[lstm_index],
+                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
+                    )
+
                 obs_gen = self.observation_matrix @ state_sample
                 obs_gen = obs_gen.item()
 
