@@ -551,6 +551,11 @@ class Model:
 
             self.set_states(mu_states_temp, var_states_temp)
             time_series_all.append(one_time_series)
+
+        # Change the LSTM output history back to the original
+        if "lstm" in self.states_name:
+            self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
+            self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
             
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 

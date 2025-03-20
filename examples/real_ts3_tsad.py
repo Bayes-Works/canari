@@ -28,23 +28,22 @@ import src.common as common
 
 
 # # Read data
-data_file = "./data/benchmark_data/test_2_data.csv"
+data_file = "./data/benchmark_data/test_3_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=";", header=None)
-time_series = pd.to_datetime(df_raw.iloc[:, 4])
-df_raw = df_raw.iloc[:, 6].to_frame()
+time_series = pd.to_datetime(df_raw.iloc[:, 3])
+df_raw = df_raw.iloc[:, 7].to_frame()
 df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 df = df_raw.resample("W").mean()
-df = df.iloc[30:, :]
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
     data=df,
     time_covariates=["week_of_year"],
-    train_split=0.25,
-    validation_split=0.08,
+    train_split=0.173,
+    validation_split=0.022,
     output_col=output_col,
 )
 
@@ -55,11 +54,11 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts2_model.pkl", "rb") as f:
+with open("saved_params/real_ts3_model.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=65,
+        look_back_len=71,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -95,15 +94,16 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -3.8793766203133e-06
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.9933596919925453e-05)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv')
+hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.mu_LTd = -3.8793766203133e-06
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.9933596919925453e-05)
+
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts3.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv', 
-                                  load_model_path='saved_params/NN_detection_model_realTS2_lstm_1000.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3.csv', 
+                                  save_model_path='saved_params/NN_detection_model_realTS3_lstm_1000.pkl', max_training_epoch=2)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
 state_type = "prior"
