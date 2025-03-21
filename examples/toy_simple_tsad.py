@@ -30,8 +30,10 @@ import src.common as common
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+anm_trend = 0.010416667/10
+# anm_trend = 0
 # linear_space = np.linspace(0, 3, num=len(df_raw))
-linear_space = np.arange(len(df_raw)) * 0.010416667/10
+linear_space = np.arange(len(df_raw)) * anm_trend
 # Set the first 52*12 values in linear_space to be 0
 anm_start_index = 52*10
 linear_space[anm_start_index:] -= linear_space[anm_start_index]
@@ -114,27 +116,11 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_
                                   load_model_path='saved_params/NN_detection_model_simpleTS_lstm_1000.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
-anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
-
-# Plot to debug
-# Delete in hsl_tsad_agent.LTd_history_all all the samples before and after anm_start_index and anm_detected_index
-hsl_tsad_agent.LTd_history_all = np.array(hsl_tsad_agent.LTd_history_all[anm_start_index:anm_detected_index])
-print(hsl_tsad_agent.LTd_history_all.shape)
-grayscale_anm_dev_time = (hsl_tsad_agent.train_y[:, 2] - hsl_tsad_agent.train_y[:, 2].min()) / (hsl_tsad_agent.train_y[:, 2].max() - hsl_tsad_agent.train_y[:, 2].min())
-# Plot all samples input
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(1, 1)
-ax = fig.add_subplot(gs[0])
-# ax.plot(samples_input.T, color='black', alpha=0.1)
-# Plot samples_input with color based on grayscale_anm_dev_time
-for i in range(1000):
-    ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
-for i in range(len(hsl_tsad_agent.LTd_history_all)):
-    ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
-ax.set_xlabel('Time')
-ax.set_ylabel('LTd')
-# Plot the color map
-fig.colorbar(plt.cm.ScalarMappable(cmap='viridis_r'), ax=ax, orientation='horizontal', label='anm_develop_time')
+if any(np.array(hsl_tsad_agent.p_anm_all) > 0.5):
+    anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
+else:
+    anm_detected_index = len(hsl_tsad_agent.p_anm_all)
+# anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
 
 #  Plot
 state_type = "prior"
@@ -239,14 +225,14 @@ std_itv_all[anm_detected_index+1:] = np.nan
 
 true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
 true_anm_dev_time[anm_start_index:anm_detected_index] += np.arange(anm_detected_index - anm_start_index)
-true_LL = true_anm_dev_time * 0.00104166666666666
+true_LL = true_anm_dev_time * anm_trend
 
 ax8.plot(time, mu_itv_all[:, 0])
 ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
 ax8.set_ylabel("itv_LT")
 ax8.set_xlim(ax0.get_xlim())
 ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax8.axhline(y=0.00104166666666666, color='r', linestyle='--')
+ax8.axhline(y=anm_trend, color='r', linestyle='--')
 
 ax9.plot(time, mu_itv_all[:, 1])
 ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
