@@ -23,36 +23,52 @@ from src import (
 )
 from examples import DataProcess
 
+plt.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": False,
+        "pgf.rcfonts": False,
+    }
+)
+import matplotlib as mpl
 
-# Fix parameters grid search
-sigma_v_fix = 0.3819414484717393
-look_back_len_fix = 12
-SKF_std_transition_error_fix = 1e-3
-SKF_norm_to_abnorm_prob_fix = 1e-3
+mpl.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "pgf.preamble": r"\usepackage{amsfonts}\usepackage{amssymb}",
+    }
+)
+
+# Fix parameters:
+sigma_v_fix = 0.04745968073623808
+look_back_len_fix = 51
+SKF_std_transition_error_fix = 3.288056287040139e-05
+SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 50,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_1_data.csv"
-    df = pd.read_csv(data_file, skiprows=0, delimiter=",")
-    date_time = pd.to_datetime(df["timestamp"])
-    df = df.drop("timestamp", axis=1)
-    df.index = date_time
-    df.index.name = "date_time"
+    data_file = "./data/benchmark_data/test_4_data.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
+    df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+    lags = [0, 4, 4, 4]
+    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
-        data=df,
+        data=df_raw,
         time_covariates=["week_of_year"],
-        train_start="2011-02-06 00:00:00",
-        train_end="2014-02-02 00:00:00",
-        validation_start="2014-02-09 00:00:00",
-        validation_end="2015-02-01 00:00:00",
-        test_start="2015-02-08 00:00:00",
+        train_split=0.23,
+        validation_split=0.07,
         output_col=output_col,
     )
     (
@@ -65,10 +81,10 @@ def main(
     # Define model
     def initialize_model(param):
         return Model(
-            LocalTrend(),
+            LocalTrend(var_states=[1e-2, 1e-2]),
             LstmNetwork(
                 look_back_len=param["look_back_len"],
-                num_features=2,
+                num_features=17,
                 num_layer=1,
                 num_hidden_unit=50,
                 device="cpu",
@@ -81,7 +97,7 @@ def main(
     if param_tune:
         param = {
             "look_back_len": [12, 52],
-            "sigma_v": [1e-1, 4e-1],
+            "sigma_v": [1e-3, 2e-1],
         }
         # Define optimizer
         model_optimizer = ModelOptimizer(
@@ -110,29 +126,29 @@ def main(
     model_optim_dict = model_optim.get_dict()
 
     # Plot
-    fig, ax = plt.subplots(figsize=(10, 6))
-    plot_data(
-        data_processor=data_processor,
-        normalization=True,
-        plot_test_data=False,
-        plot_column=output_col,
-        validation_label="y",
-    )
-    plot_prediction(
-        data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
-        std_validation_pred=std_validation_preds,
-        validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    )
-    plot_states(
-        data_processor=data_processor,
-        states=states_optim,
-        states_to_plot=["local level"],
-        sub_plot=ax,
-    )
-    plt.legend()
-    plt.title("Validation predictions")
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # plot_data(
+    #     data_processor=data_processor,
+    #     normalization=True,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    # )
+    # plot_prediction(
+    #     data_processor=data_processor,
+    #     mean_validation_pred=mu_validation_preds,
+    #     std_validation_pred=std_validation_preds,
+    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    # )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=states_optim,
+    #     states_to_plot=["local level"],
+    #     sub_plot=ax,
+    # )
+    # plt.legend()
+    # plt.title("Validation predictions")
+    # plt.show()
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
@@ -150,7 +166,6 @@ def main(
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
-        skf.save_initial_states()
         return skf
 
     # Define parameter search space
@@ -182,8 +197,6 @@ def main(
             "largest anomaly tested",
         ]
     )
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
 
     if param_tune:
         if grid_search:
@@ -220,19 +233,75 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
-    # filter_marginal_abnorm_prob, _ = skf_optim.smoother(data=data_processor.all_data)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(
+        data=data_processor.all_data
+    )
 
+    # Fig 0
+    fig, ax = plt.subplots(figsize=(4, 1))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        # plot_test_data=False,
+        sub_plot=ax,
+    )
+    # ax.set_ylabel("$y$")
+    # plt.show()
+    plt.savefig("saved_results/SKF_data.pgf", format="pgf", bbox_inches="tight")
+
+    # Fig 1
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
-        # states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
-        legend_location="upper left",
+        # legend_location="upper left",
     )
-    fig.suptitle("SKF hidden states", fontsize=10, y=1)
-    plt.show()
+    ax[0].set_xticklabels([])
+    ax[1].set_xticklabels([])
+    ax[2].set_xticklabels([])
+    ax[3].set_xticklabels([])
+    ax[0].set_ylabel("level")
+    ax[1].set_ylabel("trend")
+    ax[2].set_ylabel("lstm")
+    ax[3].set_ylabel("noise")
+    ax[4].set_ylabel("prob.")
+    fig.set_size_inches(3.5, 2.4)
+    for axis in ax:
+        for line in axis.get_lines():
+            line.set_linewidth(0.8)  # 👈 Set your desired linewidth
+    fig.subplots_adjust(hspace=0.2)  # 👈 control vertical spacing
+    # fig.suptitle("SKF hidden states", fontsize=10, y=1)
+    # plt.show()
+    plt.savefig("saved_results/SKF_filter.pgf", format="pgf", bbox_inches="tight")
+
+    # Fig 2
+    fig, ax = plot_skf_states(
+        data_processor=data_processor,
+        states=states,
+        states_to_plot=["local level", "local trend", "lstm", "white noise"],
+        states_type="smooth",
+        model_prob=smooth_marginal_abnorm_prob,
+        color="b",
+    )
+    ax[0].set_xticklabels([])
+    ax[1].set_xticklabels([])
+    ax[2].set_xticklabels([])
+    ax[3].set_xticklabels([])
+    ax[0].set_ylabel("level")
+    ax[1].set_ylabel("trend")
+    ax[2].set_ylabel("lstm")
+    ax[3].set_ylabel("noise")
+    ax[4].set_ylabel("prob.")
+    fig.set_size_inches(3.5, 2.4)
+    for axis in ax:
+        for line in axis.get_lines():
+            line.set_linewidth(0.8)  # 👈 Set your desired linewidth
+    fig.subplots_adjust(hspace=0.2)  # 👈 control vertical spacing
+    # fig.suptitle("SKF hidden states", fontsize=10, y=1)
+    # plt.show()
+    plt.savefig("saved_results/SKF_smooth.pgf", format="pgf", bbox_inches="tight")
 
     if param_tune:
         print("Model parameters used:", model_optimizer.param_optim)
@@ -314,4 +383,4 @@ if __name__ == "__main__":
     start_time = time.time()
     fire.Fire(main)
     end_time = time.time()
-    print(f"Elapsed time: {end_time-start_time:.2f} seconds")
+    print(f"Run time: {end_time-start_time:.2f} seconds")
