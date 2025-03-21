@@ -23,36 +23,50 @@ from src import (
 )
 from examples import DataProcess
 
+plt.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": False,
+        "pgf.rcfonts": False,
+    }
+)
+import matplotlib as mpl
 
-# Fix parameters grid search
-sigma_v_fix = 0.3819414484717393
-look_back_len_fix = 12
-SKF_std_transition_error_fix = 1e-3
-SKF_norm_to_abnorm_prob_fix = 1e-3
+mpl.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "pgf.preamble": r"\usepackage{amsfonts}\usepackage{amssymb}",
+    }
+)
+
+# Fix parameters:
+sigma_v_fix = 0.04168150423508317
+look_back_len_fix = 14
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 50,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_1_data.csv"
-    df = pd.read_csv(data_file, skiprows=0, delimiter=",")
-    date_time = pd.to_datetime(df["timestamp"])
-    df = df.drop("timestamp", axis=1)
-    df.index = date_time
-    df.index.name = "date_time"
+    data_file = "./data/benchmark_data/test_4_data.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
+    df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+    # lags = [0, 4, 4, 4]
+    # df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
-        data=df,
+        data=df_raw,
         time_covariates=["week_of_year"],
-        train_start="2011-02-06 00:00:00",
-        train_end="2014-02-02 00:00:00",
-        validation_start="2014-02-09 00:00:00",
-        validation_end="2015-02-01 00:00:00",
-        test_start="2015-02-08 00:00:00",
+        train_split=0.4,
+        validation_split=0.07,
         output_col=output_col,
     )
     (
@@ -68,7 +82,7 @@ def main(
             LocalTrend(),
             LstmNetwork(
                 look_back_len=param["look_back_len"],
-                num_features=2,
+                num_features=5,
                 num_layer=1,
                 num_hidden_unit=50,
                 device="cpu",
@@ -81,7 +95,7 @@ def main(
     if param_tune:
         param = {
             "look_back_len": [12, 52],
-            "sigma_v": [1e-1, 4e-1],
+            "sigma_v": [1e-3, 2e-1],
         }
         # Define optimizer
         model_optimizer = ModelOptimizer(
@@ -110,138 +124,121 @@ def main(
     model_optim_dict = model_optim.get_dict()
 
     # Plot
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Fig #1
+    fig, ax = plt.subplots(3, 1, figsize=(4, 2.4))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_test_data=False,
+        plot_column=[0],
+        sub_plot=ax[0],
+    )
+    ax[0].set_ylabel("$y$")
+    plot_data(
+        data_processor=data_processor,
+        normalization=False,
+        plot_test_data=False,
+        plot_column=[1],
+        sub_plot=ax[1],
+    )
+    ax[1].set_ylabel("water level")
+    plot_data(
+        data_processor=data_processor,
+        normalization=False,
+        plot_test_data=False,
+        plot_column=[2],
+        sub_plot=ax[2],
+    )
+    ax[2].set_ylabel("temp")
+    fig.subplots_adjust(hspace=0.15)
+    # plt.show()
+    plt.savefig("saved_results/dependencies.pgf", format="pgf", bbox_inches="tight")
+
+    # Fig #1
+    fig, ax = plt.subplots(figsize=(4, 1))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_test_data=False,
+        sub_plot=ax,
+    )
+    # ax.set_ylabel("$y$")
+    # plt.show()
+    plt.savefig("saved_results/data.pgf", format="pgf", bbox_inches="tight")
+
+    # Fig #2
+    fig, ax = plot_states(
+        data_processor=data_processor,
+        states=states_optim,
+    )
+
     plot_data(
         data_processor=data_processor,
         normalization=True,
         plot_test_data=False,
         plot_column=output_col,
-        validation_label="y",
+        # validation_label="y",
+        sub_plot=ax[0],
     )
+
     plot_prediction(
         data_processor=data_processor,
         mean_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
+        sub_plot=ax[0],
     )
-    plot_states(
-        data_processor=data_processor,
-        states=states_optim,
-        states_to_plot=["local level"],
-        sub_plot=ax,
-    )
-    plt.legend()
-    plt.title("Validation predictions")
-    plt.show()
 
-    # Define SKF model
-    def initialize_skf(skf_param, model_param: dict):
-        norm_model = Model.load_dict(model_param)
-        abnorm_model = Model(
-            LocalAcceleration(),
-            LstmNetwork(),
-            WhiteNoise(),
-        )
-        skf = SKF(
-            norm_model=norm_model,
-            abnorm_model=abnorm_model,
-            std_transition_error=skf_param["std_transition_error"],
-            norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
-            abnorm_to_norm_prob=1e-1,
-            norm_model_prior_prob=0.99,
-        )
-        skf.save_initial_states()
-        return skf
+    train_time = data_processor.get_time(split="train")
 
-    # Define parameter search space
-    slope_upper_bound = 5e-2
-    slope_lower_bound = 1e-3
-    # # Plot synthetic anomaly
-    synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_data,
-        num_samples=1,
-        slope=[slope_lower_bound, slope_upper_bound],
-    )
+    fig.set_size_inches(3.2, 2.3)
+    # fig.subplots_adjust(hspace=0.6)  # 👈 control vertical spacing
+
+    # Set x-limits
+    for a in ax:
+        a.set_xlim(train_time[0], train_time[-1])
+
+    ax[0].set_xticklabels([])
+    ax[1].set_xticklabels([])
+    ax[2].set_xticklabels([])
+    ax[0].set_ylabel("level")
+    ax[1].set_ylabel("trend")
+    ax[2].set_ylabel("lstm")
+    ax[3].set_ylabel("noise")
+    # plt.show()
+    for axis in ax:
+        for line in axis.get_lines():
+            line.set_linewidth(0.8)  # 👈 Set your desired linewidth
+    plt.savefig("saved_results/filter.pgf", format="pgf", bbox_inches="tight")
+
+    # Fig #3
+    fig, ax = plt.subplots(figsize=(4, 1.2))
     plot_data(
         data_processor=data_processor,
         normalization=True,
-        plot_validation_data=False,
         plot_test_data=False,
-        plot_column=output_col,
-        train_label="data without anomaly",
+        sub_plot=ax,
+        validation_label="obs",
     )
-
-    train_time = data_processor.get_time("train")
-    for ts in synthetic_anomaly_data:
-        plt.plot(train_time, ts["y"])
-    plt.legend(
-        [
-            "data without anomaly",
-            "",
-            "smallest anomaly tested",
-            "largest anomaly tested",
-        ]
-    )
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
-
-    if param_tune:
-        if grid_search:
-            skf_param = {
-                "std_transition_error": [1e-6, 1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4, 1e-3],
-                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
-            }
-        else:
-            skf_param = {
-                "std_transition_error": [1e-6, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-3],
-                "slope": [slope_lower_bound, slope_upper_bound],
-            }
-        # Define optimizer
-        skf_optimizer = SKFOptimizer(
-            initialize_skf=initialize_skf,
-            model_param=model_optim_dict,
-            param_space=skf_param,
-            data=data_processor.train_data,
-            num_synthetic_anomaly=50,
-            num_optimization_trial=num_trial_optimization * 2,
-            grid_search=grid_search,
-        )
-        skf_optimizer.optimize()
-        # Get best model
-        skf_optim = skf_optimizer.get_best_model()
-    else:
-        skf_param = {
-            "std_transition_error": SKF_std_transition_error_fix,
-            "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
-        }
-        skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
-
-    # Detect anomaly
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
-    # filter_marginal_abnorm_prob, _ = skf_optim.smoother(data=data_processor.all_data)
-
-    fig, ax = plot_skf_states(
+    # ax.set_ylabel("$y$")
+    plot_prediction(
         data_processor=data_processor,
-        states=states,
-        states_to_plot=["local level", "local trend", "lstm", "white noise"],
-        # states_type="smooth",
-        model_prob=filter_marginal_abnorm_prob,
-        color="b",
-        legend_location="upper left",
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
+        sub_plot=ax,
     )
-    fig.suptitle("SKF hidden states", fontsize=10, y=1)
-    plt.show()
-
-    if param_tune:
-        print("Model parameters used:", model_optimizer.param_optim)
-        print("SKF model parameters used:", skf_optimizer.param_optim)
-        print("-----")
-    else:
-        print("Model parameters used:", param)
-        print("SKF model parameters used:", skf_param)
-        print("-----")
+    # ax.legend()
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.3),
+        ncol=3,
+        frameon=False,
+    )
+    for line in ax.get_lines():
+        line.set_linewidth(0.8)  # 👈 Set your desired linewidth
+    # plt.show()
+    plt.savefig("saved_results/forecast.pgf", format="pgf", bbox_inches="tight")
 
 
 def training(model, data_processor, num_epoch: int = 50):
@@ -314,4 +311,4 @@ if __name__ == "__main__":
     start_time = time.time()
     fire.Fire(main)
     end_time = time.time()
-    print(f"Elapsed time: {end_time-start_time:.2f} seconds")
+    print(f"Run time: {end_time-start_time:.2f} seconds")

@@ -135,7 +135,7 @@ filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
 
 # # Plot
-marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
+marginal_abnorm_prob_plot = smooth_marginal_abnorm_prob
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
