@@ -476,7 +476,7 @@ class Model:
             std_obs_preds.append(var_obs_pred**0.5)
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
     
-    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None, 
+    def generate(self, num_time_series: int, num_time_steps: int, time_covariates=None, time_covariate_info=None, generation_seed=None, anm_type = 'LT',
                  add_anomaly=False, anomaly_mag_range=None, anomaly_begin_range=None) -> np.ndarray:
         """
         Generate time series data
@@ -544,8 +544,10 @@ class Model:
 
                 if add_anomaly:
                     if i > anomaly_time:
-                        obs_gen += anomaly_mag * (i - anomaly_time)     # LT anomaly
-                        # obs_gen += anomaly_mag                        # LL anomaly
+                        if anm_type == 'LT':
+                            obs_gen += anomaly_mag * (i - anomaly_time)   # LT anomaly
+                        elif anm_type == 'LL':
+                            obs_gen += anomaly_mag                        # LL anomaly
                 self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 

@@ -30,16 +30,23 @@ import src.common as common
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-anm_trend = 0.010416667/10
-# anm_trend = 0
-# linear_space = np.linspace(0, 3, num=len(df_raw))
-linear_space = np.arange(len(df_raw)) * anm_trend
-# Set the first 52*12 values in linear_space to be 0
-anm_start_index = 52*10
-linear_space[anm_start_index:] -= linear_space[anm_start_index]
-linear_space[:anm_start_index] = 0
 
-df_raw = df_raw.add(linear_space, axis=0)
+anm_start_index = 52*10
+
+# LT anomaly
+anm_mag = 0.010416667/10
+# anm_baseline = np.linspace(0, 3, num=len(df_raw))
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
+anm_baseline[:anm_start_index] = 0
+
+# # LL anomaly
+# anm_mag = 0.5
+# anm_baseline = np.zeros_like(df_raw)
+# anm_baseline[anm_start_index:] += anm_mag
+
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -110,11 +117,11 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 hsl_tsad_agent.mu_LTd = 5.907750463001452e-06
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = 5.907750463001452e-06, std = 1.318369281413848e-05)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, anm_type = 'LL + LT', save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm.csv', 
-                                  load_model_path='saved_params/NN_detection_model_simpleTS_lstm_1000.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm.csv', 
+                                  load_model_path='saved_params/NN_detection_model_simpleTS_lstm_multi_anm.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 if any(np.array(hsl_tsad_agent.p_anm_all) > 0.5):
     anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
@@ -125,8 +132,8 @@ else:
 #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(11, 1)
+fig = plt.figure(figsize=(10, 10))
+gs = gridspec.GridSpec(12, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -138,6 +145,7 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
+ax11 = plt.subplot(gs[11])
 from src.data_visualization import determine_time
 time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
@@ -218,21 +226,21 @@ std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
 mu_itv_all[:anm_start_index] = np.nan
 std_itv_all[:anm_start_index] = np.nan
 print('anm_detect_index:' , anm_detected_index)
-# Set all the values after anm_detected to be nan
-mu_itv_all[anm_detected_index+1:] = np.nan
-std_itv_all[anm_detected_index+1:] = np.nan
+# # Set all the values after anm_detected to be nan
+# mu_itv_all[anm_detected_index+1:] = np.nan
+# std_itv_all[anm_detected_index+1:] = np.nan
 # print(time.shape)
 
 true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
 true_anm_dev_time[anm_start_index:anm_detected_index] += np.arange(anm_detected_index - anm_start_index)
-true_LL = true_anm_dev_time * anm_trend
+true_LL = true_anm_dev_time * anm_mag
 
 ax8.plot(time, mu_itv_all[:, 0])
 ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
 ax8.set_ylabel("itv_LT")
 ax8.set_xlim(ax0.get_xlim())
 ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax8.axhline(y=anm_trend, color='r', linestyle='--')
+ax8.axhline(y=anm_mag, color='r', linestyle='--')
 
 ax9.plot(time, mu_itv_all[:, 1])
 ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
@@ -247,4 +255,11 @@ ax10.plot(time, true_anm_dev_time, color='k', linestyle='--')
 ax10.set_ylabel("itv_time")
 ax10.set_xlim(ax0.get_xlim())
 ax10.axvline(x=time[anm_start_index], color='r', linestyle='--')
+
+ax11.plot(time, mu_itv_all[:, 3])
+ax11.fill_between(time, mu_itv_all[:, 3] - std_itv_all[:, 3], mu_itv_all[:, 3] + std_itv_all[:, 3], alpha=0.5)
+ax11.set_ylabel("anm_type")
+ax11.axhline(y=1, color='r', linestyle='--')
+ax11.axhline(y=0, color='r', linestyle='--')
+ax11.set_xlim(ax0.get_xlim())
 plt.show()

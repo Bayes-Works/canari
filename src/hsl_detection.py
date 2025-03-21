@@ -113,8 +113,8 @@ class hsl_detection:
             
             # Dummy values for p_anm when it is not in detect mode
             self.p_anm_all.append(0)
-            self.mu_itv_all.append([np.nan, np.nan, np.nan])
-            self.std_itv_all.append([np.nan, np.nan, np.nan])
+            self.mu_itv_all.append([np.nan, np.nan, np.nan, np.nan])
+            self.std_itv_all.append([np.nan, np.nan, np.nan, np.nan])
 
             self.current_time_step += 1
 
@@ -290,8 +290,8 @@ class hsl_detection:
                 output_pred_mu, output_pred_var = self.model.net(LTd_history)
                 output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
                 output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                itv_pred_mu = output_pred_mu[0, [0, 2, 4, 6]]
+                itv_pred_var = output_pred_mu[0, [1, 3, 5, 7]]
             elif self.nn_train_with == 'backprop':
                 LTd_history = torch.tensor(LTd_history)
                 itv_pred_mu = self.model(LTd_history)
@@ -306,15 +306,23 @@ class hsl_detection:
 
             if apply_intervention:
                 if p_a_I_Yt > self.detection_threshold:
-                    # Apply intervention on base_model hidden states
                     LL_index = self.base_model.states_name.index("local level")
                     LT_index = self.base_model.states_name.index("local trend")
                     AR_index = self.base_model.states_name.index("autoregression")
-                    self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-                    self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                    self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
-                    self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-                    self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+                    # Determine if itv_pred_mu_denorm[-1] is closer to 0 or 1
+                    if abs(itv_pred_mu_denorm[-1] - 0) < abs(itv_pred_mu_denorm[-1] - 1):
+                        # Class prediction closer to 0 than 1: LL anomaly
+                        print('Prediction is a LL anomaly')
+                        self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                        self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+                        self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                    else:
+                        print('Prediction is a LT anomaly')
+                        self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                        self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+                        self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+                        self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                        self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd        
@@ -414,28 +422,51 @@ class hsl_detection:
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
     
-    def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
-        # Collect samples from synthetic time series
-        samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
+    def collect_synthetic_samples(self, num_time_series: int = 10, anm_type = 'LT', save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
 
         # Anomly feature range define
-        ts_len = 52*6
-        stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
-        # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        # anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # LT anm mag
-        anm_mag_range = [-0.5/52, 0.5/52]       # LT anm mag in normalized space
-        # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
-        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
-
-        # # Generate synthetic time series
         covariate_col = self.data_processor.covariates_col
         time_covariate_info = {'initial_time_covariate': self.data_processor.validation_data[-1, covariate_col].item(),
                                 'mu': self.data_processor.norm_const_mean[covariate_col], 
                                 'std': self.data_processor.norm_const_std[covariate_col]}
-        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate(num_time_series=num_time_series, num_time_steps=ts_len, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=True, anomaly_mag_range=anm_mag_range, anomaly_begin_range=anm_begin_range)
+        ts_len = 52*6
+        stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
+
+        # Collect samples from synthetic time series
+        samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': [], 'anm_type': []}
+        # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
+        # anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # LT anm mag
+        # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
+        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
+
+        # # Generate synthetic time series
+        anm_type_list = []
+        generated_ts = []
+        anm_mag_list, anm_begin_list = [], []
+        for k in range(num_time_series):
+            if anm_type == 'LT':
+                anm_type_k = 'LT'
+                anm_mag_range = [-0.5/52, 0.5/52]       # LT anm mag in normalized space
+                generated_ts_k, time_covariate, anm_mag_list_k, anm_begin_list_k = self.base_model.generate(num_time_series=1, num_time_steps=ts_len, 
+                                                                        time_covariates=self.data_processor.time_covariates, 
+                                                                        time_covariate_info=time_covariate_info,
+                                                                        add_anomaly=True, anomaly_mag_range=anm_mag_range, anomaly_begin_range=anm_begin_range)
+            elif anm_type == 'LL + LT':
+                anm_type_k = np.random.choice(['LT', 'LL'])
+                if anm_type_k == 'LT':
+                    anm_mag_range = [-0.5/52, 0.5/52]   # LT anm mag in normalized space
+                elif anm_type_k == 'LL':
+                    anm_mag_range = [-0.5, 0.5]         # LL anm mag in normalized space
+
+                generated_ts_k, time_covariate, anm_mag_list_k, anm_begin_list_k = self.base_model.generate(num_time_series=1, num_time_steps=ts_len, 
+                                                                        time_covariates=self.data_processor.time_covariates, 
+                                                                        time_covariate_info=time_covariate_info, anm_type=anm_type_k,
+                                                                        add_anomaly=True, anomaly_mag_range=anm_mag_range, anomaly_begin_range=anm_begin_range)
+            anm_type_list.append(anm_type_k)
+            generated_ts.append(generated_ts_k[0])
+            anm_mag_list.append(anm_mag_list_k[0])
+            anm_begin_list.append(anm_begin_list_k[0])
+                
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
@@ -497,20 +528,24 @@ class hsl_detection:
                     samples['itv_LL'].append(0.)
                     samples['anm_develop_time'].append(0.)
                     samples['p_anm'].append(0.)
+                    samples['anm_type'].append(anm_type_list[k])
                 elif i >= anm_begin_list[k]:
-                    # LT anomaly label
-                    itv_LT = anm_mag_list[k]
-                    itv_anm_dev_time = i - anm_begin_list[k]
-                    itv_LL = itv_LT * itv_anm_dev_time
-                    # # LL anomaly label
-                    # itv_LT = 0
-                    # itv_anm_dev_time = i - anm_begin_list[k]
-                    # itv_LL = anm_mag_list[k]
+                    if anm_type_list[k] == 'LT':
+                        # LT anomaly label
+                        itv_LT = anm_mag_list[k]
+                        itv_anm_dev_time = i - anm_begin_list[k]
+                        itv_LL = itv_LT * itv_anm_dev_time
+                    elif anm_type_list[k] == 'LL':
+                        # LL anomaly label
+                        itv_LT = 0
+                        itv_anm_dev_time = i - anm_begin_list[k]
+                        itv_LL = anm_mag_list[k]
                     
                     samples['itv_LT'].append(itv_LT)
                     samples['itv_LL'].append(itv_LL)
                     samples['anm_develop_time'].append(itv_anm_dev_time)
                     samples['p_anm'].append(p_a_I_Yt)
+                    samples['anm_type'].append(anm_type_list[k])
 
                 # if p_a_I_Yt > self.detection_threshold:
                 #     anomaly_detected = True
@@ -652,12 +687,13 @@ class hsl_detection:
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
+        samples['anm_type'] = samples['anm_type'].map({'LL': 0.0, 'LT': 1.0}).astype(float)
 
         # Shuffle samples
         samples = samples.sample(frac=1).reset_index(drop=True)
 
         # Target list
-        self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
+        self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time', 'anm_type']
 
         samples_input = np.array(samples['LTd_history'].values.tolist(), dtype=np.float32)
         samples_target = np.array(samples[self.target_list].values, dtype=np.float32)
@@ -765,7 +801,7 @@ class hsl_detection:
                     for j in range(n_batch_val):
                         val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
                         val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                        val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
+                        val_pred_y_mu = val_pred_mu[:, [0, 2, 4, 6]]
                         val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
                         # Compute the mse between val_pred_y_mu and val_y_batch
                         loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
@@ -791,8 +827,8 @@ class hsl_detection:
                 for j in range(n_batch_val):
                     test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
                     test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                    test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
-                    test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
+                    test_pred_y_mu = test_pred_mu[:, [0, 2, 4, 6]]
+                    test_pred_y_var = test_pred_mu[:, [1, 3, 5, 7]]
                     test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
                     # Compute the mse between test_pred_y_mu and test_y_batch
                     loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
