@@ -121,6 +121,9 @@ class hsl_detection:
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
     def estimate_LTd_dist(self, add_roll_out_ts: Optional[bool] = True):
+        # Duplicate the current LTd_buffer but in the negative domain
+        LTd_buffer_neg = -np.array(self.LTd_buffer)
+        self.LTd_buffer = np.concatenate((self.LTd_buffer, LTd_buffer_neg))
         print('mean and std before roll out synthetic data', np.mean(self.LTd_buffer), np.std(self.LTd_buffer))
         if add_roll_out_ts:
             # Roll out ten synthetic time series
@@ -419,7 +422,8 @@ class hsl_detection:
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
         # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # LT anm mag
+        # anm_mag_range = [-stationary_ar_std/52, stationary_ar_std/52]       # LT anm mag
+        anm_mag_range = [-0.5/52, 0.5/52]       # LT anm mag in normalized space
         # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
@@ -745,8 +749,6 @@ class hsl_detection:
                         out_updater.update_heteros(
                             output_states = self.model.net.output_z_buffer,
                             mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
-                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
                             delta_states = self.model.net.input_delta_z_buffer,
                         )
                         self.model.net.backward()
