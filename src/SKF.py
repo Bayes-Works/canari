@@ -687,10 +687,10 @@ class SKF:
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.smooth_marginal_prob_history["norm"].append(
+        self.smooth_marginal_prob_history["norm"][time_step] = (
             self.marginal_prob_current["norm"]
         )
-        self.smooth_marginal_prob_history["abnorm"].append(
+        self.smooth_marginal_prob_history["abnorm"][time_step] = (
             self.marginal_prob_current["abnorm"]
         )
 
