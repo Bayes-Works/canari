@@ -147,7 +147,7 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds_optim,
+    mu_validation_pred=mu_validation_preds_optim,
     std_validation_pred=std_validation_preds_optim,
     sub_plot=ax,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
