@@ -67,7 +67,10 @@ def plot_data(
             else:
                 ax.plot(time, data_plot, label=label, color=color, linestyle=linestyle)
 
-    if data_processor.validation_start != data_processor.validation_end:
+    if (
+        plot_validation_data
+        and data_processor.validation_start != data_processor.validation_end
+    ):
         ax.axvspan(
             data_processor.data.index[data_processor.validation_start],
             data_processor.data.index[data_processor.validation_end - 1],
@@ -80,11 +83,11 @@ def plot_data(
 
 def plot_prediction(
     data_processor: DataProcess,
-    mean_train_pred: Optional[np.ndarray] = None,
+    mu_train_pred: Optional[np.ndarray] = None,
     std_train_pred: Optional[np.ndarray] = None,
-    mean_validation_pred: Optional[np.ndarray] = None,
+    mu_validation_pred: Optional[np.ndarray] = None,
     std_validation_pred: Optional[np.ndarray] = None,
-    mean_test_pred: Optional[np.ndarray] = None,
+    mu_test_pred: Optional[np.ndarray] = None,
     std_test_pred: Optional[np.ndarray] = None,
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
@@ -102,7 +105,7 @@ def plot_prediction(
         ax = sub_plot
 
     split_indices = list(data_processor.get_split_indices())
-    mean_values = [mean_train_pred, mean_validation_pred, mean_test_pred]
+    mean_values = [mu_train_pred, mu_validation_pred, mu_test_pred]
     std_values = [std_train_pred, std_validation_pred, std_test_pred]
     labels = [train_label, validation_label, test_label]
     total_time = []
@@ -123,7 +126,7 @@ def plot_prediction(
                 ax=ax,
                 label=label,
             )
-    add_dynamic_grids(ax, total_time)
+    # add_dynamic_grids(ax, total_time)
 
 
 def plot_states(
@@ -333,7 +336,7 @@ def add_dynamic_grids(ax, time):
         minor_locator = YearLocator(1)
         major_formatter = DateFormatter("%Y")
     elif time_range > np.timedelta64(365, "D"):  # More than a year
-        major_locator = YearLocator()
+        major_locator = YearLocator(1)
         minor_locator = MonthLocator(bymonth=[1, 4, 7, 10])
         major_formatter = DateFormatter("%Y")
     elif time_range > np.timedelta64(30, "D"):  # More than a month
