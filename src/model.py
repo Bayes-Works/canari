@@ -429,7 +429,9 @@ class Model:
             matrix_inversion_tol,
         )
 
-    def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+    def forecast(
+        self, data: Dict[str, np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Forecast for whole time series data
         """
@@ -454,13 +456,17 @@ class Model:
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
-        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
+        return (
+            np.array(mu_obs_preds).flatten(),
+            np.array(std_obs_preds).flatten(),
+            self.states,
+        )
 
     def filter(
         self,
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Filter for whole time series data
         """
@@ -502,9 +508,13 @@ class Model:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten()
+        return (
+            np.array(mu_obs_preds).flatten(),
+            np.array(std_obs_preds).flatten(),
+            self.states,
+        )
 
-    def smoother(self, data: Dict[str, np.ndarray]) -> None:
+    def smoother(self, data: Dict[str, np.ndarray]) -> StatesHistory:
         """
         Smoother for whole time series
         """
@@ -512,6 +522,8 @@ class Model:
         num_time_steps = len(data["y"])
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
+
+        return self.states
 
     def lstm_train(
         self,
@@ -532,7 +544,7 @@ class Model:
             )
         self.filter(train_data)
         self.smoother(train_data)
-        mu_validation_preds, std_validation_preds = self.forecast(validation_data)
+        mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
         self.set_memory(states=self.states, time_step=0)
 
         return (
