@@ -93,12 +93,12 @@ for epoch in range(num_epoch):
 
     # Calculate the evaluation metric
     mse = metric.mse(
-        mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
+        mu_validation_preds_unnorm, data_processor.get_data("validation").flatten()
     )
 
     validation_log_lik = metric.log_likelihood(
         prediction=mu_validation_preds_unnorm,
-        observation=data_processor.validation_data[:, output_col].flatten(),
+        observation=data_processor.get_data("validation").flatten(),
         std=std_validation_preds_unnorm,
     )
 
@@ -119,7 +119,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 
-model_dict = model.save_model_dict()
+model_dict = model.get_dict()
 model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
