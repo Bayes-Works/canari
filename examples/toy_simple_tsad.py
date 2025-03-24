@@ -32,6 +32,7 @@ data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # linear_space = np.linspace(0, 3, num=len(df_raw))
 linear_space = np.arange(len(df_raw)) * 0.010416667/10
+# linear_space = np.arange(len(df_raw)) * 0
 # Set the first 52*12 values in linear_space to be 0
 anm_start_index = 52*10
 linear_space[anm_start_index:] -= linear_space[anm_start_index]
@@ -96,7 +97,7 @@ ltd_error = 1e-5
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
@@ -105,36 +106,19 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 5.907750463001452e-06
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = 5.907750463001452e-06, std = 1.318369281413848e-05)
+hsl_tsad_agent.mu_LTd = 4.872155174980347e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 5.7014623199866515e-05)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_V2.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm.csv', 
                                   load_model_path='saved_params/NN_detection_model_simpleTS_lstm_1000.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
-anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
-
-# Plot to debug
-# Delete in hsl_tsad_agent.LTd_history_all all the samples before and after anm_start_index and anm_detected_index
-hsl_tsad_agent.LTd_history_all = np.array(hsl_tsad_agent.LTd_history_all[anm_start_index:anm_detected_index])
-print(hsl_tsad_agent.LTd_history_all.shape)
-grayscale_anm_dev_time = (hsl_tsad_agent.train_y[:, 2] - hsl_tsad_agent.train_y[:, 2].min()) / (hsl_tsad_agent.train_y[:, 2].max() - hsl_tsad_agent.train_y[:, 2].min())
-# Plot all samples input
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(1, 1)
-ax = fig.add_subplot(gs[0])
-# ax.plot(samples_input.T, color='black', alpha=0.1)
-# Plot samples_input with color based on grayscale_anm_dev_time
-for i in range(1000):
-    ax.plot(hsl_tsad_agent.train_X[i], color=plt.cm.viridis_r(grayscale_anm_dev_time[i]), alpha=0.5)
-for i in range(len(hsl_tsad_agent.LTd_history_all)):
-    ax.plot(hsl_tsad_agent.LTd_history_all[i], color='r', alpha=0.5)
-ax.set_xlabel('Time')
-ax.set_ylabel('LTd')
-# Plot the color map
-fig.colorbar(plt.cm.ScalarMappable(cmap='viridis_r'), ax=ax, orientation='horizontal', label='anm_develop_time')
+if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
+    anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
+else:
+    anm_detected_index = len(hsl_tsad_agent.p_anm_all)
 
 #  Plot
 state_type = "prior"
