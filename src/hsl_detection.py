@@ -547,17 +547,17 @@ class hsl_detection:
                     samples['p_anm'].append(p_a_I_Yt)
                     samples['anm_type'].append(anm_type_list[k])
 
-                # if p_a_I_Yt > self.detection_threshold:
-                #     anomaly_detected = True
-                #     break
-                #     # Intervene the model using true anomaly features
-                #     LL_index = base_model_copy.states_name.index("local level")
-                #     LT_index = base_model_copy.states_name.index("local trend")
-                #     base_model_copy.mu_states[LT_index] += anm_mag_list[k]
-                #     base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
-                #     base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
-                #     drift_model_copy.mu_states[0] = 0
-                #     drift_model_copy.mu_states[1] = self.mu_LTd
+                if p_a_I_Yt > self.detection_threshold:
+                    anomaly_detected = True
+                    break
+                    # # Intervene the model using true anomaly features
+                    # LL_index = base_model_copy.states_name.index("local level")
+                    # LT_index = base_model_copy.states_name.index("local trend")
+                    # base_model_copy.mu_states[LT_index] += anm_mag_list[k]
+                    # base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
+                    # base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
+                    # drift_model_copy.mu_states[0] = 0
+                    # drift_model_copy.mu_states[1] = self.mu_LTd
 
                 mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
                 (
@@ -611,6 +611,7 @@ class hsl_detection:
             #                 alpha=0.5)
             # ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
             # ax0.plot(generated_ts[k])
+            # ax0.set_title("Anomaly type: " + anm_type_list[k])
 
             # ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
             # ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),

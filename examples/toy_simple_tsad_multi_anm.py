@@ -34,7 +34,8 @@ df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 anm_start_index = 52*10
 
 # LT anomaly
-anm_mag = 0.010416667/10
+# anm_mag = 0.010416667/10
+anm_mag = 0.1/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -117,11 +118,11 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 hsl_tsad_agent.mu_LTd = 5.907750463001452e-06
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = 5.907750463001452e-06, std = 1.318369281413848e-05)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, anm_type = 'LL + LT', save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, anm_type = 'LL + LT', save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm_V2.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm.csv', 
-                                  load_model_path='saved_params/NN_detection_model_simpleTS_lstm_multi_anm.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm_V2.csv', 
+                                  load_model_path='saved_params/NN_detection_model_simpleTS_lstm_multi_anm_V2.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 if any(np.array(hsl_tsad_agent.p_anm_all) > 0.5):
     anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
