@@ -338,6 +338,7 @@ class Model:
         """
 
         # LSTM prediction:
+        lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and input_covariates is not None:
             if mu_lstm_pred is None and var_lstm_pred is None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -358,7 +359,7 @@ class Model:
             self.observation_matrix,
             mu_lstm_pred,
             var_lstm_pred,
-            self.lstm_states_index,
+            lstm_states_index,
         )
 
         # Modification after SSM's prediction:
@@ -386,8 +387,8 @@ class Model:
         if obs_var is None:
             delta_mu_states, delta_var_states = common.backward(
                 obs,
-                self.mu_obs_prior,
-                self.var_obs_prior,
+                self.mu_obs_predict,
+                self.var_obs_predict,
                 self.var_states_prior,
                 self.observation_matrix,
             )
@@ -395,8 +396,8 @@ class Model:
             delta_mu_states, delta_var_states = common.distribution_update(
                 obs,
                 obs_var,
-                self.mu_obs_prior,
-                self.var_obs_prior,
+                self.mu_obs_predict,
+                self.var_obs_predict,
                 self.var_states_prior,
                 self.observation_matrix,
             )
