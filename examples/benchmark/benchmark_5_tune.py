@@ -24,16 +24,10 @@ from src import (
 from examples import DataProcess
 
 # Fix parameters grid search
-# sigma_v_fix = 0.048157582719331495
-# look_back_len_fix = 19
-# SKF_std_transition_error_fix = 1e-4
-# SKF_norm_to_abnorm_prob_fix = 1e-4
-
-# Fix parameters
-sigma_v_fix = 0.05146262173698055
+sigma_v_fix = 0.048157582719331495
 look_back_len_fix = 19
-SKF_std_transition_error_fix = 6.041598371874521e-05
-SKF_norm_to_abnorm_prob_fix = 1.6034287115694558e-05
+SKF_std_transition_error_fix = 1e-4
+SKF_norm_to_abnorm_prob_fix = 1e-4
 
 
 def main(
@@ -48,7 +42,7 @@ def main(
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+    df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
     lags = [0, 4, 4, 4]
     df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
@@ -126,7 +120,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
+        mu_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )

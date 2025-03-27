@@ -32,7 +32,7 @@ SKF_norm_to_abnorm_prob_fix = 1e-3
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 100,
     param_tune: bool = False,
     grid_search: bool = False,
 ):
@@ -120,7 +120,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
+        mu_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )
@@ -226,7 +226,6 @@ def main(
         data_processor=data_processor,
         states=states,
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
-        # states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",

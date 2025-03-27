@@ -4,7 +4,6 @@ import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from src import (
@@ -23,22 +22,16 @@ from src import (
 )
 from examples import DataProcess
 
-# Fix parameters grid search
-sigma_v_fix = 0.0178919637745888
-look_back_len_fix = 22
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-4
-
 # Fix parameters
-# sigma_v_fix = 0.011954086437448691
-# look_back_len_fix = 15
-# SKF_std_transition_error_fix = 2.1623509985936086e-05
-# SKF_norm_to_abnorm_prob_fix = 1.3992298521194894e-06
+sigma_v_fix = 0.011954086437448691
+look_back_len_fix = 15
+SKF_std_transition_error_fix = 2.1623509985936086e-05
+SKF_norm_to_abnorm_prob_fix = 1.3992298521194894e-06
 
 
 def main(
     num_trial_optimization: int = 100,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
@@ -48,7 +41,7 @@ def main(
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
+    df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
@@ -123,7 +116,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
+        mu_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )

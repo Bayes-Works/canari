@@ -55,8 +55,10 @@ def plot_data(
             data_plot = data[index, plot_column]
             time = data_processor.data.index[index]
             total_time.extend(list(time))
-            if not plot_nan:
-                mask = ~np.isnan(data).flatten()
+            if plot_nan:
+                ax.plot(time, data_plot, label=label, color=color, linestyle=linestyle)
+            else:
+                mask = ~np.isnan(data_plot).flatten()
                 ax.plot(
                     time[mask],
                     data_plot[mask],
@@ -64,8 +66,6 @@ def plot_data(
                     color=color,
                     linestyle=linestyle,
                 )
-            else:
-                ax.plot(time, data_plot, label=label, color=color, linestyle=linestyle)
 
     if (
         plot_validation_data
