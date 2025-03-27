@@ -126,7 +126,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # # Save model_dict to local
 # import pickle
-# with open("saved_params/toy_simple_model.pkl", "wb") as f:
+# with open("saved_params/toy_simple_model_old.pkl", "wb") as f:
 #     pickle.dump(model_dict, f)
 
 state_type = "prior"

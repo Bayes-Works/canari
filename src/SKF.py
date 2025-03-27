@@ -684,6 +684,8 @@ class SKF:
         return (
             self.filter_marginal_prob_history["abnorm"],
             self.states,
+            mu_obs_preds,
+            var_obs_preds,
         )
 
     def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, StatesHistory]:

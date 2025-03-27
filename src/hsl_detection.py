@@ -115,15 +115,17 @@ class hsl_detection:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan, np.nan])
+            # self.mu_itv_all.append([np.nan, np.nan, np.nan])
+            # self.std_itv_all.append([np.nan, np.nan, np.nan])
 
             self.current_time_step += 1
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
     def estimate_LTd_dist(self, add_roll_out_ts: Optional[bool] = True):
-        # Duplicate the current LTd_buffer but in the negative domain
-        LTd_buffer_neg = -np.array(self.LTd_buffer)
-        self.LTd_buffer = np.concatenate((self.LTd_buffer, LTd_buffer_neg))
+        # # Duplicate the current LTd_buffer but in the negative domain
+        # LTd_buffer_neg = -np.array(self.LTd_buffer)
+        # self.LTd_buffer = np.concatenate((self.LTd_buffer, LTd_buffer_neg))
         print('mean and std before roll out synthetic data', np.mean(self.LTd_buffer), np.std(self.LTd_buffer))
         if add_roll_out_ts:
             # Roll out ten synthetic time series
@@ -292,6 +294,8 @@ class hsl_detection:
                 output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
                 itv_pred_mu = output_pred_mu[0, [0, 2, 4, 6]]
                 itv_pred_var = output_pred_mu[0, [1, 3, 5, 7]]
+                # itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                # itv_pred_var = output_pred_mu[0, [1, 3, 5]]
             elif self.nn_train_with == 'backprop':
                 LTd_history = torch.tensor(LTd_history)
                 itv_pred_mu = self.model(LTd_history)
@@ -323,6 +327,12 @@ class hsl_detection:
                         self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
                         self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
                         self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+
+                    # self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                    # self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+                    # self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+                    # self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                    # self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd        
@@ -454,9 +464,9 @@ class hsl_detection:
             elif anm_type == 'LL + LT':
                 anm_type_k = np.random.choice(['LT', 'LL'])
                 if anm_type_k == 'LT':
-                    anm_mag_range = [-0.5/52, 0.5/52]   # LT anm mag in normalized space
+                    anm_mag_range = [-1/52, 1/52]   # LT anm mag in normalized space
                 elif anm_type_k == 'LL':
-                    anm_mag_range = [-0.5, 0.5]         # LL anm mag in normalized space
+                    anm_mag_range = [-1, 1]         # LL anm mag in normalized space
 
                 generated_ts_k, time_covariate, anm_mag_list_k, anm_begin_list_k = self.base_model.generate(num_time_series=1, num_time_steps=ts_len, 
                                                                         time_covariates=self.data_processor.time_covariates, 
@@ -518,10 +528,37 @@ class hsl_detection:
                 x_likelihood_a_one_ts.append(x_likelihood_a)
                 x_likelihood_na_one_ts.append(x_likelihood_na)
 
+                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
+                (
+                    _, _,
+                    mu_states_posterior,
+                    var_states_posterior,
+                ) = base_model_copy.backward(y)
+
+                if "lstm" in base_model_copy.states_name:
+                    base_model_copy.update_lstm_output_history(
+                        mu_states_posterior[lstm_index],
+                        var_states_posterior[lstm_index, lstm_index],
+                    )
+
+                base_model_copy.save_states_history()
+                base_model_copy.set_states(mu_states_posterior, var_states_posterior)
+                mu_obs_preds.append(mu_obs_pred)
+                std_obs_preds.append(var_obs_pred**0.5)
+
+                mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
+                _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+                    obs=base_model_copy.mu_states_prior[self.AR_index], 
+                    obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
+                drift_model_copy.save_states_history()
+                drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+                mu_ar_preds.append(mu_ar_pred)
+                std_ar_preds.append(var_ar_pred**0.5)
+
                 # Collect sample input
                 if i > 65:
                     LTd_mu_prior = np.array(drift_model_copy.states.mu_prior)[:, 1].flatten()
-                    mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                    mu_LTd_history = self._hidden_states_collector(i, LTd_mu_prior)
                     samples['LTd_history'].append(mu_LTd_history.tolist())
                 if i > 65 and i < anm_begin_list[k]:
                     samples['itv_LT'].append(0.)
@@ -549,42 +586,7 @@ class hsl_detection:
 
                 if p_a_I_Yt > self.detection_threshold:
                     anomaly_detected = True
-                    break
-                    # # Intervene the model using true anomaly features
-                    # LL_index = base_model_copy.states_name.index("local level")
-                    # LT_index = base_model_copy.states_name.index("local trend")
-                    # base_model_copy.mu_states[LT_index] += anm_mag_list[k]
-                    # base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
-                    # base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
-                    # drift_model_copy.mu_states[0] = 0
-                    # drift_model_copy.mu_states[1] = self.mu_LTd
-
-                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
-                (
-                    _, _,
-                    mu_states_posterior,
-                    var_states_posterior,
-                ) = base_model_copy.backward(y)
-
-                if "lstm" in base_model_copy.states_name:
-                    base_model_copy.update_lstm_output_history(
-                        mu_states_posterior[lstm_index],
-                        var_states_posterior[lstm_index, lstm_index],
-                    )
-
-                base_model_copy.save_states_history()
-                base_model_copy.set_states(mu_states_posterior, var_states_posterior)
-                mu_obs_preds.append(mu_obs_pred)
-                std_obs_preds.append(var_obs_pred**0.5)
-
-                mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
-                _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.AR_index], 
-                    obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
-                drift_model_copy.save_states_history()
-                drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-                mu_ar_preds.append(mu_ar_pred)
-                std_ar_preds.append(var_ar_pred**0.5)
+                    # break
 
             # states_mu_prior = np.array(base_model_copy.states.mu_prior)
             # states_var_prior = np.array(base_model_copy.states.var_prior)
@@ -618,18 +620,21 @@ class hsl_detection:
             #                 states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
             #                 states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
             #                 alpha=0.5)
+            # ax1.set_xlim(ax0.get_xlim())
             
             # ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
             # ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
             #                 states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
             #                 states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
             #                 alpha=0.5)
+            # ax2.set_xlim(ax0.get_xlim())
             
             # ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
             # ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
             #                 states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
             #                 states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
             #                 alpha=0.5)
+            # ax3.set_xlim(ax0.get_xlim())
             # ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
             # ax4.fill_between(np.arange(len(mu_ar_preds)),
             #                 np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
@@ -641,28 +646,34 @@ class hsl_detection:
             #                 states_drift_mu_prior[:, 0].flatten() + states_drift_var_prior[:, 0, 0]**0.5,
             #                 alpha=0.5)
             # ax4.set_ylabel('LLd')
+            # ax4.set_xlim(ax0.get_xlim())
             # ax5.plot(states_drift_mu_prior[:, 1].flatten())
             # ax5.fill_between(np.arange(len(states_drift_mu_prior[:, 1])),
             #                 states_drift_mu_prior[:, 1].flatten() - states_drift_var_prior[:, 1, 1]**0.5,
             #                 states_drift_mu_prior[:, 1].flatten() + states_drift_var_prior[:, 1, 1]**0.5,
             #                 alpha=0.5)
             # ax5.set_ylabel('LTd')
+            # ax5.set_xlim(ax0.get_xlim())
             # ax6.plot(states_drift_mu_prior[:, 2].flatten())
             # ax6.fill_between(np.arange(len(states_drift_mu_prior[:, 2])),
             #                 states_drift_mu_prior[:, 2].flatten() - states_drift_var_prior[:, 2, 2]**0.5,
             #                 states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
             #                 alpha=0.5)
             # ax6.set_ylabel('ARd')
+            # ax6.set_xlim(ax0.get_xlim())
             # ax7.plot(p_anm_one_syn_ts)
             # ax7.axvline(x=anm_begin_list[k], color='r', linestyle='--')
             # ax7.set_ylim(-0.05, 1.05)
             # ax7.set_ylabel('p_anm')
+            # ax7.set_xlim(ax0.get_xlim())
             # ax8.plot(y_likelihood_a_one_ts, label='itv')
             # ax8.plot(y_likelihood_na_one_ts, label='no itv')
             # ax8.set_ylabel('y_likelihood')
+            # ax8.set_xlim(ax0.get_xlim())
             # ax9.plot(x_likelihood_a_one_ts, label='itv')
             # ax9.plot(x_likelihood_na_one_ts, label='no itv')
             # ax9.set_ylabel('x_likelihood')
+            # ax9.set_xlim(ax0.get_xlim())
             # plt.show()
         
         samples_df = pd.DataFrame(samples)
@@ -695,6 +706,7 @@ class hsl_detection:
 
         # Target list
         self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time', 'anm_type']
+        # self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
 
         samples_input = np.array(samples['LTd_history'].values.tolist(), dtype=np.float32)
         samples_target = np.array(samples[self.target_list].values, dtype=np.float32)
@@ -707,10 +719,10 @@ class hsl_detection:
         samples_target = np.delete(samples_target, zero_indices, axis=0)
         samples_p_anm = np.delete(samples_p_anm, zero_indices, axis=0)
 
-        panm_b5_indices = np.where(samples_p_anm > 0.5)[0]
-        samples_p_anm = np.delete(samples_p_anm, panm_b5_indices, axis=0)
-        samples_input = np.delete(samples_input, panm_b5_indices, axis=0)
-        samples_target = np.delete(samples_target, panm_b5_indices, axis=0)
+        # panm_b5_indices = np.where(samples_p_anm > 0.5)[0]
+        # samples_p_anm = np.delete(samples_p_anm, panm_b5_indices, axis=0)
+        # samples_input = np.delete(samples_input, panm_b5_indices, axis=0)
+        # samples_target = np.delete(samples_target, panm_b5_indices, axis=0)
 
         # Train the model using 80% of the samples
         n_samples = len(samples_input)
@@ -803,6 +815,7 @@ class hsl_detection:
                         val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
                         val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
                         val_pred_y_mu = val_pred_mu[:, [0, 2, 4, 6]]
+                        # val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
                         val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
                         # Compute the mse between val_pred_y_mu and val_y_batch
                         loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
@@ -830,6 +843,8 @@ class hsl_detection:
                     test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
                     test_pred_y_mu = test_pred_mu[:, [0, 2, 4, 6]]
                     test_pred_y_var = test_pred_mu[:, [1, 3, 5, 7]]
+                    # test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
+                    # test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
                     test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
                     # Compute the mse between test_pred_y_mu and test_y_batch
                     loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()

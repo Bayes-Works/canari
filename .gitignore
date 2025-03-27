@@ -14,3 +14,6 @@ saved_params/
 !.vscode/settings.json
 !saved_results/time_series_toy.png
 
+data/toy_time_series/hsl_intro_figure_data.csv
+data/toy_time_series/hsl_intro_figure_datetime.csv
+examples/plot_figure_hsl_intro.ipynb
