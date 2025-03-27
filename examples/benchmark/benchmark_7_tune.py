@@ -42,7 +42,7 @@ def main(
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["displacement_z", "water_level", "temp_min", "temp_max"]
+    df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
     lags = [0, 4, 4, 4]
     df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
@@ -119,7 +119,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
+        mu_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )

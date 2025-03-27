@@ -119,7 +119,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
+        mu_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )
