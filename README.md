@@ -6,7 +6,7 @@ Open-source library for probabilistic anomaly detection in time series
 ```sh
 git clone https://github.com/CivML-PolyMtl/canari.git
 cd canari
-
+```
 
 #### Create Miniconda Environment
 
