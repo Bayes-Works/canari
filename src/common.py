@@ -1,6 +1,7 @@
 from typing import Tuple, Optional, Dict
 import numpy as np
 from src.data_struct import LstmOutputHistory
+from pytagi import Normalizer
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -160,6 +161,35 @@ def gaussian_mixture(
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
     return mu_mixture, var_mixture
+
+
+def unstandardize_states(mu_norm, std_norm, norm_const_mean, norm_const_std):
+    """Un-standardize mean and variance of hidden states"""
+
+    mu_unnorm = {}
+    std_unnorm = {}
+
+    for key in mu_norm:
+        _mu_norm = mu_norm[key]
+        _std_norm = std_norm[key]
+
+        if key == "local level":
+            _norm_const_mean = norm_const_mean
+        else:
+            _norm_const_mean = 0
+
+        mu_unnorm[key] = Normalizer.unstandardize(
+            _mu_norm,
+            _norm_const_mean,
+            norm_const_std,
+        )
+
+        std_unnorm[key] = Normalizer.unstandardize_std(
+            _std_norm,
+            norm_const_std,
+        )
+
+    return mu_unnorm, std_unnorm
 
 
 class GMA(object):

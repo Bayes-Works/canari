@@ -6,7 +6,7 @@ saved_results/
 **/__pycache__/
 *.egg-info/
 *.png
-data/demo_data.csv
+data/demo_data
 data/benchmark_data/
 saved_params/
 
