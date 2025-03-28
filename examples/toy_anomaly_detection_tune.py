@@ -33,7 +33,7 @@ SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
@@ -134,6 +134,7 @@ def main(
     plot_states(
         data_processor=data_processor,
         states=states_optim,
+        normalization=True,
         states_to_plot=["local level"],
         sub_plot=ax,
     )
@@ -231,6 +232,7 @@ def main(
         states=states,
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
+        normalization=False,
         color="b",
         legend_location="upper left",
     )

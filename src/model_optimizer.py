@@ -88,7 +88,7 @@ class ModelOptimizer:
 
             # Run optimization
             custom_logger = CustomLogger(total_samples=self.num_optimization_trial)
-            if self.algorithm == "optuna":
+            if self.algorithm == "default":
                 optimizer_runner = tune.run(
                     objective,
                     config=search_config,
@@ -99,7 +99,7 @@ class ModelOptimizer:
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
                 )
-            elif self.algorithm == "default":
+            elif self.algorithm == "parallel":
                 scheduler = ASHAScheduler(metric="metric", mode="min")
                 optimizer_runner = tune.run(
                     objective,

@@ -115,7 +115,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         break
 
 # save model
-model_dict = model.save_model_dict()
+model_dict = model.get_dict()
 model_dict["mu_states_optimal"] = states_optim.mu_prior[-1]
 
 print(f"Optimal epoch: {model.optimal_epoch}")
@@ -165,6 +165,7 @@ state_type = "prior"
 fig, ax = plot_states(
     data_processor=data_processor,
     states=states_optim,
+    normalization=True,
     states_type=state_type,
     states_to_plot=[
         "local level",
@@ -197,6 +198,7 @@ fig, ax = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type=state_type,
+    normalization=True,
     states_to_plot=[
         "local level",
         "local trend",

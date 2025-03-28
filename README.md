@@ -1,6 +1,46 @@
 # canari
 Open-source library for probabilistic anomaly detection in time series 
 
+## Installation
+#### Clone this repository or create canari folder 
+```sh
+git clone https://github.com/CivML-PolyMtl/canari.git
+cd canari
+```
+
+#### Create Miniconda Environment
+
+1. Install Miniconda by following these [instructions](https://docs.conda.io/en/latest/miniconda.html)
+2. Create a conda environment:
+
+    ```sh
+    conda create --name canari python=3.10
+    ```
+
+3. Activate conda environment:
+
+    ```sh
+    conda activate canari
+    ```
+
+#### Canari Installation
+
+1. Install requirements:
+
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+
+2. Test **canari** package:
+
+    ```sh
+    python -m examples.toy_forecast
+    ```
+
+
+## Code organization
+for development purposes
 ```
 canari
 |
