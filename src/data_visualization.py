@@ -12,7 +12,8 @@ from matplotlib.dates import (
     HourLocator,
     DateFormatter,
 )
-import pandas as pd
+from pytagi import Normalizer
+from src import common
 
 
 def plot_data(
@@ -83,11 +84,11 @@ def plot_data(
 
 def plot_prediction(
     data_processor: DataProcess,
-    mu_train_pred: Optional[np.ndarray] = None,
+    mean_train_pred: Optional[np.ndarray] = None,
     std_train_pred: Optional[np.ndarray] = None,
-    mu_validation_pred: Optional[np.ndarray] = None,
+    mean_validation_pred: Optional[np.ndarray] = None,
     std_validation_pred: Optional[np.ndarray] = None,
-    mu_test_pred: Optional[np.ndarray] = None,
+    mean_test_pred: Optional[np.ndarray] = None,
     std_test_pred: Optional[np.ndarray] = None,
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
@@ -105,7 +106,7 @@ def plot_prediction(
         ax = sub_plot
 
     split_indices = list(data_processor.get_split_indices())
-    mean_values = [mu_train_pred, mu_validation_pred, mu_test_pred]
+    mean_values = [mean_train_pred, mean_validation_pred, mean_test_pred]
     std_values = [std_train_pred, std_validation_pred, std_test_pred]
     labels = [train_label, validation_label, test_label]
     total_time = []
@@ -134,6 +135,7 @@ def plot_states(
     states: StatesHistory,
     states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
+    normalization: Optional[bool] = False,
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "b",
@@ -159,8 +161,15 @@ def plot_states(
     time = determine_time(data_processor, len_states)
 
     # Mean and std to plot
-    mu_plot = states.get_mean(states_type=states_type, states_name=states_to_plot)
-    std_plot = states.get_std(states_type=states_type, states_name=states_to_plot)
+    mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
+    std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
+    if not normalization:
+        mu_states, std_states = common.unstandardize_states(
+            mu_states,
+            std_states,
+            data_processor.norm_const_mean[data_processor.output_col],
+            data_processor.norm_const_std[data_processor.output_col],
+        )
 
     for idx, plot_state in enumerate(states_to_plot):
         ax = axes[idx] if sub_plot is None else sub_plot
@@ -168,8 +177,8 @@ def plot_states(
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_plot[plot_state].flatten(),
-            std=std_plot[plot_state].flatten(),
+            mu=mu_states[plot_state].flatten(),
+            std=std_states[plot_state].flatten(),
             num_std=num_std,
             color=color,
             linestyle=linestyle,
@@ -206,6 +215,7 @@ def plot_skf_states(
     model_prob: np.ndarray,
     states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
+    normalization: Optional[bool] = False,
     num_std: Optional[int] = 1,
     plot_observation: Optional[bool] = True,
     color: Optional[str] = "b",
@@ -227,8 +237,15 @@ def plot_skf_states(
     time = determine_time(data_processor, len_states)
 
     # Mean and std to plot
-    mu_plot = states.get_mean(states_type=states_type, states_name=states_to_plot)
-    std_plot = states.get_std(states_type=states_type, states_name=states_to_plot)
+    mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
+    std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
+    if not normalization:
+        mu_states, std_states = common.unstandardize_states(
+            mu_states,
+            std_states,
+            data_processor.norm_const_mean[data_processor.output_col],
+            data_processor.norm_const_std[data_processor.output_col],
+        )
 
     for idx, plot_state in enumerate(states_to_plot):
         ax = axes[idx]
@@ -236,8 +253,8 @@ def plot_skf_states(
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_plot[plot_state].flatten(),
-            std=std_plot[plot_state].flatten(),
+            mu=mu_states[plot_state].flatten(),
+            std=std_states[plot_state].flatten(),
             num_std=num_std,
             color=color,
             linestyle=linestyle,
@@ -256,7 +273,7 @@ def plot_skf_states(
         plot_data(
             data_processor=data_processor,
             plot_column=data_processor.output_col,
-            normalization=True,
+            normalization=normalization,
             sub_plot=axes[0],
             plot_nan=plot_nan,
         )
@@ -298,20 +315,20 @@ def plot_with_uncertainty(
     """Plot mean and std"""
 
     if index is not None:
-        mu_plot = mu[:, index]
-        std_plot = std[:, index, index].flatten()
+        mu_states = mu[:, index]
+        std_states = std[:, index, index].flatten()
     else:
-        mu_plot = mu
-        std_plot = std.flatten()
+        mu_states = mu
+        std_states = std.flatten()
 
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(time, mu_plot, color=color, label=label[0], linestyle=linestyle)
+    ax.plot(time, mu_states, color=color, label=label[0], linestyle=linestyle)
     ax.fill_between(
         time,
-        mu_plot - num_std * std_plot,
-        mu_plot + num_std * std_plot,
+        mu_states - num_std * std_states,
+        mu_states + num_std * std_states,
         color=color,
         alpha=0.2,
         label=label[1],

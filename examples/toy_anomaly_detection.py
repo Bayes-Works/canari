@@ -18,6 +18,7 @@ from src import (
     plot_skf_states,
 )
 import pytagi.metric as metric
+from src import common
 
 
 # # Read data
@@ -147,7 +148,7 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mu_validation_pred=mu_validation_preds_optim,
+    mean_validation_pred=mu_validation_preds_optim,
     std_validation_pred=std_validation_preds_optim,
     sub_plot=ax,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
@@ -164,6 +165,7 @@ fig, ax = plot_skf_states(
     states=states,
     states_to_plot=["local level", "local trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
+    # normalization=True,
     color="b",
     legend_location="upper left",
 )
