@@ -210,6 +210,7 @@ class Model:
             save_dict["autoregression_index"] = self.states_name.index("autoregression")
         if "W2bar" in self.states_name:
             save_dict["W2bar_index"] = self.states_name.index("W2bar")
+
         return save_dict
 
     @staticmethod
