@@ -31,11 +31,11 @@ import src.common as common
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 
-anm_start_index = 52*10
+anm_start_index = 52*10 + 15
 
 # LT anomaly
 # anm_mag = 0.010416667/10
-anm_mag = 0/52
+anm_mag = 1/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0

@@ -100,17 +100,17 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 hsl_tsad_agent.mu_LTd = -5.077905827794165e-06
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 3.100935940308812e-05)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts5.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, anm_type = 'LL + LT', save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_V2.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5.csv', 
-                                  load_model_path='saved_params/NN_detection_model_realTS5_lstm_1000.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_V2.csv', 
+                                  load_model_path='saved_params/NN_detection_model_realTS5_lstm_V2_M1.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
-# #  Plot
+#  Plot
 state_type = "prior"
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(11, 1)
+fig = plt.figure(figsize=(10, 10))
+gs = gridspec.GridSpec(12, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -122,6 +122,7 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
+ax11 = plt.subplot(gs[11])
 from src.data_visualization import determine_time
 time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
@@ -140,7 +141,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("HSL Detection & Intervention agent")
+ax0.set_title("Hidden states likelihood")
 plot_states(
     data_processor=data_processor,
     states=hsl_tsad_agent.base_model.states,
@@ -211,4 +212,11 @@ ax10.plot(time, mu_itv_all[:, 2])
 ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
 ax10.set_ylabel("itv_time")
 ax10.set_xlim(ax0.get_xlim())
+
+ax11.plot(time, mu_itv_all[:, 3])
+ax11.fill_between(time, mu_itv_all[:, 3] - std_itv_all[:, 3], mu_itv_all[:, 3] + std_itv_all[:, 3], alpha=0.5)
+ax11.set_ylabel("anm_type")
+ax11.axhline(y=1, color='k', linestyle='--')
+ax11.axhline(y=0, color='k', linestyle='--')
+ax11.set_xlim(ax0.get_xlim())
 plt.show()
