@@ -195,6 +195,7 @@ time = data_processor.get_time("all")
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     plot_observation=False,
+    normalization=True,
     states=states,
     model_prob=marginal_abnorm_prob_plot,
     color="b",

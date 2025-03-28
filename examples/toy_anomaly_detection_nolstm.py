@@ -121,7 +121,16 @@ def main(
         states=states,
         states_type="prior",
         model_prob=marginal_abnorm_prob_plot,
-        # states_to_plot=['local level', 'local trend', 'periodic 1', 'autoregression', 'phi', 'AR_error', 'W2', 'W2bar'],
+        states_to_plot=[
+            "local level",
+            "local trend",
+            "periodic 1",
+            "autoregression",
+            "phi",
+            "AR_error",
+            "W2",
+            "W2bar",
+        ],
         color="b",
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
