@@ -8,13 +8,13 @@ Open-source library for probabilistic anomaly detection in time series
 2. Create a conda environment:
 
     ```sh
-    conda create --name your_env_name python=3.10
+    conda create --name canari python=3.10
     ```
 
 3. Activate conda environment:
 
     ```sh
-    conda activate your_env_name
+    conda activate canari
     ```
 
 ### Canari Installation
