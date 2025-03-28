@@ -28,16 +28,10 @@ look_back_len_fix = 6
 SKF_std_transition_error_fix = 0.0002876702842607609
 SKF_norm_to_abnorm_prob_fix = 6.221328051970482e-05
 
-# Fix parameters
-# sigma_v_fix = 0.0747805401245962
-# look_back_len_fix = 6
-# SKF_std_transition_error_fix = 1e-4
-# SKF_norm_to_abnorm_prob_fix = 1e-5
-
 
 def main(
     num_trial_optimization: int = 40,
-    param_tune: bool = False,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data
@@ -123,7 +117,7 @@ def main(
     )
     plot_prediction(
         data_processor=data_processor,
-        mu_validation_pred=mu_validation_preds,
+        mean_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )
