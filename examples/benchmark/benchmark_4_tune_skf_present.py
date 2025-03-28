@@ -143,6 +143,7 @@ def main(
     # plot_states(
     #     data_processor=data_processor,
     #     states=states_optim,
+    #     normalization=True,
     #     states_to_plot=["local level"],
     #     sub_plot=ax,
     # )
