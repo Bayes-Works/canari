@@ -31,11 +31,11 @@ import src.common as common
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 
-anm_start_index = 52*10 + 15
+anm_start_index = 52*10
 
 # LT anomaly
 # anm_mag = 0.010416667/10
-anm_mag = 1/52
+anm_mag = 0.5/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -43,7 +43,7 @@ anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
 anm_baseline[:anm_start_index] = 0
 
 # # LL anomaly
-# anm_mag = 1
+# anm_mag = 0.5
 # anm_baseline = np.zeros_like(df_raw)
 # anm_baseline[anm_start_index:] += anm_mag
 
@@ -119,9 +119,9 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 6.752008216862851e-06
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.4359286999624447e-05)
+hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.mu_LTd = 6.752008216862851e-06
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.4359286999624447e-05)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=100, anm_type = 'LL + LT', save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_multi_anm_V4.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
