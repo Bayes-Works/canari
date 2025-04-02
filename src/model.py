@@ -511,7 +511,8 @@ class Model:
             else:
                 lstm_output_history_exist = False
 
-        lstm_cell_states = self.lstm_net.get_lstm_states()
+            lstm_cell_states = self.lstm_net.get_lstm_states()
+        
         for _ in range(num_time_series):
             one_time_series = []
 
@@ -585,6 +586,7 @@ class Model:
                 )
             else:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            self.lstm_net.set_lstm_states(lstm_cell_states)
 
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
