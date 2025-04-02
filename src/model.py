@@ -463,8 +463,19 @@ class Model:
             np.array(std_obs_preds).flatten(),
             self.states,
         )
-    
-    def generate_time_series(self, num_time_series: int, num_time_steps: int, add_lstm_pred_noise = True, time_covariates=None, time_covariate_info=None, add_anomaly=False, anomaly_mag_range=None, anomaly_begin_range=None, anomaly_type = 'trend') -> np.ndarray:
+
+    def generate_time_series(
+        self,
+        num_time_series: int,
+        num_time_steps: int,
+        add_lstm_pred_noise=True,
+        time_covariates=None,
+        time_covariate_info=None,
+        add_anomaly=False,
+        anomaly_mag_range=None,
+        anomaly_begin_range=None,
+        anomaly_type="trend",
+    ) -> np.ndarray:
         """
         Generate time series data
         """
@@ -477,16 +488,25 @@ class Model:
         # Prepare time covariates
         if time_covariates is not None:
             initial_time_covariate = time_covariate_info["initial_time_covariate"]
-            input_covariates = self.prepare_covariates_generation(initial_time_covariate, num_time_steps, time_covariates)
-            input_covariates = normalizer.standardize(input_covariates, time_covariate_info["mu"], time_covariate_info["std"])
+            input_covariates = self.prepare_covariates_generation(
+                initial_time_covariate, num_time_steps, time_covariates
+            )
+            input_covariates = normalizer.standardize(
+                input_covariates, time_covariate_info["mu"], time_covariate_info["std"]
+            )
         else:
             input_covariates = np.empty((num_time_steps, 0))
 
         # Get LSTM initializations
         if "lstm" in self.states_name:
-            if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
+            if (
+                self.lstm_output_history.mu is not None
+                and self.lstm_output_history.var is not None
+            ):
                 lstm_output_history_mu_temp = copy.deepcopy(self.lstm_output_history.mu)
-                lstm_output_history_var_temp = copy.deepcopy(self.lstm_output_history.var)
+                lstm_output_history_var_temp = copy.deepcopy(
+                    self.lstm_output_history.var
+                )
                 lstm_output_history_exist = True
             else:
                 lstm_output_history_exist = False
@@ -498,15 +518,25 @@ class Model:
                 self.lstm_net.reset_lstm_states()
                 # Reset lstm output history
                 if lstm_output_history_exist:
-                    self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                    self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                    self.lstm_output_history.mu = copy.deepcopy(
+                        lstm_output_history_mu_temp
+                    )
+                    self.lstm_output_history.var = copy.deepcopy(
+                        lstm_output_history_var_temp
+                    )
                 else:
-                    self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            
+                    self.lstm_output_history.initialize(
+                        self.lstm_net.lstm_look_back_len
+                    )
+
             # Get the anomaly features
             if add_anomaly:
-                anomaly_mag = np.random.uniform(anomaly_mag_range[0], anomaly_mag_range[1])
-                anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
+                anomaly_mag = np.random.uniform(
+                    anomaly_mag_range[0], anomaly_mag_range[1]
+                )
+                anomaly_time = np.random.randint(
+                    anomaly_begin_range[0], anomaly_begin_range[1]
+                )
                 anm_mag_all.append(anomaly_mag)
                 anm_begin_all.append(anomaly_time)
 
@@ -519,7 +549,9 @@ class Model:
                         var_states_prior[lstm_index, :] = 0
                         var_states_prior[:, lstm_index] = 0
 
-                state_sample = np.random.multivariate_normal(mu_states_prior.flatten(), var_states_prior).reshape(-1, 1)
+                state_sample = np.random.multivariate_normal(
+                    mu_states_prior.flatten(), var_states_prior
+                ).reshape(-1, 1)
 
                 if "lstm" in self.states_name:
                     self.lstm_output_history.update(
@@ -532,10 +564,10 @@ class Model:
 
                 if add_anomaly:
                     if i > anomaly_time:
-                        if anomaly_type == 'trend':
-                            obs_gen += anomaly_mag * (i - anomaly_time)     # LT anomaly
-                        elif anomaly_type == 'level':
-                            obs_gen += anomaly_mag                          # LL anomaly
+                        if anomaly_type == "trend":
+                            obs_gen += anomaly_mag * (i - anomaly_time)  # LT anomaly
+                        elif anomaly_type == "level":
+                            obs_gen += anomaly_mag  # LL anomaly
                 self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 
@@ -546,10 +578,12 @@ class Model:
         if "lstm" in self.states_name:
             if lstm_output_history_exist:
                 self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                self.lstm_output_history.var = copy.deepcopy(
+                    lstm_output_history_var_temp
+                )
             else:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            
+
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
     def filter(
@@ -796,23 +830,37 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
-    
-    def prepare_covariates_generation(self, initial_covariate, num_generated_samples: int, time_covariates: List[str]):
+
+    def prepare_covariates_generation(
+        self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
+    ):
         """
         Prepare covariates for synthetic data generation
         """
         covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":
-                covariates_generation = (initial_covariate + covariates_generation) % 24 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 24 + 1
             elif time_cov == "day_of_week":
-                covariates_generation = (initial_covariate + covariates_generation) % 7 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 7 + 1
             elif time_cov == "day_of_year":
-                covariates_generation = (initial_covariate + covariates_generation) % 365 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 365 + 1
             elif time_cov == "week_of_year":
-                covariates_generation = (initial_covariate + covariates_generation) % 52 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 52 + 1
             elif time_cov == "month_of_year":
-                covariates_generation = (initial_covariate + covariates_generation) % 12 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 12 + 1
             elif time_cov == "quarter_of_year":
-                covariates_generation = (initial_covariate + covariates_generation) % 4 + 1
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 4 + 1
         return covariates_generation
