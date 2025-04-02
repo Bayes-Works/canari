@@ -535,7 +535,8 @@ class Model:
             one_time_series = []
 
             if "lstm" in self.states_name:
-                self.lstm_net.reset_lstm_states()
+                # Reset lstm cell states
+                self.lstm_net.set_lstm_states(lstm_cell_states)
                 # Reset lstm output history
                 if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
                     self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
