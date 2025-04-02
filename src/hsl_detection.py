@@ -436,9 +436,10 @@ class hsl_detection:
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
         ax0 = plt.subplot(gs[0])
+        norm_data = self.data_processor.normalize_data()
         for j in range(len(generated_ts)):
-            ax0.plot(np.concatenate((self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1), 
-                                        self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1), 
+            ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
+                                        norm_data[val_index, self.data_processor.output_col].reshape(-1), 
                                         generated_ts[j])))
         ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
         ax0.set_title("Data generation")
