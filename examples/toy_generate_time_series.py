@@ -137,8 +137,8 @@ for epoch in range(num_epoch):
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
 
     if epoch == model.optimal_epoch:
-        mu_validation_preds_optim = mu_validation_preds.copy()
-        std_validation_preds_optim = std_validation_preds.copy()
+        mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
+        std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
     if model.stop_training:
         break
@@ -233,7 +233,7 @@ fig, ax = plot_states(
 )
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    normalization=False,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],

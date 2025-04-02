@@ -468,7 +468,7 @@ class Model:
         self,
         num_time_series: int,
         num_time_steps: int,
-        add_lstm_pred_noise=True,
+        sample_from_lstm_pred=True,
         time_covariates=None,
         time_covariate_info=None,
         add_anomaly=False,
@@ -545,7 +545,7 @@ class Model:
 
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
-                    if not add_lstm_pred_noise:
+                    if not sample_from_lstm_pred:
                         var_states_prior[lstm_index, :] = 0
                         var_states_prior[:, lstm_index] = 0
 
