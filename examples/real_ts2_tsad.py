@@ -87,7 +87,7 @@ ltd_error = 1e-5
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.save_model_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
