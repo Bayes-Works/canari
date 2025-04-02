@@ -511,11 +511,13 @@ class Model:
             else:
                 lstm_output_history_exist = False
 
+        lstm_cell_states = self.lstm_net.get_lstm_states()
         for _ in range(num_time_series):
             one_time_series = []
 
             if "lstm" in self.states_name:
-                self.lstm_net.reset_lstm_states()
+                # Reset lstm cell states
+                self.lstm_net.set_lstm_states(lstm_cell_states)
                 # Reset lstm output history
                 if lstm_output_history_exist:
                     self.lstm_output_history.mu = copy.deepcopy(
