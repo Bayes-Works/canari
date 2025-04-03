@@ -1,28 +1,24 @@
 import fire
 import copy
-from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pytagi import exponential_scheduler
 from pytagi import metric
 from pytagi import Normalizer as normalizer
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    ModelOptimizer,
-    SKF,
-    SKFOptimizer,
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend, LocalAcceleration
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
+from canari.model_optimizer import ModelOptimizer
+from canari.SKF_optimizer import SKFOptimizer
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
-from examples import DataProcess
-
 
 # Fix parameters grid search
 sigma_v_fix = 0.015519087402266298

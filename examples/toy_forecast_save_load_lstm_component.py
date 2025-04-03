@@ -1,23 +1,19 @@
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
-    Model,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-import copy
 
 
 # # Read data
@@ -127,7 +123,7 @@ lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 # # #
 model2.filter(data=train_data, train_lstm=False)
 model2.smoother(data=train_data)
-mu_validation_preds2, std_validation_preds2 = model2.forecast(validation_data)
+mu_validation_preds2, std_validation_preds2, _ = model2.forecast(validation_data)
 
 lstm_params_after_filter = copy.deepcopy(model2.lstm_net.state_dict())
 assert lstm_params_before_filter == lstm_params_after_filter

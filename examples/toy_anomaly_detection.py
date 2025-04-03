@@ -1,25 +1,21 @@
 import copy
 import pandas as pd
 from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from examples import DataProcess
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    SKF,
+import pytagi.metric as metric
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend, LocalAcceleration
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_skf_states,
 )
-import pytagi.metric as metric
-from src import common
-
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"

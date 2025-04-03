@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Optional, List
-from examples import DataProcess
-from src.data_struct import StatesHistory
+from canari.data_process import DataProcess
+from canari.data_struct import StatesHistory
 import matplotlib.dates as mdates
 from matplotlib.dates import (
     YearLocator,
@@ -12,8 +12,7 @@ from matplotlib.dates import (
     HourLocator,
     DateFormatter,
 )
-from pytagi import Normalizer
-from src import common
+from canari import common
 
 
 def plot_data(
