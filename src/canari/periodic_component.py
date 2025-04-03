@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from src.base_component import BaseComponent
+from canari.base_component import BaseComponent
 
 
 class Periodic(BaseComponent):

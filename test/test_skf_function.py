@@ -1,20 +1,11 @@
-from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-from src.data_struct import LstmOutputHistory
-
-from src import (
-    LocalAcceleration,
-    LocalLevel,
-    LocalTrend,
-    Periodic,
-    Autoregression,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    SKF,
-    common,
-)
+from canari.data_struct import LstmOutputHistory
+from canari.baseline_component import LocalTrend, LocalAcceleration
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
 
 
 # Components

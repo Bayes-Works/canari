@@ -1,6 +1,6 @@
-import numpy as np
 from typing import Optional
-from src.base_component import BaseComponent
+import numpy as np
+from canari.base_component import BaseComponent
 
 
 class Autoregression(BaseComponent):

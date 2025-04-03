@@ -1,26 +1,24 @@
+import copy
 import fire
 import time
-import copy
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    ModelOptimizer,
-    SKF,
-    SKFOptimizer,
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend, LocalAcceleration
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
+from canari.model_optimizer import ModelOptimizer
+from canari.SKF_optimizer import SKFOptimizer
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
-from examples import DataProcess
 
 # Fix parameters
 sigma_v_fix = 0.020591615862631585

@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Optional
-from src.base_component import BaseComponent
+from canari.base_component import BaseComponent
 
 
 class WhiteNoise(BaseComponent):
