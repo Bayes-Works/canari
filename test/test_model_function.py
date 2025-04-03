@@ -1,19 +1,14 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-
-from src import (
-    BaseComponent,
-    LocalAcceleration,
-    LocalLevel,
-    LocalTrend,
-    Periodic,
-    Autoregression,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    common,
-)
+from canari.base_component import BaseComponent
+from canari.baseline_component import LocalLevel, LocalTrend, LocalAcceleration
+from canari.lstm_component import LstmNetwork
+from canari.periodic_component import Periodic
+from canari.white_noise_component import WhiteNoise
+from canari.autoregression_component import Autoregression
+from canari import common
+from canari.model import Model
 
 
 def compute_observation_and_state_updates(

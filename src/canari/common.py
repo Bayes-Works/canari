@@ -1,6 +1,6 @@
 from typing import Tuple, Optional, Dict
 import numpy as np
-from src.data_struct import LstmOutputHistory
+from canari.data_struct import LstmOutputHistory
 from pytagi import Normalizer
 
 

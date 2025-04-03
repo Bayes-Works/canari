@@ -2,13 +2,10 @@ from typing import Tuple, Dict, Optional
 import copy
 import numpy as np
 from pytagi import metric
-from src.model import Model
-from src import common
-import copy
-from src.data_struct import (
-    StatesHistory,
-)
-from examples import DataProcess
+from canari.model import Model
+from canari import common
+from canari.data_struct import StatesHistory
+from canari.data_process import DataProcess
 import matplotlib.pyplot as plt
 
 

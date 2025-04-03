@@ -1,14 +1,8 @@
-from typing import Tuple
-import numpy as np
 import numpy.testing as npt
-
-from src import (
-    LocalTrend,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-)
-
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
 
 # Components
 lstm_look_back_len = 10

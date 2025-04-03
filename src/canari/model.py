@@ -1,11 +1,11 @@
-import numpy as np
 import copy
 from typing import Optional, List, Tuple, Dict
-from src.base_component import BaseComponent
-import src.common as common
-from src.data_struct import LstmOutputHistory, StatesHistory
-from src.common import GMA
-from examples import DataProcess
+import numpy as np
+from canari.base_component import BaseComponent
+import canari.common as common
+from canari.data_struct import LstmOutputHistory, StatesHistory
+from canari.common import GMA
+from canari.data_process import DataProcess
 
 
 class Model:

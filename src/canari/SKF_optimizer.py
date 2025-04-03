@@ -1,10 +1,11 @@
+import signal
 from ray import tune
 from ray.tune import Callback, Stopper
 from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 import numpy as np
 from ray.tune.schedulers import ASHAScheduler
-import signal
+
 
 # Ignore segmentation fault signals
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)

@@ -1,23 +1,18 @@
 import os
-import fire
 import pandas as pd
 import numpy as np
-import pytest
 import matplotlib.pyplot as plt
-
 from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
-
-from src import (
-    LocalTrend,
-    LstmNetwork,
-    Autoregression,
-    WhiteNoise,
-    Model,
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
 )
-from examples import DataProcess
 
 
 def model_test_runner(model: Model, plot: bool) -> float:
