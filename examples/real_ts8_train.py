@@ -84,13 +84,14 @@ for epoch in range(num_epoch):
     )
 
     # Calculate the evaluation metric
+    validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(
-        mu_validation_preds_unnorm, data_processor.validation_data[:, output_col].flatten()
+        mu_validation_preds_unnorm, validation_obs
     )
 
     validation_log_lik = metric.log_likelihood(
         prediction=mu_validation_preds_unnorm,
-        observation=data_processor.validation_data[:, output_col].flatten(),
+        observation=validation_obs,
         std=std_validation_preds_unnorm,
     )
 
@@ -111,7 +112,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 
-model_dict = model.save_model_dict()
+model_dict = model.get_dict()
 model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
@@ -159,6 +160,7 @@ plot_data(
 )
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['local level'],
@@ -168,6 +170,7 @@ ax0.set_xticklabels([])
 ax0.set_title("Hidden states estimated by the pre-trained model")
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
@@ -176,6 +179,7 @@ plot_states(
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -184,6 +188,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -218,6 +223,7 @@ plot_prediction(
 )
 plot_states(
   data_processor=data_processor,
+  normalization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['local level'],
@@ -227,6 +233,7 @@ ax0.set_xticklabels([])
 ax0.set_title("Hidden states at the optimal epoch in training")
 plot_states(
   data_processor=data_processor,
+  normalization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['local trend'],
@@ -235,6 +242,7 @@ plot_states(
 ax1.set_xticklabels([])
 plot_states(
   data_processor=data_processor,
+  normalization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['lstm'],
@@ -243,6 +251,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
   data_processor=data_processor,
+  normalization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['autoregression'],
@@ -252,6 +261,7 @@ ax3.set_xticklabels([])
 if "phi" in model.states_name:
   plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['phi'],
@@ -261,6 +271,7 @@ if "phi" in model.states_name:
 if "W2bar" in model.states_name:
   plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['W2bar'],
