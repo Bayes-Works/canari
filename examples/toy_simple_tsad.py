@@ -119,13 +119,15 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.mu_LTd = 1.4510690181047063e-07
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.6985096511431246e-05)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
-                                  save_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+                                  load_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
     anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
@@ -228,21 +230,20 @@ std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
 mu_itv_all[:anm_start_index] = np.nan
 std_itv_all[:anm_start_index] = np.nan
 print('anm_detect_index:' , anm_detected_index)
-# Set all the values after anm_detected to be nan
-mu_itv_all[anm_detected_index+1:] = np.nan
-std_itv_all[anm_detected_index+1:] = np.nan
-# print(time.shape)
+# # Set all the values after anm_detected to be nan
+# mu_itv_all[anm_detected_index+1:] = np.nan
+# std_itv_all[anm_detected_index+1:] = np.nan
 
 true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
-true_anm_dev_time[anm_start_index:anm_detected_index] += np.arange(anm_detected_index - anm_start_index)
-true_LL = true_anm_dev_time * 0.00104166666666666
+true_anm_dev_time[anm_start_index:len(np.zeros_like(mu_itv_all[:, 1]))] += np.arange(len(np.zeros_like(mu_itv_all[:, 1])) - anm_start_index)
+true_LL = true_anm_dev_time * anm_mag
 
 ax8.plot(time, mu_itv_all[:, 0])
 ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
 ax8.set_ylabel("itv_LT")
 ax8.set_xlim(ax0.get_xlim())
 ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax8.axhline(y=0.00104166666666666, color='r', linestyle='--')
+ax8.axhline(y=anm_mag, color='k', linestyle='--')
 
 ax9.plot(time, mu_itv_all[:, 1])
 ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
