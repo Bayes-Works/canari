@@ -490,13 +490,11 @@ class Model:
         anomaly_mag_range=None,
         anomaly_begin_range=None,
         anomaly_type="trend",
-        ) -> np.ndarray:
+    ) -> np.ndarray:
         """
         Generate time series data
         """
         time_series_all = []
-        anm_mag_all = []
-        anm_begin_all = []
         anm_mag_all = []
         anm_begin_all = []
         mu_states_temp = copy.deepcopy(self.mu_states)
@@ -512,7 +510,6 @@ class Model:
                 input_covariates, time_covariate_info["mu"], time_covariate_info["std"]
             )
         else:
-            input_covariates = np.empty((num_time_steps, 0))
             input_covariates = np.empty((num_time_steps, 0))
 
         # Get LSTM initializations
@@ -538,28 +535,32 @@ class Model:
                 # Reset lstm cell states
                 self.lstm_net.set_lstm_states(lstm_cell_states)
                 # Reset lstm output history
-                if self.lstm_output_history.mu is not None and self.lstm_output_history.var is not None:
-                    self.lstm_output_history.mu = copy.deepcopy(lstm_output_history_mu_temp)
-                    self.lstm_output_history.var = copy.deepcopy(lstm_output_history_var_temp)
+                if lstm_output_history_exist:
+                    self.lstm_output_history.mu = copy.deepcopy(
+                        lstm_output_history_mu_temp
+                    )
+                    self.lstm_output_history.var = copy.deepcopy(
+                        lstm_output_history_var_temp
+                    )
                 else:
-                    self.initialize_lstm_output_history()
-            
+                    self.lstm_output_history.initialize(
+                        self.lstm_net.lstm_look_back_len
+                    )
+
             # Get the anomaly features
             if add_anomaly:
-                anomaly_mag = np.random.uniform(anomaly_mag_range[0], anomaly_mag_range[1])
-                anomaly_time = np.random.randint(anomaly_begin_range[0], anomaly_begin_range[1])
+                anomaly_mag = np.random.uniform(
+                    anomaly_mag_range[0], anomaly_mag_range[1]
+                )
+                anomaly_time = np.random.randint(
+                    anomaly_begin_range[0], anomaly_begin_range[1]
+                )
                 anm_mag_all.append(anomaly_mag)
                 anm_begin_all.append(anomaly_time)
-            
-            for i, x in enumerate(input_covariates):
-                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(x)
 
-                # Generate observation samples
-                obs_gen = mu_obs_pred.item()
-                if "autoregression" in self.states_name:
-                    obs_gen -= mu_states_prior[self.states_name.index("autoregression")].item()
-                    ar_sample = ar_sample * phi_AR + np.random.normal(0, sigma_AR)
-                    obs_gen += ar_sample
+            for i, x in enumerate(input_covariates):
+                _, _, mu_states_prior, var_states_prior = self.forward(x)
+
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
                     if not sample_from_lstm_pred:
