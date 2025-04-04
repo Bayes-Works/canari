@@ -23,22 +23,30 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-from src.model import load_model_dict
 import src.common as common
 
 
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 3, num=len(df_raw))
-linear_space = np.arange(len(df_raw)) * 0.010416667/10
-# linear_space = np.arange(len(df_raw)) * 0
-# Set the first 52*12 values in linear_space to be 0
-anm_start_index = 52*10
-linear_space[anm_start_index:] -= linear_space[anm_start_index]
-linear_space[:anm_start_index] = 0
 
-df_raw = df_raw.add(linear_space, axis=0)
+anm_start_index = 52*10
+
+# LT anomaly
+# anm_mag = 0.010416667/10
+anm_mag = 0.5/52
+# anm_baseline = np.linspace(0, 3, num=len(df_raw))
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
+anm_baseline[:anm_start_index] = 0
+
+# # LL anomaly
+# anm_mag = 0.5
+# anm_baseline = np.zeros_like(df_raw)
+# anm_baseline[anm_start_index:] += anm_mag
+
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -51,6 +59,12 @@ df_raw.columns = ["values"]
 output_col = [0]
 train_split=0.289
 validation_split=0.0693*2
+
+# Remove the last 52*5 rows in df_raw
+train_split = train_split * len(df_raw) / len(df_raw[:-52*5])
+validation_split = validation_split * len(df_raw) / len(df_raw[:-52*5])
+df_raw = df_raw[:-52*5]
+
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -97,7 +111,7 @@ ltd_error = 1e-5
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
@@ -105,14 +119,12 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 4.872155174980347e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 5.7014623199866515e-05)
+hsl_tsad_agent.estimate_LTd_dist()
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_V2.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_dummy.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm.csv', 
-                                  load_model_path='saved_params/NN_detection_model_simpleTS_lstm_1000.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_dummy.csv', 
+                                  save_model_path='saved_params/NN_detection_model_simpleTS_lstm_dummy.pkl', max_training_epoch=10)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
