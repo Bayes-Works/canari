@@ -121,10 +121,10 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(t
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_dummy.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_lstm_dummy.csv', 
-                                  save_model_path='saved_params/NN_detection_model_simpleTS_lstm_dummy.pkl', max_training_epoch=10)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
+                                  save_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
