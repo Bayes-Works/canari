@@ -300,7 +300,7 @@ class Model:
             self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                self.lstm_net.reset_lstm_states()
+                # self.lstm_net.reset_lstm_states()
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -322,7 +322,7 @@ class Model:
                 self.lstm_output_history.var = std_lstm_to_set**2
 
                 # TODO: load lstm's cell and hidden states, for now, reset to 0
-                self.lstm_net.reset_lstm_states()
+                # self.lstm_net.reset_lstm_states()
 
     def forward(
         self,
