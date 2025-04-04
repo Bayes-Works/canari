@@ -4,9 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 from src import (
+    LocalLevel,
     LocalTrend,
+    LocalAcceleration,
+    LstmNetwork,
     Periodic,
     Autoregression,
+    WhiteNoise,
     Model,
     plot_data,
     plot_prediction,
@@ -197,11 +201,12 @@ pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_pa
 # Generate data
 pretrained_model.filter(train_data, train_lstm=False)
 pretrained_model.filter(validation_data, train_lstm=False)
-generated_ts,_,_,_, _, _, _ = pretrained_model.generate_time_series(
+generated_ts, _, _, _ = pretrained_model.generate_time_series(
     num_time_series=3,
     num_time_steps=len(train_val_data),
     time_covariates=data_processor.time_covariates,
     time_covariate_info=time_covariate_info,
+    sample_from_lstm_pred=False,
 )
 
 time_idx = np.arange(
