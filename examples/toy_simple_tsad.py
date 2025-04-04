@@ -161,6 +161,7 @@ plot_data(
 )
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     # states=pretrained_model.states,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
@@ -172,6 +173,7 @@ ax0.set_xticklabels([])
 ax0.set_title("Hidden states likelihood")
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
@@ -180,6 +182,7 @@ plot_states(
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -188,6 +191,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -196,6 +200,7 @@ plot_states(
 ax3.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['local level'],
@@ -204,6 +209,7 @@ plot_states(
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
@@ -212,6 +218,7 @@ plot_states(
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
