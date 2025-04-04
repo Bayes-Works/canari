@@ -419,7 +419,7 @@ class hsl_detection:
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
         # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        anm_mag_range = [-0.5/52, 0.5/52]       # LT anm mag
+        anm_mag_range = [-1/52, 1/52]       # LT anm mag
         # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
@@ -670,10 +670,10 @@ class hsl_detection:
         samples_target = np.delete(samples_target, zero_indices, axis=0)
         samples_p_anm = np.delete(samples_p_anm, zero_indices, axis=0)
 
-        panm_b5_indices = np.where(samples_p_anm > 0.5)[0]
-        samples_p_anm = np.delete(samples_p_anm, panm_b5_indices, axis=0)
-        samples_input = np.delete(samples_input, panm_b5_indices, axis=0)
-        samples_target = np.delete(samples_target, panm_b5_indices, axis=0)
+        # panm_b5_indices = np.where(samples_p_anm > 0.5)[0]
+        # samples_p_anm = np.delete(samples_p_anm, panm_b5_indices, axis=0)
+        # samples_input = np.delete(samples_input, panm_b5_indices, axis=0)
+        # samples_target = np.delete(samples_target, panm_b5_indices, axis=0)
 
         # Train the model using 80% of the samples
         n_samples = len(samples_input)
@@ -689,7 +689,7 @@ class hsl_detection:
         self.std_target = train_y.std(axis=0)
         # # Remove when using time series with different anomaly magnitude
         # self.mean_target[0] = 0
-        self.std_target[0] = 1
+        # self.std_target[0] = 1
         # self.mean_target = np.zeros_like(self.mean_target)
         # self.std_target = np.ones_like(self.std_target)
         train_y = (train_y - self.mean_target) / self.std_target
@@ -749,8 +749,6 @@ class hsl_detection:
                         out_updater.update_heteros(
                             output_states = self.model.net.output_z_buffer,
                             mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
-                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
-                            # var_obs = np.zeros_like(train_y[i*self.batch_size:(i+1)*self.batch_size].flatten()),
                             delta_states = self.model.net.input_delta_z_buffer,
                         )
                         self.model.net.backward()
