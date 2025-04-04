@@ -129,17 +129,18 @@ class hsl_detection:
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
                                 'mu': self.data_processor.norm_const_mean[covariate_col], 
                                 'std': self.data_processor.norm_const_std[covariate_col]}
-        generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
+        generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=1, num_time_steps=52*10, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=False, sample_from_lstm_pred=False)
         # # Run the current model on the synthetic time series
         lstm_index = self.base_model.get_states_index("lstm")
+        lstm_cell_states = self.base_model.lstm_net.get_lstm_states()
         for k in tqdm(range(len(generated_ts))):
             base_model_copy = copy.deepcopy(self.base_model)
             if "lstm" in self.base_model.states_name:
                 base_model_copy.lstm_net = self.base_model.lstm_net
-                base_model_copy.lstm_net.reset_lstm_states()
+                base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
             drift_model_copy = copy.deepcopy(self.drift_model)
 
             base_model_copy.initialize_states_history()
@@ -448,11 +449,12 @@ class hsl_detection:
 
         # # Run the current model on the synthetic time series
         lstm_index = self.base_model.get_states_index("lstm")
+        lstm_cell_states = self.base_model.lstm_net.get_lstm_states()
         for k in tqdm(range(len(generated_ts))):
             base_model_copy = copy.deepcopy(self.base_model)
             if "lstm" in self.base_model.states_name:
                 base_model_copy.lstm_net = self.base_model.lstm_net
-                base_model_copy.lstm_net.reset_lstm_states()
+                base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
             drift_model_copy = copy.deepcopy(self.drift_model)
 
             mu_obs_preds, std_obs_preds = [], []
@@ -549,10 +551,10 @@ class hsl_detection:
                 mu_ar_preds.append(mu_ar_pred)
                 std_ar_preds.append(var_ar_pred**0.5)
 
-            states_mu_prior = np.array(base_model_copy.states.mu_prior)
-            states_var_prior = np.array(base_model_copy.states.var_prior)
-            states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
-            states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
+            # states_mu_prior = np.array(base_model_copy.states.mu_prior)
+            # states_var_prior = np.array(base_model_copy.states.var_prior)
+            # states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
+            # states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
 
             # fig = plt.figure(figsize=(10, 9))
             # gs = gridspec.GridSpec(10, 1)
