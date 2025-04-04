@@ -81,6 +81,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ####################################################################
 # Load model_dict from local
 with open("saved_params/toy_simple_model_old.pkl", "rb") as f:
+# with open("saved_params/toy_simple_model_ar1e3.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
