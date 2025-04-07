@@ -158,6 +158,7 @@ class SKFOptimizer:
                         detection_target=0.50, false_target=0.00, alarm_target="No"
                     ),
                     scheduler=scheduler,
+                    resources_per_trial={"cpu": 1, "gpu": 0.1},
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],

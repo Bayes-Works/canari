@@ -107,6 +107,7 @@ class ModelOptimizer:
                     name="Model_optimizer",
                     num_samples=self.num_optimization_trial,
                     scheduler=scheduler,
+                    resources_per_trial={"cpu": 1, "gpu": 0.1},
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
