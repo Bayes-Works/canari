@@ -23,7 +23,6 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-from src.model import load_model_dict
 import src.common as common
 
 
@@ -87,7 +86,7 @@ ltd_error = 1e-5
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
-hsl_tsad_agent_pre = hsl_detection(base_model=load_model_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
@@ -96,13 +95,13 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -3.8793766203133e-06
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.9933596919925453e-05)
+hsl_tsad_agent.mu_LTd = 2.6750273973300243e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 2.2010328155257587e-05)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts2.csv', 
-                                  load_model_path='saved_params/NN_detection_model_realTS2_lstm_1000.pkl', max_training_epoch=50)
+                                  load_model_path='saved_params/NN_detection_model_real_ts2.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 # #  Plot
@@ -132,6 +131,7 @@ plot_data(
 )
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     # states=pretrained_model.states,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
@@ -142,6 +142,7 @@ ax0.set_xticklabels([])
 ax0.set_title("HSL Detection & Intervention agent")
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
@@ -150,6 +151,7 @@ plot_states(
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -158,6 +160,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -166,6 +169,7 @@ plot_states(
 ax3.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['local level'],
@@ -174,6 +178,7 @@ plot_states(
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['local trend'],
@@ -182,6 +187,7 @@ plot_states(
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
