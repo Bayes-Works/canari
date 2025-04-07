@@ -153,11 +153,10 @@ class Model:
     ):
         """Update lstm network's parameters"""
 
-        # self.lstm_net.input_delta_z_buffer.delta_mu[0] = delta_mu_lstm
-        # self.lstm_net.input_delta_z_buffer.delta_var[0] = delta_var_lstm
         self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
         self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
-        self.lstm_net.delta_z_to_device()
+        if self.lstm_net.device == "cuda":
+            self.lstm_net.delta_z_to_device()
         self.lstm_net.backward()
         self.lstm_net.step()
 
@@ -303,7 +302,14 @@ class Model:
             self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                # self.lstm_net.reset_lstm_states()
+                lstm_states = self.lstm_net.get_lstm_states()
+                for key in lstm_states:
+                    old_tuple = lstm_states[key]
+                    new_tuple = tuple(
+                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                    )
+                    lstm_states[key] = new_tuple
+                self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
