@@ -153,8 +153,11 @@ class Model:
     ):
         """Update lstm network's parameters"""
 
+        # self.lstm_net.input_delta_z_buffer.delta_mu[0] = delta_mu_lstm
+        # self.lstm_net.input_delta_z_buffer.delta_var[0] = delta_var_lstm
         self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
         self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
+        self.lstm_net.delta_z_to_device()
         self.lstm_net.backward()
         self.lstm_net.step()
 
@@ -496,7 +499,7 @@ class Model:
                 )
                 if train_lstm:
                     self.lstm_net.update_param(
-                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                        delta_mu_lstm, delta_var_lstm
                     )
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],

@@ -8,9 +8,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "cwd": "${workspaceFolder}", // Set the current working directory to the workspace root
+            "cwd": "${workspaceFolder}",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}" // Add the workspace root to PYTHONPATH
+                "PYTHONPATH": "${workspaceFolder}/src"
             }
         }
     ]
