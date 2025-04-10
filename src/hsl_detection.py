@@ -46,12 +46,15 @@ class hsl_detection:
         self.AR_index = base_model.states_name.index("autoregression")
         self.LTd_buffer = []
         self.p_anm_all = []
+        self.mu_obs_preds, self.std_obs_preds = [], []
+        self.mu_ar_preds, self.std_ar_preds = [], []
         self.prior_na, self.prior_a = 0.998, 0.002
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
         self.nn_train_with = 'tagiv'
         self.current_time_step = 0
-        pass
+        self.lstm_history = []
+        self.lstm_cell_states = []
 
     def _create_drift_model(self, baseline_process_error_std):
         self.ar_component = self.base_model.components["autoregression"]
@@ -250,23 +253,25 @@ class hsl_detection:
             ):
 
         lstm_index = self.base_model.get_states_index("lstm")
-        mu_obs_preds, std_obs_preds = [], []
-        mu_ar_preds, std_ar_preds = [], []
         mu_lstm_pred, var_lstm_pred = None, None
 
         # # # Set drift model rigid prior
         # self.drift_model.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
 
-        for i, (x, y) in enumerate(zip(data["x"], data["y"])):
+        # for i, (x, y) in enumerate(zip(data["x"], data["y"])):
+        i = 0
+        i_before_retract = 0
+        trigger = False
+        while i < len(data["x"]):
             # Estimate likelihoods
             # Estimate likelihood without intervention
             y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
-                                                                                                        obs=y, input_covariates=x, state_dist=self.LTd_pdf)
+                                                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
             # Estimate likelihood with intervention
             itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
             y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(
                                                                                                 base_model=self.base_model, drift_model=self.drift_model,
-                                                                                                obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                                                obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
                                                                                                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,
                                                                                                 base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
                                                                                                 )
@@ -301,30 +306,58 @@ class hsl_detection:
             self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
             self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
 
-            if apply_intervention:
-                if p_a_I_Yt > self.detection_threshold:
-                    # Apply intervention on base_model hidden states
-                    LL_index = self.base_model.states_name.index("local level")
-                    LT_index = self.base_model.states_name.index("local trend")
-                    AR_index = self.base_model.states_name.index("autoregression")
-                    self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-                    self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                    self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
-                    self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-                    self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+            self._save_lstm_input()
 
-                    self.drift_model.mu_states[0] = 0
-                    self.drift_model.mu_states[1] = self.mu_LTd        
+            # if apply_intervention:
+            #     if trigger is False:
+            #         if p_a_I_Yt > self.detection_threshold:
+            #             if i > i_before_retract:
+            #                 # To control that during the rerun from the past, the agent cannnot trigger again
+            #                 i_before_retract = copy.copy(i)
+            #                 # Retract agent
+            #                 step_back = int(itv_pred_mu_denorm[2]) if int(itv_pred_mu_denorm[2]) < i else i - 2
+            #                 print(len(self.lstm_history))
+            #                 print('step back', step_back)
+            #                 self._retract_agent(time_step_back=step_back)
+            #                 i = i - step_back
+            #                 self.current_time_step = self.current_time_step - 1 - step_back
+
+            #                 # Apply intervention on base_model hidden states
+            #                 LL_index = self.base_model.states_name.index("local level")
+            #                 LT_index = self.base_model.states_name.index("local trend")
+            #                 AR_index = self.base_model.states_name.index("autoregression")
+            #                 self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+            #                 self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+            #                 self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
+            #                 self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+            #                 self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+
+            #                 self.drift_model.mu_states[0] = 0
+            #                 self.drift_model.mu_states[1] = self.mu_LTd
+            #                 trigger = True
+
+            # if trigger is False:
+            #     if i == 200:
+            #         print(len(self.lstm_history))
+            #         print(len(self.base_model.states.mu_posterior))
+            #         print('step back', 100)
+            #         self._retract_agent(time_step_back=100)
+            #         i_before_retract = copy.copy(i)
+            #         i = i - 100
+            #         self.current_time_step = self.current_time_step - 1 - 100
+            #         trigger = True
 
             # Base model filter process, same as in model.py
-            mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(x,
-                                                                      mu_lstm_pred=mu_lstm_pred,
-                                                                      var_lstm_pred=var_lstm_pred,)
+            # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
+            mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i],
+                                                                    mu_lstm_pred=mu_lstm_pred,
+                                                                    var_lstm_pred=var_lstm_pred,)
+
             (
                 _, _,
                 mu_states_posterior,
                 var_states_posterior,
-            ) = self.base_model.backward(y)
+            ) = self.base_model.backward(data["y"][i])
 
             if self.base_model.lstm_net:
                 self.base_model.lstm_output_history.update(
@@ -334,8 +367,8 @@ class hsl_detection:
 
             self.base_model._save_states_history()
             self.base_model.set_states(mu_states_posterior, var_states_posterior)
-            mu_obs_preds.append(mu_obs_pred)
-            std_obs_preds.append(var_obs_pred**0.5)
+            self.mu_obs_preds.append(mu_obs_pred)
+            self.std_obs_preds.append(var_obs_pred**0.5)
 
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
@@ -344,12 +377,13 @@ class hsl_detection:
                 obs_var=self.base_model.var_states_prior[self.AR_index, self.AR_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-            mu_ar_preds.append(mu_ar_pred)
-            std_ar_preds.append(var_ar_pred**0.5)
+            self.mu_ar_preds.append(mu_ar_pred)
+            self.std_ar_preds.append(var_ar_pred**0.5)
 
             self.current_time_step += 1
+            i += 1
 
-        return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
+        return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(self.mu_ar_preds).flatten(), np.array(self.std_ar_preds).flatten()
 
     def _estimate_likelihoods(
             self, 
@@ -824,6 +858,51 @@ class hsl_detection:
             elif self.nn_train_with == 'backprop':
                 pass    # TODO
 
+    def _save_lstm_input(self):
+        self.lstm_history.append(copy.deepcopy(self.base_model.lstm_output_history))
+        self.lstm_cell_states.append(self.base_model.lstm_net.get_lstm_states())
+        pass
+
+
+    def _erase_history(self, num_steps_to_erase):
+        # Erase the last num_steps_to_erase steps of the lstm history
+        remove_until_index = -(num_steps_to_erase)
+        self.base_model.states.mu_prior = self.base_model.states.mu_prior[:remove_until_index]
+        self.base_model.states.var_prior = self.base_model.states.var_prior[:remove_until_index]
+        self.base_model.states.mu_posterior = self.base_model.states.mu_posterior[:remove_until_index]
+        self.base_model.states.var_posterior = self.base_model.states.var_posterior[:remove_until_index]
+        self.base_model.states.cov_states = self.base_model.states.cov_states[:remove_until_index]
+        self.base_model.states.mu_smooth = self.base_model.states.mu_smooth[:remove_until_index]
+        self.base_model.states.var_smooth = self.base_model.states.var_smooth[:remove_until_index]
+
+        self.drift_model.states.mu_prior = self.drift_model.states.mu_prior[:remove_until_index]
+        self.drift_model.states.var_prior = self.drift_model.states.var_prior[:remove_until_index]
+        self.drift_model.states.mu_posterior = self.drift_model.states.mu_posterior[:remove_until_index]
+        self.drift_model.states.var_posterior = self.drift_model.states.var_posterior[:remove_until_index]
+        self.drift_model.states.cov_states = self.drift_model.states.cov_states[:remove_until_index]
+        self.drift_model.states.mu_smooth = self.drift_model.states.mu_smooth[:remove_until_index]
+        self.drift_model.states.var_smooth = self.drift_model.states.var_smooth[:remove_until_index]
+        self.lstm_history = self.lstm_history[:remove_until_index]
+        self.lstm_cell_states = self.lstm_cell_states[:remove_until_index]
+        self.p_anm_all = self.p_anm_all[:remove_until_index]
+        self.mu_itv_all = self.mu_itv_all[:remove_until_index]
+        self.std_itv_all = self.std_itv_all[:remove_until_index]
+
+    def _retract_agent(self, time_step_back):
+        self._erase_history(time_step_back)
+        new_base_mu_states = self.base_model.states.mu_posterior[-1]
+        new_base_var_states = self.base_model.states.var_posterior[-1]
+        new_drift_mu_states = self.drift_model.states.mu_posterior[-1]
+        new_drift_var_states = self.drift_model.states.var_posterior[-1]
+        self.base_model.set_states(new_base_mu_states, new_base_var_states)
+        self.drift_model.set_states(new_drift_mu_states, new_drift_var_states)
+        print(len(self.lstm_history))
+        print(len(self.base_model.states.mu_posterior))
+        print('------------------------')
+        self.base_model.lstm_output_history = self.lstm_history[-1]
+        self.base_model.lstm_net.set_lstm_states(self.lstm_cell_states[-1])
+
+        # pass
 
 class TAGI_Net():
     def __init__(self, n_observations, n_actions):
