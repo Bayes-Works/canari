@@ -311,7 +311,7 @@ class hsl_detection:
             self._save_lstm_input()
 
             if apply_intervention:
-                if trigger is False and rerun_kf is False:
+                if rerun_kf is False:
                     if p_a_I_Yt > self.detection_threshold:
                         rerun_kf = True
                         # To control that during the rerun from the past, the agent cannnot trigger again
@@ -326,9 +326,9 @@ class hsl_detection:
                         LL_index = self.base_model.states_name.index("local level")
                         LT_index = self.base_model.states_name.index("local trend")
                         AR_index = self.base_model.states_name.index("autoregression")
-                        self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                        # self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
                         self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                        self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                        # self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
                         self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
                         self.drift_model.mu_states[0] = 0
