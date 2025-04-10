@@ -34,7 +34,7 @@ anm_start_index = 52*10
 
 # LT anomaly
 # anm_mag = 0.010416667/10
-anm_mag = 0.5/52
+anm_mag = 0.3/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
