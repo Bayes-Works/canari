@@ -265,16 +265,14 @@ class hsl_detection:
         while i < len(data["x"]):
             # Estimate likelihoods
             # Estimate likelihood without intervention
-            y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
-                                                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
+            y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
             # Estimate likelihood with intervention
             itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
-            y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(
-                                                                                                base_model=self.base_model, drift_model=self.drift_model,
-                                                                                                obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
-                                                                                                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,
-                                                                                                base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
-                                                                                                )
+            y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
+                                                                        base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                        )
             p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
             # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
             p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
@@ -336,22 +334,17 @@ class hsl_detection:
             #                 self.drift_model.mu_states[1] = self.mu_LTd
             #                 trigger = True
 
-            # if trigger is False:
-            #     if i == 200:
-            #         print(len(self.lstm_history))
-            #         print(len(self.base_model.states.mu_posterior))
-            #         print('step back', 100)
-            #         self._retract_agent(time_step_back=100)
-            #         i_before_retract = copy.copy(i)
-            #         i = i - 100
-            #         self.current_time_step = self.current_time_step - 1 - 100
-            #         trigger = True
+            if trigger is False:
+                if i == len(data["x"]) - 1:
+                    self._retract_agent(time_step_back=len(data["x"]) - 1 - 100)
+                    # current_step_before_retract = copy.copy(i)
+                    i = 100
+                    self.current_time_step = self.current_time_step - (len(data["x"]) - 1 - 100)
+                    trigger = True
 
             # Base model filter process, same as in model.py
             # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
-            mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i],
-                                                                    mu_lstm_pred=mu_lstm_pred,
-                                                                    var_lstm_pred=var_lstm_pred,)
+            mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
 
             (
                 _, _,
@@ -392,8 +385,6 @@ class hsl_detection:
             obs: float,
             state_dist: Optional[Callable] = None,
             input_covariates: Optional[np.ndarray] = None,
-            mu_lstm_pred: Optional[np.ndarray] = None,
-            var_lstm_pred: Optional[np.ndarray] = None,
             base_model_prior: Optional[Dict] = None,
             drift_model_prior: Optional[Dict] = None,
             ):
@@ -403,7 +394,11 @@ class hsl_detection:
         base_model_copy = copy.deepcopy(base_model)
         drift_model_copy = copy.deepcopy(drift_model)
         if "lstm" in base_model.states_name:
+            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
+            cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
             base_model_copy.lstm_net = base_model.lstm_net
+            base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+            base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
 
         if base_model_prior is not None and drift_model_prior is not None:
             base_model_copy.mu_states = base_model_prior['mu']
@@ -411,16 +406,18 @@ class hsl_detection:
             drift_model_copy.mu_states = drift_model_prior['mu']
             drift_model_copy.var_states = drift_model_prior['var']
 
-        if mu_lstm_pred is not None and var_lstm_pred is not None:
-            mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(input_covariates = input_covariates, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred)
-        else:
-            mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(input_covariates = input_covariates)
+        mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(input_covariates = input_covariates)
 
         y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred), obs)
 
         _, _, mu_d_states_prior, _ = drift_model_copy.forward()
         x_likelihood = state_dist(mu_d_states_prior[1].item())
-        return y_likelihood.item(), x_likelihood, base_model_copy.mu_lstm_pred, base_model_copy.var_lstm_pred
+
+        if "lstm" in base_model.states_name:
+            # Set the base_model back to the original state
+            base_model.lstm_output_history = copy.deepcopy(output_history_temp)
+            base_model.lstm_net.set_lstm_states(cell_states_temp)
+        return y_likelihood.item(), x_likelihood
     
     def _intervene_current_priors(self, base_model, drift_model):
         base_model_prior = {
@@ -887,6 +884,10 @@ class hsl_detection:
         self.p_anm_all = self.p_anm_all[:remove_until_index]
         self.mu_itv_all = self.mu_itv_all[:remove_until_index]
         self.std_itv_all = self.std_itv_all[:remove_until_index]
+        self.mu_obs_preds = self.mu_obs_preds[:remove_until_index]
+        self.std_obs_preds = self.std_obs_preds[:remove_until_index]
+        self.mu_ar_preds = self.mu_ar_preds[:remove_until_index]
+        self.std_ar_preds = self.std_ar_preds[:remove_until_index]
 
     def _retract_agent(self, time_step_back):
         self._erase_history(time_step_back)
@@ -896,9 +897,6 @@ class hsl_detection:
         new_drift_var_states = self.drift_model.states.var_posterior[-1]
         self.base_model.set_states(new_base_mu_states, new_base_var_states)
         self.drift_model.set_states(new_drift_mu_states, new_drift_var_states)
-        print(len(self.lstm_history))
-        print(len(self.base_model.states.mu_posterior))
-        print('------------------------')
         self.base_model.lstm_output_history = self.lstm_history[-1]
         self.base_model.lstm_net.set_lstm_states(self.lstm_cell_states[-1])
 
