@@ -262,85 +262,86 @@ class hsl_detection:
         i = 0
         i_before_retract = 0
         trigger = False
+        rerun_kf = False
         while i < len(data["x"]):
-            # Estimate likelihoods
-            # Estimate likelihood without intervention
-            y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
-                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
-            # Estimate likelihood with intervention
-            itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
-            y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
-                                                                        obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
-                                                                        base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
-                                                                        )
-            p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
-            # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
-            p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
-            self.p_anm_all.append(p_a_I_Yt)
+            if i > i_before_retract:
+                rerun_kf = False
+            if rerun_kf is False:
+                # Estimate likelihoods
+                # Estimate likelihood without intervention
+                y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                                                                            obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
+                # Estimate likelihood with intervention
+                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
+                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                                                                            obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
+                                                                            base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                            )
+                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
+                # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
+                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
+                self.p_anm_all.append(p_a_I_Yt)
 
-            # Track what NN learns
-            LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-            # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-            LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
-            LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
-            LTd_history = (LTd_history - self.mean_train) / self.std_train
-            if self.nn_train_with == 'tagiv':
-                LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+                # Track what NN learns
+                LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
+                LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
+                LTd_history = (LTd_history - self.mean_train) / self.std_train
+                if self.nn_train_with == 'tagiv':
+                    LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
 
-                output_pred_mu, output_pred_var = self.model.net(LTd_history)
-                output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                itv_pred_var = output_pred_mu[0, [1, 3, 5]]
-            elif self.nn_train_with == 'backprop':
-                LTd_history = torch.tensor(LTd_history)
-                itv_pred_mu = self.model(LTd_history)
-                itv_pred_mu = itv_pred_mu.detach().numpy()
-                itv_pred_var = np.zeros_like(itv_pred_mu)
-                
-            itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-            itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+                    output_pred_mu, output_pred_var = self.model.net(LTd_history)
+                    output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                    output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+                    itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                    itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                elif self.nn_train_with == 'backprop':
+                    LTd_history = torch.tensor(LTd_history)
+                    itv_pred_mu = self.model(LTd_history)
+                    itv_pred_mu = itv_pred_mu.detach().numpy()
+                    itv_pred_var = np.zeros_like(itv_pred_mu)
+                    
+                itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-            self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
-            self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
+                self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
+                self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
 
             self._save_lstm_input()
 
-            # if apply_intervention:
-            #     if trigger is False:
-            #         if p_a_I_Yt > self.detection_threshold:
-            #             if i > i_before_retract:
-            #                 # To control that during the rerun from the past, the agent cannnot trigger again
-            #                 i_before_retract = copy.copy(i)
-            #                 # Retract agent
-            #                 step_back = int(itv_pred_mu_denorm[2]) if int(itv_pred_mu_denorm[2]) < i else i - 2
-            #                 print(len(self.lstm_history))
-            #                 print('step back', step_back)
-            #                 self._retract_agent(time_step_back=step_back)
-            #                 i = i - step_back
-            #                 self.current_time_step = self.current_time_step - 1 - step_back
+            if apply_intervention:
+                if trigger is False and rerun_kf is False:
+                    if p_a_I_Yt > self.detection_threshold:
+                        rerun_kf = True
+                        # To control that during the rerun from the past, the agent cannnot trigger again
+                        i_before_retract = copy.copy(i)
+                        # Retract agent
+                        step_back = int(itv_pred_mu_denorm[2]) if int(itv_pred_mu_denorm[2]) < i else i - 2
+                        self._retract_agent(time_step_back=step_back)
+                        i = i - step_back
+                        self.current_time_step = self.current_time_step - step_back
 
-            #                 # Apply intervention on base_model hidden states
-            #                 LL_index = self.base_model.states_name.index("local level")
-            #                 LT_index = self.base_model.states_name.index("local trend")
-            #                 AR_index = self.base_model.states_name.index("autoregression")
-            #                 self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-            #                 self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-            #                 self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
-            #                 self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-            #                 self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+                        # Apply intervention on base_model hidden states
+                        LL_index = self.base_model.states_name.index("local level")
+                        LT_index = self.base_model.states_name.index("local trend")
+                        AR_index = self.base_model.states_name.index("autoregression")
+                        self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+                        self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+                        self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+                        self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
-            #                 self.drift_model.mu_states[0] = 0
-            #                 self.drift_model.mu_states[1] = self.mu_LTd
-            #                 trigger = True
+                        self.drift_model.mu_states[0] = 0
+                        self.drift_model.mu_states[1] = self.mu_LTd
+                        trigger = True
 
-            if trigger is False:
-                if i == len(data["x"]) - 1:
-                    self._retract_agent(time_step_back=len(data["x"]) - 1 - 100)
-                    # current_step_before_retract = copy.copy(i)
-                    i = 100
-                    self.current_time_step = self.current_time_step - (len(data["x"]) - 1 - 100)
-                    trigger = True
+            # if trigger is False:
+            #     if i == len(data["x"]) - 1:
+            #         self._retract_agent(time_step_back=len(data["x"]) - 1 - 100)
+            #         # current_step_before_retract = copy.copy(i)
+            #         i = 100
+            #         self.current_time_step = self.current_time_step - (len(data["x"]) - 1 - 100)
+            #         trigger = True
 
             # Base model filter process, same as in model.py
             # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
@@ -881,9 +882,9 @@ class hsl_detection:
         self.drift_model.states.var_smooth = self.drift_model.states.var_smooth[:remove_until_index]
         self.lstm_history = self.lstm_history[:remove_until_index]
         self.lstm_cell_states = self.lstm_cell_states[:remove_until_index]
-        self.p_anm_all = self.p_anm_all[:remove_until_index]
-        self.mu_itv_all = self.mu_itv_all[:remove_until_index]
-        self.std_itv_all = self.std_itv_all[:remove_until_index]
+        # self.p_anm_all = self.p_anm_all[:remove_until_index]
+        # self.mu_itv_all = self.mu_itv_all[:remove_until_index]
+        # self.std_itv_all = self.std_itv_all[:remove_until_index]
         self.mu_obs_preds = self.mu_obs_preds[:remove_until_index]
         self.std_obs_preds = self.std_obs_preds[:remove_until_index]
         self.mu_ar_preds = self.mu_ar_preds[:remove_until_index]
