@@ -309,7 +309,6 @@ class hsl_detection:
                     AR_index = self.base_model.states_name.index("autoregression")
                     self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
                     self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                    self.base_model.mu_states[AR_index] -= itv_pred_mu_denorm[1]
                     self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
                     self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
