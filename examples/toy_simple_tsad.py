@@ -119,6 +119,7 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
+print('before len',len(hsl_tsad_agent.base_model.states.mu_posterior))
 # hsl_tsad_agent.estimate_LTd_dist()
 hsl_tsad_agent.mu_LTd = 1.4510690181047063e-07
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 1.6985096511431246e-05)
@@ -128,6 +129,11 @@ hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
                                   load_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+
+print(np.sum(mu_obs_preds))
+print(np.sum(std_obs_preds))
+print(np.sum(mu_ar_preds))
+print(np.sum(std_ar_preds))
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
     anm_detected_index = np.where(np.array(hsl_tsad_agent.p_anm_all) > 0.5)[0][0]
