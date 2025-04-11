@@ -62,10 +62,12 @@ LSTM = LstmNetwork(
         num_hidden_unit=50,
         device="cpu",
     )
+periodic = Periodic(period=52, var_states=[1, 1])
 
 model = Model(
     # LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12]),
     LocalTrend(),
+    periodic,
     LSTM,
     AR,
 )
@@ -103,7 +105,8 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
+    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    # model.early_stopping(evaluate_metric=mse, mode="min", skip_epoch=50)
     # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
@@ -124,10 +127,10 @@ model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/toy_simple_model.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
+# Save model_dict to local
+import pickle
+with open("saved_params/toy_simple_model_PD_LSTM.pkl", "wb") as f:
+    pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
@@ -138,6 +141,7 @@ pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
+    Periodic(period=52, mu_states=model_dict['early_stop_init_mu_states'][2:4].reshape(-1), var_states=[1e-12, 1e-12]),
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
                    mu_states=[model_dict["mu_states"][model_dict['autoregression_index']].item()], 
@@ -153,11 +157,12 @@ pretrained_model.smoother(normalized_data)
 state_type = "prior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(4, 1)
+gs = gridspec.GridSpec(5, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
+ax4 = plt.subplot(gs[4])
 plot_data(
     data_processor=data_processor,
     normalization=True,
@@ -189,7 +194,7 @@ plot_states(
     normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['lstm'],
+    states_to_plot=['periodic 1'],
     sub_plot=ax2,
 )
 ax2.set_xticklabels([])
@@ -198,21 +203,32 @@ plot_states(
     normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['autoregression'],
+    states_to_plot=['lstm'],
     sub_plot=ax3,
 )
 ax3.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    normalization=True,
+    states=pretrained_model.states,
+    states_type=state_type,
+    states_to_plot=['autoregression'],
+    sub_plot=ax4,
+)
+ax4.set_xticklabels([])
+# plt.show()
 
 state_type = "prior"
 # Plot states from AR learner
 fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(6, 1)
+gs = gridspec.GridSpec(7, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
 ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
+ax6 = plt.subplot(gs[6])
 plot_data(
   data_processor=data_processor,
   normalization=True,
@@ -248,7 +264,7 @@ plot_states(
   data_processor=data_processor,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['lstm'],
+  states_to_plot=['periodic 1'],
   sub_plot=ax2,
 )
 ax2.set_xticklabels([])
@@ -256,25 +272,33 @@ plot_states(
   data_processor=data_processor,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['autoregression'],
+  states_to_plot=['lstm'],
   sub_plot=ax3,
 )
 ax3.set_xticklabels([])
+plot_states(
+  data_processor=data_processor,
+  states=states_optim,
+  states_type=state_type,
+  states_to_plot=['autoregression'],
+  sub_plot=ax4,
+)
+ax4.set_xticklabels([])
 if "phi" in model.states_name:
   plot_states(
     data_processor=data_processor,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['phi'],
-    sub_plot=ax4,
+    sub_plot=ax5,
   )
-  ax4.set_xticklabels([])
+ax5.set_xticklabels([])
 if "W2bar" in model.states_name:
   plot_states(
     data_processor=data_processor,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['W2bar'],
-    sub_plot=ax5,
+    sub_plot=ax6,
   )
 plt.show()

@@ -63,11 +63,12 @@ LSTM = LstmNetwork(
         device="cpu",
     )
 
+sigma_v = 0.25
 model = Model(
     # LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12]),
     LocalTrend(),
     LSTM,
-    AR,
+    WhiteNoise(std_error=sigma_v),
 )
 # model._mu_local_level = 0
 model.auto_initialize_baseline_states(train_data["y"][0:51])
@@ -111,6 +112,7 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
+        optimal_sigma_v = copy.copy(model.components["white noise"].std_error)
         states_optim = copy.copy(states)
     if model.stop_training:
         break
@@ -132,16 +134,11 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-                   mu_states=[model_dict["mu_states"][model_dict['autoregression_index']].item()], 
-                   var_states=[model_dict["var_states"][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
+    WhiteNoise(std_error=optimal_sigma_v),
 )
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
@@ -198,7 +195,7 @@ plot_states(
     normalization=True,
     states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['autoregression'],
+    states_to_plot=['white noise'],
     sub_plot=ax3,
 )
 ax3.set_xticklabels([])
@@ -206,13 +203,11 @@ ax3.set_xticklabels([])
 state_type = "prior"
 # Plot states from AR learner
 fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(6, 1)
+gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
-ax4 = plt.subplot(gs[4])
-ax5 = plt.subplot(gs[5])
 plot_data(
   data_processor=data_processor,
   normalization=True,
@@ -256,25 +251,7 @@ plot_states(
   data_processor=data_processor,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['autoregression'],
+  states_to_plot=['white noise'],
   sub_plot=ax3,
 )
-ax3.set_xticklabels([])
-if "phi" in model.states_name:
-  plot_states(
-    data_processor=data_processor,
-    states=states_optim,
-    states_type=state_type,
-    states_to_plot=['phi'],
-    sub_plot=ax4,
-  )
-  ax4.set_xticklabels([])
-if "W2bar" in model.states_name:
-  plot_states(
-    data_processor=data_processor,
-    states=states_optim,
-    states_type=state_type,
-    states_to_plot=['W2bar'],
-    sub_plot=ax5,
-  )
 plt.show()
