@@ -6,11 +6,9 @@ on:
       - testing/Hydro_Quebec_310325
     tags:
       - 'v*'
-  release:
-    types: [published]
 
 jobs:
-  build-and-publish:
+  build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -26,7 +24,30 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install build tools
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build package
+        run: python -m build
+
+  publish:
+    name: Publish to Test PyPI
+    runs-on: ubuntu-latest
+    needs: build  # Ensure build finishes first
+    if: startsWith(github.ref, 'refs/tags/v')  # Only run on version tags
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install build twine
@@ -34,10 +55,8 @@ jobs:
       - name: Build package
         run: python -m build
 
-      # Only upload from ubuntu-latest
-      - name: Publish to Test PyPI
-        if: matrix.os == 'ubuntu-latest'
+      - name: Upload to Test PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+        run: twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
