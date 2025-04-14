@@ -6,6 +6,7 @@ import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from pytagi.nn import OutputUpdater
 
 
 class Model:
@@ -504,9 +505,7 @@ class Model:
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
                 if train_lstm:
-                    self.lstm_net.update_param(
-                        delta_mu_lstm, delta_var_lstm
-                    )
+                    self.lstm_net.update_param(delta_mu_lstm, delta_var_lstm)
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
@@ -551,10 +550,46 @@ class Model:
             self._white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
+
+        if self.lstm_net.smooth:
+            out_updater = OutputUpdater(self.lstm_net.device)
+            for _ in range(0, self.lstm_net.lstm_look_back_len):
+                input_covariates = []
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+                )
+                out_updater.update(
+                    output_states=self.lstm_net.output_z_buffer,
+                    mu_obs=np.array([np.nan], dtype=np.float32),
+                    var_obs=np.array([0], dtype=np.float32),
+                    delta_states=self.lstm_net.input_delta_z_buffer,
+                )
+                # Feed backward
+                self.lstm_net.backward()
+                self.lstm_net.step()
+
+                self.lstm_output_history.update(
+                    mu_lstm_pred,
+                    var_lstm_pred,
+                )
+
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        self.set_memory(states=self.states, time_step=0)
+
+        if self.lstm_net.smooth:
+            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
+            zo_smooth_std = np.array(var_zo_smooth) ** 0.5
+            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
+            std_sequence = zo_smooth_std[: self.lstm_net.lstm_look_back_len]
+            self.lstm_output_history.mu = mu_sequence
+            self.lstm_output_history.mu = std_sequence
+            self.initialize_states_with_smoother_estimates()
+        else:
+            self.set_memory(states=self.states, time_step=0)
 
         return (
             np.array(mu_validation_preds).flatten(),

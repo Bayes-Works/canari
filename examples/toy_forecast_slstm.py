@@ -12,6 +12,7 @@ from canari.model import Model
 from canari.data_visualization import (
     plot_data,
     plot_prediction,
+    plot_states,
 )
 
 
@@ -54,12 +55,13 @@ model = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        # device="cuda",
         manual_seed=1,
+        smoother=True,
     ),
     WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.lstm_net.num_samples = 19 + len(train_data["y"])
 
 # Training
 for epoch in range(num_epoch):
@@ -82,6 +84,15 @@ for epoch in range(num_epoch):
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
+
+    fig, ax = plot_states(
+        data_processor=data_processor,
+        states=states,
+        states_type="prior",
+    )
+    filename = f"saved_results/smoother#{epoch}.png"
+    plt.savefig(filename)
+    plt.close()
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")

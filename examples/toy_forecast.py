@@ -12,6 +12,7 @@ from canari.model import Model
 from canari.data_visualization import (
     plot_data,
     plot_prediction,
+    plot_states,
 )
 
 
@@ -81,6 +82,15 @@ for epoch in range(num_epoch):
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
+
+    fig, ax = plot_states(
+        data_processor=data_processor,
+        states=states,
+        states_type="prior",
+    )
+    filename = f"saved_results/lstm#{epoch}.png"
+    plt.savefig(filename)
+    plt.close()
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")
