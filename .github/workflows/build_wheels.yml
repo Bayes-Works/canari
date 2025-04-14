@@ -1,0 +1,39 @@
+name: build
+
+on:
+  push:
+    branches:
+      - testing/Hydro_Quebec_310325
+
+jobs:
+  build-and-publish:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      # Only upload from ubuntu-latest
+      - name: Publish to Test PyPI
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: twine upload --repository-url https://test.pypi.org/legacy/ dist/*
