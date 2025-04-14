@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - testing/Hydro_Quebec_310325
+    tags:
+      - 'v*'
+  release:
+    types: [published]
 
 jobs:
   build-and-publish:
