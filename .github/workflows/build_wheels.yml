@@ -1,9 +1,9 @@
-name: Build and Publish to Test PyPI
+name: Build and Publish to PyPI
 
 on:
   push:
     branches:
-      - testing/Hydro_Quebec_310325
+      - testing/Hydro_Quebec
     tags:
       - 'v*'
 
@@ -32,10 +32,10 @@ jobs:
       - name: Build package
         run: python -m build
 
-      - name: Upload to Test PyPI
+      - name: Upload to PyPI
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/* --skip-existing
+          twine upload --verbose dist/* --skip-existing
