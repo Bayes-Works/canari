@@ -55,6 +55,7 @@ class hsl_detection:
         self.current_time_step = 0
         self.lstm_history = []
         self.lstm_cell_states = []
+        self.mean_train, self.std_train, self.mean_target, self.std_target = None, None, None, None
 
     def _create_drift_model(self, baseline_process_error_std):
         self.ar_component = self.base_model.components["autoregression"]
@@ -137,13 +138,16 @@ class hsl_detection:
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=False, sample_from_lstm_pred=False)
         # # Run the current model on the synthetic time series
-        lstm_index = self.base_model.get_states_index("lstm")
-        lstm_cell_states = self.base_model.lstm_net.get_lstm_states()
+        if "lstm" in self.base_model.states_name:
+            lstm_index = self.base_model.get_states_index("lstm")
+            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
+            cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
         for k in tqdm(range(len(generated_ts))):
             base_model_copy = copy.deepcopy(self.base_model)
             if "lstm" in self.base_model.states_name:
                 base_model_copy.lstm_net = self.base_model.lstm_net
-                base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
+                base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+                base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
             drift_model_copy = copy.deepcopy(self.drift_model)
 
             base_model_copy.initialize_states_history()
@@ -273,7 +277,8 @@ class hsl_detection:
                                                                             obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf)
                 # Estimate likelihood with intervention
                 itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=self.base_model, drift_model=self.drift_model,)
-                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(base_model=self.base_model, drift_model=self.drift_model,
+                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(
+                                                                            base_model=self.base_model, drift_model=self.drift_model,
                                                                             obs=data["y"][i], input_covariates=data["x"][i], state_dist=self.LTd_pdf,
                                                                             base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
                                                                             )
@@ -395,8 +400,8 @@ class hsl_detection:
         base_model_copy = copy.deepcopy(base_model)
         drift_model_copy = copy.deepcopy(drift_model)
         if "lstm" in base_model.states_name:
-            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
-            cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
+            output_history_temp = copy.deepcopy(base_model.lstm_output_history)
+            cell_states_temp = copy.deepcopy(base_model.lstm_net.get_lstm_states())
             base_model_copy.lstm_net = base_model.lstm_net
             base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
             base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
@@ -480,12 +485,15 @@ class hsl_detection:
         plt.show()
 
         # # Run the current model on the synthetic time series
-        lstm_index = self.base_model.get_states_index("lstm")
-        lstm_cell_states = self.base_model.lstm_net.get_lstm_states()
+        if "lstm" in self.base_model.states_name:
+            lstm_index = self.base_model.get_states_index("lstm")
+            lstm_cell_states = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
+            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
         for k in tqdm(range(len(generated_ts))):
             base_model_copy = copy.deepcopy(self.base_model)
             if "lstm" in self.base_model.states_name:
                 base_model_copy.lstm_net = self.base_model.lstm_net
+                base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
                 base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
             drift_model_copy = copy.deepcopy(self.drift_model)
 
@@ -496,21 +504,18 @@ class hsl_detection:
             x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
-            # # # Set drift model rigid prior
-            # drift_model_copy.var_states = np.diag([1e-12, 1e-12, self.ar_component.var_states.item()])
-            anomaly_detected = False
+
             for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
                 # Estimate likelihood without intervention
-                y_likelihood_na, x_likelihood_na, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
-                                                                                                           obs=y, input_covariates=x, state_dist=self.LTd_pdf)
+                y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                obs=y, input_covariates=x, state_dist=self.LTd_pdf)
                 # Estimate likelihood with intervention
                 itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=base_model_copy, drift_model=drift_model_copy,)
-                y_likelihood_a, x_likelihood_a, mu_lstm_pred, var_lstm_pred = self._estimate_likelihoods(
-                                                                                                    base_model=base_model_copy, drift_model=drift_model_copy,
-                                                                                                    obs=y, input_covariates=x, state_dist=self.LTd_pdf,
-                                                                                                    mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,
-                                                                                                    base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
-                                                                                                    )
+                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(
+                                                                            base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                            obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                            base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                            )
                 p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
                 p_anm_one_syn_ts.append(p_a_I_Yt)
@@ -556,7 +561,7 @@ class hsl_detection:
                 #     drift_model_copy.mu_states[0] = 0
                 #     drift_model_copy.mu_states[1] = self.mu_LTd
 
-                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x, mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred,)
+                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x)
                 (
                     _, _,
                     mu_states_posterior,
@@ -714,11 +719,17 @@ class hsl_detection:
         train_X = samples_input[:n_train]
         train_y = samples_target[:n_train]
         # Get the moments of training set, and use them to normalize the validation set and test set
-        self.mean_train = train_X.mean()
-        self.std_train = train_X.std()
+        if self.mean_train is None or self.std_train is None or self.mean_target is None or self.std_target is None:
+            print('skip')
+            self.mean_train = train_X.mean()
+            self.std_train = train_X.std()
+            self.mean_target = train_y.mean(axis=0)
+            self.std_target = train_y.std(axis=0)
+        print('mean and std of training input', self.mean_train, self.std_train)
+        print('mean and std of training target', self.mean_target, self.std_target)
+
         train_X = (train_X - self.mean_train) / self.std_train
-        self.mean_target = train_y.mean(axis=0)
-        self.std_target = train_y.std(axis=0)
+
         # # Remove when using time series with different anomaly magnitude
         # self.mean_target[0] = 0
         # self.std_target[0] = 1
@@ -739,7 +750,6 @@ class hsl_detection:
         test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
         test_X = (test_X - self.mean_train) / self.std_train
         test_y = (test_y - self.mean_target) / self.std_target
-
 
         if self.nn_train_with == 'tagiv':
             self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
