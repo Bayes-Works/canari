@@ -1,19 +1,17 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=75.5.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "canari"
-version = "0.0.3"
+version = "0.0.4"
 description = "Open-source library for probabilistic anomaly detection in time series"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 
 authors = [
-  { name = "Van-Dai Vuong", email = "vuongdai@gmail.com" },
-  { name = "Luong-Ha Nguyen", email = "luongha.nguyen@gmail.com" },
-  { name = "James-A. Goulet", email = "james.goulet@polymtl.ca" }
+  { name = "Van-Dai Vuong, Luong-Ha Nguyen, and James-A. Goulet", email = "vuongdai@gmail.com" }
 ]
 
 classifiers = [
@@ -26,3 +24,5 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+
