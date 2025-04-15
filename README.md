@@ -1,4 +1,4 @@
-# canari
+# pycanari
 Open-source library for probabilistic anomaly detection in time series 
 
 ## Installation
@@ -32,7 +32,7 @@ Open-source library for probabilistic anomaly detection in time series
 4. Extract the pycanari-0.0.1.tar file using:
 
     ```sh
-        tar -xvf pycanari-0.0.1.tar
+    tar -xvf pycanari-0.0.1.tar
     ```
 5. Set directory
     ```sh
@@ -51,4 +51,4 @@ Open-source library for probabilistic anomaly detection in time series
     python -m examples.toy_forecast
     ```
 
-NOTE: Replace the name pycanari-0.0.1 with the corresponding version, e.g. pycanari-0.0.2
+NOTE: Replace the name `pycanari-0.0.1` with the corresponding version, e.g. pycanari-0.0.2
