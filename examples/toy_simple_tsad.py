@@ -238,9 +238,6 @@ std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
 mu_itv_all[:anm_start_index] = np.nan
 std_itv_all[:anm_start_index] = np.nan
 print('anm_detect_index:' , anm_detected_index)
-# # Set all the values after anm_detected to be nan
-# mu_itv_all[anm_detected_index+1:] = np.nan
-# std_itv_all[anm_detected_index+1:] = np.nan
 
 true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
 true_anm_dev_time[anm_start_index:len(np.zeros_like(mu_itv_all[:, 1]))] += np.arange(len(np.zeros_like(mu_itv_all[:, 1])) - anm_start_index)
