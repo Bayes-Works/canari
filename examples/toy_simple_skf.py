@@ -114,6 +114,7 @@ abnorm_model = Model(
                    mu_states=[model_dict['early_stop_init_mu_states'][model_dict['autoregression_index']].item()],
                    var_states=[model_dict['early_stop_init_var_states'][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
 )
+abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 skf = SKF(
     norm_model=norm_model,
