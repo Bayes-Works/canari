@@ -322,7 +322,7 @@ class hsl_detection:
                         # To control that during the rerun from the past, the agent cannnot trigger again
                         i_before_retract = copy.copy(i)
                         # Retract agent
-                        step_back = int(itv_pred_mu_denorm[2]) if int(itv_pred_mu_denorm[2]) < i else i - 2
+                        step_back = max(int(itv_pred_mu_denorm[2]), 1) if max(int(itv_pred_mu_denorm[2]), 1) < i else i - 2
                         self._retract_agent(time_step_back=step_back)
                         i = i - step_back
                         self.current_time_step = self.current_time_step - step_back
