@@ -24,6 +24,7 @@ from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
 import src.common as common
+from src.data_visualization import add_dynamic_grids
 
 
 # # Read data
@@ -121,13 +122,16 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(t
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
 hsl_tsad_agent.mu_LTd = -1.035922643305238e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 7.166353631122538e-05)
+hsl_tsad_agent.LTd_std = 7.166353631122538e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=100, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 6.164014e-05, 0.00072832895, np.array([6.5932894e-04, 6.9455087e-02, 1.0722370e+02]), np.array([1.0831345e-02, 1.3456550e+00, 6.2564503e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
                                   load_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
+# hsl_tsad_agent.tune(decay_factor=0.95)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
@@ -171,7 +175,6 @@ plot_states(
 )
 ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
 ax0.set_xticklabels([])
-ax0.set_title("Hidden states likelihood")
 plot_states(
     data_processor=data_processor,
     normalization=True,
@@ -205,6 +208,7 @@ ax4.set_ylabel("p_anm")
 ax4.set_xlim(ax0.get_xlim())
 ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
 ax4.set_ylim(-0.05, 1.05)
+add_dynamic_grids(ax4, time)
 
 # plot_states(
 #     data_processor=data_processor,
