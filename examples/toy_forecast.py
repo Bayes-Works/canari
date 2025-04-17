@@ -63,6 +63,8 @@ model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 for epoch in range(num_epoch):
+    if epoch == 5:
+        check = 1
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,

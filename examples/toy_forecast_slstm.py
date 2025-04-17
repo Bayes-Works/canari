@@ -61,7 +61,10 @@ model = Model(
     WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
-model.lstm_net.num_samples = 19 + len(train_data["y"])
+# model.lstm_net.num_samples = model.lstm_net.lstm_look_back_len + len(train_data["y"])
+model.lstm_net.num_samples = (
+    model.lstm_net.lstm_look_back_len + len(train_data["y"]) + len(validation_data["y"])
+)
 
 # Training
 for epoch in range(num_epoch):
