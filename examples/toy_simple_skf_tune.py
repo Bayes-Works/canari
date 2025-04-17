@@ -28,13 +28,13 @@ import pickle
 
 # Fix parameters grid search
 look_back_len_fix = 19
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-4
+SKF_std_transition_error_fix = 0.0003123022418182095
+SKF_norm_to_abnorm_prob_fix = 1.2129283607371455e-06
 
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
