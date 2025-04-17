@@ -70,9 +70,12 @@ class SKFOptimizer:
                 or false_rate > self.false_rate_threshold
                 or false_alarm_train == "Yes"
             ):
-                metric = 2 + 5 * slope
+                # metric = 2 + 5 * slope
+                # metric = 2
+                metric = self.param_space["slope"][1]
             else:
-                metric = detection_rate + 5 * np.abs(slope)
+                # metric = detection_rate + 5 * np.abs(slope)
+                metric = np.abs(slope)
 
             tune.report(
                 {
@@ -222,14 +225,6 @@ class CustomStopper(Stopper):
             detection = round(detection, 2)
             false_rate = round(false_rate, 2)
             false_alarm = str(false_alarm).strip()
-
-            if (
-                detection == self.detection_target
-                and false_rate == self.false_target
-                and false_alarm == self.alarm_target
-            ):
-                print(f"Stops all trials. Reach detection rate = 0.5")
-                self._stop_now = True
 
         return self._stop_now
 
