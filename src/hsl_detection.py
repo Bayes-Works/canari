@@ -247,8 +247,170 @@ class hsl_detection:
             # plt.show()
 
         self.mu_LTd = np.mean(self.LTd_buffer)
-        self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = np.std(self.LTd_buffer))
-        print('mean and std after roll out synthetic data',self.mu_LTd, np.std(self.LTd_buffer))
+        self.LTd_std = np.std(self.LTd_buffer)
+        self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
+        print('mean and std after roll out synthetic data',self.mu_LTd, self.LTd_std)
+
+    def tune(self, decay_factor: Optional[float] = 0.9):
+        '''
+        Tune the std_LTd using synthetic time series
+        '''
+        covariate_col = self.data_processor.covariates_col
+        train_index, val_index, test_index = self.data_processor.get_split_indices()
+        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+                                'mu': self.data_processor.norm_const_mean[covariate_col], 
+                                'std': self.data_processor.norm_const_std[covariate_col]}
+        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
+                                                                time_covariates=self.data_processor.time_covariates, 
+                                                                time_covariate_info=time_covariate_info,
+                                                                add_anomaly=False)
+                                                                # add_anomaly=True, anomaly_mag_range=[-1/52, 1/52], 
+                                                                # anomaly_begin_range=[int(52*10/4), int(52*10*3/8)], sample_from_lstm_pred=False)
+
+        std_LTd_coeff = 1 / decay_factor
+        LTd_std_original = copy.deepcopy(self.LTd_std)
+        false_alarm = False
+
+        while not false_alarm:
+            std_LTd_coeff *= decay_factor
+            self.LTd_std = LTd_std_original * std_LTd_coeff
+            self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
+            print(f'Tuning LTd_std with coefficient of {std_LTd_coeff}; LTd_std is {self.LTd_std} ...')
+        
+            # # Run the current model on the synthetic time series
+            if "lstm" in self.base_model.states_name:
+                lstm_index = self.base_model.get_states_index("lstm")
+                output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
+                cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
+            for k in range(len(generated_ts)):
+                base_model_copy = copy.deepcopy(self.base_model)
+                if "lstm" in self.base_model.states_name:
+                    base_model_copy.lstm_net = self.base_model.lstm_net
+                    base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+                    base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
+                drift_model_copy = copy.deepcopy(self.drift_model)
+
+                base_model_copy.initialize_states_history()
+                drift_model_copy.initialize_states_history()
+                mu_ar_preds, std_ar_preds = [], []
+                p_anm_one_syn_ts = []
+
+                for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
+
+                    # Estimate likelihood without intervention
+                    y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                    obs=y, input_covariates=x, state_dist=self.LTd_pdf)
+                    # Estimate likelihood with intervention
+                    itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=base_model_copy, drift_model=drift_model_copy,)
+                    y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(
+                                                                                base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                                base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                                )
+                    p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
+                    p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
+                    p_anm_one_syn_ts.append(p_a_I_Yt)
+
+                    mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x)
+                    (
+                        _, _,
+                        mu_states_posterior,
+                        var_states_posterior,
+                    ) = base_model_copy.backward(y)
+
+                    if "lstm" in base_model_copy.states_name:
+                        base_model_copy.lstm_output_history.update(
+                            mu_states_posterior[lstm_index],
+                            var_states_posterior[lstm_index, lstm_index],
+                        )
+
+                    base_model_copy._save_states_history()
+                    base_model_copy.set_states(mu_states_posterior, var_states_posterior)
+
+                    mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
+                    _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+                        obs=base_model_copy.mu_states_prior[self.AR_index], 
+                        obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
+                    drift_model_copy._save_states_history()
+                    drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+                    mu_ar_preds.append(mu_ar_pred)
+                    std_ar_preds.append(var_ar_pred**0.5)
+
+                # states_mu_prior = np.array(base_model_copy.states.mu_prior)
+                # states_var_prior = np.array(base_model_copy.states.var_prior)
+                # states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
+                # states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
+
+                # fig = plt.figure(figsize=(10, 9))
+                # gs = gridspec.GridSpec(8, 1)
+                # ax0 = plt.subplot(gs[0])
+                # ax1 = plt.subplot(gs[1])
+                # ax2 = plt.subplot(gs[2])
+                # ax3 = plt.subplot(gs[3])
+                # ax4 = plt.subplot(gs[4])
+                # ax5 = plt.subplot(gs[5])
+                # ax6 = plt.subplot(gs[6])
+                # ax7 = plt.subplot(gs[7])
+                # # print(base_model_copy.states.mu_prior)
+                # ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
+                # ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
+                #                 states_mu_prior[:, 0].flatten() - states_var_prior[:, 0, 0]**0.5,
+                #                 states_mu_prior[:, 0].flatten() + states_var_prior[:, 0, 0]**0.5,
+                #                 alpha=0.5)
+                # ax0.plot(generated_ts[k])
+
+                # ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
+                # ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),
+                #                 states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
+                #                 states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
+                #                 alpha=0.5)
+                
+                # ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
+                # ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
+                #                 states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
+                #                 states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
+                #                 alpha=0.5)
+                
+                # ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
+                # ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
+                #                 states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
+                #                 states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
+                #                 alpha=0.5)
+                # ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
+                # ax4.fill_between(np.arange(len(mu_ar_preds)),
+                #                 np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
+                #                 np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
+                #                 alpha=0.5)
+                # ax4.plot(states_drift_mu_prior[:, 0].flatten())
+                # ax4.fill_between(np.arange(len(states_drift_mu_prior[:, 0])),
+                #                 states_drift_mu_prior[:, 0].flatten() - states_drift_var_prior[:, 0, 0]**0.5,
+                #                 states_drift_mu_prior[:, 0].flatten() + states_drift_var_prior[:, 0, 0]**0.5,
+                #                 alpha=0.5)
+                # ax4.set_ylabel('LLd')
+                # ax5.plot(states_drift_mu_prior[:, 1].flatten())
+                # ax5.fill_between(np.arange(len(states_drift_mu_prior[:, 1])),
+                #                 states_drift_mu_prior[:, 1].flatten() - states_drift_var_prior[:, 1, 1]**0.5,
+                #                 states_drift_mu_prior[:, 1].flatten() + states_drift_var_prior[:, 1, 1]**0.5,
+                #                 alpha=0.5)
+                # ax5.set_ylabel('LTd')
+                # ax6.plot(states_drift_mu_prior[:, 2].flatten())
+                # ax6.fill_between(np.arange(len(states_drift_mu_prior[:, 2])),
+                #                 states_drift_mu_prior[:, 2].flatten() - states_drift_var_prior[:, 2, 2]**0.5,
+                #                 states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
+                #                 alpha=0.5)
+                # ax6.set_ylabel('ARd')
+                # ax7.plot(p_anm_one_syn_ts)
+                # ax7.set_ylim(-0.05, 1.05)
+                # ax7.set_ylabel('p_anm')
+                # plt.show()
+
+                if (len(np.where(np.array(p_anm_one_syn_ts) > 0.5)[0]) > 0.5):
+                    false_alarm = True
+                    break
+        
+        self.LTd_std = self.LTd_std/decay_factor # Revert the LTd_std to the last one before false alarm is raised
+        self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
+        print(f'LTd_std is tuned to coefficient of {std_LTd_coeff/decay_factor}; LTd_std is tuned to {self.LTd_std} ...')
 
     def detect(
             self, 
