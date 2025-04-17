@@ -121,7 +121,7 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(t
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
 hsl_tsad_agent.mu_LTd = -1.035922643305238e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 7.166353631122538e-05 * 1/10)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 7.166353631122538e-05)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=100, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
@@ -139,18 +139,18 @@ else:
 state_type = "prior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(11, 1)
+gs = gridspec.GridSpec(5, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
 ax4 = plt.subplot(gs[4])
-ax5 = plt.subplot(gs[5])
-ax6 = plt.subplot(gs[6])
-ax7 = plt.subplot(gs[7])
-ax8 = plt.subplot(gs[8])
-ax9 = plt.subplot(gs[9])
-ax10 = plt.subplot(gs[10])
+# ax5 = plt.subplot(gs[5])
+# ax6 = plt.subplot(gs[6])
+# ax7 = plt.subplot(gs[7])
+# ax8 = plt.subplot(gs[8])
+# ax9 = plt.subplot(gs[9])
+# ax10 = plt.subplot(gs[10])
 from src.data_visualization import determine_time
 time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
@@ -199,68 +199,76 @@ plot_states(
     sub_plot=ax3,
 )
 ax3.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['local level'],
-    sub_plot=ax4,
-)
-ax4.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['local trend'],
-    sub_plot=ax5,
-)
-ax5.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax6,
-)
-ax6.set_xticklabels([])
-ax7.plot(time, hsl_tsad_agent.p_anm_all)
-ax7.set_ylabel("p_anm")
-ax7.set_xlim(ax0.get_xlim())
-ax7.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax7.set_ylim(-0.05, 1.05)
 
-mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
-std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
-# Set all the values before anm_start_index to be nan
-mu_itv_all[:anm_start_index] = np.nan
-std_itv_all[:anm_start_index] = np.nan
-print('anm_detect_index:' , anm_detected_index)
+ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
+ax4.set_ylabel("p_anm")
+ax4.set_xlim(ax0.get_xlim())
+ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
+ax4.set_ylim(-0.05, 1.05)
 
-true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
-true_anm_dev_time[anm_start_index:len(np.zeros_like(mu_itv_all[:, 1]))] += np.arange(len(np.zeros_like(mu_itv_all[:, 1])) - anm_start_index)
-true_LL = true_anm_dev_time * anm_mag
+# plot_states(
+#     data_processor=data_processor,
+#     normalization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['local level'],
+#     sub_plot=ax4,
+# )
 
-ax8.plot(time, mu_itv_all[:, 0])
-ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
-ax8.set_ylabel("itv_LT")
-ax8.set_xlim(ax0.get_xlim())
-ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax8.axhline(y=anm_mag, color='k', linestyle='--')
+# ax4.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     normalization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['local trend'],
+#     sub_plot=ax5,
+# )
+# ax5.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     normalization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['autoregression'],
+#     sub_plot=ax6,
+# )
+# ax6.set_xticklabels([])
+# ax7.plot(time, hsl_tsad_agent.p_anm_all)
+# ax7.set_ylabel("p_anm")
+# ax7.set_xlim(ax0.get_xlim())
+# ax7.axvline(x=time[anm_start_index], color='r', linestyle='--')
+# ax7.set_ylim(-0.05, 1.05)
 
-ax9.plot(time, mu_itv_all[:, 1])
-ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
-ax9.plot(time, true_LL, color='k', linestyle='--')
-ax9.set_ylabel("itv_LL")
-ax9.set_xlim(ax0.get_xlim())
-ax9.axvline(x=time[anm_start_index], color='r', linestyle='--')
+# mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
+# std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
+# # Set all the values before anm_start_index to be nan
+# mu_itv_all[:anm_start_index] = np.nan
+# std_itv_all[:anm_start_index] = np.nan
+# print('anm_detect_index:' , anm_detected_index)
 
-ax10.plot(time, mu_itv_all[:, 2])
-ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
-ax10.plot(time, true_anm_dev_time, color='k', linestyle='--')
-ax10.set_ylabel("itv_time")
-ax10.set_xlim(ax0.get_xlim())
-ax10.axvline(x=time[anm_start_index], color='r', linestyle='--')
+# true_anm_dev_time = np.zeros_like(mu_itv_all[:, 1])
+# true_anm_dev_time[anm_start_index:len(np.zeros_like(mu_itv_all[:, 1]))] += np.arange(len(np.zeros_like(mu_itv_all[:, 1])) - anm_start_index)
+# true_LL = true_anm_dev_time * anm_mag
+
+# ax8.plot(time, mu_itv_all[:, 0])
+# ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
+# ax8.set_ylabel("itv_LT")
+# ax8.set_xlim(ax0.get_xlim())
+# ax8.axvline(x=time[anm_start_index], color='r', linestyle='--')
+# ax8.axhline(y=anm_mag, color='k', linestyle='--')
+
+# ax9.plot(time, mu_itv_all[:, 1])
+# ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
+# ax9.plot(time, true_LL, color='k', linestyle='--')
+# ax9.set_ylabel("itv_LL")
+# ax9.set_xlim(ax0.get_xlim())
+# ax9.axvline(x=time[anm_start_index], color='r', linestyle='--')
+
+# ax10.plot(time, mu_itv_all[:, 2])
+# ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
+# ax10.plot(time, true_anm_dev_time, color='k', linestyle='--')
+# ax10.set_ylabel("itv_time")
+# ax10.set_xlim(ax0.get_xlim())
+# ax10.axvline(x=time[anm_start_index], color='r', linestyle='--')
 plt.show()

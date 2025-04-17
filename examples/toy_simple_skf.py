@@ -137,7 +137,7 @@ p_anm_all = filter_marginal_abnorm_prob
 #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 4))
+fig = plt.figure(figsize=(10, 8))
 gs = gridspec.GridSpec(5, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
@@ -193,7 +193,7 @@ plot_states(
 )
 ax3.set_xticklabels([])
 
-ax4.plot(time, p_anm_all)
+ax4.plot(time, p_anm_all, color='b')
 ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
 ax4.set_xlim(ax0.get_xlim())
 # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
