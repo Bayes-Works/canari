@@ -194,8 +194,10 @@ def main(
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-2],
-                "norm_to_abnorm_prob": [1e-6, 1e-2],
+                # "std_transition_error": [1e-6, 1e-3],
+                # "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "std_transition_error": [1e-6, 1e-4],
+                "norm_to_abnorm_prob": [1e-6, 1e-4],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
