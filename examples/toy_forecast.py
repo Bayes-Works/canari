@@ -63,8 +63,6 @@ model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 for epoch in range(num_epoch):
-    if epoch == 5:
-        check = 1
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
@@ -85,14 +83,14 @@ for epoch in range(num_epoch):
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
 
-    fig, ax = plot_states(
-        data_processor=data_processor,
-        states=states,
-        states_type="prior",
-    )
-    filename = f"saved_results/lstm#{epoch}.png"
-    plt.savefig(filename)
-    plt.close()
+    # fig, ax = plot_states(
+    #     data_processor=data_processor,
+    #     states=states,
+    #     states_type="prior",
+    # )
+    # filename = f"saved_results/lstm#{epoch}.png"
+    # plt.savefig(filename)
+    # plt.close()
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, mode="min")

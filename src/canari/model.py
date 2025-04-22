@@ -7,6 +7,7 @@ from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi.nn import OutputUpdater
+from collections import Counter, defaultdict
 
 
 class Model:
@@ -17,8 +18,10 @@ class Model:
         *components: BaseComponent,
     ):
         self._initialize_attributes()
+        # TODO: self.component: use a list or dict, with indexing _0, _1 or not
         self.components = {
-            component.component_name: component for component in components
+            f"{component.component_name}_{i}": component
+            for i, component in enumerate(components)
         }
         self._initialize_model()
         self.states = StatesHistory()
@@ -168,8 +171,9 @@ class Model:
         scheduled_sigma_v = white_noise_max_std * np.exp(
             -white_noise_decay_factor * epoch
         )
-        if scheduled_sigma_v < self.components["white noise"].std_error:
-            scheduled_sigma_v = self.components["white noise"].std_error
+        for component in self.components.values():
+            if component.component_name == "white noise":
+                scheduled_sigma_v = max(scheduled_sigma_v, component.std_error)
         self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
     def _save_states_history(self):
@@ -668,7 +672,9 @@ class Model:
             self.early_stop_init_var_states = copy.copy(self.var_states)
             self.optimal_epoch = copy.copy(self._current_epoch)
 
-        self._current_epoch += 1
+        self._current_epoch += (
+            1  # TODO: no increasing _current_epoch when not using early_stopping
+        )
 
         # Check stop condition and assign optimal values
         if (

@@ -731,7 +731,7 @@ class SKF:
         """
 
         mu_obs_preds = []
-        var_obs_preds = []
+        std_obs_preds = []
         self.filter_marginal_prob_history = self.prob_history()
 
         # Initialize hidden states
@@ -755,7 +755,7 @@ class SKF:
             self._save_states_history()
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
+            std_obs_preds.append(var_obs_pred**0.5)
             self.filter_marginal_prob_history["norm"].append(
                 self.marginal_prob_current["norm"]
             )
@@ -765,6 +765,8 @@ class SKF:
 
         self.set_memory(states=self.model["norm_norm"].states, time_step=0)
         return (
+            np.array(mu_obs_preds).flatten(),
+            np.array(std_obs_preds).flatten(),
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
         )

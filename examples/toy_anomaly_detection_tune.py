@@ -1,5 +1,6 @@
 import fire
 import copy
+from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,6 +20,8 @@ from canari.data_visualization import (
     plot_skf_states,
     plot_states,
 )
+from canari.data_process import DataProcess
+
 
 # Fix parameters grid search
 sigma_v_fix = 0.015519087402266298
