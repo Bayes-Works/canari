@@ -91,6 +91,20 @@ def main(
     with open("saved_params/toy_simple_model.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
+    # Get true baseline
+    norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+    anm_mag_normed = anm_mag / norm_const_std
+    LL_baseline_true = np.zeros_like(df_raw)
+    LT_baseline_true = np.zeros_like(df_raw)
+    for i in range(1, len(df_raw)):
+        if i > anm_start_index:
+            LL_baseline_true[i] += anm_mag_normed * (i - anm_start_index)
+            LT_baseline_true[i] += anm_mag_normed
+
+    LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
+    LL_baseline_true = LL_baseline_true.flatten()
+    LT_baseline_true = LT_baseline_true.flatten()
+
     LSTM = LstmNetwork(
         look_back_len=19,
         num_features=2,
@@ -264,12 +278,29 @@ def main(
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
 
+    # Compute MSE for SKF baselines
+    mu_LL_states = states.get_mean(states_type='prior', states_name=["local level"])["local level"]
+    mu_LT_states = states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+    mse_LL = metric.mse(
+        mu_LL_states[anm_start_index:],
+        LL_baseline_true[anm_start_index:],
+    )
+    mse_LT = metric.mse(
+        mu_LT_states[anm_start_index:],
+        LT_baseline_true[anm_start_index:],
+    )
+    mse = mse_LL + mse_LT
+
+    from src.data_visualization import determine_time
+    time = determine_time(data_processor, len(data_processor.all_data["y"]))
+
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
+        states_type = 'prior',
         states_to_plot=["local level", "local trend", "lstm", "autoregression"],
         model_prob=filter_marginal_abnorm_prob,
-        normalization=False,
+        normalization=True,
         color="b",
         legend_location="upper left",
     )
@@ -278,7 +309,11 @@ def main(
         color="r",
         linestyle="--",
     )
-    fig.suptitle("SKF hidden states", fontsize=10, y=1)
+    # ax[0].plot(time[anm_start_index:], mu_LL_states[anm_start_index:], color='r')
+    # ax[1].plot(time[anm_start_index:], mu_LT_states[anm_start_index:], color='r')
+    ax[0].plot(time, LL_baseline_true, color='k', linestyle='--')
+    ax[1].plot(time, LT_baseline_true, color='k', linestyle='--')
+    fig.suptitle(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}", fontsize=10, y=1)
     plt.show()
 
     if param_tune:
