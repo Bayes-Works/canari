@@ -76,14 +76,27 @@ data_processor = DataProcess(
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-
-####################################################################
-######################### Pretrained model #########################
-####################################################################
 # Load model_dict from local
 with open("saved_params/toy_simple_model.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
+# Get true baseline
+norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+anm_mag_normed = anm_mag / norm_const_std
+LL_baseline_true = np.zeros_like(df_raw)
+LT_baseline_true = np.zeros_like(df_raw)
+for i in range(1, len(df_raw)):
+    if i > anm_start_index:
+        LL_baseline_true[i] += anm_mag_normed * (i - anm_start_index)
+        LT_baseline_true[i] += anm_mag_normed
+
+LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
+LL_baseline_true = LL_baseline_true.flatten()
+LT_baseline_true = LT_baseline_true.flatten()
+
+####################################################################
+######################### Pretrained model #########################
+####################################################################
 LSTM = LstmNetwork(
         look_back_len=19,
         num_features=2,
@@ -139,6 +152,19 @@ if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():
 else:
     anm_detected_index = len(hsl_tsad_agent.p_anm_all)
 
+# Compute MSE for SKF baselines
+mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local level"])["local level"]
+mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+mse_LL = metric.mse(
+    mu_LL_states[anm_start_index:],
+    LL_baseline_true[anm_start_index:],
+)
+mse_LT = metric.mse(
+    mu_LT_states[anm_start_index:],
+    LT_baseline_true[anm_start_index:],
+)
+mse = mse_LL + mse_LT
+
 #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
@@ -173,8 +199,10 @@ plot_states(
     states_to_plot=['local level'],
     sub_plot=ax0,
 )
+ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
 ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
 ax0.set_xticklabels([])
+ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}")
 plot_states(
     data_processor=data_processor,
     normalization=True,
@@ -183,6 +211,9 @@ plot_states(
     states_to_plot=['local trend'],
     sub_plot=ax1,
 )
+# ax0.plot(time[anm_start_index:], mu_LL_states[anm_start_index:], color='r')
+# ax1.plot(time[anm_start_index:], mu_LT_states[anm_start_index:], color='r')
+ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
