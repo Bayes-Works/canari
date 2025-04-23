@@ -134,9 +134,6 @@ class SKFOptimizer:
                     ),
                     config=search_config,
                     search_alg=OptunaSearch(metric="metric", mode="min"),
-                    stop=CustomStopper(
-                        detection_target=0.50, false_target=0.00, alarm_target="No"
-                    ),
                     name="SKF_optimizer",
                     num_samples=self.num_optimization_trial,
                     verbose=0,
@@ -153,9 +150,6 @@ class SKFOptimizer:
                     config=search_config,
                     name="SKF_optimizer",
                     num_samples=self.num_optimization_trial,
-                    stop=CustomStopper(
-                        detection_target=0.50, false_target=0.00, alarm_target="No"
-                    ),
                     scheduler=scheduler,
                     verbose=0,
                     raise_on_failed_trial=False,
@@ -200,38 +194,3 @@ class CustomLogger(Callback):
         print(
             f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
         )
-
-
-class CustomStopper(Stopper):
-    """
-    Custome stopper
-    """
-
-    def __init__(self, detection_target=0.50, false_target=0.00, alarm_target="No"):
-        self.detection_target = detection_target
-        self.false_target = false_target
-        self.alarm_target = alarm_target
-        self._stop_now = False
-
-    def __call__(self, trial_id, result):
-        detection = result.get("detection_rate")
-        false_rate = result.get("false_rate")
-        false_alarm = result.get("false_alarm_train")
-
-        if detection is not None and false_rate is not None and false_alarm is not None:
-            detection = round(detection, 2)
-            false_rate = round(false_rate, 2)
-            false_alarm = str(false_alarm).strip()
-
-            if (
-                detection == self.detection_target
-                and false_rate == self.false_target
-                and false_alarm == self.alarm_target
-            ):
-                print(f"Stops all trials. Reach detection rate = 0.5")
-                self._stop_now = True
-
-        return self._stop_now
-
-    def stop_all(self):
-        return self._stop_now

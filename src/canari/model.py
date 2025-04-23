@@ -1,11 +1,12 @@
-import numpy as np
 import copy
 from typing import Optional, List, Tuple, Dict
-from src.base_component import BaseComponent
-import src.common as common
-from src.data_struct import LstmOutputHistory, StatesHistory
-from src.common import GMA
-from examples import DataProcess
+import numpy as np
+from canari.base_component import BaseComponent
+import canari.common as common
+from canari.data_struct import LstmOutputHistory, StatesHistory
+from canari.common import GMA
+from canari.data_process import DataProcess
+from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
 
 
@@ -154,8 +155,11 @@ class Model:
     ):
         """Update lstm network's parameters"""
 
-        self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
-        self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
+        # self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
+        # self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
+        # if self.lstm_net.device == "cuda":
+        #     self.lstm_net.delta_z_to_device()
+        self.lstm_net.set_delta_z(delta_mu_lstm, delta_var_lstm)
         self.lstm_net.backward()
         self.lstm_net.step()
 
@@ -512,7 +516,7 @@ class Model:
                 lstm_output_history_exist = False
 
             lstm_cell_states = self.lstm_net.get_lstm_states()
-        
+
         for _ in range(num_time_series):
             one_time_series = []
 
