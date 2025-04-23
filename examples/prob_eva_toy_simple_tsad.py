@@ -128,8 +128,10 @@ hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 6.164014e-05, 0.00072832895, np.array([6.5932894e-04, 6.9455087e-02, 1.0722370e+02]), np.array([1.0831345e-02, 1.3456550e+00, 6.2564503e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
                                 load_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
+LTd_std_coefficients = [0.6634204312890623, 0.5688000922764596, 0.5987369392383786, 0.5987369392383786, 0.6634204312890623, 
+                        0.5987369392383786, 0.6634204312890623, 0.5688000922764596, 0.6302494097246091, 0.6302494097246091]
 # hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
 
 gen_mode_copy = copy.deepcopy(gen_model)
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
