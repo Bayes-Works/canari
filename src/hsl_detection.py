@@ -313,7 +313,8 @@ class hsl_detection:
                 self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
                 self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
 
-            self._save_lstm_input()
+            if "lstm" in self.base_model.states_name:
+                self._save_lstm_input()
 
             if apply_intervention:
                 if rerun_kf is False:
@@ -908,8 +909,9 @@ class hsl_detection:
         new_drift_var_states = self.drift_model.states.var_posterior[-1]
         self.base_model.set_states(new_base_mu_states, new_base_var_states)
         self.drift_model.set_states(new_drift_mu_states, new_drift_var_states)
-        self.base_model.lstm_output_history = self.lstm_history[-1]
-        self.base_model.lstm_net.set_lstm_states(self.lstm_cell_states[-1])
+        if "lstm" in self.base_model.states_name:
+            self.base_model.lstm_output_history = self.lstm_history[-1]
+            self.base_model.lstm_net.set_lstm_states(self.lstm_cell_states[-1])
 
         # pass
 
