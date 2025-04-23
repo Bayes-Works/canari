@@ -116,91 +116,125 @@ abnorm_model = Model(
 )
 abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
+# No detection: 3, 7
+std_trans_error_norm_to_abnorm_prob_comb = [[0.0003123022418182095, 1.2129283607371455e-06],
+                                            [5.6033733839347894e-05, 1.7559948785393028e-06],
+                                            [6.564963793526337e-05, 7.712919602901581e-05],
+                                            [0.00032847278347743723, 3.9947717600623924e-05],
+                                            [0.0004800598353304185, 3.3254051926052085e-05],
+                                            [3.400413281349548e-05, 6.282990924767272e-05],
+                                            [0.0012194568427483132, 1.2514669352313052e-05],
+                                            [0.0009316055756732739, 3.5848341660084674e-06],
+                                            [0.00017739592835080213, 0.0013276774530535473],
+                                            [0.0008005024870053932, 1.6648750624135252e-06],
+                                            ]
+
 skf = SKF(
     norm_model=norm_model,
     abnorm_model=abnorm_model,
-    std_transition_error=1e-4,
-    norm_to_abnorm_prob=1e-4,
+    std_transition_error=0.0008005024870053932,
+    norm_to_abnorm_prob=1.6648750624135252e-06,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
 
 # # Anomaly Detection
-filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
+# filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 # smooth_marginal_abnorm_prob, states = skf.smoother(data=normalized_data)
 
-from src.data_visualization import determine_time
-time = determine_time(data_processor, len(normalized_data["y"]))
+skf.filter_marginal_prob_history = skf.prob_history()
+skf.set_same_states_transition_models()
+skf.initialize_states_history()
 
-p_anm_all = filter_marginal_abnorm_prob
+filter_marginal_abnorm_prob, states = skf.filter(data=train_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=validation_data)
+states_temp = copy.deepcopy(states)
+abnorm_prob_temp = copy.deepcopy(skf.filter_marginal_prob_history)
+marginal_prob_current_temp = copy.deepcopy(skf.marginal_prob_current)
+# filter_marginal_abnorm_prob, states = skf.filter(data=test_data)
+lstm_net_temp = copy.deepcopy(skf.model["norm_norm"].lstm_net.get_lstm_states())
+for i in range(2):
+    skf.states = copy.deepcopy(states_temp)
+    skf.filter_marginal_prob_history = copy.deepcopy(abnorm_prob_temp)
+    skf.marginal_prob_current = copy.deepcopy(marginal_prob_current_temp)
+    current_time_step = len(train_data["y"]) + len(validation_data["y"])
+    skf.model["norm_norm"].set_memory(states=skf.model["norm_norm"].states, time_step=current_time_step)
+    skf.model["norm_norm"].lstm_net.set_lstm_states(lstm_net_temp)
 
-#  Plot
-state_type = "prior"
-#  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(5, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
-ax4 = plt.subplot(gs[4])
+    filter_marginal_abnorm_prob, states = skf.filter(data=test_data)
 
-plot_data(
-    data_processor=data_processor,
-    normalization=True,
-    plot_column=output_col,
-    validation_label="y",
-    sub_plot=ax0,
-)
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    # states=pretrained_model.states,
-    states=states,
-    states_type=state_type,
-    states_to_plot=['local level'],
-    sub_plot=ax0,
-)
-ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states likelihood")
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=states,
-    states_type=state_type,
-    states_to_plot=['local trend'],
-    sub_plot=ax1,
-)
-ax1.set_xticklabels([])
+    from src.data_visualization import determine_time
+    time = determine_time(data_processor, len(normalized_data["y"]))
 
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=states,
-    states_type=state_type,
-    states_to_plot=['lstm'],
-    sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    normalization=True,
-    states=states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax3,
-)
-ax3.set_xticklabels([])
+    p_anm_all = filter_marginal_abnorm_prob
 
-ax4.plot(time, p_anm_all, color='b')
-ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
-ax4.set_xlim(ax0.get_xlim())
-# ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
-ax4.set_ylim(-0.05, 1.05)
-ax4.set_yticks([0, 1])
-# ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
-# ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
-ax4.set_xlim(ax0.get_xlim())
+    #  Plot
+    state_type = "prior"
+    #  Plot states from pretrained model
+    fig = plt.figure(figsize=(10, 8))
+    gs = gridspec.GridSpec(5, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+    ax4 = plt.subplot(gs[4])
 
-plt.show()
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_column=output_col,
+        validation_label="y",
+        sub_plot=ax0,
+    )
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        # states=pretrained_model.states,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['local level'],
+        sub_plot=ax0,
+    )
+    ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
+    ax0.set_xticklabels([])
+    ax0.set_title("Hidden states likelihood")
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['local trend'],
+        sub_plot=ax1,
+    )
+    ax1.set_xticklabels([])
+
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['lstm'],
+        sub_plot=ax2,
+    )
+    ax2.set_xticklabels([])
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['autoregression'],
+        sub_plot=ax3,
+    )
+    ax3.set_xticklabels([])
+
+    ax4.plot(time, p_anm_all, color='b')
+    ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
+    ax4.set_xlim(ax0.get_xlim())
+    # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
+    ax4.set_ylim(-0.05, 1.05)
+    ax4.set_yticks([0, 1])
+    # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
+    # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
+    ax4.set_xlim(ax0.get_xlim())
+
+    plt.show()

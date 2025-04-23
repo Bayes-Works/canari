@@ -735,11 +735,11 @@ class SKF:
 
         mu_obs_preds = []
         var_obs_preds = []
-        self.filter_marginal_prob_history = self.prob_history()
+        # self.filter_marginal_prob_history = self.prob_history()
 
         # Initialize hidden states
-        self.set_same_states_transition_models()
-        self.initialize_states_history()
+        # self.set_same_states_transition_models()
+        # self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
@@ -766,7 +766,7 @@ class SKF:
                 self.marginal_prob_current["abnorm"]
             )
 
-        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
+        # self.set_memory(states=self.model["norm_norm"].states, time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
