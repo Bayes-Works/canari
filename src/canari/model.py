@@ -155,10 +155,6 @@ class Model:
     ):
         """Update lstm network's parameters"""
 
-        # self.lstm_net.input_delta_z_buffer.delta_mu = delta_mu_lstm
-        # self.lstm_net.input_delta_z_buffer.delta_var = [delta_var_lstm]
-        # if self.lstm_net.device == "cuda":
-        #     self.lstm_net.delta_z_to_device()
         self.lstm_net.set_delta_z(delta_mu_lstm, delta_var_lstm)
         self.lstm_net.backward()
         self.lstm_net.step()
