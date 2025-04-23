@@ -154,8 +154,7 @@ class Model:
         delta_var_lstm: np.ndarray,
     ):
         """Update lstm network's parameters"""
-
-        self.lstm_net.set_delta_z(delta_mu_lstm, delta_var_lstm)
+        self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
         self.lstm_net.backward()
         self.lstm_net.step()
 
@@ -302,7 +301,14 @@ class Model:
             self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                self.lstm_net.reset_lstm_states()
+                lstm_states = self.lstm_net.get_lstm_states()
+                for key in lstm_states:
+                    old_tuple = lstm_states[key]
+                    new_tuple = tuple(
+                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                    )
+                    lstm_states[key] = new_tuple
+                self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -324,7 +330,7 @@ class Model:
                 self.lstm_output_history.var = std_lstm_to_set**2
 
                 # TODO: load lstm's cell and hidden states, for now, reset to 0
-                self.lstm_net.reset_lstm_states()
+                # self.lstm_net.reset_lstm_states()
 
     def forward(
         self,
