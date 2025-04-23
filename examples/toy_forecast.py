@@ -53,7 +53,7 @@ model = Model(
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
-        device="cpu",
+        device="cuda",
         manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),
