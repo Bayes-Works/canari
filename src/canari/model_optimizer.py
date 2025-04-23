@@ -1,10 +1,10 @@
+import signal
 from typing import Callable, Optional
 from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
-from examples.data_process import DataProcess
 from ray.tune.schedulers import ASHAScheduler
-import signal
+from canari.data_process import DataProcess
 
 # Ignore segmentation fault signals
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)

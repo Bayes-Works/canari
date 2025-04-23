@@ -1,9 +1,9 @@
-import fire
 import copy
+import fire
+import time
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-from pytagi import metric
+import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari.data_process import DataProcess
 from canari.baseline_component import LocalTrend, LocalAcceleration
@@ -20,11 +20,11 @@ from canari.data_visualization import (
     plot_states,
 )
 
-# Fix parameters grid search
-sigma_v_fix = 0.015519087402266298
-look_back_len_fix = 11
-SKF_std_transition_error_fix = 0.0006733112773884772
-SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
+# Fix parameters
+sigma_v_fix = 0.004402724885540067
+look_back_len_fix = 6
+SKF_std_transition_error_fix = 8.972582234906219e-05
+SKF_norm_to_abnorm_prob_fix = 5.643494669316642e-05
 
 
 def main(
@@ -33,29 +33,19 @@ def main(
     grid_search: bool = False,
 ):
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = "./data/benchmark_data/test_12_monthly_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
-    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(time_series[0])
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["values"]
-
-    # Add synthetic anomaly to data
-    trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 120
-    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
-    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-    df_raw = df_raw.add(trend, axis=0)
-
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
         data=df_raw,
-        time_covariates=["hour_of_day"],
-        train_split=0.4,
-        validation_split=0.1,
+        time_covariates=["month_of_year"],
+        train_split=0.16,
+        validation_split=2.5e-02,
         output_col=output_col,
     )
     (
@@ -75,7 +65,7 @@ def main(
                 num_layer=1,
                 num_hidden_unit=50,
                 device="cpu",
-                manual_seed=1,
+                manual_seed=2,
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )
@@ -83,7 +73,7 @@ def main(
     # Define parameter search space
     if param_tune:
         param = {
-            "look_back_len": [10, 30],
+            "look_back_len": [6, 15],
             "sigma_v": [1e-3, 2e-1],
         }
         # Define optimizer
@@ -119,13 +109,15 @@ def main(
         normalization=True,
         plot_test_data=False,
         plot_column=output_col,
-        test_label="y",
+        validation_label="y",
+        plot_nan=False,
     )
     plot_prediction(
         data_processor=data_processor,
         mean_validation_pred=mu_validation_preds,
         std_validation_pred=std_validation_preds,
         validation_label=[r"$\mu$", f"$\pm\sigma$"],
+        sub_plot=ax,
     )
     plot_states(
         data_processor=data_processor,
@@ -153,14 +145,15 @@ def main(
             norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
+            conditional_likelihood=False,
         )
+        skf.save_initial_states()
         return skf
 
     # Define parameter search space
-    slope_upper_bound = 5e-2
+    slope_upper_bound = 2e-1
     slope_lower_bound = 1e-3
-
-    # Plot synthetic anomaly
+    # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
         data_processor.train_data,
         num_samples=1,
@@ -172,7 +165,10 @@ def main(
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
+        train_label="data without anomaly",
+        plot_nan=False,
     )
+
     train_time = data_processor.get_time("train")
     for ts in synthetic_anomaly_data:
         plt.plot(train_time, ts["y"])
@@ -184,20 +180,19 @@ def main(
             "largest anomaly tested",
         ]
     )
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
 
     if param_tune:
         if grid_search:
             skf_param = {
-                "std_transition_error": [1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-5, 1e-4, 1e-3],
-                "slope": [0.006, 0.008, 0.01, 0.02],
+                "std_transition_error": [1e-6, 1e-5, 1e-4],
+                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
+                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
+                # "slope": [2e-2, 1e-2, 0.5e-2],
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-2],
-                "norm_to_abnorm_prob": [1e-6, 1e-2],
+                "std_transition_error": [1e-6, 1e-3],
+                "norm_to_abnorm_prob": [1e-6, 1e-3],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
@@ -228,14 +223,8 @@ def main(
         states=states,
         states_to_plot=["local level", "local trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
-        normalization=False,
         color="b",
-        legend_location="upper left",
-    )
-    ax[0].axvline(
-        x=data_processor.data.index[time_anomaly],
-        color="r",
-        linestyle="--",
+        plot_nan=False,
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
@@ -243,17 +232,21 @@ def main(
     if param_tune:
         print("Model parameters used:", model_optimizer.param_optim)
         print("SKF model parameters used:", skf_optimizer.param_optim)
+        print("-----")
     else:
         print("Model parameters used:", param)
         print("SKF model parameters used:", skf_param)
-    print("-----")
+        print("-----")
 
 
-def training(model, data_processor, num_epoch: int = 50):
-    """ """
+def training(model, data_processor, num_epoch: int = 100):
+    """
+    Training procedure
+    """
+
     # index_start = 0
-    # index_end = 24 * 3 + 1
-    # y1 = data_processor.train_data["y"][:-1].flatten()
+    # index_end = 12 * 3
+    # y1 = data_processor.train_data["y"][index_start:index_end].flatten()
     # trend, _, seasonality, _ = DataProcess.decompose_data(y1)
     # t_plot = data_processor.data.index[index_start:index_end].to_numpy()
     # plt.plot(t_plot, trend, color="b")
@@ -266,7 +259,7 @@ def training(model, data_processor, num_epoch: int = 50):
     # )
     # plt.show()
 
-    model.auto_initialize_baseline_states(data_processor.train_data["y"][0:24])
+    model.auto_initialize_baseline_states(data_processor.train_data["y"][0 : 12 * 3])
     states_optim = None
     mu_validation_preds_optim = None
     std_validation_preds_optim = None
@@ -313,4 +306,7 @@ def training(model, data_processor, num_epoch: int = 50):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     fire.Fire(main)
+    end_time = time.time()
+    print(f"Run time: {end_time-start_time:.2f} seconds")

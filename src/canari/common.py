@@ -1,7 +1,7 @@
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional
 import numpy as np
-from src.data_struct import LstmOutputHistory
 from pytagi import Normalizer
+from canari.data_struct import LstmOutputHistory
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -67,7 +67,12 @@ def forward(
     mu_obs_predict, var_obs_predict = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix
     )
-    return mu_obs_predict, var_obs_predict, mu_states_prior, var_states_prior
+    return (
+        np.float32(mu_obs_predict),
+        np.float32(var_obs_predict),
+        np.float32(mu_states_prior),
+        np.float32(var_states_prior),
+    )
 
 
 def backward(
@@ -78,11 +83,13 @@ def backward(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-    # var_obs_predict = var_obs_predict + 1e-20
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
     delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
-    return delta_mu_states, delta_var_states
+    return (
+        np.float32(delta_mu_states),
+        np.float32(delta_var_states),
+    )
 
 
 def rts_smoother(
@@ -103,7 +110,10 @@ def rts_smoother(
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
-    return mu_states_smooth, var_states_smooth
+    return (
+        np.float32(mu_states_smooth),
+        np.float32(var_states_smooth),
+    )
 
 
 def prepare_lstm_input(
@@ -121,7 +131,7 @@ def prepare_lstm_input(
             np.zeros(len(input_covariates), dtype=np.float32),
         )
     )
-    return mu_lstm_input, var_lstm_input
+    return np.float32(mu_lstm_input), np.float32(var_lstm_input)
 
 
 def pad_matrix(
@@ -160,7 +170,7 @@ def gaussian_mixture(
     m1 = mu1 - mu_mixture
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
-    return mu_mixture, var_mixture
+    return np.float32(mu_mixture), np.float32(var_mixture)
 
 
 def unstandardize_states(mu_norm, std_norm, norm_const_mean, norm_const_std):
