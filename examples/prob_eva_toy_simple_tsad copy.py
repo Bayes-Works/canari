@@ -26,8 +26,6 @@ import pickle
 import src.common as common
 from src.data_visualization import add_dynamic_grids
 
-import ast
-from tqdm import tqdm
 
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
@@ -150,35 +148,28 @@ var_drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.var_states)
 current_time_step_temp = copy.deepcopy(hsl_tsad_agent.current_time_step)
 p_anm_all_temp = copy.deepcopy(hsl_tsad_agent.p_anm_all)
 
-# Load the CSV
-df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen.csv")
-# Containers for restored data
-restored_data = []
-for _, row in df.iterrows():
-    # Convert string to list, then to desired type
-    timestamps = pd.to_datetime(ast.literal_eval(row["timestamps"]))
-    values = np.array(ast.literal_eval(row["values"]), dtype=float)
-    anomaly_magnitude = float(row["anomaly_magnitude"])
-    anomaly_start_index = int(row["anomaly_start_index"])
-    
-    restored_data.append((timestamps, values, anomaly_magnitude, anomaly_start_index))
 
-results_all = []
-LTd_std_temp = copy.deepcopy(hsl_tsad_agent.LTd_std)
-
-for k in tqdm(range(len(restored_data))):
-    anm_start_index = restored_data[k][3]
-    anm_mag = restored_data[k][2]
+num_test_ts = 5
+anm_mag = 0.3/52
+for k in range(num_test_ts):
+    anm_start_index = np.random.randint(0, 52 * 2)
+    num_time_steps = anm_start_index + 52 * 5
 
     anm_start_index_global = anm_start_index + len(df_raw) - len(test_data["y"])
 
-    # gen_time_series = gen_time_series[0]
-    gen_time_series = restored_data[k][1]
+    # Generate data from the current point
+    gen_time_series, _, _, _ = gen_mode_copy.generate_time_series(num_time_series=1, num_time_steps=num_time_steps,
+                                                                  add_anomaly=True, anomaly_mag_range = [anm_mag, anm_mag], anomaly_begin_range=[anm_start_index, anm_start_index+1])
+    gen_time_series = gen_time_series[0]
 
     # Remove the last len(test_data["y"]) rows in df_raw
     df_raw = df_raw[:-len(test_data["y"])]
 
-    new_df = pd.DataFrame({'values': gen_time_series}, index=restored_data[k][0])
+    # Genrate date_time from df_raw["date_time"][-1] with an interval of 7
+    last_date_time = pd.to_datetime(test_start)
+    date_time_array = np.array(pd.date_range(start=last_date_time, periods=len(gen_time_series), freq='7D'))
+
+    new_df = pd.DataFrame({'values': gen_time_series}, index=pd.to_datetime(date_time_array))
     df_raw = pd.concat([df_raw, new_df])
 
     # df_raw["values"].iloc[-len(test_data["y"]):] = gen_time_series
@@ -190,11 +181,6 @@ for k in tqdm(range(len(restored_data))):
         output_col=output_col,
     )
     train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
-
-    # Pick a random coefficient from LTd_std_coefficients
-    LTd_std_coeff = np.random.choice(LTd_std_coefficients)
-    hsl_tsad_agent.LTd_std = LTd_std_temp * LTd_std_coeff
-    hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
     mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
@@ -228,77 +214,74 @@ for k in tqdm(range(len(restored_data))):
         mu_LT_states[anm_start_index_global:],
         LT_baseline_true[anm_start_index_global:],
     )
-    detection_time = anm_detected_index - anm_start_index_global
 
-    results_all.append([anm_mag, anm_start_index_global, anm_detected_index, mse_LL, mse_LT, detection_time])
+    #  Plot
+    state_type = "prior"
+    #  Plot states from pretrained model
+    fig = plt.figure(figsize=(10, 8))
+    gs = gridspec.GridSpec(5, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+    ax4 = plt.subplot(gs[4])
+    from src.data_visualization import determine_time
+    time = determine_time(data_processor, len(normalized_data["y"]))
+    plot_data(
+        data_processor=data_processor,
+        normalization=True,
+        plot_column=output_col,
+        validation_label="y",
+        sub_plot=ax0,
+    )
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        # states=pretrained_model.states,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['local level'],
+        sub_plot=ax0,
+    )
+    ax0.set_xticklabels([])
+    ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
+    ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
+    ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {anm_detected_index - anm_start_index_global}")
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['local trend'],
+        sub_plot=ax1,
+    )
+    ax1.set_xticklabels([])
+    ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['lstm'],
+        sub_plot=ax2,
+    )
+    ax2.set_xticklabels([])
+    plot_states(
+        data_processor=data_processor,
+        normalization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['autoregression'],
+        sub_plot=ax3,
+    )
+    ax3.set_xticklabels([])
 
-    # #  Plot
-    # state_type = "prior"
-    # #  Plot states from pretrained model
-    # fig = plt.figure(figsize=(10, 8))
-    # gs = gridspec.GridSpec(5, 1)
-    # ax0 = plt.subplot(gs[0])
-    # ax1 = plt.subplot(gs[1])
-    # ax2 = plt.subplot(gs[2])
-    # ax3 = plt.subplot(gs[3])
-    # ax4 = plt.subplot(gs[4])
-    # from src.data_visualization import determine_time
-    # time = determine_time(data_processor, len(normalized_data["y"]))
-    # plot_data(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     plot_column=output_col,
-    #     validation_label="y",
-    #     sub_plot=ax0,
-    # )
-    # plot_states(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     # states=pretrained_model.states,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['local level'],
-    #     sub_plot=ax0,
-    # )
-    # ax0.set_xticklabels([])
-    # ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
-    # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
-    # ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-    # plot_states(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['local trend'],
-    #     sub_plot=ax1,
-    # )
-    # ax1.set_xticklabels([])
-    # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
-    # plot_states(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['lstm'],
-    #     sub_plot=ax2,
-    # )
-    # ax2.set_xticklabels([])
-    # plot_states(
-    #     data_processor=data_processor,
-    #     normalization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['autoregression'],
-    #     sub_plot=ax3,
-    # )
-    # ax3.set_xticklabels([])
-
-    # ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
-    # ax4.set_ylabel("p_anm")
-    # ax4.set_xlim(ax0.get_xlim())
-    # ax4.set_ylim(-0.05, 1.05)
-    # add_dynamic_grids(ax4, time)
-    # plt.show()
+    ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
+    ax4.set_ylabel("p_anm")
+    ax4.set_xlim(ax0.get_xlim())
+    ax4.set_ylim(-0.05, 1.05)
+    add_dynamic_grids(ax4, time)
+    plt.show()
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
     hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -312,6 +295,3 @@ for k in tqdm(range(len(restored_data))):
     hsl_tsad_agent.current_time_step = copy.deepcopy(current_time_step_temp)
     hsl_tsad_agent.p_anm_all = copy.deepcopy(p_anm_all_temp)
 
-# # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/toy_simple_results.csv", index=False)
