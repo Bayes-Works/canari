@@ -6,8 +6,7 @@ saved_results/
 **/__pycache__/
 *.egg-info/
 *.png
-dist
-docs
+dist/
 data/demo_data
 data/benchmark_data/
 saved_params/
@@ -16,4 +15,4 @@ saved_params/
 .vscode
 
 !saved_results/time_series_toy.png
-
+!docs/build/
