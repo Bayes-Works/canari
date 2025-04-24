@@ -314,4 +314,4 @@ for k in tqdm(range(len(restored_data))):
 
 # # Save the results to a CSV file
 # results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/toy_simple_results.csv", index=False)
+# results_df.to_csv("saved_results/prob_eva/toy_simple_results_il.csv", index=False)
