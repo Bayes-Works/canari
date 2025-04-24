@@ -1,9 +1,8 @@
 from typing import Optional
 import numpy as np
-from src.base_component import BaseComponent
+from canari.base_component import BaseComponent
 import pytagi
-from pytagi.nn import LSTM, Linear
-from pytagi.nn import Sequential
+from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
 
 
 class LstmNetwork(BaseComponent):
@@ -36,14 +35,14 @@ class LstmNetwork(BaseComponent):
         self.num_features = num_features
         self.input_features = input_features
         self.num_output = num_output
-        self.mu_states = mu_states
-        self.var_states = var_states
         self.device = device
         self.num_thread = num_thread
         self.manual_seed = manual_seed
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
+        self._mu_states = mu_states
+        self._var_states = var_states
         super().__init__()
 
     def initialize_component_name(self):
@@ -65,18 +64,18 @@ class LstmNetwork(BaseComponent):
         self._process_noise_matrix = np.array([[self.std_error**2]])
 
     def initialize_mu_states(self):
-        if self.mu_states is None:
-            self.mu_states = np.zeros((self.num_states, 1))
-        elif len(self.mu_states) == self.num_states:
-            self.mu_states = np.atleast_2d(self.mu_states).T
+        if self._mu_states is None:
+            self._mu_states = np.zeros((self.num_states, 1))
+        elif len(self._mu_states) == self.num_states:
+            self._mu_states = np.atleast_2d(self._mu_states).T
         else:
             raise ValueError(f"Incorrect mu_states dimension for the lstm component.")
 
     def initialize_var_states(self):
-        if self.var_states is None:
-            self.var_states = np.zeros((self.num_states, 1))
-        elif len(self.var_states) == self.num_states:
-            self.var_states = np.atleast_2d(self.var_states).T
+        if self._var_states is None:
+            self._var_states = np.zeros((self.num_states, 1))
+        elif len(self._var_states) == self.num_states:
+            self._var_states = np.atleast_2d(self._var_states).T
         else:
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 

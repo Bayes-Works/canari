@@ -1,26 +1,20 @@
-import fire
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
-    Model,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from matplotlib import gridspec
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.autoregression_component import Autoregression
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
 
 
 # # Read data
