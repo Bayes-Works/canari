@@ -6,16 +6,16 @@ Open-source library for probabilistic anomaly detection in time series
 #### Create Miniconda Environment
 
 1. Install Miniconda by following these [instructions](https://docs.conda.io/en/latest/miniconda.html)
-2. Create a conda environment:
+2. Create a conda environment named `canari`:
 
     ```sh
-    conda create --name pycanari python=3.10
+    conda create --name canari python=3.10
     ```
 
 3. Activate conda environment:
 
     ```sh
-    conda activate pycanari
+    conda activate canari
     ```
 
 #### Install pycanari
@@ -39,13 +39,19 @@ Open-source library for probabilistic anomaly detection in time series
     cd pycanari-0.0.1
     ```
 
-6. Install requirements:
+6. Run:
+
+    ```sh
+    conda install -c conda-forge libstdcxx-ng
+    ```
+    
+7. Install requirements:
 
     ```sh
     pip install -r requirements.txt
     ```
 
-7. Test **pycanari** package:
+8. Test **pycanari** package:
 
     ```sh
     python -m examples.toy_forecast
