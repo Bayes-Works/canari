@@ -1,4 +1,4 @@
-# macOS
+*build
 *.DS_Store
 *.vscode
 *.json
@@ -6,11 +6,13 @@ saved_results/
 **/__pycache__/
 *.egg-info/
 *.png
+dist
 data/demo_data
 data/benchmark_data/
 saved_params/
 
-!.vscode/launch.json
-!.vscode/settings.json
+# VSCode
+.vscode
+
 !saved_results/time_series_toy.png
 

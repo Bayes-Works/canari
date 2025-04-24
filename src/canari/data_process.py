@@ -1,5 +1,4 @@
 from typing import Optional, Tuple, List, Dict
-import copy
 import numpy as np
 import pandas as pd
 from pytagi import Normalizer
@@ -39,6 +38,7 @@ class DataProcess:
         self.time_covariates = time_covariates
         self.output_col = output_col
 
+        data = data.astype("float32")
         self.data = data.copy()
         self.norm_const_mean, self.norm_const_std = None, None
 
@@ -56,19 +56,19 @@ class DataProcess:
         if self.time_covariates is not None:
             for time_cov in self.time_covariates:
                 if time_cov == "hour_of_day":
-                    self.data["hour_of_day"] = self.data.index.hour
+                    self.data["hour_of_day"] = np.float32(self.data.index.hour)
                 elif time_cov == "day_of_week":
-                    self.data["day_of_week"] = self.data.index.dayofweek
+                    self.data["day_of_week"] = np.float32(self.data.index.dayofweek)
                 elif time_cov == "day_of_year":
-                    self.data["day_of_year"] = self.data.index.dayofyear
+                    self.data["day_of_year"] = np.float32(self.data.index.dayofyear)
                 elif time_cov == "week_of_year":
                     self.data["week_of_year"] = np.array(
-                        self.data.index.isocalendar().week, dtype=np.float64
+                        self.data.index.isocalendar().week, dtype=np.float32
                     )
                 elif time_cov == "month_of_year":
-                    self.data["month"] = self.data.index.month
+                    self.data["month"] = np.float32(self.data.index.month)
                 elif time_cov == "quarter_of_year":
-                    self.data["quarter"] = self.data.index.quarter
+                    self.data["quarter"] = np.float32(self.data.index.quarter)
 
     def get_split_start_end_indices(self):
         """Get indices for train, validation, and test sets"""

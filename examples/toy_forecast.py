@@ -1,22 +1,18 @@
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
-    Model,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-import copy
 
 
 # # Read data
@@ -57,7 +53,7 @@ model = Model(
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
-        device="cpu",
+        device="cuda",
         manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),

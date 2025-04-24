@@ -1,21 +1,20 @@
+import copy
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalTrend,
-    LstmNetwork,
-    Autoregression,
-    Model,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from canari.data_process import DataProcess
+from canari.baseline_component import LocalTrend
+from canari.lstm_component import LstmNetwork
+from canari.autoregression_component import Autoregression
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
 
 
 ###########################
@@ -212,7 +211,13 @@ plot_data(
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
-    plot_test_data=True,
+    plot_test_data=False,
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=optimal_mu_val_preds,
+    std_validation_pred=optimal_std_val_preds,
+    sub_plot=ax[0],
 )
 fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()
