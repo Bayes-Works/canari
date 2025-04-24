@@ -151,9 +151,23 @@ filter_marginal_abnorm_prob, states = skf.filter(data=validation_data)
 states_temp = copy.deepcopy(states)
 abnorm_prob_temp = copy.deepcopy(skf.filter_marginal_prob_history)
 marginal_prob_current_temp = copy.deepcopy(skf.marginal_prob_current)
-# filter_marginal_abnorm_prob, states = skf.filter(data=test_data)
 lstm_net_temp = copy.deepcopy(skf.model["norm_norm"].lstm_net.get_lstm_states())
-for i in range(2):
+
+# Get true baseline
+norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+anm_mag_normed = anm_mag / norm_const_std
+LL_baseline_true = np.zeros_like(df_raw)
+LT_baseline_true = np.zeros_like(df_raw)
+for i in range(1, len(df_raw)):
+    if i > anm_start_index:
+        LL_baseline_true[i] += anm_mag_normed * (i - anm_start_index)
+        LT_baseline_true[i] += anm_mag_normed
+
+LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
+LL_baseline_true = LL_baseline_true.flatten()
+LT_baseline_true = LT_baseline_true.flatten()
+
+for i in range(5):
     skf.states = copy.deepcopy(states_temp)
     skf.filter_marginal_prob_history = copy.deepcopy(abnorm_prob_temp)
     skf.marginal_prob_current = copy.deepcopy(marginal_prob_current_temp)
@@ -167,6 +181,19 @@ for i in range(2):
     time = determine_time(data_processor, len(normalized_data["y"]))
 
     p_anm_all = filter_marginal_abnorm_prob
+
+    # Compute MSE for SKF baselines
+    mu_LL_states = states.get_mean(states_type='prior', states_name=["local level"])["local level"]
+    mu_LT_states = states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+    mse_LL = metric.mse(
+        mu_LL_states[anm_start_index:],
+        LL_baseline_true[anm_start_index:],
+    )
+    mse_LT = metric.mse(
+        mu_LT_states[anm_start_index:],
+        LT_baseline_true[anm_start_index:],
+    )
+    mse = mse_LL + mse_LT
 
     #  Plot
     state_type = "prior"
@@ -197,7 +224,9 @@ for i in range(2):
     )
     ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
     ax0.set_xticklabels([])
-    ax0.set_title("Hidden states likelihood")
+    ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}")
+    ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
+    ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
     plot_states(
         data_processor=data_processor,
         normalization=True,
