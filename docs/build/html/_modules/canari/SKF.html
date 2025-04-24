@@ -1,0 +1,999 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="EN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>canari.SKF &mdash; canari v.0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=e3cb8337"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            canari
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">canari</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">canari.SKF</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for canari.SKF</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">metric</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="n">common</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatesHistory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
+
+
+<div class="viewcode-block" id="SKF">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SKF</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Switching Kalman Filter&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">norm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+        <span class="n">abnorm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+        <span class="n">std_transition_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">norm_to_abnorm_prob</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+        <span class="n">abnorm_to_norm_prob</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">norm_model_prior_prob</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.99</span><span class="p">,</span>
+        <span class="n">conditional_likelihood</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std_transition_error</span> <span class="o">=</span> <span class="n">std_transition_error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_to_abnorm_prob</span> <span class="o">=</span> <span class="n">norm_to_abnorm_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">abnorm_to_norm_prob</span> <span class="o">=</span> <span class="n">abnorm_to_norm_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span> <span class="o">=</span> <span class="n">norm_model_prior_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conditional_likelihood</span> <span class="o">=</span> <span class="n">conditional_likelihood</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">StatesHistory</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_attributes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">(</span><span class="n">norm_model</span><span class="p">,</span> <span class="n">abnorm_model</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SKF.prob_history">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.prob_history">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prob_history</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dictionary to save marginal probability history&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;norm&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;abnorm&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="SKF.transition">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.transition">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transition</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dictionary for transition&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;norm_norm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;norm_abnorm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;abnorm_norm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="SKF.marginal">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.marginal">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">marginal</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dictionary for mariginal&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;norm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;abnorm&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize attribute&quot;&quot;&quot;</span>
+
+        <span class="c1"># General attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_states</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># SKF-related attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_init</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_init</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prob_history</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prob_history</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;norm&quot;</span><span class="p">,</span> <span class="s2">&quot;abnorm&quot;</span><span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_to_abnorm_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_to_abnorm_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">abnorm_to_norm_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">abnorm_to_norm_prob</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span>
+
+        <span class="c1"># LSTM-related attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Early stopping attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop_training</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimal_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric_history</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">abnorm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize model&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_transition_model</span><span class="p">(</span>
+            <span class="n">norm_model</span><span class="p">,</span>
+            <span class="n">abnorm_model</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_link_skf_to_model</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_initial_states</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_compatible_models</span><span class="p">(</span><span class="n">soure_model</span><span class="p">,</span> <span class="n">target_model</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create compatiable model by padding zero to states and matrices&quot;&quot;&quot;</span>
+
+        <span class="n">pad_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">soure_model</span><span class="o">.</span><span class="n">num_states</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">pad_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">target_model</span><span class="o">.</span><span class="n">num_states</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">states_diff</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">target_model</span><span class="o">.</span><span class="n">states_name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">soure_model</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">mu_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">pad_matrix</span><span class="p">(</span>
+                    <span class="n">soure_model</span><span class="o">.</span><span class="n">mu_states</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">pad_row</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">var_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">pad_matrix</span><span class="p">(</span>
+                    <span class="n">soure_model</span><span class="o">.</span><span class="n">var_states</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">pad_row</span><span class="p">,</span> <span class="n">pad_col</span>
+                <span class="p">)</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">transition_matrix</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">pad_matrix</span><span class="p">(</span>
+                    <span class="n">soure_model</span><span class="o">.</span><span class="n">transition_matrix</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">pad_row</span><span class="p">,</span> <span class="n">pad_col</span>
+                <span class="p">)</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">process_noise_matrix</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">pad_matrix</span><span class="p">(</span>
+                    <span class="n">soure_model</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">pad_row</span><span class="p">,</span> <span class="n">pad_col</span>
+                <span class="p">)</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">observation_matrix</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">pad_matrix</span><span class="p">(</span>
+                    <span class="n">soure_model</span><span class="o">.</span><span class="n">observation_matrix</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">pad_col</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">num_states</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                <span class="n">states_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;white noise&quot;</span> <span class="ow">in</span> <span class="n">soure_model</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
+            <span class="n">index_noise</span> <span class="o">=</span> <span class="n">soure_model</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">)</span>
+            <span class="n">target_model</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">index_noise</span><span class="p">,</span> <span class="n">index_noise</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">soure_model</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">index_noise</span><span class="p">,</span> <span class="n">index_noise</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">soure_model</span><span class="p">,</span> <span class="n">target_model</span><span class="p">,</span> <span class="n">states_diff</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_transition_model</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">norm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+        <span class="n">abnorm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create transitional models from normal and abnormal models&quot;&quot;&quot;</span>
+
+        <span class="c1"># Create transitional model</span>
+        <span class="n">norm_norm</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">norm_model</span><span class="p">)</span>
+        <span class="n">norm_norm</span><span class="o">.</span><span class="n">lstm_net</span> <span class="o">=</span> <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_net</span>
+        <span class="n">abnorm_abnorm</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">abnorm_model</span><span class="p">)</span>
+        <span class="n">norm_norm</span><span class="p">,</span> <span class="n">abnorm_abnorm</span><span class="p">,</span> <span class="n">states_diff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_compatible_models</span><span class="p">(</span>
+            <span class="n">norm_norm</span><span class="p">,</span> <span class="n">abnorm_abnorm</span>
+        <span class="p">)</span>
+        <span class="n">abnorm_norm</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">norm_norm</span><span class="p">)</span>
+        <span class="n">norm_abnorm</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">abnorm_abnorm</span><span class="p">)</span>
+
+        <span class="c1"># Add transition noise to norm_abnorm.process_noise_matrix</span>
+        <span class="n">index_states_diff</span> <span class="o">=</span> <span class="n">norm_norm</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="n">states_diff</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">norm_abnorm</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">index_states_diff</span><span class="p">,</span> <span class="n">index_states_diff</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">std_transition_error</span><span class="o">**</span><span class="mi">2</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Store transitional models in a dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">norm_norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">abnorm_abnorm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">norm_abnorm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">abnorm_norm</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_link_skf_to_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Link SKF&#39;s attributes to norm_norm model&#39;s attributes&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">num_states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states_name</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lstm_net</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lstm_net</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lstm_output_history</span>
+
+<div class="viewcode-block" id="SKF.set_same_states_transition_models">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.set_same_states_transition_models">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_same_states_transition_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy the states from self.model[&quot;norm_norm&quot;] to all other transition models&quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mu_states</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">var_states</span>
+            <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the smoothed estimates at the last time step = posterior&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">gaussian_mixture</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_posterior</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_posterior</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_posterior</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_posterior</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save states&#39; priors, posteriors and cross-covariances at one time step&quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">_save_states_history</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_prior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_posterior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_posterior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_transition_likelihood</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">mu_pred_transit</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">var_pred_transit</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the likelihood of observing &#39;obs&#39; given predicted means and variances, for each transition model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">transition_likelihood</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">obs</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">transit</span> <span class="ow">in</span> <span class="n">transition_likelihood</span><span class="p">:</span>
+                <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_likelihood</span><span class="p">:</span>
+                <span class="n">num_noise_realization</span> <span class="o">=</span> <span class="mi">10</span>
+                <span class="n">white_noise_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">)</span>
+                <span class="n">var_obs_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span>
+                    <span class="n">white_noise_index</span><span class="p">,</span> <span class="n">white_noise_index</span>
+                <span class="p">]</span>
+                <span class="n">noise</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="n">var_obs_error</span><span class="o">**</span><span class="mf">0.5</span><span class="p">,</span> <span class="p">(</span><span class="n">num_noise_realization</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">transit</span> <span class="ow">in</span> <span class="n">transition_likelihood</span><span class="p">:</span>
+                    <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+                            <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
+                                <span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">noise</span><span class="p">,</span>
+                                <span class="n">obs</span><span class="p">,</span>
+                                <span class="p">(</span><span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">-</span> <span class="n">var_obs_error</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">transit</span> <span class="ow">in</span> <span class="n">transition_likelihood</span><span class="p">:</span>
+                    <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+                        <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
+                            <span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+                            <span class="n">obs</span><span class="p">,</span>
+                            <span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+        <span class="k">return</span> <span class="n">transition_likelihood</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_smooth_states_transition</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get states values for collapse step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mu_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">var_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">transit</span><span class="p">,</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">transition_model</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">]</span>
+            <span class="n">var_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">transition_model</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">mu_states_transit</span><span class="p">,</span>
+            <span class="n">var_states_transit</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_collapse_states</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mu_states_transit</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">var_states_transit</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">state_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Collapse step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mu_states_marginal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal</span><span class="p">()</span>
+        <span class="n">var_states_marginal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">state_type</span> <span class="o">==</span> <span class="s2">&quot;smooth&quot;</span><span class="p">:</span>
+            <span class="n">norm_keys</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">,</span> <span class="s2">&quot;norm_abnorm&quot;</span><span class="p">)</span>
+            <span class="n">abnorm_keys</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">,</span> <span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">norm_keys</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">,</span> <span class="s2">&quot;abnorm_norm&quot;</span><span class="p">)</span>
+            <span class="n">abnorm_keys</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">,</span> <span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Retrieve states for norm mixture</span>
+        <span class="n">mu_norm_1</span> <span class="o">=</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">var_norm_1</span> <span class="o">=</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">mu_norm_2</span> <span class="o">=</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">var_norm_2</span> <span class="o">=</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="n">mu_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">],</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">common</span><span class="o">.</span><span class="n">gaussian_mixture</span><span class="p">(</span>
+                <span class="n">mu_norm_1</span><span class="p">,</span>
+                <span class="n">var_norm_1</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="n">mu_norm_2</span><span class="p">,</span>
+                <span class="n">var_norm_2</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">norm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Retrieve states for abnorm mixture</span>
+        <span class="n">mu_abnorm_1</span> <span class="o">=</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">var_abnorm_1</span> <span class="o">=</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">mu_abnorm_2</span> <span class="o">=</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">var_abnorm_2</span> <span class="o">=</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="n">mu_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">common</span><span class="o">.</span><span class="n">gaussian_mixture</span><span class="p">(</span>
+                <span class="n">mu_abnorm_1</span><span class="p">,</span>
+                <span class="n">var_abnorm_1</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="n">mu_abnorm_2</span><span class="p">,</span>
+                <span class="n">var_abnorm_2</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Combine the two final distributions</span>
+        <span class="n">mu_states_combined</span><span class="p">,</span> <span class="n">var_states_combined</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">gaussian_mixture</span><span class="p">(</span>
+            <span class="n">mu_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">],</span>
+            <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">],</span>
+            <span class="n">mu_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span>
+            <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">mu_states_combined</span><span class="p">,</span>
+            <span class="n">var_states_combined</span><span class="p">,</span>
+            <span class="n">mu_states_marginal</span><span class="p">,</span>
+            <span class="n">var_states_marginal</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_estimate_transition_coef</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">obs</span><span class="p">,</span>
+        <span class="n">mu_pred_transit</span><span class="p">,</span>
+        <span class="n">var_pred_transit</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Estimate coefficients for each transition model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">epsilon</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="mf">1e-20</span>
+        <span class="n">transition_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">transition_likelihood</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_transition_likelihood</span><span class="p">(</span>
+            <span class="n">obs</span><span class="p">,</span> <span class="n">mu_pred_transit</span><span class="p">,</span> <span class="n">var_pred_transit</span>
+        <span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="n">trans_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">sum_trans_prob</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">trans_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="n">origin_state</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">sum_trans_prob</span> <span class="o">+=</span> <span class="n">trans_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">transit</span> <span class="ow">in</span> <span class="n">trans_prob</span><span class="p">:</span>
+            <span class="n">trans_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">trans_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
+                <span class="n">sum_trans_prob</span><span class="p">,</span> <span class="n">epsilon</span>
+            <span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">trans_prob</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">trans_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">trans_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">trans_prob</span><span class="p">[</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="c1">#</span>
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">transition_coef</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">trans_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="n">arrival_state</span><span class="p">],</span> <span class="n">epsilon</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">transition_coef</span>
+
+<div class="viewcode-block" id="SKF.auto_initialize_baseline_states">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.auto_initialize_baseline_states">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">auto_initialize_baseline_states</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Automatically initialize baseline states from data for normal model&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_initial_states</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SKF.save_initial_states">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.save_initial_states">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_initial_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        save initial states at time = 0 for reuse SKF</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mu_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">var_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SKF.load_initial_states">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.load_initial_states">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_initial_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mu_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_init</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">var_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_states_init</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SKF.initialize_states_history">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.initialize_states_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize history for all time steps for the combined states and each transition model&quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">initialize_states_history</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.set_states">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.set_states">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assign new values for the states of each transition model&quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span>
+                <span class="n">transition_model</span><span class="o">.</span><span class="n">mu_states_posterior</span><span class="p">,</span>
+                <span class="n">transition_model</span><span class="o">.</span><span class="n">var_states_posterior</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.set_memory">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.set_memory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">states</span><span class="p">:</span> <span class="n">StatesHistory</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set memory at a specific time step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span>
+            <span class="n">states</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">time_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_initial_states</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span></div>
+
+
+<div class="viewcode-block" id="SKF.get_dict">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.get_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save the SKF model as a dict.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">save_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;abnorm_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;std_transition_error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_transition_error</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_to_abnorm_prob</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;abnorm_to_norm_prob&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">abnorm_to_norm_prob</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model_prior_prob&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
+            <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_network_params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">save_dict</span></div>
+
+
+<div class="viewcode-block" id="SKF.load_dict">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.load_dict">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a model from a saved dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create normal model</span>
+        <span class="n">norm_components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model&quot;</span><span class="p">][</span><span class="s2">&quot;components&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">norm_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="o">*</span><span class="n">norm_components</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
+            <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_network_params&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Create abnormal model</span>
+        <span class="n">ab_components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;abnorm_model&quot;</span><span class="p">][</span><span class="s2">&quot;components&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">ab_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="o">*</span><span class="n">ab_components</span><span class="p">)</span>
+
+        <span class="n">skf</span> <span class="o">=</span> <span class="n">SKF</span><span class="p">(</span>
+            <span class="n">norm_model</span><span class="o">=</span><span class="n">norm_model</span><span class="p">,</span>
+            <span class="n">abnorm_model</span><span class="o">=</span><span class="n">ab_model</span><span class="p">,</span>
+            <span class="n">std_transition_error</span><span class="o">=</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;std_transition_error&quot;</span><span class="p">],</span>
+            <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">],</span>
+            <span class="n">abnorm_to_norm_prob</span><span class="o">=</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;abnorm_to_norm_prob&quot;</span><span class="p">],</span>
+            <span class="n">norm_model_prior_prob</span><span class="o">=</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model_prior_prob&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">skf</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span>
+            <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model&quot;</span><span class="p">][</span><span class="s2">&quot;mu_states&quot;</span><span class="p">],</span> <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;norm_model&quot;</span><span class="p">][</span><span class="s2">&quot;var_states&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">skf</span></div>
+
+
+<div class="viewcode-block" id="SKF.lstm_train">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.lstm_train">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">lstm_train</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">train_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">validation_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">white_noise_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">white_noise_max_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Train the LstmNetwork of the normal model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lstm_train</span><span class="p">(</span>
+            <span class="n">train_data</span><span class="p">,</span>
+            <span class="n">validation_data</span><span class="p">,</span>
+            <span class="n">white_noise_decay</span><span class="p">,</span>
+            <span class="n">white_noise_max_std</span><span class="p">,</span>
+            <span class="n">white_noise_decay_factor</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.early_stopping">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.early_stopping">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">early_stopping</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;max&quot;</span><span class="p">,</span>
+        <span class="n">patience</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">evaluate_metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">skip_epoch</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+        <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop_training</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric_history</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">(</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">patience</span><span class="o">=</span><span class="n">patience</span><span class="p">,</span>
+            <span class="n">evaluate_metric</span><span class="o">=</span><span class="n">evaluate_metric</span><span class="p">,</span>
+            <span class="n">skip_epoch</span><span class="o">=</span><span class="n">skip_epoch</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop_training</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric_history</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.forward">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">input_covariates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Forward pass for 4 transition models</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mu_pred_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">var_pred_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">mu_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">var_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
+            <span class="n">mu_lstm_input</span><span class="p">,</span> <span class="n">var_lstm_input</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">prepare_lstm_input</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="p">,</span> <span class="n">input_covariates</span>
+            <span class="p">)</span>
+            <span class="n">mu_lstm_pred</span><span class="p">,</span> <span class="n">var_lstm_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span>
+                <span class="n">mu_x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">mu_lstm_input</span><span class="p">),</span> <span class="n">var_x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">var_lstm_input</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu_lstm_pred</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">var_lstm_pred</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="n">transit</span><span class="p">,</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="p">(</span>
+                <span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+                <span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+                <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+                <span class="n">var_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">transition_model</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span>
+                <span class="n">mu_lstm_pred</span><span class="o">=</span><span class="n">mu_lstm_pred</span><span class="p">,</span> <span class="n">var_lstm_pred</span><span class="o">=</span><span class="n">var_lstm_pred</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_estimate_transition_coef</span><span class="p">(</span>
+            <span class="n">obs</span><span class="p">,</span>
+            <span class="n">mu_pred_transit</span><span class="p">,</span>
+            <span class="n">var_pred_transit</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collapse_states</span><span class="p">(</span>
+            <span class="n">mu_states_transit</span><span class="p">,</span> <span class="n">var_states_transit</span><span class="p">,</span> <span class="n">state_type</span><span class="o">=</span><span class="s2">&quot;prior&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">mu_obs_pred</span><span class="p">,</span> <span class="n">var_obs_pred</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">calc_observation</span><span class="p">(</span>
+            <span class="n">mu_states_prior</span><span class="p">,</span>
+            <span class="n">var_states_prior</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">observation_matrix</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span> <span class="o">=</span> <span class="n">mu_states_prior</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span> <span class="o">=</span> <span class="n">var_states_prior</span>
+
+        <span class="k">return</span> <span class="n">mu_obs_pred</span><span class="p">,</span> <span class="n">var_obs_pred</span></div>
+
+
+<div class="viewcode-block" id="SKF.backward">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.backward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update step in states-space model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mu_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">var_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">transit</span><span class="p">,</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">transition_model</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="p">(</span>
+            <span class="n">mu_states_posterior</span><span class="p">,</span>
+            <span class="n">var_states_posterior</span><span class="p">,</span>
+            <span class="n">mu_states_marginal</span><span class="p">,</span>
+            <span class="n">var_states_marginal</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collapse_states</span><span class="p">(</span>
+            <span class="n">mu_states_transit</span><span class="p">,</span> <span class="n">var_states_transit</span><span class="p">,</span> <span class="n">state_type</span><span class="o">=</span><span class="s2">&quot;posterior&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Reassign posterior states</span>
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span><span class="o">.</span><span class="n">set_posterior_states</span><span class="p">(</span>
+                    <span class="n">mu_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">],</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="n">mu_states_posterior</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span> <span class="o">=</span> <span class="n">var_states_posterior</span>
+
+        <span class="k">return</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span></div>
+
+
+<div class="viewcode-block" id="SKF.rts_smoother">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.rts_smoother">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rts_smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        RTS smoother</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">epsilon</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="mf">1e-20</span>
+        <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+
+        <span class="n">joint_transition_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="n">arrival_state_marginal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">joint_transition_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="n">origin_state</span><span class="p">][</span><span class="n">time_step</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="n">arrival_state_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">joint_transition_prob</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">joint_transition_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">arrival_state_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">joint_transition_prob</span><span class="p">[</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">]</span>
+            <span class="o">+</span> <span class="n">joint_transition_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">joint_transition_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">joint_transition_prob</span><span class="p">[</span>
+                    <span class="n">transit</span>
+                <span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">arrival_state_marginal</span><span class="p">[</span><span class="n">arrival_state</span><span class="p">],</span> <span class="n">epsilon</span><span class="p">)</span>
+
+        <span class="n">joint_future_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">joint_future_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">joint_transition_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="n">arrival_state</span><span class="p">][</span><span class="n">time_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">joint_future_prob</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">joint_future_prob</span><span class="p">[</span><span class="s2">&quot;norm_abnorm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">joint_future_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_norm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">joint_future_prob</span><span class="p">[</span><span class="s2">&quot;abnorm_abnorm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">][</span><span class="n">time_step</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">][</span><span class="n">time_step</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">joint_future_prob</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="n">origin_state</span><span class="p">],</span> <span class="n">epsilon</span>
+                <span class="p">)</span>
+
+        <span class="n">mu_states_transit</span><span class="p">,</span> <span class="n">var_states_transit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_smooth_states_transition</span><span class="p">(</span>
+            <span class="n">time_step</span>
+        <span class="p">)</span>
+        <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
+            <span class="n">mu_states_marginal</span><span class="p">,</span>
+            <span class="n">var_states_marginal</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collapse_states</span><span class="p">(</span>
+            <span class="n">mu_states_transit</span><span class="p">,</span>
+            <span class="n">var_states_transit</span><span class="p">,</span>
+            <span class="n">state_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">origin_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
+                <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_states_marginal</span><span class="p">[</span>
+                    <span class="n">arrival_state</span>
+                <span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_states_marginal</span><span class="p">[</span>
+                    <span class="n">arrival_state</span>
+                <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="SKF.filter">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filtering</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">var_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prob_history</span><span class="p">()</span>
+
+        <span class="c1"># Initialize hidden states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_same_states_transition_models</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialize_states_history</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]):</span>
+            <span class="n">mu_obs_pred</span><span class="p">,</span> <span class="n">var_obs_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">input_covariates</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
+                <span class="n">lstm_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;lstm&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">lstm_index</span><span class="p">],</span>
+                    <span class="n">var_states_posterior</span><span class="p">[</span>
+                        <span class="n">lstm_index</span><span class="p">,</span>
+                        <span class="n">lstm_index</span><span class="p">,</span>
+                    <span class="p">],</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_states_history</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_states</span><span class="p">()</span>
+            <span class="n">mu_obs_preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mu_obs_pred</span><span class="p">)</span>
+            <span class="n">var_obs_preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var_obs_pred</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob_current</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.smoother">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.smoother">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoother for whole time series</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">num_time_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_smoother</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SKF.detect_synthetic_anomaly">
+<a class="viewcode-back" href="../../api/canari.html#canari.SKF.SKF.detect_synthetic_anomaly">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">detect_synthetic_anomaly</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]],</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">max_timestep_to_detect</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_anomaly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">slope_anomaly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">anomaly_start</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.33</span><span class="p">,</span>
+        <span class="n">anomaly_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.66</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Detect anomaly&quot;&quot;&quot;</span>
+
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+        <span class="n">num_anomaly_detected</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">num_false_alarm</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">false_alarm_train</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+
+        <span class="n">synthetic_data</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">add_synthetic_anomaly</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">num_samples</span><span class="o">=</span><span class="n">num_anomaly</span><span class="p">,</span>
+            <span class="n">slope</span><span class="o">=</span><span class="p">[</span><span class="n">slope_anomaly</span><span class="p">],</span>
+            <span class="n">anomaly_start</span><span class="o">=</span><span class="n">anomaly_start</span><span class="p">,</span>
+            <span class="n">anomaly_end</span><span class="o">=</span><span class="n">anomaly_end</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c1"># Check false alarm in the training set</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">filter_marginal_abnorm_prob</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">):</span>
+            <span class="n">false_alarm_train</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+
+        <span class="c1"># Iterate over data with synthetic anomalies</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_anomaly</span><span class="p">):</span>
+            <span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">synthetic_data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">window_start</span> <span class="o">=</span> <span class="n">synthetic_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;anomaly_timestep&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">max_timestep_to_detect</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">window_end</span> <span class="o">=</span> <span class="n">num_timesteps</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">window_end</span> <span class="o">=</span> <span class="n">window_start</span> <span class="o">+</span> <span class="n">max_timestep_to_detect</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">[</span><span class="n">window_start</span><span class="p">:</span><span class="n">window_end</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">):</span>
+                <span class="n">num_anomaly_detected</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">[:</span><span class="n">window_start</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">):</span>
+                <span class="n">num_false_alarm</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">detection_rate</span> <span class="o">=</span> <span class="n">num_anomaly_detected</span> <span class="o">/</span> <span class="n">num_anomaly</span>
+        <span class="n">false_rate</span> <span class="o">=</span> <span class="n">num_false_alarm</span> <span class="o">/</span> <span class="n">num_anomaly</span>
+
+        <span class="k">return</span> <span class="n">detection_rate</span><span class="p">,</span> <span class="n">false_rate</span><span class="p">,</span> <span class="n">false_alarm_train</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
