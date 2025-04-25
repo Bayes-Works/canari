@@ -29,8 +29,8 @@ df_skf["detection_rate"] = df_skf["detection_time"].apply(
 # For the same anomaly magnitude, compute the mean and variance of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"], stored them in a new dataframe
 df_il_mean = df_il.groupby("anomaly_magnitude").agg(
     {
-        # "mse_LL": ["mean", "std"],
-        # "mse_LT": ["mean", "std"],
+        "mse_LL": ["mean", "std"],
+        "mse_LT": ["mean", "std"],
         "mape_LL": ["mean", "std"],
         "mape_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
@@ -39,8 +39,8 @@ df_il_mean = df_il.groupby("anomaly_magnitude").agg(
 )
 df_skf_mean = df_skf.groupby("anomaly_magnitude").agg(
     {
-        # "mse_LL": ["mean", "std"],
-        # "mse_LT": ["mean", "std"],
+        "mse_LL": ["mean", "std"],
+        "mse_LT": ["mean", "std"],
         "mape_LL": ["mean", "std"],
         "mape_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
@@ -51,61 +51,63 @@ df_skf_mean = df_skf.groupby("anomaly_magnitude").agg(
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
 fig, ax = plt.subplots(4, 1, figsize=(10, 6))
 # Plot for mse_LL
-# ax[0].plot(df_il_mean.index, df_il_mean["mse_LL"]["mean"], label="IL")
-ax[0].plot(df_il_mean.index, df_il_mean["mape_LL"]["mean"], label="IL")
+ax[0].plot(df_il_mean.index, df_il_mean["mse_LL"]["mean"], label="IL")
+# ax[0].plot(df_il_mean.index, df_il_mean["mape_LL"]["mean"], label="IL")
 ax[0].fill_between(
     df_il_mean.index,
-    # df_il_mean["mse_LL"]["mean"] - df_il_mean["mse_LL"]["std"],
-    # df_il_mean["mse_LL"]["mean"] + df_il_mean["mse_LL"]["std"],
-    df_il_mean["mape_LL"]["mean"] - df_il_mean["mape_LL"]["std"],
-    df_il_mean["mape_LL"]["mean"] + df_il_mean["mape_LL"]["std"],
+    df_il_mean["mse_LL"]["mean"] - df_il_mean["mse_LL"]["std"],
+    df_il_mean["mse_LL"]["mean"] + df_il_mean["mse_LL"]["std"],
+    # df_il_mean["mape_LL"]["mean"] - df_il_mean["mape_LL"]["std"],
+    # df_il_mean["mape_LL"]["mean"] + df_il_mean["mape_LL"]["std"],
     alpha=0.2,
 )
 
-# ax[0].plot(df_skf_mean.index, df_skf_mean["mse_LL"]["mean"], label="SKF")
-ax[0].plot(df_skf_mean.index, df_skf_mean["mape_LL"]["mean"], label="SKF")
+ax[0].plot(df_skf_mean.index, df_skf_mean["mse_LL"]["mean"], label="SKF")
+# ax[0].plot(df_skf_mean.index, df_skf_mean["mape_LL"]["mean"], label="SKF")
 ax[0].fill_between(
     df_skf_mean.index,
-    # df_skf_mean["mse_LL"]["mean"] - df_skf_mean["mse_LL"]["std"],
-    # df_skf_mean["mse_LL"]["mean"] + df_skf_mean["mse_LL"]["std"],
-    df_skf_mean["mape_LL"]["mean"] - df_skf_mean["mape_LL"]["std"],
-    df_skf_mean["mape_LL"]["mean"] + df_skf_mean["mape_LL"]["std"],
+    df_skf_mean["mse_LL"]["mean"] - df_skf_mean["mse_LL"]["std"],
+    df_skf_mean["mse_LL"]["mean"] + df_skf_mean["mse_LL"]["std"],
+    # df_skf_mean["mape_LL"]["mean"] - df_skf_mean["mape_LL"]["std"],
+    # df_skf_mean["mape_LL"]["mean"] + df_skf_mean["mape_LL"]["std"],
     alpha=0.2,
 )
-# ax[0].set_ylabel(r"MSE($x^{\mathrm{LL}}$)")
-ax[0].set_ylabel(r"MAPE($x^{\mathrm{LL}}$)")
+ax[0].set_ylabel(r"MSE($x^{\mathrm{LL}}$)")
+# ax[0].set_ylabel(r"MAPE($x^{\mathrm{LL}}$)")
 ax[0].legend()
 ax[0].set_xscale('log')
+ax[0].set_yscale('log')
 ax[0].set_xticklabels([])
 
 # Plot for mse_LT
-# ax[1].plot(df_il_mean.index, df_il_mean["mse_LT"]["mean"], label="IL")
-ax[1].plot(df_il_mean.index, df_il_mean["mape_LT"]["mean"], label="IL")
+ax[1].plot(df_il_mean.index, df_il_mean["mse_LT"]["mean"], label="IL")
+# ax[1].plot(df_il_mean.index, df_il_mean["mape_LT"]["mean"], label="IL")
 ax[1].fill_between(
     df_il_mean.index,
-    # df_il_mean["mse_LT"]["mean"] - df_il_mean["mse_LT"]["std"],
-    # df_il_mean["mse_LT"]["mean"] + df_il_mean["mse_LT"]["std"],
-    df_il_mean["mape_LT"]["mean"] - df_il_mean["mape_LT"]["std"],
-    df_il_mean["mape_LT"]["mean"] + df_il_mean["mape_LT"]["std"],
+    df_il_mean["mse_LT"]["mean"] - df_il_mean["mse_LT"]["std"],
+    df_il_mean["mse_LT"]["mean"] + df_il_mean["mse_LT"]["std"],
+    # df_il_mean["mape_LT"]["mean"] - df_il_mean["mape_LT"]["std"],
+    # df_il_mean["mape_LT"]["mean"] + df_il_mean["mape_LT"]["std"],
     alpha=0.2,
 )
 
-# ax[1].plot(df_skf_mean.index, df_skf_mean["mse_LT"]["mean"], label="SKF")
-ax[1].plot(df_skf_mean.index, df_skf_mean["mape_LT"]["mean"], label="SKF")
+ax[1].plot(df_skf_mean.index, df_skf_mean["mse_LT"]["mean"], label="SKF")
+# ax[1].plot(df_skf_mean.index, df_skf_mean["mape_LT"]["mean"], label="SKF")
 ax[1].fill_between(
     df_skf_mean.index,
-    # df_skf_mean["mse_LT"]["mean"] - df_skf_mean["mse_LT"]["std"],
-    # df_skf_mean["mse_LT"]["mean"] + df_skf_mean["mse_LT"]["std"],
-    df_skf_mean["mape_LT"]["mean"] - df_skf_mean["mape_LT"]["std"],
-    df_skf_mean["mape_LT"]["mean"] + df_skf_mean["mape_LT"]["std"],
+    df_skf_mean["mse_LT"]["mean"] - df_skf_mean["mse_LT"]["std"],
+    df_skf_mean["mse_LT"]["mean"] + df_skf_mean["mse_LT"]["std"],
+    # df_skf_mean["mape_LT"]["mean"] - df_skf_mean["mape_LT"]["std"],
+    # df_skf_mean["mape_LT"]["mean"] + df_skf_mean["mape_LT"]["std"],
     alpha=0.2,
 )
-# ax[1].set_ylabel(r"MSE($x^{\mathrm{LT}}$)")
-ax[1].set_ylabel(r"MAPE($x^{\mathrm{LT}}$)")
+ax[1].set_ylabel(r"MSE($x^{\mathrm{LT}}$)")
+# ax[1].set_ylabel(r"MAPE($x^{\mathrm{LT}}$)")
 # Format x-axis ticks with scientific notation
 ax[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 ax[1].set_xscale('log')
+ax[1].set_yscale('log')
 ax[1].set_xticklabels([])
 
 # Plot for detection_time
