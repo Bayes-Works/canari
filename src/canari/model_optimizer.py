@@ -1,3 +1,36 @@
+"""
+Module: model_optimizer
+
+This module provides functionality to optimize hyperparameters for a machine learning model
+using Ray Tune. It includes:
+
+- `ModelOptimizer`: A class to configure and run hyperparameter search (grid or random) with
+  support for Optuna and ASHA schedulers.
+- `CustomLogger`: A Ray Tune callback for verbose trial progress logging.
+
+Usage:
+```python
+from model_optimizer import ModelOptimizer, CustomLogger
+
+# Define a model initialization function and a training function
+# Provide a parameter search space and a DataProcess instance
+optimizer = ModelOptimizer(
+    initialize_model, train, param_space, data_processor,
+    num_optimization_trial=50, grid_search=False, algorithm="default"
+)
+optimizer.optimize()
+best_model = optimizer.get_best_model()
+```
+
+Requirements:
+- ray[tune]
+- optuna
+- canari (for DataProcess)
+
+Signal Handling:
+Segmentation fault signals are ignored to prevent Ray Tune worker crashes.
+"""
+
 import signal
 from typing import Callable, Optional
 from ray import tune
@@ -12,7 +45,35 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class ModelOptimizer:
     """
-    Parameter optimization for model.py
+    Optimize hyperparameters of a model using Ray Tune.
+
+    This class wraps the model initialization and training functions,
+    configures a hyperparameter search space, and runs the optimization
+    using either grid search or a configurable search algorithm.
+
+    Attributes:
+        initialize_model (Callable[[Dict[str, Any]], Any]):
+            Function that returns a model instance when given a config dict.
+        train (Callable[[Any, DataProcess], Any]):
+            Function that trains the model; should accept (model, data_processor)
+            and return a tuple whose first element is the trained model with
+            an attribute `early_stop_metric` for tuning.
+        param_space (Dict[str, list]):
+            Mapping from parameter names to either
+            - a list of two values [min, max] for range sampling, or
+            - a list of discrete values for grid search.
+        data_processor (DataProcess):
+            DataProcess instance for preparing and feeding training data.
+        num_optimization_trial (int):
+            Total number of trials for random search sampling (default: 50).
+        grid_search (bool):
+            If True, perform exhaustive grid search over given discrete values.
+        algorithm (str):
+            Optimization algorithm: 'default' for OptunaSearch, 'parallel' for ASHAScheduler.
+        model_optim (Any):
+            The best model instance initialized with optimal parameters after running optimize().
+        param_optim (Dict[str, Any]):
+            The best hyperparameter configuration found during optimization.
     """
 
     def __init__(
@@ -25,6 +86,28 @@ class ModelOptimizer:
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
     ):
+        """
+        Initialize the ModelOptimizer.
+
+        Args:
+            initialize_model (Callable[[Dict[str, Any]], Any]):
+                Function that returns a model instance given a config dict.
+            train (Callable[[Any, DataProcess], Any]):
+                Function that trains a model; should return (trained_model, ...)
+                where `trained_model.early_stop_metric` exists.
+            param_space (Dict[str, list]):
+                Parameter search space: two-value lists [min, max] for sampling
+                or lists of discrete values for grid search.
+            data_processor (DataProcess):
+                DataProcess instance for data preparation.
+            num_optimization_trial (int, optional):
+                Number of random search trials (ignored for grid search). Defaults to 50.
+            grid_search (bool, optional):
+                If True, perform grid search; otherwise, random search. Defaults to False.
+            algorithm (str, optional):
+                Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler). Defaults to 'default'.
+        """
+
         self.initialize_model = initialize_model
         self.train = train
         self.param_space = param_space
@@ -37,7 +120,14 @@ class ModelOptimizer:
 
     def optimize(self):
         """
-        Optimization
+        Run hyperparameter optimization over the configured search space.
+
+        Depending on `grid_search`, either exhaustive grid search or random sampling
+        (using OptunaSearch or ASHAScheduler) is performed. The best configuration
+        and corresponding model are stored in `param_optim` and `model_optim`.
+
+        Prints:
+            Optimal trial number and parameter values.
         """
 
         # Function for optimization
@@ -129,18 +219,55 @@ class ModelOptimizer:
 
     def get_best_model(self):
         """
-        Obtain optim model
+        Retrieve the optimized model instance after running optimization.
+
+        Returns:
+            Any: Model instance initialized with the best-found hyperparameters.
+
+        Raises:
+            RuntimeError: If `optimize()` has not been called yet.
         """
         return self.model_optim
 
 
 class CustomLogger(Callback):
+    """
+    Ray Tune callback for custom logging of trial progress.
+
+    Attributes:
+        total_samples (int): Total number of expected trials.
+        current_sample (int): Counter of completed samples.
+        trial_sample_map (Dict[str, int]):
+            Maps trial IDs to their corresponding sample index.
+    """
+
     def __init__(self, total_samples):
+        """
+        Initialize the CustomLogger.
+
+        Args:
+            total_samples (int): Total number of optimization trials.
+        """
+
         self.total_samples = total_samples
         self.current_sample = 0
         self.trial_sample_map = {}
 
     def on_trial_result(self, iteration, trial, result, **info):
+        """
+        Log progress when a trial reports results.
+
+        Increments the sample counter, records a mapping from trial ID to
+        the sample index, and prints a formatted line containing the running
+        sample count, reported metric, and trial parameters.
+
+        Args:
+            iteration (int): Current iteration number of Ray Tune.
+            trial (Trial): The Ray Tune Trial object.
+            result (Dict[str, Any]): Dictionary of trial results; must include key 'metric'.
+            **info: Additional callback info.
+        """
+
         self.current_sample += 1
         params = trial.config
         metric = result["metric"]

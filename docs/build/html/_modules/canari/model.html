@@ -15,6 +15,7 @@
       <script src="../../_static/documentation_options.js?v=e3cb8337"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -39,9 +40,13 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/tutorial_forecast.html">Forecasting with Canari</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari</a></li>
 </ul>
 
         </div>
@@ -69,27 +74,71 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.model</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Hybrid LSTM-State Space Model (SSM).</span>
+
+<span class="sd">This module defines the `Model` class, which is a hybrid model that couples</span>
+<span class="sd">Long Short-Term Memory (LSTM) and State-Space Modeling (SSM). The model supports</span>
+<span class="sd">forecasting, filtering, smoothing.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Dict</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">canari.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span> <span class="k">as</span> <span class="n">normalizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">canari.common</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">common</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">LstmOutputHistory</span><span class="p">,</span> <span class="n">StatesHistory</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.common</span><span class="w"> </span><span class="kn">import</span> <span class="n">GMA</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi.nn</span><span class="w"> </span><span class="kn">import</span> <span class="n">OutputUpdater</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span> <span class="k">as</span> <span class="n">normalizer</span>
 
 
 <div class="viewcode-block" id="Model">
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;LSTM/SSM model&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Hybrid LSTM/State-Space Model.</span>
+
+<span class="sd">    This model supports a flexible architecture where multiple `BaseComponent`s</span>
+<span class="sd">    are assembled to define a structured state-space system.</span>
+
+<span class="sd">    The model can:</span>
+<span class="sd">        - Forecast future observations with uncertainty quantification.</span>
+<span class="sd">        - Filter observations using Bayesian updates.</span>
+<span class="sd">        - Apply the RTS smoother for optimal state estimation.</span>
+<span class="sd">        - Train its LSTM network component.</span>
+<span class="sd">        - Automatically initialize or restore model states.</span>
+<span class="sd">        - Generate synthetic time series data, including anomaly injection.</span>
+<span class="sd">        - Perform online autoregressive updates.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        components (Dict[str, BaseComponent]): Dictionary of named state-space components.</span>
+<span class="sd">        states (StatesHistory): Container for tracking state evolution.</span>
+<span class="sd">        lstm_net (Optional[LstmNetwork]): LSTM neural network instance, if present.</span>
+<span class="sd">        lstm_output_history (LstmOutputHistory): Rolling buffer of LSTM predictions.</span>
+<span class="sd">        observation_matrix (np.ndarray): Matrix mapping hidden states to observations.</span>
+<span class="sd">        transition_matrix (np.ndarray): State transition matrix.</span>
+<span class="sd">        process_noise_matrix (np.ndarray): Covariance of process noise.</span>
+<span class="sd">        mu_states, var_states (np.ndarray): Mean and variance of the hidden states.</span>
+<span class="sd">        mu_obs_predict, var_obs_predict (np.ndarray): Predicted mean and variance of observations.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        &gt;&gt;&gt; model = Model(LocalTrend(), Periodic(),WhiteNoise())</span>
+<span class="sd">        &gt;&gt;&gt; mu_pred, std_pred, _ = model.forecast(data)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="n">components</span><span class="p">:</span> <span class="n">BaseComponent</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the model with a list of components.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            components (BaseComponent): One or more state-space components.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_attributes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">component</span><span class="o">.</span><span class="n">component_name</span><span class="p">:</span> <span class="n">component</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span>
@@ -98,7 +147,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">StatesHistory</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize model attributes&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize default model attributes.</span>
+
+<span class="sd">        Sets up component containers, state metadata, matrix placeholders, LSTM and</span>
+<span class="sd">        autoregression attributes, and early stopping criteria.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># General attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
@@ -140,7 +194,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">stop_training</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize model&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up the model by assembling matrices, initializing states,</span>
+<span class="sd">        configuring LSTM and autoregressive modules if included.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_matrices</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_states</span><span class="p">()</span>
@@ -148,7 +205,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_autoregression</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_assemble_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble_matrices&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assemble block-diagonal matrices:</span>
+<span class="sd">            - Transition matrix</span>
+<span class="sd">            - Process noise matrix</span>
+<span class="sd">            - Observation matrix</span>
+
+<span class="sd">        Extracted from all components in the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Assemble transition matrices</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">transition_matrix</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">create_block_diag</span><span class="p">(</span>
@@ -169,7 +233,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">observation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">global_observation_matrix</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_assemble_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble_states&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate state means and variances from all components.</span>
+
+<span class="sd">        Sets internal metadata such as state names, component names, and state count.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span>
             <span class="p">[</span><span class="n">component</span><span class="o">.</span><span class="n">mu_states</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
@@ -191,7 +259,11 @@
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_lstm_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize_lstm_network from lstm_component if needed&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize and configure LSTM network if a component named &#39;lstm&#39; is found.</span>
+
+<span class="sd">        Sets up forward prediction and gradient update mechanisms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">lstm_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
             <span class="p">(</span>
@@ -207,7 +279,11 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_autoregression</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize autoregression component if needed&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize autoregression-related states such as W2, W2bar, and associated variances.</span>
+<span class="sd">        Only applicable when the component &#39;autoregression&#39; exists.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">autoregression_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
             <span class="p">(</span>
                 <span class="n">component</span>
@@ -226,7 +302,14 @@
         <span class="n">delta_mu_lstm</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">delta_var_lstm</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update lstm network&#39;s parameters&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update LSTM parameters using filtered signal deltas.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            delta_mu_lstm (np.ndarray): Delta mean signal from backward update.</span>
+<span class="sd">            delta_var_lstm (np.ndarray): Delta variance signal from backward update.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">set_delta_z</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">delta_mu_lstm</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">delta_var_lstm</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
@@ -234,6 +317,15 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_white_noise_decay</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">white_noise_max_std</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="nb">float</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply exponential decay to white noise variance over epochs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            epoch (int): Current training epoch.</span>
+<span class="sd">            white_noise_max_std (float): Maximum allowed noise std.</span>
+<span class="sd">            white_noise_decay_factor (float): Factor controlling decay rate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">noise_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">)</span>
         <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="n">white_noise_max_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
             <span class="o">-</span><span class="n">white_noise_decay_factor</span> <span class="o">*</span> <span class="n">epoch</span>
@@ -243,7 +335,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">noise_index</span><span class="p">,</span> <span class="n">noise_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduled_sigma_v</span><span class="o">**</span><span class="mi">2</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save states&#39; priors, posteriors and cross-covariances for smoother&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save current prior, posterior states, and cross-covariaces for later smoothing use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_prior</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span><span class="p">)</span>
@@ -255,7 +349,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__deepcopy__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">memo</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy a model object, but do not copy &quot;lstm_net&quot; attribute&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a deep copy of the model while excluding the LSTM network.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            memo (dict): Python deepcopy memoization dictionary.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Model: Deep-copied instance without LSTM network state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
@@ -270,7 +372,10 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.get_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Save the model as a dict.</span>
+<span class="sd">        Export model attributes into a serializable dictionary.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Serializable model dictionary containing all major attributes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">save_dict</span> <span class="o">=</span> <span class="p">{}</span>
@@ -294,7 +399,13 @@
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a model from a saved dict</span>
+<span class="sd">        Load model from dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            save_dict (dict): Dictionary containing saved model structure and parameters.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Model: Instantiated and parameterized model.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
@@ -309,7 +420,15 @@
 <div class="viewcode-block" id="Model.get_states_index">
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.get_states_index">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_states_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">states_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get state index in the state vector&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve index of a state in the state vector.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            states_name (str): The name of the state.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int or None: Index of the state, or None if not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">index</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">states_name</span><span class="p">)</span>
@@ -322,7 +441,12 @@
 <div class="viewcode-block" id="Model.auto_initialize_baseline_states">
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.auto_initialize_baseline_states">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">auto_initialize_baseline_states</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Automatically initialize baseline states from data&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Automatically assign initial baseline states values using trend decomposition.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y (np.ndarray): Time series data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">trend</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">decompose_data</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
 
@@ -350,7 +474,13 @@
         <span class="n">new_mu_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">new_var_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the posterirors for the states&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the posterior state values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            new_mu_states (np.ndarray): Posterior state means.</span>
+<span class="sd">            new_var_states (np.ndarray): Posterior state variances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="n">new_mu_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span> <span class="o">=</span> <span class="n">new_var_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
@@ -363,7 +493,13 @@
         <span class="n">new_mu_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">new_var_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set new states&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set new values for states.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            new_mu_states (np.ndarray): Mean values to be set.</span>
+<span class="sd">            new_var_states (np.ndarray): Covariance matrix to be set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span> <span class="o">=</span> <span class="n">new_mu_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states</span> <span class="o">=</span> <span class="n">new_var_states</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
@@ -372,7 +508,9 @@
 <div class="viewcode-block" id="Model.initialize_states_with_smoother_estimates">
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.initialize_states_with_smoother_estimates">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_with_smoother_estimates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the model initial hidden states = the smoothed estimates&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set states to the first smoothed values after smoothing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -384,7 +522,10 @@
 <div class="viewcode-block" id="Model.initialize_states_history">
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.initialize_states_history">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize states history including prior, posterior, and smoother states&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start a new history buffer for priors, posteriors, and smoothers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">)</span></div>
 
 
@@ -392,8 +533,11 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.set_memory">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">states</span><span class="p">:</span> <span class="n">StatesHistory</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set memory at a specific time step, i.e., mu_states, var_states,</span>
-<span class="sd">        cell and hidden states, and lstm output history</span>
+<span class="sd">        Load model state from a given timestep&#39;s smoothed state.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            states (StatesHistory): Full history object.</span>
+<span class="sd">            time_step (int): Index of timestep to restore.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="n">time_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -441,7 +585,15 @@
         <span class="n">var_lstm_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        One step prediction in states-space model</span>
+<span class="sd">        Execute a one-step prediction. Recall common.forward</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_covariates (Optional[np.ndarray]): Covariate vector.</span>
+<span class="sd">            mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM.</span>
+<span class="sd">            var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># LSTM prediction:</span>
@@ -468,7 +620,7 @@
 
         <span class="c1"># Modification after SSM&#39;s prediction:</span>
         <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
-            <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">online_AR_forward_modification</span><span class="p">(</span>
+            <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_online_AR_forward_modification</span><span class="p">(</span>
                 <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span>
             <span class="p">)</span>
 
@@ -487,7 +639,13 @@
         <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Update step in states-space model</span>
+<span class="sd">        Update step in Kalman filter. Recall common.backward</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            obs (float): Observed value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (delta_mu, delta_var, posterior_mu, posterior_var)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">delta_mu_states</span><span class="p">,</span> <span class="n">delta_var_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span>
@@ -504,7 +662,7 @@
 
         <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
             <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">online_AR_backward_modification</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_online_AR_backward_modification</span><span class="p">(</span>
                     <span class="n">mu_states_posterior</span><span class="p">,</span>
                     <span class="n">var_states_posterior</span><span class="p">,</span>
                 <span class="p">)</span>
@@ -529,8 +687,13 @@
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        RTS smoother</span>
+<span class="sd">        Apply RTS smoothing for a specific timestep.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            time_step (int): Target smoothing index.</span>
+<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
@@ -552,7 +715,13 @@
         <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Forecast for whole time series data</span>
+<span class="sd">        Forecast over an entire dataset using repeated one-step predictions.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (Dict[str, np.ndarray]): Contains key &#39;x&#39; as input features.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (mean forecasts, std deviations, full state history)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
@@ -597,8 +766,17 @@
         <span class="n">anomaly_type</span><span class="o">=</span><span class="s2">&quot;trend&quot;</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate time series data</span>
+<span class="sd">        Generate synthetic time series from the original one optionally with added synthetic anomalies.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            num_time_series (int): Number of series to generate.</span>
+<span class="sd">            num_time_steps (int): Number of timesteps per series to generate data.</span>
+<span class="sd">            ... (various): Anomaly and covariate controls.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: Synthetic time series.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">time_series_all</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">anm_mag_all</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">anm_begin_all</span> <span class="o">=</span> <span class="p">[]</span>
@@ -608,7 +786,7 @@
         <span class="c1"># Prepare time covariates</span>
         <span class="k">if</span> <span class="n">time_covariates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">initial_time_covariate</span> <span class="o">=</span> <span class="n">time_covariate_info</span><span class="p">[</span><span class="s2">&quot;initial_time_covariate&quot;</span><span class="p">]</span>
-            <span class="n">input_covariates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_covariates_generation</span><span class="p">(</span>
+            <span class="n">input_covariates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_covariates_generation</span><span class="p">(</span>
                 <span class="n">initial_time_covariate</span><span class="p">,</span> <span class="n">num_time_steps</span><span class="p">,</span> <span class="n">time_covariates</span>
             <span class="p">)</span>
             <span class="n">input_covariates</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">standardize</span><span class="p">(</span>
@@ -719,7 +897,14 @@
         <span class="n">train_lstm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Filter for whole time series data</span>
+<span class="sd">        Perform Kalman filter over entire sequence.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (Dict[str, np.ndarray]): Includes &#39;x&#39; and &#39;y&#39;.</span>
+<span class="sd">            train_lstm (bool): Whether to updates LSTM&#39;s parameter weights and biases.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (mean predictions, std deviations, filtered state history)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
@@ -770,9 +955,16 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model.Model.smoother">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Smoother for whole time series</span>
+<span class="sd">        Execute RTS smoothing backward pass over the whole time series data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (Dict[str, np.ndarray]): Includes &#39;y&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            StatesHistory: Smoothed states.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
+        <span class="c1"># TODO: data as input is not needed.</span>
         <span class="n">num_time_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
@@ -791,7 +983,14 @@
         <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Train LstmNetwork</span>
+<span class="sd">        Train LSTM using train and validation sets.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            train_data (Dict[str, np.ndarray]): train data (x,y).</span>
+<span class="sd">            validation_data (Dict[str, np.ndarray]): validation data (x,y).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (val_predictions, val_stds, states)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Decaying observation&#39;s variance</span>
@@ -820,6 +1019,16 @@
         <span class="n">evaluate_metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">skip_epoch</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine early stopping condition during training.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode (str): &#39;min&#39; or &#39;max&#39; metric optimization.</span>
+<span class="sd">            patience (int): Epochs to wait for improvement.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple: (stop_flag, best_epoch, best_score, history)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span>
@@ -872,9 +1081,22 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="Model.online_AR_forward_modification">
-<a class="viewcode-back" href="../../api/canari.html#canari.model.Model.online_AR_forward_modification">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">online_AR_forward_modification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_online_AR_forward_modification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply forward path autoregressive (AR) moment transformations.</span>
+
+<span class="sd">        Updates prior state means and variances based on autoregressive error modeling,</span>
+<span class="sd">        propagating uncertainty from W2bar to AR_error. These are used during the forward</span>
+<span class="sd">        pass when AR components are present.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mu_states_prior (np.ndarray): Prior mean vector of the states.</span>
+<span class="sd">            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="k">if</span> <span class="s2">&quot;AR_error&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
             <span class="n">ar_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;autoregression&quot;</span><span class="p">)</span>
             <span class="n">ar_error_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;AR_error&quot;</span><span class="p">)</span>
@@ -903,18 +1125,26 @@
             <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
             <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
             <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
-        <span class="k">return</span> <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span></div>
+        <span class="k">return</span> <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span>
 
-
-<div class="viewcode-block" id="Model.online_AR_backward_modification">
-<a class="viewcode-back" href="../../api/canari.html#canari.model.Model.online_AR_backward_modification">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">online_AR_backward_modification</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_online_AR_backward_modification</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">mu_states_posterior</span><span class="p">,</span>
         <span class="n">var_states_posterior</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Online AR backwar modification</span>
+<span class="sd">        Apply backward AR moment updates during state-space filtering.</span>
+
+<span class="sd">        Computes the posterior distribution of W2 and W2bar from AR_error states,</span>
+<span class="sd">        and adjusts the autoregressive process noise accordingly. Also applies</span>
+<span class="sd">        GMA transformations when &quot;phi&quot; is involved in the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mu_states_posterior (np.ndarray): Posterior mean vector of the states.</span>
+<span class="sd">            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="s2">&quot;phi&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
@@ -971,17 +1201,26 @@
 
             <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
 
-        <span class="k">return</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span></div>
+        <span class="k">return</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
 
-
-<div class="viewcode-block" id="Model.prepare_covariates_generation">
-<a class="viewcode-back" href="../../api/canari.html#canari.model.Model.prepare_covariates_generation">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_covariates_generation</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_covariates_generation</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">initial_covariate</span><span class="p">,</span> <span class="n">num_generated_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">time_covariates</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Prepare covariates for synthetic data generation</span>
+<span class="sd">        Generate structured time-based covariates for simulation purposes.</span>
+
+<span class="sd">        Each covariate (e.g., hour_of_day, day_of_week) is computed cyclically using</span>
+<span class="sd">        modular arithmetic to simulate realistic calendar-based signals.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            initial_covariate (int): Starting value for time-based covariates.</span>
+<span class="sd">            num_generated_samples (int): Total number of steps to generate.</span>
+<span class="sd">            time_covariates (List[str]): List of time covariate names to encode.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: Encoded covariate matrix of shape (num_generated_samples, 1).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">covariates_generation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_generated_samples</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">time_cov</span> <span class="ow">in</span> <span class="n">time_covariates</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;hour_of_day&quot;</span><span class="p">:</span>
@@ -1009,7 +1248,6 @@
                     <span class="n">initial_covariate</span> <span class="o">+</span> <span class="n">covariates_generation</span>
                 <span class="p">)</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">covariates_generation</span></div>
-</div>
 
 </pre></div>
 

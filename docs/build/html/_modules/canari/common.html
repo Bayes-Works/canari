@@ -15,6 +15,7 @@
       <script src="../../_static/documentation_options.js?v=e3cb8337"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -39,9 +40,13 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/tutorial_forecast.html">Forecasting with Canari</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari</a></li>
 </ul>
 
         </div>
@@ -69,7 +74,11 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.common</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Utility functions</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">LstmOutputHistory</span>
@@ -81,13 +90,12 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a block diagonal matrix from the provided arrays.</span>
 
-<span class="sd">    Parameters:</span>
-<span class="sd">        *arrays (np.ndarray): Variable number of 2D arrays to be placed along the diagonal.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        *arrays (np.ndarray): Variable number of 2D arrays.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        np.ndarray: A block diagonal matrix.</span>
+<span class="sd">        np.ndarray: Block diagonal matrix with input arrays along the diagonal.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="k">if</span> <span class="ow">not</span> <span class="n">arrays</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[]])</span>
     <span class="n">total_rows</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">)</span>
@@ -113,7 +121,17 @@
     <span class="n">var_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">observation_matrix</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Predict observation mean and variance from state estimates.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        mu_states (np.ndarray): Mean of the state variables.</span>
+<span class="sd">        var_states (np.ndarray): Covariance matrix of the state variables.</span>
+<span class="sd">        observation_matrix (np.ndarray): Observation model matrix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]: Predicted mean and variance of observations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mu_obs_predict</span> <span class="o">=</span> <span class="n">observation_matrix</span> <span class="o">@</span> <span class="n">mu_states</span>
     <span class="n">var_obs_predict</span> <span class="o">=</span> <span class="n">observation_matrix</span> <span class="o">@</span> <span class="n">var_states</span> <span class="o">@</span> <span class="n">observation_matrix</span><span class="o">.</span><span class="n">T</span>
     <span class="k">return</span> <span class="n">mu_obs_predict</span><span class="p">,</span> <span class="n">var_obs_predict</span></div>
@@ -132,14 +150,28 @@
     <span class="n">var_lstm_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">lstm_indice</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform the forward pass for Kalman filtering.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        mu_states_posterior (np.ndarray): Posterior state means.</span>
+<span class="sd">        var_states_posterior (np.ndarray): Posterior state covariance.</span>
+<span class="sd">        transition_matrix (np.ndarray): State transition matrix.</span>
+<span class="sd">        process_noise_matrix (np.ndarray): Covariance of the process noise.</span>
+<span class="sd">        observation_matrix (np.ndarray): Observation model matrix.</span>
+<span class="sd">        mu_lstm_pred (Optional[np.ndarray]): LSTM predicted mean (optional).</span>
+<span class="sd">        var_lstm_pred (Optional[np.ndarray]): LSTM predicted variance (optional).</span>
+<span class="sd">        lstm_indice (Optional[int]): Index to insert LSTM predictions (optional).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Predicted observation mean/var and state prior mean/var.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mu_states_prior</span> <span class="o">=</span> <span class="n">transition_matrix</span> <span class="o">@</span> <span class="n">mu_states_posterior</span>
     <span class="n">var_states_prior</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">transition_matrix</span> <span class="o">@</span> <span class="n">var_states_posterior</span> <span class="o">@</span> <span class="n">transition_matrix</span><span class="o">.</span><span class="n">T</span>
         <span class="o">+</span> <span class="n">process_noise_matrix</span>
     <span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">mu_lstm_pred</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">mu_lstm_pred</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mu_states_prior</span><span class="p">[</span><span class="n">lstm_indice</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_lstm_pred</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
         <span class="n">var_states_prior</span><span class="p">[</span><span class="n">lstm_indice</span><span class="p">,</span> <span class="n">lstm_indice</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_lstm_pred</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
@@ -164,7 +196,19 @@
     <span class="n">var_states_prior</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">observation_matrix</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform the backward pass for Kalman update.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        obs (float): Actual observation value.</span>
+<span class="sd">        mu_obs_predict (np.ndarray): Predicted observation mean.</span>
+<span class="sd">        var_obs_predict (np.ndarray): Predicted observation variance.</span>
+<span class="sd">        var_states_prior (np.ndarray): Prior state covariance matrix.</span>
+<span class="sd">        observation_matrix (np.ndarray): Observation model matrix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]: Correction for state mean and covariance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cov_obs_states</span> <span class="o">=</span> <span class="n">observation_matrix</span> <span class="o">@</span> <span class="n">var_states_prior</span>
     <span class="n">delta_mu_states</span> <span class="o">=</span> <span class="n">cov_obs_states</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">var_obs_predict</span> <span class="o">@</span> <span class="p">(</span><span class="n">obs</span> <span class="o">-</span> <span class="n">mu_obs_predict</span><span class="p">)</span>
     <span class="n">delta_var_states</span> <span class="o">=</span> <span class="o">-</span><span class="n">cov_obs_states</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">var_obs_predict</span> <span class="o">@</span> <span class="n">cov_obs_states</span>
@@ -187,7 +231,22 @@
     <span class="n">cross_cov_states</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rauch-Tung-Striebel (RTS) smoother.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        mu_states_prior (np.ndarray): Prior mean vector.</span>
+<span class="sd">        var_states_prior (np.ndarray): Prior covariance metrix.</span>
+<span class="sd">        mu_states_smooth (np.ndarray): Smoothed mean vector.</span>
+<span class="sd">        var_states_smooth (np.ndarray): Smoothed covariance matrix.</span>
+<span class="sd">        mu_states_posterior (np.ndarray): Posterior mean vector.</span>
+<span class="sd">        var_states_posterior (np.ndarray): Posterior covariance matrix.</span>
+<span class="sd">        cross_cov_states (np.ndarray): Cross-covariance matrix between states at two consecutive time steps.</span>
+<span class="sd">        matrix_inversion_tol (Optional[float]): Regularization tolerance.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jcb</span> <span class="o">=</span> <span class="n">cross_cov_states</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span>
         <span class="n">var_states_prior</span><span class="p">,</span> <span class="n">rcond</span><span class="o">=</span><span class="n">matrix_inversion_tol</span>
     <span class="p">)</span>
@@ -208,16 +267,19 @@
     <span class="n">lstm_output_history</span><span class="p">:</span> <span class="n">LstmOutputHistory</span><span class="p">,</span> <span class="n">input_covariates</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Prepare input for lstm network, concatenate lstm output history and the input covariates</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    Prepare LSTM input by concatenating past LSTM outputs with current input covariates.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        lstm_output_history (LstmOutputHistory): Historical LSTM mean/variance.</span>
+<span class="sd">        input_covariates (np.ndarray): Input covariates.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]: LSTM input mean and variance vectors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mu_lstm_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="n">input_covariates</span><span class="p">))</span>
     <span class="n">mu_lstm_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">mu_lstm_input</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
     <span class="n">var_lstm_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
-        <span class="p">(</span>
-            <span class="n">lstm_output_history</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">input_covariates</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
-        <span class="p">)</span>
+        <span class="p">(</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">input_covariates</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">mu_lstm_input</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">var_lstm_input</span><span class="p">)</span></div>
 
@@ -232,9 +294,17 @@
     <span class="n">pad_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Add padding for a matrix</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    Add a row and/or column padding to the matrix.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        matrix (np.ndarray): Matrix to pad.</span>
+<span class="sd">        pad_index (int): Index to insert the padding.</span>
+<span class="sd">        pad_row (Optional[np.ndarray]): Row vector to insert.</span>
+<span class="sd">        pad_col (Optional[np.ndarray]): Column vector to insert.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: Padded matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">pad_row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">pad_index</span><span class="p">,</span> <span class="n">pad_row</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">pad_col</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -254,7 +324,18 @@
     <span class="n">coef2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Gaussian reduction mixture</span>
+<span class="sd">    Perform a reduction of two Gaussian distributions into a single mixture distribution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mu1 (np.ndarray): Mean vector of the first Gaussian.</span>
+<span class="sd">        var1 (np.ndarray): Covariance matrix of the first Gaussian.</span>
+<span class="sd">        coef1 (float): Mixture weight for the first Gaussian.</span>
+<span class="sd">        mu2 (np.ndarray): Mean vector of the second Gaussian.</span>
+<span class="sd">        var2 (np.ndarray): Covariance matrix of the second Gaussian.</span>
+<span class="sd">        coef2 (float): Mixture weight for the second Gaussian.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]: Mixture mean vector and covariance matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">mu1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">mu1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mu1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
@@ -271,31 +352,28 @@
 <div class="viewcode-block" id="unstandardize_states">
 <a class="viewcode-back" href="../../api/canari.html#canari.common.unstandardize_states">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">unstandardize_states</span><span class="p">(</span><span class="n">mu_norm</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">,</span> <span class="n">norm_const_mean</span><span class="p">,</span> <span class="n">norm_const_std</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Un-standardize mean and variance of hidden states&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Unstandardize normalized mean and standard deviation of states.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        mu_norm (dict): Normalized means by key.</span>
+<span class="sd">        std_norm (dict): Normalized stds by key.</span>
+<span class="sd">        norm_const_mean (float): Mean normalization constant.</span>
+<span class="sd">        norm_const_std (float): Standard deviation normalization constant.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[dict, dict]: Unnormalized means and stds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mu_unnorm</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">std_unnorm</span> <span class="o">=</span> <span class="p">{}</span>
-
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mu_norm</span><span class="p">:</span>
         <span class="n">_mu_norm</span> <span class="o">=</span> <span class="n">mu_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="n">_std_norm</span> <span class="o">=</span> <span class="n">std_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;local level&quot;</span><span class="p">:</span>
-            <span class="n">_norm_const_mean</span> <span class="o">=</span> <span class="n">norm_const_mean</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">_norm_const_mean</span> <span class="o">=</span> <span class="mi">0</span>
-
+        <span class="n">_norm_const_mean</span> <span class="o">=</span> <span class="n">norm_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;local level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="n">mu_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
-            <span class="n">_mu_norm</span><span class="p">,</span>
-            <span class="n">_norm_const_mean</span><span class="p">,</span>
-            <span class="n">norm_const_std</span><span class="p">,</span>
+            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_norm_const_mean</span><span class="p">,</span> <span class="n">norm_const_std</span>
         <span class="p">)</span>
-
-        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
-            <span class="n">_std_norm</span><span class="p">,</span>
-            <span class="n">norm_const_std</span><span class="p">,</span>
-        <span class="p">)</span>
-
+        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">norm_const_std</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">mu_unnorm</span><span class="p">,</span> <span class="n">std_unnorm</span></div>
 
 
@@ -304,10 +382,13 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.common.GMA">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GMA</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Gaussian Multiplicative Approximation of two variables in a vector</span>
-<span class="sd">    Input:</span>
-<span class="sd">    mu: mean vector of all the variables</span>
-<span class="sd">    var: full covariance matrix of all the variables</span>
+<span class="sd">    Gaussian Multiplicative Approximation (GMA).</span>
+
+<span class="sd">    Provides a way to augment and approximate the product of two Gaussian variables.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        mu (np.ndarray): Mean vector.</span>
+<span class="sd">        var (np.ndarray): Covariance matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -318,7 +399,6 @@
         <span class="n">index2</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">replace_index</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">var</span>
         <span class="k">if</span> <span class="n">index1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">index2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">replace_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -330,18 +410,12 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.common.GMA.multiply_and_augment">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">multiply_and_augment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The multiplication of two variables is augmented to the last index of the provided vector</span>
+<span class="sd">        Augment mean and covariance with the product of two variables.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1"># Augment the dimension of the input matrix</span>
         <span class="n">GMA_mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
         <span class="n">GMA_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">GMA_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GMA_var</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">GMA_var</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
-        <span class="c1"># Multiply the two provided indices</span>
-        <span class="c1"># # Mean for the multiplicated term</span>
         <span class="n">GMA_mu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index2</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">index2</span><span class="p">]</span>
-        <span class="c1"># # Variance for the multiplicated term</span>
         <span class="n">GMA_var</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">index1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index2</span><span class="p">][</span><span class="n">index2</span><span class="p">]</span>
             <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">index2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
@@ -349,7 +423,6 @@
             <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">index1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
             <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index2</span><span class="p">][</span><span class="n">index2</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="p">)</span>
-        <span class="c1"># # Covariance between the multiplicated term and the existing terms</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">)):</span>
             <span class="n">cov_i</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">index1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index2</span><span class="p">]</span>
@@ -357,7 +430,6 @@
             <span class="p">)</span>
             <span class="n">GMA_var</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_i</span>
             <span class="n">GMA_var</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_i</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">GMA_mu</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">GMA_var</span></div>
 
@@ -366,9 +438,12 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.common.GMA.swap">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">swap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Swap the sequence of moments of two variables in the vector</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        Swap two variables in the mean and covariance structures.</span>
 
+<span class="sd">        Args:</span>
+<span class="sd">            index1 (int): Index of the first variable.</span>
+<span class="sd">            index2 (int): Index of the second variable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[[</span><span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[[</span><span class="n">index2</span><span class="p">,</span> <span class="n">index1</span><span class="p">]]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[[</span><span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[[</span><span class="n">index2</span><span class="p">,</span> <span class="n">index1</span><span class="p">]]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[:,</span> <span class="p">[</span><span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[:,</span> <span class="p">[</span><span class="n">index2</span><span class="p">,</span> <span class="n">index1</span><span class="p">]]</span></div>
@@ -378,9 +453,11 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.common.GMA.delete">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Delete the moments of a variables in the vector</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        Remove a variable from the mean and covariance structures.</span>
 
+<span class="sd">        Args:</span>
+<span class="sd">            index (int): Index of the variable to delete.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
@@ -389,6 +466,12 @@
 <div class="viewcode-block" id="GMA.get_results">
 <a class="viewcode-back" href="../../api/canari.html#canari.common.GMA.get_results">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the current mean and covariance.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span></div>
 </div>
 

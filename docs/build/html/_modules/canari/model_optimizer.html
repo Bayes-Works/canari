@@ -15,6 +15,7 @@
       <script src="../../_static/documentation_options.js?v=e3cb8337"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -39,9 +40,13 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/tutorial_forecast.html">Forecasting with Canari</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/canari.html">canari</a></li>
 </ul>
 
         </div>
@@ -69,7 +74,40 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.model_optimizer</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module: model_optimizer</span>
+
+<span class="sd">This module provides functionality to optimize hyperparameters for a machine learning model</span>
+<span class="sd">using Ray Tune. It includes:</span>
+
+<span class="sd">- `ModelOptimizer`: A class to configure and run hyperparameter search (grid or random) with</span>
+<span class="sd">  support for Optuna and ASHA schedulers.</span>
+<span class="sd">- `CustomLogger`: A Ray Tune callback for verbose trial progress logging.</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">```python</span>
+<span class="sd">from model_optimizer import ModelOptimizer, CustomLogger</span>
+
+<span class="sd"># Define a model initialization function and a training function</span>
+<span class="sd"># Provide a parameter search space and a DataProcess instance</span>
+<span class="sd">optimizer = ModelOptimizer(</span>
+<span class="sd">    initialize_model, train, param_space, data_processor,</span>
+<span class="sd">    num_optimization_trial=50, grid_search=False, algorithm=&quot;default&quot;</span>
+<span class="sd">)</span>
+<span class="sd">optimizer.optimize()</span>
+<span class="sd">best_model = optimizer.get_best_model()</span>
+<span class="sd">```</span>
+
+<span class="sd">Requirements:</span>
+<span class="sd">- ray[tune]</span>
+<span class="sd">- optuna</span>
+<span class="sd">- canari (for DataProcess)</span>
+
+<span class="sd">Signal Handling:</span>
+<span class="sd">Segmentation fault signals are ignored to prevent Ray Tune worker crashes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray</span><span class="w"> </span><span class="kn">import</span> <span class="n">tune</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callback</span>
@@ -85,7 +123,35 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model_optimizer.ModelOptimizer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelOptimizer</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Parameter optimization for model.py</span>
+<span class="sd">    Optimize hyperparameters of a model using Ray Tune.</span>
+
+<span class="sd">    This class wraps the model initialization and training functions,</span>
+<span class="sd">    configures a hyperparameter search space, and runs the optimization</span>
+<span class="sd">    using either grid search or a configurable search algorithm.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        initialize_model (Callable[[Dict[str, Any]], Any]):</span>
+<span class="sd">            Function that returns a model instance when given a config dict.</span>
+<span class="sd">        train (Callable[[Any, DataProcess], Any]):</span>
+<span class="sd">            Function that trains the model; should accept (model, data_processor)</span>
+<span class="sd">            and return a tuple whose first element is the trained model with</span>
+<span class="sd">            an attribute `early_stop_metric` for tuning.</span>
+<span class="sd">        param_space (Dict[str, list]):</span>
+<span class="sd">            Mapping from parameter names to either</span>
+<span class="sd">            - a list of two values [min, max] for range sampling, or</span>
+<span class="sd">            - a list of discrete values for grid search.</span>
+<span class="sd">        data_processor (DataProcess):</span>
+<span class="sd">            DataProcess instance for preparing and feeding training data.</span>
+<span class="sd">        num_optimization_trial (int):</span>
+<span class="sd">            Total number of trials for random search sampling (default: 50).</span>
+<span class="sd">        grid_search (bool):</span>
+<span class="sd">            If True, perform exhaustive grid search over given discrete values.</span>
+<span class="sd">        algorithm (str):</span>
+<span class="sd">            Optimization algorithm: &#39;default&#39; for OptunaSearch, &#39;parallel&#39; for ASHAScheduler.</span>
+<span class="sd">        model_optim (Any):</span>
+<span class="sd">            The best model instance initialized with optimal parameters after running optimize().</span>
+<span class="sd">        param_optim (Dict[str, Any]):</span>
+<span class="sd">            The best hyperparameter configuration found during optimization.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -98,6 +164,28 @@
         <span class="n">grid_search</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the ModelOptimizer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            initialize_model (Callable[[Dict[str, Any]], Any]):</span>
+<span class="sd">                Function that returns a model instance given a config dict.</span>
+<span class="sd">            train (Callable[[Any, DataProcess], Any]):</span>
+<span class="sd">                Function that trains a model; should return (trained_model, ...)</span>
+<span class="sd">                where `trained_model.early_stop_metric` exists.</span>
+<span class="sd">            param_space (Dict[str, list]):</span>
+<span class="sd">                Parameter search space: two-value lists [min, max] for sampling</span>
+<span class="sd">                or lists of discrete values for grid search.</span>
+<span class="sd">            data_processor (DataProcess):</span>
+<span class="sd">                DataProcess instance for data preparation.</span>
+<span class="sd">            num_optimization_trial (int, optional):</span>
+<span class="sd">                Number of random search trials (ignored for grid search). Defaults to 50.</span>
+<span class="sd">            grid_search (bool, optional):</span>
+<span class="sd">                If True, perform grid search; otherwise, random search. Defaults to False.</span>
+<span class="sd">            algorithm (str, optional):</span>
+<span class="sd">                Search algorithm: &#39;default&#39; (OptunaSearch) or &#39;parallel&#39; (ASHAScheduler). Defaults to &#39;default&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize_model</span> <span class="o">=</span> <span class="n">initialize_model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train</span> <span class="o">=</span> <span class="n">train</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_space</span> <span class="o">=</span> <span class="n">param_space</span>
@@ -112,7 +200,14 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model_optimizer.ModelOptimizer.optimize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Optimization</span>
+<span class="sd">        Run hyperparameter optimization over the configured search space.</span>
+
+<span class="sd">        Depending on `grid_search`, either exhaustive grid search or random sampling</span>
+<span class="sd">        (using OptunaSearch or ASHAScheduler) is performed. The best configuration</span>
+<span class="sd">        and corresponding model are stored in `param_optim` and `model_optim`.</span>
+
+<span class="sd">        Prints:</span>
+<span class="sd">            Optimal trial number and parameter values.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Function for optimization</span>
@@ -207,7 +302,13 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.model_optimizer.ModelOptimizer.get_best_model">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_best_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Obtain optim model</span>
+<span class="sd">        Retrieve the optimized model instance after running optimization.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Any: Model instance initialized with the best-found hyperparameters.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError: If `optimize()` has not been called yet.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span></div>
 </div>
@@ -217,7 +318,24 @@
 <div class="viewcode-block" id="CustomLogger">
 <a class="viewcode-back" href="../../api/canari.html#canari.model_optimizer.CustomLogger">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CustomLogger</span><span class="p">(</span><span class="n">Callback</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Ray Tune callback for custom logging of trial progress.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        total_samples (int): Total number of expected trials.</span>
+<span class="sd">        current_sample (int): Counter of completed samples.</span>
+<span class="sd">        trial_sample_map (Dict[str, int]):</span>
+<span class="sd">            Maps trial IDs to their corresponding sample index.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_samples</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the CustomLogger.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            total_samples (int): Total number of optimization trials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span> <span class="o">=</span> <span class="n">total_samples</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trial_sample_map</span> <span class="o">=</span> <span class="p">{}</span>
@@ -225,6 +343,20 @@
 <div class="viewcode-block" id="CustomLogger.on_trial_result">
 <a class="viewcode-back" href="../../api/canari.html#canari.model_optimizer.CustomLogger.on_trial_result">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">on_trial_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log progress when a trial reports results.</span>
+
+<span class="sd">        Increments the sample counter, records a mapping from trial ID to</span>
+<span class="sd">        the sample index, and prints a formatted line containing the running</span>
+<span class="sd">        sample count, reported metric, and trial parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            iteration (int): Current iteration number of Ray Tune.</span>
+<span class="sd">            trial (Trial): The Ray Tune Trial object.</span>
+<span class="sd">            result (Dict[str, Any]): Dictionary of trial results; must include key &#39;metric&#39;.</span>
+<span class="sd">            **info: Additional callback info.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="n">params</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">config</span>
         <span class="n">metric</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span>

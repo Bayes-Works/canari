@@ -24,7 +24,10 @@ extensions = [
     "sphinx.ext.napoleon",  # Google/NumPy style
     "sphinx.ext.viewcode",  # Add source links
     "sphinx.ext.autosummary",  # Summary tables (optional)
+    "nbsphinx",
+    "sphinx_rtd_theme",
 ]
+nbsphinx_execute = "never"
 
 templates_path = ["_templates"]
 exclude_patterns = []

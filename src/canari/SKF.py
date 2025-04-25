@@ -9,7 +9,20 @@ from canari.data_process import DataProcess
 
 
 class SKF:
-    """Switching Kalman Filter"""
+    """
+    Switching Kalman Filter (SKF)
+
+    Combines two state-space models (normal and abnormal) into a probabilistic
+    switching framework. It supports anomaly detection by computing probabilities of both models.
+
+    Attributes:
+        norm_to_abnorm_prob (float): Transition probability from normal to abnormal.
+        abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
+        norm_model_prior_prob (float): Prior probability of being in the normal state.
+        model (dict): Dictionary of transition model instances (norm_norm, norm_abnorm, etc.).
+        states (StatesHistory): History of collapsed marginal states.
+        transition_coef (dict): Transition coefficients computed per timestep.
+    """
 
     def __init__(
         self,
@@ -21,6 +34,19 @@ class SKF:
         norm_model_prior_prob: Optional[float] = 0.99,
         conditional_likelihood: Optional[bool] = False,
     ):
+        """
+        Initialize the SKF with two base models and transition probabilities.
+
+        Args:
+            norm_model (Model): Model representing normal behavior.
+            abnorm_model (Model): Model representing abnormal behavior.
+            std_transition_error (float): Std deviation of transition noise.
+            norm_to_abnorm_prob (float): P(abnormal | normal).
+            abnorm_to_norm_prob (float): P(normal | abnormal).
+            norm_model_prior_prob (float): Initial P(normal).
+            conditional_likelihood (bool): Whether to use sampled noise in likelihood.
+        """
+
         self.std_transition_error = std_transition_error
         self.norm_to_abnorm_prob = norm_to_abnorm_prob
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
@@ -58,7 +84,49 @@ class SKF:
         }
 
     def _initialize_attributes(self):
-        """Initialize attribute"""
+        """Initialize all internal attributes to their default values.
+
+        This private helper sets up:
+        1. General model bookkeeping (number and names of states),
+        2. State‐space Kalman filter (SKF) buffers and priors/posteriors,
+        3. Transition coefficients and marginal probability histories,
+        4. LSTM network placeholders,
+        5. Early‐stopping flags and history.
+
+        Attributes:
+            # General attributes
+            num_states (int): Number of hidden states. Defaults to 0.
+            states_name (list[str]): Labels for each state. Defaults to [].
+
+            # SKF‐related attributes
+            mu_states_init (array‐like or None): Initial state means.
+            var_states_init (array‐like or None): Initial state variances.
+            mu_states_prior (array‐like or None): Prior state means.
+            var_states_prior (array‐like or None): Prior state variances.
+            mu_states_posterior (array‐like or None): Posterior state means.
+            var_states_posterior (array‐like or None): Posterior state variances.
+            transition_coef (dict): Coefficients from `self.transition()`.
+            filter_marginal_prob_history (list): Filtered marginal‐probability history.
+            smooth_marginal_prob_history (list): Smoothed marginal‐probability history.
+            marginal_list (set[str]): Allowed marginal labels, e.g. {'norm', 'abnorm'}.
+            transition_prob (dict): Transition probabilities between margins:
+                • 'norm_norm', 'norm_abnorm', 'abnorm_norm', 'abnorm_abnorm'.
+            marginal_prob_current (dict): Current marginal probabilities:
+                • 'norm', 'abnorm'.
+
+            # LSTM‐related attributes
+            lstm_net (torch.nn.Module or None): The LSTM model instance.
+            lstm_output_history (list): Collected LSTM outputs over time.
+
+            # Early‐stopping attributes
+            stop_training (bool): Whether to halt training early.
+            optimal_epoch (int): Epoch index yielding best early‐stop metric.
+            early_stop_metric_history (list[float]): History of the monitored metric.
+            early_stop_metric (float or None): Latest value of the early‐stop metric.
+
+        Returns:
+            None
+        """
 
         # General attributes
         self.num_states = 0
@@ -98,7 +166,18 @@ class SKF:
         self.early_stop_metric = None
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
-        """Initialize model"""
+        """Initialize transition models and link SKF to these new models.
+
+        This method creates four transition-specific models (normal→normal, abnormal→abnormal,
+        normal→abnormal, abnormal→normal).
+
+        Args:
+            norm_model (Model): Model for the normal regime.
+            abnorm_model (Model): Model for the abnormal regime.
+
+        Returns:
+            None
+        """
 
         self._create_transition_model(
             norm_model,
@@ -109,7 +188,21 @@ class SKF:
 
     @staticmethod
     def _create_compatible_models(soure_model, target_model) -> None:
-        """Create compatiable model by padding zero to states and matrices"""
+        """Pad and align two models so they share the same state dimensions and names.
+
+        When source_model has fewer states than target_model, new rows/columns of zeros
+        are inserted into its state vectors and matrices at the appropriate indices.
+        Also returns the list of newly added state names.
+
+        Args:
+            source_model (Model): Model to be padded.
+            target_model (Model): Model whose state space defines the target dimension.
+
+        Returns:
+            source_model (Model): The padded source model.
+            target_model (Model): The (potentially updated) target model.
+            states_diff (list[str]): Names of states added to source_model.
+        """
 
         pad_row = np.zeros((soure_model.num_states)).flatten()
         pad_col = np.zeros((target_model.num_states)).flatten()
@@ -147,7 +240,21 @@ class SKF:
         norm_model: Model,
         abnorm_model: Model,
     ):
-        """Create transitional models from normal and abnormal models"""
+        """Build four regime-transition models and store them in self.model.
+
+        Copies of the input normal and abnormal models are made to represent:
+        - norm_norm: stay in normal regime
+        - abnorm_abnorm: stay in abnormal regime
+        - norm_abnorm: transition from normal to abnormal (with added transition noise)
+        - abnorm_norm: transition from abnormal to normal
+
+        Args:
+            norm_model (Model): Base model for the normal regime.
+            abnorm_model (Model): Base model for the abnormal regime.
+
+        Returns:
+            None
+        """
 
         # Create transitional model
         norm_norm = copy.deepcopy(norm_model)
@@ -172,7 +279,14 @@ class SKF:
         self.model["abnorm_norm"] = abnorm_norm
 
     def _link_skf_to_model(self):
-        """Link SKF's attributes to norm_norm model's attributes"""
+        """Attach SKF attributes (state count, names, LSTM) from norm_norm model.
+
+        Copies the number of states, state names, and LSTM network/reference to
+        self.num_states, self.states_name, self.lstm_net, and self.lstm_output_history.
+
+        Returns:
+            None
+        """
 
         self.num_states = self.model["norm_norm"].num_states
         self.states_name = self.model["norm_norm"].states_name
@@ -181,7 +295,14 @@ class SKF:
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
     def set_same_states_transition_models(self):
-        """Copy the states from self.model["norm_norm"] to all other transition models"""
+        """Synchronize all transition models to the same hidden-state initialization.
+
+        Copies the initial mu_states and var_states from norm_norm to every model
+        in self.model.
+
+        Returns:
+            None
+        """
 
         for transition_model in self.model.values():
             transition_model.set_states(
@@ -189,7 +310,14 @@ class SKF:
             )
 
     def _initialize_smoother(self):
-        """Set the smoothed estimates at the last time step = posterior"""
+        """Initialize smoothed state estimates at the final time step.
+
+        Sets the last entries of mu_smooth and var_smooth to the mixture of posteriors
+        from norm_norm and abnorm_abnorm, weighted by the final filter marginals.
+
+        Returns:
+            None
+        """
 
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
@@ -201,7 +329,14 @@ class SKF:
         )
 
     def _save_states_history(self):
-        """Save states' priors, posteriors and cross-covariances at one time step"""
+        """Archive the current priors, posteriors, and smooth estimates.
+
+        Invokes each transition model's internal _save_states_history, then appends
+        the latest mu/var priors and posteriors (and duplicates for smoothing) to self.states.
+
+        Returns:
+            None
+        """
 
         for transition_model in self.model.values():
             transition_model._save_states_history()
@@ -219,8 +354,20 @@ class SKF:
         mu_pred_transit: Dict[str, np.ndarray],
         var_pred_transit: Dict[str, np.ndarray],
     ) -> Dict[str, float]:
-        """
-        Compute the likelihood of observing 'obs' given predicted means and variances, for each transition model.
+        """Compute observation likelihood under each transition hypothesis.
+
+        If obs is NaN, returns likelihood=1 for all transitions. Otherwise:
+        - When conditional_likelihood=True, adds white-noise realizations to the mean and
+          averages the exponentiated log-likelihoods.
+        - Otherwise, directly exponentiates the Gaussian log-likelihood per transition.
+
+        Args:
+            obs (float): Observed value at current time step.
+            mu_pred_transit (dict): Predicted means for each transition model.
+            var_pred_transit (dict): Predicted variances for each transition model.
+
+        Returns:
+            dict[str, float]: Likelihood of obs for each transition key.
         """
 
         transition_likelihood = self.transition()
@@ -263,9 +410,16 @@ class SKF:
         self,
         time_step: int,
     ) -> Tuple[np.ndarray, np.ndarray]:
+        """Retrieve smoothed state vectors for all transition models at a given time.
+
+        Args:
+            time_step (int): Index of time step for which to fetch smoothed states.
+
+        Returns:
+            mu_states_transit (dict[str, np.ndarray]): Smoothed means per transition.
+            var_states_transit (dict[str, np.ndarray]): Smoothed variances per transition.
         """
-        Get states values for collapse step
-        """
+
         mu_states_transit = self.transition()
         var_states_transit = self.transition()
 
@@ -284,8 +438,23 @@ class SKF:
         var_states_transit: np.ndarray,
         state_type: str,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Collapse step
+        """Collapse state distributions across transition models into marginals and combined.
+
+        Performs two levels of Gaussian mixtures:
+        1) Mix origin→arrival pairs for each regime to get marginal means/vars.
+        2) Mix the regime marginals by current marginal probabilities.
+
+        Args:
+            mu_states_transit (dict[str, np.ndarray]): Predicted means per transition.
+            var_states_transit (dict[str, np.ndarray]): Predicted variances per transition.
+            state_type (str): 'prior', 'posterior', or 'smooth' to select mixture keys.
+
+        Returns:
+            Tuple containing:
+            - mu_combined (np.ndarray): Combined state means.
+            - var_combined (np.ndarray): Combined state variances.
+            - mu_marginal (dict[str, np.ndarray]): Regime-specific marginal means.
+            - var_marginal (dict[str, np.ndarray]): Regime-specific marginal variances.
         """
 
         mu_states_marginal = self.marginal()
@@ -355,8 +524,19 @@ class SKF:
         mu_pred_transit,
         var_pred_transit,
     ) -> Dict[str, float]:
-        """
-        Estimate coefficients for each transition model
+        """Estimate transition coefficients given observation and predicted transitions.
+
+        Computes joint transition probabilities combining prior transitions,
+        predicted likelihoods, and current marginals, then normalizes to yield
+        conditional transition coefficients.
+
+        Args:
+            obs (float): Observation at current step.
+            mu_pred_transit (dict[str, np.ndarray]): Predicted means per transition.
+            var_pred_transit (dict[str, np.ndarray]): Predicted variances per transition.
+
+        Returns:
+            Dict[str, float]: Updated transition coefficients for each origin→arrival key.
         """
 
         epsilon = 0 * 1e-20
@@ -400,33 +580,69 @@ class SKF:
         return transition_coef
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
-        """Automatically initialize baseline states from data for normal model"""
+        """Automatically initialize baseline states from data for normal model.
+
+        Delegates to the normal regime model to estimate initial state means and variances
+        from observations, then saves these initial states.
+
+        Args:
+            y (np.ndarray): Observed data for baseline initialization.
+
+        Returns:
+            None
+        """
+
         self.model["norm_norm"].auto_initialize_baseline_states(y)
         self.save_initial_states()
 
     def save_initial_states(self):
-        """
-        save initial states at time = 0 for reuse SKF
+        """Save initial SKF state mean/variance for reuse in subsequent runs.
+
+        Stores copies of the normal model's current mu_states and var_states in
+        self.mu_states_init and self.var_states_init.
+
+        Returns:
+            None
         """
 
         self.mu_states_init = self.model["norm_norm"].mu_states.copy()
         self.var_states_init = self.model["norm_norm"].var_states.copy()
 
     def load_initial_states(self):
-        """ """
+        """Restore saved initial states into the normal model.
+
+        Copies back self.mu_states_init and self.var_states_init into the normal model.
+
+        Returns:
+            None
+        """
 
         self.model["norm_norm"].mu_states = self.mu_states_init.copy()
         self.model["norm_norm"].var_states = self.var_states_init.copy()
 
     def initialize_states_history(self):
-        """Initialize history for all time steps for the combined states and each transition model"""
+        """Initialize state history containers for all transition models.
+
+        Invokes each model's own initialization, then sets combined StatesHistory
+        based on self.states_name.
+
+        Returns:
+            None
+        """
 
         for transition_model in self.model.values():
             transition_model.initialize_states_history()
         self.states.initialize(self.states_name)
 
     def set_states(self):
-        """Assign new values for the states of each transition model"""
+        """Assign posterior states to be used as priors for next time step.
+
+        For each transition model, sets its mu_states and var_states from
+        the latest posterior estimates.
+
+        Returns:
+            None
+        """
 
         for transition_model in self.model.values():
             transition_model.set_states(
@@ -435,8 +651,14 @@ class SKF:
             )
 
     def set_memory(self, states: StatesHistory, time_step: int):
-        """
-        Set memory at a specific time step
+        """Set model memory at a given time step and optionally reset to initial.
+
+        Args:
+            states (StatesHistory): StatesHistory object to load into norm_norm.
+            time_step (int): Index of time step; if 0, reload initial states and reset marginals.
+
+        Returns:
+            None
         """
 
         self.model["norm_norm"].set_memory(
@@ -448,8 +670,11 @@ class SKF:
             self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
-        """
-        Save the SKF model as a dict.
+        """Serialize the SKF and underlying models into a dictionary.
+
+        Returns:
+            dict: Contains serialized normal/abnormal models, transition parameters,
+            prior probabilities, and any trained LSTM parameters.
         """
 
         save_dict = {}
@@ -466,8 +691,13 @@ class SKF:
 
     @staticmethod
     def load_dict(save_dict: dict):
-        """
-        Create a model from a saved dict
+        """Reconstruct an SKF instance from its serialized dictionary.
+
+        Args:
+            save_dict (dict): Dictionary produced by get_dict(), containing model states and params.
+
+        Returns:
+            SKF: A new SKF object with loaded parameters and states.
         """
 
         # Create normal model
@@ -502,8 +732,17 @@ class SKF:
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
-        """
-        Train the LstmNetwork of the normal model
+        """Train the normal regime's LSTM network and record training history.
+
+        Args:
+            train_data (dict): Input/observation arrays for training.
+            validation_data (dict): Data for validation during training.
+            white_noise_decay (bool): Whether to decay noise over epochs.
+            white_noise_max_std (float): Maximum std for injected white noise.
+            white_noise_decay_factor (float): Multiplicative decay per epoch.
+
+        Returns:
+            Tuple containing training losses, validation losses, and StatesHistory.
         """
 
         return self.model["norm_norm"].lstm_train(
@@ -521,6 +760,18 @@ class SKF:
         evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
+        """Apply early stopping policy from the normal model's training.
+
+        Args:
+            mode (str): 'max' or 'min' to maximize or minimize the metric.
+            patience (int): Number of epochs without improvement allowed.
+            evaluate_metric (Optional[float]): Current metric value to evaluate.
+            skip_epoch (int): Epoch count before starting to monitor.
+
+        Returns:
+            Tuple indicating (stop_flag, optimal_epoch, best_metric, history_list).
+        """
+
         (
             self.stop_training,
             self.optimal_epoch,
@@ -544,8 +795,14 @@ class SKF:
         obs: float,
         input_covariates: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Forward pass for 4 transition models
+        """Forward pass across all transition models to predict next observation.
+
+        Args:
+            obs (float): Current observation.
+            input_covariates (Optional[np.ndarray]): Exogenous inputs for LSTM.
+
+        Returns:
+            Tuple(mu_obs_pred, var_obs_pred): Predicted observation mean and variance.
         """
 
         mu_pred_transit = self.transition()
@@ -598,10 +855,16 @@ class SKF:
     def backward(
         self,
         obs: float,
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Backward update step: collapse posterior states after observation.
+
+        Args:
+            obs (float): Observation at current time step.
+
+        Returns:
+            Tuple(mu_states_posterior, var_states_posterior): Posterior state estimates.
         """
-        Update step in states-space model
-        """
+
         mu_states_transit = self.transition()
         var_states_transit = self.transition()
 
@@ -633,8 +896,16 @@ class SKF:
         return mu_states_posterior, var_states_posterior
 
     def rts_smoother(self, time_step: int):
-        """
-        RTS smoother
+        """Run Rauch–Tung–Striebel smoother at a given time step.
+
+        Updates smoothed state estimates and transition coefficients based on
+        forward filter history and transition probabilities.
+
+        Args:
+            time_step (int): Index at which to perform smoothing.
+
+        Returns:
+            None
         """
 
         epsilon = 0 * 1e-20
@@ -725,8 +996,13 @@ class SKF:
         self,
         data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, StatesHistory]:
-        """
-        Filtering
+        """Run filtering over a time series and record abnormal probabilities.
+
+        Args:
+            data (dict): Contains 'x' (covariates) and 'y' (observations).
+
+        Returns:
+            Tuple(abnorm_probs, StatesHistory): Abnormal marginal probabilities and state history.
         """
 
         mu_obs_preds = []
@@ -769,8 +1045,13 @@ class SKF:
         )
 
     def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, StatesHistory]:
-        """
-        Smoother for whole time series
+        """Apply RTS smoothing over entire time series.
+
+        Args:
+            data (dict): Contains 'x' and 'y' arrays for smoothing.
+
+        Returns:
+            Tuple(smoothed_abnorm_probs, StatesHistory): Smoothed abnormal probabilities and history.
         """
 
         num_time_steps = len(data["y"])
@@ -794,7 +1075,23 @@ class SKF:
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ) -> Tuple[float, float]:
-        """Detect anomaly"""
+        """Detect synthetic anomalies and compute detection/false-alarm rates.
+
+        Args:
+            data (list[dict]): List of original time series dicts.
+            threshold (float): Probability cutoff for anomaly detection.
+            max_timestep_to_detect (int): Window length post-anomaly for detection.
+            num_anomaly (int): Number of synthetic anomalies to insert.
+            slope_anomaly (float): Magnitude of anomaly slope.
+            anomaly_start (float): Fractional start position of anomaly.
+            anomaly_end (float): Fractional end position of anomaly.
+
+        Returns:
+            Tuple(detection_rate, false_rate, false_alarm_train):
+                detection_rate (float): Fraction of anomalies detected.
+                false_rate (float): Fraction of false alarms post-insertion.
+                false_alarm_train (str): 'Yes' if any alarm during training data.
+        """
 
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
