@@ -1,21 +1,66 @@
+"""
+Hybrid LSTM-State Space Model (SSM).
+
+This module defines the `Model` class, which is a hybrid model that couples
+Long Short-Term Memory (LSTM) and State-Space Modeling (SSM). The model supports
+forecasting, filtering, smoothing.
+
+"""
+
 import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
+from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
-from pytagi import Normalizer as normalizer
 
 
 class Model:
-    """LSTM/SSM model"""
+    """
+    Hybrid LSTM/State-Space Model.
+
+    This model supports a flexible architecture where multiple `BaseComponent`s
+    are assembled to define a structured state-space system.
+
+    The model can:
+        - Forecast future observations with uncertainty quantification.
+        - Filter observations using Bayesian updates.
+        - Apply the RTS smoother for optimal state estimation.
+        - Train its LSTM network component.
+        - Automatically initialize or restore model states.
+        - Generate synthetic time series data, including anomaly injection.
+        - Perform online autoregressive updates.
+
+    Attributes:
+        components (Dict[str, BaseComponent]): Dictionary of named state-space components.
+        states (StatesHistory): Container for tracking state evolution.
+        lstm_net (Optional[LstmNetwork]): LSTM neural network instance, if present.
+        lstm_output_history (LstmOutputHistory): Rolling buffer of LSTM predictions.
+        observation_matrix (np.ndarray): Matrix mapping hidden states to observations.
+        transition_matrix (np.ndarray): State transition matrix.
+        process_noise_matrix (np.ndarray): Covariance of process noise.
+        mu_states, var_states (np.ndarray): Mean and variance of the hidden states.
+        mu_obs_predict, var_obs_predict (np.ndarray): Predicted mean and variance of observations.
+
+    Usage:
+        >>> model = Model(LocalTrend(), Periodic(),WhiteNoise())
+        >>> mu_pred, std_pred, _ = model.forecast(data)
+    """
 
     def __init__(
         self,
         *components: BaseComponent,
     ):
+        """
+        Initialize the model with a list of components.
+
+        Args:
+            components (BaseComponent): One or more state-space components.
+        """
+
         self._initialize_attributes()
         self.components = {
             component.component_name: component for component in components
@@ -24,7 +69,12 @@ class Model:
         self.states = StatesHistory()
 
     def _initialize_attributes(self):
-        """Initialize model attributes"""
+        """
+        Initialize default model attributes.
+
+        Sets up component containers, state metadata, matrix placeholders, LSTM and
+        autoregression attributes, and early stopping criteria.
+        """
 
         # General attributes
         self.components = {}
@@ -66,7 +116,10 @@ class Model:
         self.stop_training = False
 
     def _initialize_model(self):
-        """Initialize model"""
+        """
+        Set up the model by assembling matrices, initializing states,
+        configuring LSTM and autoregressive modules if included.
+        """
 
         self._assemble_matrices()
         self._assemble_states()
@@ -74,7 +127,14 @@ class Model:
         self._initialize_autoregression()
 
     def _assemble_matrices(self):
-        """Assemble_matrices"""
+        """
+        Assemble block-diagonal matrices:
+            - Transition matrix
+            - Process noise matrix
+            - Observation matrix
+
+        Extracted from all components in the model.
+        """
 
         # Assemble transition matrices
         self.transition_matrix = common.create_block_diag(
@@ -95,7 +155,11 @@ class Model:
         self.observation_matrix = np.atleast_2d(global_observation_matrix)
 
     def _assemble_states(self):
-        """Assemble_states"""
+        """
+        Concatenate state means and variances from all components.
+
+        Sets internal metadata such as state names, component names, and state count.
+        """
 
         self.mu_states = np.vstack(
             [component.mu_states for component in self.components.values()]
@@ -117,7 +181,11 @@ class Model:
         )
 
     def _initialize_lstm_network(self):
-        """Initialize_lstm_network from lstm_component if needed"""
+        """
+        Initialize and configure LSTM network if a component named 'lstm' is found.
+
+        Sets up forward prediction and gradient update mechanisms.
+        """
 
         lstm_component = next(
             (
@@ -133,7 +201,11 @@ class Model:
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
-        """Initialize autoregression component if needed"""
+        """
+        Initialize autoregression-related states such as W2, W2bar, and associated variances.
+        Only applicable when the component 'autoregression' exists.
+        """
+
         autoregression_component = next(
             (
                 component
@@ -152,7 +224,14 @@ class Model:
         delta_mu_lstm: np.ndarray,
         delta_var_lstm: np.ndarray,
     ):
-        """Update lstm network's parameters"""
+        """
+        Update LSTM parameters using filtered signal deltas.
+
+        Args:
+            delta_mu_lstm (np.ndarray): Delta mean signal from backward update.
+            delta_var_lstm (np.ndarray): Delta variance signal from backward update.
+        """
+
         self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
         self.lstm_net.backward()
         self.lstm_net.step()
@@ -160,6 +239,15 @@ class Model:
     def _white_noise_decay(
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
     ):
+        """
+        Apply exponential decay to white noise variance over epochs.
+
+        Args:
+            epoch (int): Current training epoch.
+            white_noise_max_std (float): Maximum allowed noise std.
+            white_noise_decay_factor (float): Factor controlling decay rate.
+        """
+
         noise_index = self.get_states_index("white noise")
         scheduled_sigma_v = white_noise_max_std * np.exp(
             -white_noise_decay_factor * epoch
@@ -169,7 +257,9 @@ class Model:
         self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
     def _save_states_history(self):
-        """Save states' priors, posteriors and cross-covariances for smoother"""
+        """
+        Save current prior, posterior states, and cross-covariaces for later smoothing use.
+        """
 
         self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(self.var_states_prior)
@@ -181,7 +271,15 @@ class Model:
         self.states.var_smooth.append(self.var_states_posterior)
 
     def __deepcopy__(self, memo):
-        """Copy a model object, but do not copy "lstm_net" attribute"""
+        """
+        Create a deep copy of the model while excluding the LSTM network.
+
+        Args:
+            memo (dict): Python deepcopy memoization dictionary.
+
+        Returns:
+            Model: Deep-copied instance without LSTM network state.
+        """
 
         cls = self.__class__
         obj = cls.__new__(cls)
@@ -194,7 +292,10 @@ class Model:
 
     def get_dict(self) -> dict:
         """
-        Save the model as a dict.
+        Export model attributes into a serializable dictionary.
+
+        Returns:
+            dict: Serializable model dictionary containing all major attributes.
         """
 
         save_dict = {}
@@ -215,7 +316,13 @@ class Model:
     @staticmethod
     def load_dict(save_dict: dict):
         """
-        Create a model from a saved dict
+        Load model from dictionary.
+
+        Args:
+            save_dict (dict): Dictionary containing saved model structure and parameters.
+
+        Returns:
+            Model: Instantiated and parameterized model.
         """
 
         components = list(save_dict["components"].values())
@@ -227,7 +334,15 @@ class Model:
         return model
 
     def get_states_index(self, states_name: str):
-        """Get state index in the state vector"""
+        """
+        Retrieve index of a state in the state vector.
+
+        Args:
+            states_name (str): The name of the state.
+
+        Returns:
+            int or None: Index of the state, or None if not found.
+        """
 
         index = (
             self.states_name.index(states_name)
@@ -237,7 +352,12 @@ class Model:
         return index
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
-        """Automatically initialize baseline states from data"""
+        """
+        Automatically assign initial baseline states values using trend decomposition.
+
+        Args:
+            y (np.ndarray): Time series data.
+        """
 
         trend, slope, _, _ = DataProcess.decompose_data(y.flatten())
 
@@ -262,7 +382,13 @@ class Model:
         new_mu_states: np.ndarray,
         new_var_states: np.ndarray,
     ):
-        """Set the posterirors for the states"""
+        """
+        Set the posterior state values.
+
+        Args:
+            new_mu_states (np.ndarray): Posterior state means.
+            new_var_states (np.ndarray): Posterior state variances.
+        """
 
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
@@ -272,13 +398,21 @@ class Model:
         new_mu_states: np.ndarray,
         new_var_states: np.ndarray,
     ):
-        """Set new states"""
+        """
+        Set new values for states.
+
+        Args:
+            new_mu_states (np.ndarray): Mean values to be set.
+            new_var_states (np.ndarray): Covariance matrix to be set.
+        """
 
         self.mu_states = new_mu_states.copy()
         self.var_states = new_var_states.copy()
 
     def initialize_states_with_smoother_estimates(self):
-        """Set the model initial hidden states = the smoothed estimates"""
+        """
+        Set states to the first smoothed values after smoothing.
+        """
 
         self.mu_states = self.states.mu_smooth[0].copy()
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
@@ -287,13 +421,19 @@ class Model:
             self.mu_states[local_level_index] = self._mu_local_level
 
     def initialize_states_history(self):
-        """Initialize states history including prior, posterior, and smoother states"""
+        """
+        Start a new history buffer for priors, posteriors, and smoothers.
+        """
+
         self.states.initialize(self.states_name)
 
     def set_memory(self, states: StatesHistory, time_step: int):
         """
-        Set memory at a specific time step, i.e., mu_states, var_states,
-        cell and hidden states, and lstm output history
+        Load model state from a given timestep's smoothed state.
+
+        Args:
+            states (StatesHistory): Full history object.
+            time_step (int): Index of timestep to restore.
         """
 
         if time_step == 0:
@@ -338,7 +478,15 @@ class Model:
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        One step prediction in states-space model
+        Execute a one-step prediction. Recall common.forward
+
+        Args:
+            input_covariates (Optional[np.ndarray]): Covariate vector.
+            mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM.
+            var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM.
+
+        Returns:
+            Tuple: (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior)
         """
 
         # LSTM prediction:
@@ -365,7 +513,7 @@ class Model:
 
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_forward_modification(
+            mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
 
@@ -381,7 +529,13 @@ class Model:
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Update step in states-space model
+        Update step in Kalman filter. Recall common.backward
+
+        Args:
+            obs (float): Observed value.
+
+        Returns:
+            Tuple: (delta_mu, delta_var, posterior_mu, posterior_var)
         """
 
         delta_mu_states, delta_var_states = common.backward(
@@ -398,7 +552,7 @@ class Model:
 
         if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
-                self.online_AR_backward_modification(
+                self._online_AR_backward_modification(
                     mu_states_posterior,
                     var_states_posterior,
                 )
@@ -420,8 +574,13 @@ class Model:
         matrix_inversion_tol: Optional[float] = 1e-12,
     ):
         """
-        RTS smoother
+        Apply RTS smoothing for a specific timestep.
+
+        Args:
+            time_step (int): Target smoothing index.
+            matrix_inversion_tol (float): Numerical stability threshold.
         """
+
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
@@ -440,7 +599,13 @@ class Model:
         self, data: Dict[str, np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        Forecast for whole time series data
+        Forecast over an entire dataset using repeated one-step predictions.
+
+        Args:
+            data (Dict[str, np.ndarray]): Contains key 'x' as input features.
+
+        Returns:
+            Tuple: (mean forecasts, std deviations, full state history)
         """
 
         mu_obs_preds = []
@@ -482,8 +647,17 @@ class Model:
         anomaly_type="trend",
     ) -> np.ndarray:
         """
-        Generate time series data
+        Generate synthetic time series from the original one optionally with added synthetic anomalies.
+
+        Args:
+            num_time_series (int): Number of series to generate.
+            num_time_steps (int): Number of timesteps per series to generate data.
+            ... (various): Anomaly and covariate controls.
+
+        Returns:
+            np.ndarray: Synthetic time series.
         """
+
         time_series_all = []
         anm_mag_all = []
         anm_begin_all = []
@@ -493,7 +667,7 @@ class Model:
         # Prepare time covariates
         if time_covariates is not None:
             initial_time_covariate = time_covariate_info["initial_time_covariate"]
-            input_covariates = self.prepare_covariates_generation(
+            input_covariates = self._prepare_covariates_generation(
                 initial_time_covariate, num_time_steps, time_covariates
             )
             input_covariates = normalizer.standardize(
@@ -601,7 +775,14 @@ class Model:
         train_lstm: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        Filter for whole time series data
+        Perform Kalman filter over entire sequence.
+
+        Args:
+            data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
+            train_lstm (bool): Whether to updates LSTM's parameter weights and biases.
+
+        Returns:
+            Tuple: (mean predictions, std deviations, filtered state history)
         """
 
         mu_obs_preds = []
@@ -649,9 +830,16 @@ class Model:
 
     def smoother(self, data: Dict[str, np.ndarray]) -> StatesHistory:
         """
-        Smoother for whole time series
+        Execute RTS smoothing backward pass over the whole time series data.
+
+        Args:
+            data (Dict[str, np.ndarray]): Includes 'y'.
+
+        Returns:
+            StatesHistory: Smoothed states.
         """
 
+        # TODO: data as input is not needed.
         num_time_steps = len(data["y"])
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step)
@@ -667,7 +855,14 @@ class Model:
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        Train LstmNetwork
+        Train LSTM using train and validation sets.
+
+        Args:
+            train_data (Dict[str, np.ndarray]): train data (x,y).
+            validation_data (Dict[str, np.ndarray]): validation data (x,y).
+
+        Returns:
+            Tuple: (val_predictions, val_stds, states)
         """
 
         # Decaying observation's variance
@@ -693,6 +888,16 @@ class Model:
         evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
+        """
+        Determine early stopping condition during training.
+
+        Args:
+            mode (str): 'min' or 'max' metric optimization.
+            patience (int): Epochs to wait for improvement.
+
+        Returns:
+            Tuple: (stop_flag, best_epoch, best_score, history)
+        """
 
         if self._current_epoch == 0:
             if mode == "max":
@@ -744,7 +949,22 @@ class Model:
             self.early_stop_metric_history,
         )
 
-    def online_AR_forward_modification(self, mu_states_prior, var_states_prior):
+    def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
+        """
+        Apply forward path autoregressive (AR) moment transformations.
+
+        Updates prior state means and variances based on autoregressive error modeling,
+        propagating uncertainty from W2bar to AR_error. These are used during the forward
+        pass when AR components are present.
+
+        Args:
+            mu_states_prior (np.ndarray): Prior mean vector of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).
+        """
+
         if "AR_error" in self.states_name:
             ar_index = self.get_states_index("autoregression")
             ar_error_index = self.get_states_index("AR_error")
@@ -775,13 +995,24 @@ class Model:
             var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
         return mu_states_prior, var_states_prior
 
-    def online_AR_backward_modification(
+    def _online_AR_backward_modification(
         self,
         mu_states_posterior,
         var_states_posterior,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Online AR backwar modification
+        Apply backward AR moment updates during state-space filtering.
+
+        Computes the posterior distribution of W2 and W2bar from AR_error states,
+        and adjusts the autoregressive process noise accordingly. Also applies
+        GMA transformations when "phi" is involved in the model.
+
+        Args:
+            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
         """
 
         if "phi" in self.states_name:
@@ -840,12 +1071,24 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def prepare_covariates_generation(
+    def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
     ):
         """
-        Prepare covariates for synthetic data generation
+        Generate structured time-based covariates for simulation purposes.
+
+        Each covariate (e.g., hour_of_day, day_of_week) is computed cyclically using
+        modular arithmetic to simulate realistic calendar-based signals.
+
+        Args:
+            initial_covariate (int): Starting value for time-based covariates.
+            num_generated_samples (int): Total number of steps to generate.
+            time_covariates (List[str]): List of time covariate names to encode.
+
+        Returns:
+            np.ndarray: Encoded covariate matrix of shape (num_generated_samples, 1).
         """
+
         covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":

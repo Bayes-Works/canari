@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>canari documentation &mdash; canari v.0.0.1 documentation</title>
+  <title>Canari Documentation &mdash; canari v.0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -16,10 +16,13 @@
       <script src="_static/documentation_options.js?v=e3cb8337"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="canari package" href="api/canari.html" /> 
+    <link rel="next" title="Forecasting with Canari" href="examples/tutorial_forecast.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,9 +44,13 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.html">canari package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/tutorial_forecast.html">Forecasting with Canari</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.html">canari</a></li>
 </ul>
 
         </div>
@@ -60,7 +67,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">canari documentation</li>
+      <li class="breadcrumb-item active">Canari Documentation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -71,30 +78,25 @@
            <div itemprop="articleBody">
              
   <section id="canari-documentation">
-<h1>canari documentation<a class="headerlink" href="#canari-documentation" title="Link to this heading"></a></h1>
-<p>Add your content using <code class="docutils literal notranslate"><span class="pre">reStructuredText</span></code> syntax. See the
-<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html">reStructuredText</a>
-documentation for details.</p>
+<span id="index"></span><h1>Canari Documentation<a class="headerlink" href="#canari-documentation" title="Link to this heading"></a></h1>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.html">canari package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.SKF">canari.SKF module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.SKF_optimizer">canari.SKF_optimizer module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.autoregression_component">canari.autoregression_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.base_component">canari.base_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.baseline_component">canari.baseline_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.common">canari.common module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.data_process">canari.data_process module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.data_struct">canari.data_struct module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.data_visualization">canari.data_visualization module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.lstm_component">canari.lstm_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.model">canari.model module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.model_optimizer">canari.model_optimizer module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.periodic_component">canari.periodic_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.white_noise_component">canari.white_noise_component module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari">Module contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/tutorial_forecast.html">Forecasting with Canari</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.html">canari</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.data_process">Data Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.component.base_component">Component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.model">Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.model_optimizer">Model Optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.SKF">SKF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.SKF_optimizer">SKF Optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.common">Common functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.html#module-canari.data_visualization">Data Visualization</a></li>
 </ul>
 </li>
 </ul>
@@ -105,7 +107,7 @@ documentation for details.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="api/canari.html" class="btn btn-neutral float-right" title="canari package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="examples/tutorial_forecast.html" class="btn btn-neutral float-right" title="Forecasting with Canari" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

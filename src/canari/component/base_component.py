@@ -16,27 +16,6 @@ class BaseComponent(ABC):
 
     This class defines the interface and shared attributes for all components.
 
-    Attributes:
-        _component_name (str): Unique identifier string for the component.
-        _num_states (int): Number of hidden states in the component.
-        _states_name (list of str): Names of each hidden state.
-        _transition_matrix (np.ndarray): Transition matrix for the component.
-        _observation_matrix (np.ndarray): Observation matrix for the component.
-        _process_noise_matrix (np.ndarray): Process noise covariance matrix.
-        _mu_states (np.ndarray): mean values for hidden states.
-        _var_states (np.ndarray): covariance matrix for hidden states.
-
-    Properties:
-        component_name (str): Name of the component.
-        num_states (int): Number of hidden states.
-        states_name (list[str]): Names of the hidden states.
-        transition_matrix (np.ndarray): Transition matrix.
-        observation_matrix (np.ndarray): Observation matrix.
-        process_noise_matrix (np.ndarray): Process noise matrix.
-        mu_states (np.ndarray): mean vector for hidden states
-        var_states (np.ndarray): covariance matrix for hidden states
-
-
     Examples:
     """
 
@@ -121,67 +100,53 @@ class BaseComponent(ABC):
     @abstractmethod
     def initialize_component_name(self):
         """
-        Abstract method to initialize the component's name.
+        Initialize the component's name.
         """
 
     @abstractmethod
     def initialize_num_states(self):
         """
-        Abstract method to initialize the number of hidden states.
+        Initialize the number of hidden states.
         """
 
     @abstractmethod
     def initialize_states_name(self):
         """
-        Abstract method to initialize the names of all hidden states.
+        Initialize the names of all hidden states.
         Must provide `self._states_name` with a list of strings.
         """
 
     @abstractmethod
     def initialize_mu_states(self):
         """
-        Abstract method to initialize the mean of the hidden states.
+        Initialize the mean of the hidden states.
         Must define or validate the initial `mu_states` as a 2D NumPy ndarray.
         """
 
     @abstractmethod
     def initialize_var_states(self):
         """
-        Abstract method to initialize the variance of the hidden states.
+        Initialize the variance of the hidden states.
         Must define or validate the initial `var_states` as a 2D NumPy ndarray.
         """
 
     @abstractmethod
     def initialize_transition_matrix(self):
         """
-        Abstract method to initialize the transition matrix.
+        Initialize the transition matrix.
         Must define `self._transition_matrix` as a 2D NumPy ndarray.
         """
 
     @abstractmethod
     def initialize_observation_matrix(self):
         """
-        Abstract method to initialize the observation matrix.
+        Initialize the observation matrix.
         Must define `self._observation_matrix` as a 2D NumPy ndarray.
         """
 
     @abstractmethod
     def initialize_process_noise_matrix(self):
         """
-        Abstract method to initialize the process noise covariance matrix.
+        Initialize the process noise covariance matrix.
         Must define `self._process_noise_matrix` as a 2D NumPy ndarray.
         """
-
-    @property
-    def mu_states(self):
-        """
-        np.ndarray: mean vector for hidden states
-        """
-        return self._mu_states
-
-    @property
-    def var_states(self):
-        """
-        np.ndarray: covariance matrix for hidden states
-        """
-        return self._var_states
