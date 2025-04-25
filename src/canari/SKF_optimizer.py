@@ -1,3 +1,40 @@
+"""
+Module: skf_optimizer
+
+Optimizers for parameter tuning of SKF detection pipelines using Ray Tune.
+
+Classes:
+
+- SKFOptimizer: automated hyperparameter search using grid search or Bayesian optimization via Optuna/ASHAScheduler.
+- CustomLogger: custom callback for progress logging during hyperparameter trials.
+
+Usage example:
+
+```python
+from skf_optimizer import SKFOptimizer
+
+def init_skf(config, model_params):
+    # initialize your SKF detector with config and model parameters
+    return MySKFDetector(**model_params, **config)
+
+model_params = {...}
+param_space = {"slope": [0.1, 2.0]}
+data = {...}
+
+optimizer = SKFOptimizer(
+    initialize_skf=init_skf,
+    model_param=model_params,
+    param_space=param_space,
+    data=data,
+    detection_threshold=0.6,
+    false_rate_threshold=0.1,
+    num_optimization_trial=100,
+)
+optimizer.optimize()
+best_model = optimizer.get_best_model()
+```
+"""
+
 from ray import tune
 from ray.tune import Callback, Stopper
 from typing import Callable, Optional
@@ -12,7 +49,11 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class SKFOptimizer:
     """
-    Parameter optimization for model_param.py
+    Parameter optimizer for SKF anomaly detection pipelines.
+
+    This class runs hyperparameter search over the SKF detector configuration
+    using Ray Tune. Supports both grid search and sampling-based algorithms
+    (Optuna or ASHA scheduler).
     """
 
     def __init__(
@@ -29,6 +70,27 @@ class SKFOptimizer:
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
     ):
+        """
+        Initializes the SKFOptimizer.
+
+        Args:
+            initialize_skf (Callable): Factory for creating an SKF detector instance.
+            model_param (dict): Base parameters for the detector model.
+            param_space (dict): Search space for hyperparameters.
+            data (dict): Input data for synthetic anomaly detection.
+            detection_threshold (float, optional): Minimum acceptable detection rate. Defaults to 0.5.
+            false_rate_threshold (float, optional): Maximum acceptable false alarm rate. Defaults to 0.0.
+            max_timestep_to_detect (int, optional): Max timesteps to allow detection. Defaults to None.
+            num_synthetic_anomaly (int, optional): Number of anomalies to simulate. Defaults to 50.
+            num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
+            grid_search (bool, optional): If True, perform exhaustive grid search. Defaults to False.
+            algorithm (str, optional): Optimization algorithm ('default' for Optuna, 'parallel' for ASHA). Defaults to 'default'.
+
+        Attributes:
+            skf_optim: Best SKF instance after optimization.
+            param_optim (dict): Best hyperparameter configuration.
+        """
+
         self.initialize_skf = initialize_skf
         self.model_param = model_param
         self.param_space = param_space
@@ -45,7 +107,10 @@ class SKFOptimizer:
 
     def optimize(self):
         """
-        Optimization
+        Executes the hyperparameter search.
+
+        Runs either grid search or sampling-based trials and logs progress.
+        After completion, stores `param_optim` and `skf_optim`.
         """
 
         # Function for optimization
@@ -173,18 +238,37 @@ class SKFOptimizer:
 
     def get_best_model(self):
         """
-        Obtain optim model_param
+        Retrieves the SKF detector instance initialized with the best parameters.
+
+        Returns:
+            Any: SKF detector instance corresponding to the optimal configuration.
         """
         return self.skf_optim
 
 
 class CustomLogger(Callback):
+    """
+    Ray Tune callback for logging trial progress.
+
+    Logs the sample count and metrics for each trial as they complete.
+    """
+
     def __init__(self, total_samples):
         self.total_samples = total_samples
         self.current_sample = 0
         self.trial_sample_map = {}
 
     def on_trial_result(self, iteration, trial, result, **info):
+        """
+        Called when a trial reports intermediate results.
+
+        Args:
+            iteration (int): Current iteration number.
+            trial (Trial): Trial object.
+            result (dict): Metrics reported by the trial.
+            **info: Additional info.
+        """
+
         self.current_sample += 1
         params = trial.config
         self.trial_sample_map[trial.trial_id] = self.current_sample

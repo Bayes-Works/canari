@@ -5,16 +5,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pytagi import metric
 from pytagi import Normalizer as normalizer
-from canari import (
-    DataProcess,
-    Model,
-    SKF,
+from canari.data_process import DataProcess
+from canari.component.baseline_component import LocalTrend, LocalAcceleration
+from canari.component.lstm_component import LstmNetwork
+from canari.component.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
+from canari.model_optimizer import ModelOptimizer
+from canari.SKF_optimizer import SKFOptimizer
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
-from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Fix parameters grid search
 sigma_v_fix = 0.015519087402266298
@@ -25,7 +29,7 @@ SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = False,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data

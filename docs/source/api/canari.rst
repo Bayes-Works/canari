@@ -1,125 +1,91 @@
-canari package
-==============
+canari
+=======
 
-Submodules
-----------
-
-canari.SKF module
------------------
-
-.. automodule:: canari.SKF
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.SKF\_optimizer module
-----------------------------
-
-.. automodule:: canari.SKF_optimizer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.autoregression\_component module
----------------------------------------
-
-.. automodule:: canari.autoregression_component
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.base\_component module
------------------------------
-
-.. automodule:: canari.base_component
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.baseline\_component module
----------------------------------
-
-.. automodule:: canari.baseline_component
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.common module
---------------------
-
-.. automodule:: canari.common
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-canari.data\_process module
----------------------------
+Data Process
+------------
 
 .. automodule:: canari.data_process
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.data\_struct module
---------------------------
+Component
+---------
 
-.. automodule:: canari.data_struct
+.. automodule:: canari.component.base_component
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.data\_visualization module
----------------------------------
-
-.. automodule:: canari.data_visualization
+.. automodule:: canari.component.autoregression_component
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.lstm\_component module
------------------------------
-
-.. automodule:: canari.lstm_component
+.. automodule:: canari.component.baseline_component
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.model module
--------------------
+.. automodule:: canari.component.periodic_component
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: canari.component.white_noise_component
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: canari.component.lstm_component
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Model
+-----
 
 .. automodule:: canari.model
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.model\_optimizer module
-------------------------------
+Model Optimizer
+---------------
 
 .. automodule:: canari.model_optimizer
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.periodic\_component module
----------------------------------
+SKF
+---
 
-.. automodule:: canari.periodic_component
+.. automodule:: canari.SKF
    :members:
    :undoc-members:
    :show-inheritance:
 
-canari.white\_noise\_component module
--------------------------------------
+SKF Optimizer
+-------------
 
-.. automodule:: canari.white_noise_component
+.. automodule:: canari.SKF_optimizer
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+Common functions
+----------------
 
-.. automodule:: canari
+.. automodule:: canari.common
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Data Visualization
+------------------
+
+.. automodule:: canari.data_visualization
    :members:
    :undoc-members:
    :show-inheritance:

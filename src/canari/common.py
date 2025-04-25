@@ -1,3 +1,7 @@
+"""
+Utility functions
+"""
+
 from typing import Tuple, Optional
 import numpy as np
 from pytagi import Normalizer
@@ -8,13 +12,12 @@ def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
     """
     Create a block diagonal matrix from the provided arrays.
 
-    Parameters:
-        *arrays (np.ndarray): Variable number of 2D arrays to be placed along the diagonal.
+    Args:
+        *arrays (np.ndarray): Variable number of 2D arrays.
 
     Returns:
-        np.ndarray: A block diagonal matrix.
+        np.ndarray: Block diagonal matrix with input arrays along the diagonal.
     """
-
     if not arrays:
         return np.array([[]])
     total_rows = sum(a.shape[0] for a in arrays)
@@ -37,7 +40,17 @@ def calc_observation(
     var_states: np.ndarray,
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Predict observation mean and variance from state estimates.
 
+    Args:
+        mu_states (np.ndarray): Mean of the state variables.
+        var_states (np.ndarray): Covariance matrix of the state variables.
+        observation_matrix (np.ndarray): Observation model matrix.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Predicted mean and variance of observations.
+    """
     mu_obs_predict = observation_matrix @ mu_states
     var_obs_predict = observation_matrix @ var_states @ observation_matrix.T
     return mu_obs_predict, var_obs_predict
@@ -53,14 +66,28 @@ def forward(
     var_lstm_pred: Optional[np.ndarray] = None,
     lstm_indice: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Perform the forward pass for Kalman filtering.
 
+    Args:
+        mu_states_posterior (np.ndarray): Posterior state means.
+        var_states_posterior (np.ndarray): Posterior state covariance.
+        transition_matrix (np.ndarray): State transition matrix.
+        process_noise_matrix (np.ndarray): Covariance of the process noise.
+        observation_matrix (np.ndarray): Observation model matrix.
+        mu_lstm_pred (Optional[np.ndarray]): LSTM predicted mean (optional).
+        var_lstm_pred (Optional[np.ndarray]): LSTM predicted variance (optional).
+        lstm_indice (Optional[int]): Index to insert LSTM predictions (optional).
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Predicted observation mean/var and state prior mean/var.
+    """
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
         transition_matrix @ var_states_posterior @ transition_matrix.T
         + process_noise_matrix
     )
-
-    if mu_lstm_pred:
+    if mu_lstm_pred is not None:
         mu_states_prior[lstm_indice] = mu_lstm_pred.item()
         var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
 
@@ -82,7 +109,19 @@ def backward(
     var_states_prior: np.ndarray,
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Perform the backward pass for Kalman update.
 
+    Args:
+        obs (float): Actual observation value.
+        mu_obs_predict (np.ndarray): Predicted observation mean.
+        var_obs_predict (np.ndarray): Predicted observation variance.
+        var_states_prior (np.ndarray): Prior state covariance matrix.
+        observation_matrix (np.ndarray): Observation model matrix.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Correction for state mean and covariance.
+    """
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
     delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
@@ -102,7 +141,22 @@ def rts_smoother(
     cross_cov_states: np.ndarray,
     matrix_inversion_tol: Optional[float] = 1e-12,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Rauch-Tung-Striebel (RTS) smoother.
 
+    Args:
+        mu_states_prior (np.ndarray): Prior mean vector.
+        var_states_prior (np.ndarray): Prior covariance metrix.
+        mu_states_smooth (np.ndarray): Smoothed mean vector.
+        var_states_smooth (np.ndarray): Smoothed covariance matrix.
+        mu_states_posterior (np.ndarray): Posterior mean vector.
+        var_states_posterior (np.ndarray): Posterior covariance matrix.
+        cross_cov_states (np.ndarray): Cross-covariance matrix between states at two consecutive time steps.
+        matrix_inversion_tol (Optional[float]): Regularization tolerance.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.
+    """
     jcb = cross_cov_states @ np.linalg.pinv(
         var_states_prior, rcond=matrix_inversion_tol
     )
@@ -120,16 +174,19 @@ def prepare_lstm_input(
     lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Prepare input for lstm network, concatenate lstm output history and the input covariates
-    """
+    Prepare LSTM input by concatenating past LSTM outputs with current input covariates.
 
+    Args:
+        lstm_output_history (LstmOutputHistory): Historical LSTM mean/variance.
+        input_covariates (np.ndarray): Input covariates.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: LSTM input mean and variance vectors.
+    """
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     var_lstm_input = np.concatenate(
-        (
-            lstm_output_history.var,
-            np.zeros(len(input_covariates), dtype=np.float32),
-        )
+        (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float32))
     )
     return np.float32(mu_lstm_input), np.float32(var_lstm_input)
 
@@ -141,9 +198,17 @@ def pad_matrix(
     pad_col: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray]:
     """
-    Add padding for a matrix
-    """
+    Add a row and/or column padding to the matrix.
 
+    Args:
+        matrix (np.ndarray): Matrix to pad.
+        pad_index (int): Index to insert the padding.
+        pad_row (Optional[np.ndarray]): Row vector to insert.
+        pad_col (Optional[np.ndarray]): Column vector to insert.
+
+    Returns:
+        np.ndarray: Padded matrix.
+    """
     if pad_row is not None:
         matrix = np.insert(matrix, pad_index, pad_row, axis=0)
     if pad_col is not None:
@@ -160,7 +225,18 @@ def gaussian_mixture(
     coef2: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Gaussian reduction mixture
+    Perform a reduction of two Gaussian distributions into a single mixture distribution.
+
+    Args:
+        mu1 (np.ndarray): Mean vector of the first Gaussian.
+        var1 (np.ndarray): Covariance matrix of the first Gaussian.
+        coef1 (float): Mixture weight for the first Gaussian.
+        mu2 (np.ndarray): Mean vector of the second Gaussian.
+        var2 (np.ndarray): Covariance matrix of the second Gaussian.
+        coef2 (float): Mixture weight for the second Gaussian.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Mixture mean vector and covariance matrix.
     """
     if mu1.ndim == 1:
         mu1 = np.atleast_2d(mu1).T
@@ -174,40 +250,40 @@ def gaussian_mixture(
 
 
 def unstandardize_states(mu_norm, std_norm, norm_const_mean, norm_const_std):
-    """Un-standardize mean and variance of hidden states"""
+    """
+    Unstandardize normalized mean and standard deviation of states.
 
+    Args:
+        mu_norm (dict): Normalized means by key.
+        std_norm (dict): Normalized stds by key.
+        norm_const_mean (float): Mean normalization constant.
+        norm_const_std (float): Standard deviation normalization constant.
+
+    Returns:
+        Tuple[dict, dict]: Unnormalized means and stds.
+    """
     mu_unnorm = {}
     std_unnorm = {}
-
     for key in mu_norm:
         _mu_norm = mu_norm[key]
         _std_norm = std_norm[key]
-
-        if key == "local level":
-            _norm_const_mean = norm_const_mean
-        else:
-            _norm_const_mean = 0
-
+        _norm_const_mean = norm_const_mean if key == "local level" else 0
         mu_unnorm[key] = Normalizer.unstandardize(
-            _mu_norm,
-            _norm_const_mean,
-            norm_const_std,
+            _mu_norm, _norm_const_mean, norm_const_std
         )
-
-        std_unnorm[key] = Normalizer.unstandardize_std(
-            _std_norm,
-            norm_const_std,
-        )
-
+        std_unnorm[key] = Normalizer.unstandardize_std(_std_norm, norm_const_std)
     return mu_unnorm, std_unnorm
 
 
 class GMA(object):
     """
-    Gaussian Multiplicative Approximation of two variables in a vector
-    Input:
-    mu: mean vector of all the variables
-    var: full covariance matrix of all the variables
+    Gaussian Multiplicative Approximation (GMA).
+
+    Provides a way to augment and approximate the product of two Gaussian variables.
+
+    Attributes:
+        mu (np.ndarray): Mean vector.
+        var (np.ndarray): Covariance matrix.
     """
 
     def __init__(
@@ -218,7 +294,6 @@ class GMA(object):
         index2: Optional[int] = None,
         replace_index: Optional[int] = None,
     ) -> None:
-
         self.mu = mu
         self.var = var
         if index1 is not None and index2 is not None and replace_index is not None:
@@ -228,18 +303,12 @@ class GMA(object):
 
     def multiply_and_augment(self, index1, index2):
         """
-        The multiplication of two variables is augmented to the last index of the provided vector
+        Augment mean and covariance with the product of two variables.
         """
-
-        # Augment the dimension of the input matrix
         GMA_mu = np.vstack((self.mu, 0))
         GMA_var = np.append(self.var, np.zeros((1, self.var.shape[1])), axis=0)
         GMA_var = np.append(GMA_var, np.zeros((GMA_var.shape[0], 1)), axis=1)
-
-        # Multiply the two provided indices
-        # # Mean for the multiplicated term
         GMA_mu[-1] = self.mu[index1] * self.mu[index2] + self.var[index1][index2]
-        # # Variance for the multiplicated term
         GMA_var[-1, -1] = (
             self.var[index1][index1] * self.var[index2][index2]
             + self.var[index1][index2] ** 2
@@ -247,7 +316,6 @@ class GMA(object):
             + self.var[index1][index1] * self.mu[index2] ** 2
             + self.var[index2][index2] * self.mu[index1] ** 2
         )
-        # # Covariance between the multiplicated term and the existing terms
         for i in range(len(self.mu)):
             cov_i = (
                 self.var[i][index1] * self.mu[index2]
@@ -255,27 +323,37 @@ class GMA(object):
             )
             GMA_var[i][-1] = cov_i
             GMA_var[-1][i] = cov_i
-
         self.mu = GMA_mu
         self.var = GMA_var
 
     def swap(self, index1, index2):
         """
-        Swap the sequence of moments of two variables in the vector
-        """
+        Swap two variables in the mean and covariance structures.
 
+        Args:
+            index1 (int): Index of the first variable.
+            index2 (int): Index of the second variable.
+        """
         self.mu[[index1, index2]] = self.mu[[index2, index1]]
         self.var[[index1, index2]] = self.var[[index2, index1]]
         self.var[:, [index1, index2]] = self.var[:, [index2, index1]]
 
     def delete(self, index):
         """
-        Delete the moments of a variables in the vector
-        """
+        Remove a variable from the mean and covariance structures.
 
+        Args:
+            index (int): Index of the variable to delete.
+        """
         self.mu = np.delete(self.mu, index, axis=0)
         self.var = np.delete(self.var, index, axis=0)
         self.var = np.delete(self.var, index, axis=1)
 
     def get_results(self):
+        """
+        Get the current mean and covariance.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
+        """
         return self.mu, self.var
