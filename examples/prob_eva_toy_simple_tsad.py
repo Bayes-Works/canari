@@ -221,16 +221,25 @@ for k in tqdm(range(len(restored_data))):
     mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local level"])["local level"]
     mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
     mse_LL = metric.mse(
-        mu_LL_states[anm_start_index_global:],
-        LL_baseline_true[anm_start_index_global:],
+        mu_LL_states[anm_start_index_global+1:],
+        LL_baseline_true[anm_start_index_global+1:],
     )
     mse_LT = metric.mse(
-        mu_LT_states[anm_start_index_global:],
-        LT_baseline_true[anm_start_index_global:],
+        mu_LT_states[anm_start_index_global+1:],
+        LT_baseline_true[anm_start_index_global+1:],
+    )
+    # Compute MAPE for LL and LT
+    mape_LL = metric.mape(
+        mu_LL_states[anm_start_index_global+1:],
+        LL_baseline_true[anm_start_index_global+1:],
+    )
+    mape_LT = metric.mape(
+        mu_LT_states[anm_start_index_global+1:],
+        LT_baseline_true[anm_start_index_global+1:],
     )
     detection_time = anm_detected_index - anm_start_index_global
 
-    results_all.append([anm_mag, anm_start_index_global, anm_detected_index, mse_LL, mse_LT, detection_time])
+    results_all.append([anm_mag, anm_start_index_global, anm_detected_index, mse_LL, mse_LT, mape_LL, mape_LT, detection_time])
 
     # #  Plot
     # state_type = "prior"
@@ -313,5 +322,5 @@ for k in tqdm(range(len(restored_data))):
     hsl_tsad_agent.p_anm_all = copy.deepcopy(p_anm_all_temp)
 
 # # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
 # results_df.to_csv("saved_results/prob_eva/toy_simple_results_il.csv", index=False)
