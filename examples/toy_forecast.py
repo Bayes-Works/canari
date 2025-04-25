@@ -7,7 +7,6 @@ from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
-
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)

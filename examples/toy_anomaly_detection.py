@@ -5,15 +5,17 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
-from canari import (
-    DataProcess,
-    Model,
-    SKF,
+from canari.data_process import DataProcess
+from canari.component.baseline_component import LocalTrend, LocalAcceleration
+from canari.component.lstm_component import LstmNetwork
+from canari.component.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.SKF import SKF
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_skf_states,
 )
-from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"

@@ -4,14 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import (
-    DataProcess,
-    Model,
+from canari.data_process import DataProcess
+from canari.component.baseline_component import LocalTrend
+from canari.component.lstm_component import LstmNetwork
+from canari.component.white_noise_component import WhiteNoise
+from canari.model import Model
+from canari.data_visualization import (
     plot_data,
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 
 # # Read data

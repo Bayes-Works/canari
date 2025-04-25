@@ -1,3 +1,14 @@
+"""
+Visualization for Canari's results.
+
+This module provides plotting functions for:
+- Raw or normalized data (train, validation, and test splits)
+- Prediction results with uncertainty (mean ± standard deviation)
+- Hidden state estimates (posterior or prior) from state-space models
+- Abnormal regime-switching probabilities from Switching Kalman filters
+
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Optional, List
@@ -15,6 +26,82 @@ from matplotlib.dates import (
 from canari import common
 
 
+def _add_dynamic_grids(ax, time):
+    """
+    Add time-aware x-axis grids depending on data range.
+
+    Args:
+        ax (plt.Axes): Axis to configure.
+        time (np.ndarray): Time array (datetime-indexed).
+    """
+
+    # Calculate the time range
+    start_date = time[0]
+    end_date = time[-1]
+    time_range = end_date - start_date
+
+    if time_range > np.timedelta64(15 * 365, "D"):  # More than 15 years
+        major_locator = YearLocator(3)
+        minor_locator = YearLocator(1)
+        major_formatter = DateFormatter("%Y")
+    elif time_range > np.timedelta64(365, "D"):  # More than a year
+        major_locator = YearLocator(1)
+        minor_locator = MonthLocator(bymonth=[1, 4, 7, 10])
+        major_formatter = DateFormatter("%Y")
+    elif time_range > np.timedelta64(30, "D"):  # More than a month
+        major_locator = MonthLocator()
+        minor_locator = WeekdayLocator(byweekday=mdates.MONDAY)  # Weekly on Mondays
+        major_formatter = DateFormatter("%b %Y")
+    else:  # Less than a month
+        major_locator = DayLocator()
+        minor_locator = HourLocator(byhour=[0, 6, 12, 18])  # 4 times a day
+        major_formatter = DateFormatter("%m-%d")
+
+    # Apply locators and formatters
+    ax.xaxis.set_major_locator(major_locator)
+    ax.xaxis.set_minor_locator(minor_locator)
+    ax.xaxis.set_major_formatter(major_formatter)
+
+    # Enable vertical grid only
+    ax.grid(
+        visible=True, which="major", axis="x", linestyle="-", linewidth=0.8, alpha=0.8
+    )
+    ax.grid(
+        visible=True, which="minor", axis="x", linestyle="--", linewidth=0.5, alpha=0.5
+    )
+
+    # Disable horizontal grid
+    ax.grid(visible=False, which="major", axis="y")
+    ax.grid(visible=False, which="minor", axis="y")
+
+
+def _determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
+    """
+    Infer which segment of the time index to use for state plots.
+
+    Args:
+        data_processor (DataProcess): Provides split index mapping.
+        len_states (int): Number of states in time.
+
+    Returns:
+        np.ndarray: Time values corresponding to the state sequence.
+    """
+
+    train_index, val_index, _ = data_processor.get_split_indices()
+    if len_states == len(data_processor.data):
+        return data_processor.data.index.to_numpy()
+    elif len_states == len(train_index):
+        return data_processor.data.index[train_index].to_numpy()
+    else:
+        return np.concatenate(
+            [
+                data_processor.data.index[train_index].to_numpy(),
+                data_processor.data.index[val_index].to_numpy(),
+            ],
+            axis=0,
+        )
+
+
 def plot_data(
     data_processor: DataProcess,
     normalization: Optional[bool] = False,
@@ -30,7 +117,24 @@ def plot_data(
     test_label: Optional[str] = None,
     plot_nan: Optional[bool] = True,
 ):
-    """Plot train, validation, and test data with normalization and NaN filtering"""
+    """
+    Plot train, validation, and test data with optional normalization and NaN filtering.
+
+    Args:
+        data_processor (DataProcess): Object that wraps the dataset and split metadata.
+        normalization (bool, optional): Normalize the data using stored statistics.
+        plot_train_data (bool, optional): If True, plot training data.
+        plot_validation_data (bool, optional): If True, plot validation data.
+        plot_test_data (bool, optional): If True, plot test data.
+        plot_column (list[int], optional): List of column indices to plot.
+        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
+        color (str, optional): Line color for plot lines.
+        linestyle (str, optional): Line style (e.g., '-', '--').
+        train_label (str, optional): Legend label for training data.
+        validation_label (str, optional): Legend label for validation data.
+        test_label (str, optional): Legend label for test data.
+        plot_nan (bool, optional): Whether to include NaN values in the plot.
+    """
 
     if sub_plot is None:
         ax = plt.gca()
@@ -78,7 +182,7 @@ def plot_data(
             alpha=0.1,
             edgecolor=None,
         )
-    add_dynamic_grids(ax, total_time)
+    _add_dynamic_grids(ax, total_time)
 
 
 def plot_prediction(
@@ -97,7 +201,25 @@ def plot_prediction(
     validation_label: Optional[List[str]] = ["", ""],
     test_label: Optional[List[str]] = ["", ""],
 ):
-    """Plot mean and standard deviation for predictions"""
+    """
+    Plot predicted mean and uncertainty (standard deviation) for each data split.
+
+    Args:
+        data_processor (DataProcess): Data processing object.
+        mean_train_pred (np.ndarray, optional): Predicted means for training.
+        std_train_pred (np.ndarray, optional): Standard deviations for training predictions.
+        mean_validation_pred (np.ndarray, optional): Predicted means for validation.
+        std_validation_pred (np.ndarray, optional): Standard deviations for validation.
+        mean_test_pred (np.ndarray, optional): Predicted means for test.
+        std_test_pred (np.ndarray, optional): Standard deviations for test.
+        num_std (int, optional): Number of std deviations for uncertainty bands.
+        sub_plot (plt.Axes, optional): Axis to plot on.
+        color (str, optional): Line color.
+        linestyle (str, optional): Line style.
+        train_label (List[str], optional): [mean_label, std_label] for train.
+        validation_label (List[str], optional): [mean_label, std_label] for validation.
+        test_label (List[str], optional): [mean_label, std_label] for test.
+    """
 
     if sub_plot is None:
         ax = plt.gca()
@@ -126,7 +248,7 @@ def plot_prediction(
                 ax=ax,
                 label=label,
             )
-    # add_dynamic_grids(ax, total_time)
+    # _add_dynamic_grids(ax, total_time)
 
 
 def plot_states(
@@ -141,7 +263,21 @@ def plot_states(
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
 ):
-    """Plot hidden states"""
+    """
+    Plot hidden states with mean and uncertainty intervals.
+
+    Args:
+        data_processor (DataProcess): Data and metadata handler.
+        states (StatesHistory): Object containing state estimates.
+        states_to_plot (list[str] or "all", optional): Names of states to plot.
+        states_type (str, optional): Type of state ('posterior' or 'prior').
+        normalization (bool, optional): Whether to unnormalize the states.
+        num_std (int, optional): Number of standard deviations for error bands.
+        sub_plot (plt.Axes, optional): Single shared axis to plot all states.
+        color (str, optional): Color for mean line and uncertainty fill.
+        linestyle (str, optional): Line style.
+        legend_location (str, optional): Legend placement for first state subplot.
+    """
 
     if states_to_plot == "all":
         states_to_plot = states.states_name
@@ -157,7 +293,7 @@ def plot_states(
 
     # Time determination
     len_states = len(states.mu_prior)
-    time = determine_time(data_processor, len_states)
+    time = _determine_time(data_processor, len_states)
 
     # Mean and std to plot
     mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
@@ -197,7 +333,7 @@ def plot_states(
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
-        add_dynamic_grids(ax, time)
+        _add_dynamic_grids(ax, time)
 
         if sub_plot is not None:
             break
@@ -222,7 +358,23 @@ def plot_skf_states(
     legend_location: Optional[str] = None,
     plot_nan: Optional[bool] = True,
 ):
-    """Plot hidden states along with probability of regime switch"""
+    """
+    Plot hidden states along with model-switching probabilities.
+
+    Args:
+        data_processor (DataProcess): Input data and splits.
+        states (StatesHistory): Posterior/prior state values.
+        model_prob (np.ndarray): Probabilities of abnormal regime.
+        states_to_plot (list[str] or "all", optional): Which states to visualize.
+        states_type (str, optional): Type of state (posterior/prior).
+        normalization (bool, optional): Whether to convert states back to original scale.
+        num_std (int, optional): Width of uncertainty interval in std units.
+        plot_observation (bool, optional): Whether to include observed data.
+        color (str, optional): Line color for states.
+        linestyle (str, optional): Line style.
+        legend_location (str, optional): Location of legend in top subplot.
+        plot_nan (bool, optional): Whether to include NaNs in observed values.
+    """
 
     if states_to_plot == "all":
         states_to_plot = states.states_name
@@ -233,7 +385,7 @@ def plot_skf_states(
 
     # Time determination
     len_states = len(states.mu_prior)
-    time = determine_time(data_processor, len_states)
+    time = _determine_time(data_processor, len_states)
 
     # Mean and std to plot
     mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
@@ -266,7 +418,7 @@ def plot_skf_states(
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
-        add_dynamic_grids(ax, time)
+        _add_dynamic_grids(ax, time)
 
     if plot_observation:
         plot_data(
@@ -276,7 +428,7 @@ def plot_skf_states(
             sub_plot=axes[0],
             plot_nan=plot_nan,
         )
-    add_dynamic_grids(axes[0], time)
+    _add_dynamic_grids(axes[0], time)
 
     # Add legends for the first subplot
     if legend_location:
@@ -289,7 +441,7 @@ def plot_skf_states(
     # Plot abnormal model probability
     axes[len(states_to_plot)].plot(time, model_prob, color="b")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
-    add_dynamic_grids(axes[len(states_to_plot)], time)
+    _add_dynamic_grids(axes[len(states_to_plot)], time)
     axes[len(states_to_plot)].set_ylim(-0.02, 1)
     axes[len(states_to_plot)].set_xlabel("Time")
     if legend_location:
@@ -311,7 +463,20 @@ def plot_with_uncertainty(
     num_std: Optional[int] = 1,
     ax: Optional[plt.Axes] = None,
 ):
-    """Plot mean and std"""
+    """
+    Plot mean and confidence interval for a variable.
+
+    Args:
+        time (np.ndarray): Time vector.
+        mu (np.ndarray): Mean values to plot.
+        std (np.ndarray): Standard deviation values.
+        color (str, optional): Line/fill color.
+        linestyle (str, optional): Line style.
+        label (List[str], optional): Labels for mean and band.
+        index (int, optional): Index if plotting from multivariate tensor.
+        num_std (int, optional): Number of standard deviations to shade.
+        ax (plt.Axes, optional): Axis to use for plotting.
+    """
 
     if index is not None:
         mu_states = mu[:, index]
@@ -332,70 +497,3 @@ def plot_with_uncertainty(
         alpha=0.2,
         label=label[1],
     )
-
-
-def add_dynamic_grids(ax, time):
-    """
-    Add dynamic major and minor grids to the x-axis of the plot based on the time range.
-
-    Parameters:
-        ax (plt.Axes): The axis to add the grid to.
-        time (np.ndarray): Array of time values.
-    """
-    # Calculate the time range
-    start_date = time[0]
-    end_date = time[-1]
-    time_range = end_date - start_date
-
-    if time_range > np.timedelta64(15 * 365, "D"):  # More than 15 years
-        major_locator = YearLocator(3)
-        minor_locator = YearLocator(1)
-        major_formatter = DateFormatter("%Y")
-    elif time_range > np.timedelta64(365, "D"):  # More than a year
-        major_locator = YearLocator(1)
-        minor_locator = MonthLocator(bymonth=[1, 4, 7, 10])
-        major_formatter = DateFormatter("%Y")
-    elif time_range > np.timedelta64(30, "D"):  # More than a month
-        major_locator = MonthLocator()
-        minor_locator = WeekdayLocator(byweekday=mdates.MONDAY)  # Weekly on Mondays
-        major_formatter = DateFormatter("%b %Y")
-    else:  # Less than a month
-        major_locator = DayLocator()
-        minor_locator = HourLocator(byhour=[0, 6, 12, 18])  # 4 times a day
-        major_formatter = DateFormatter("%m-%d")
-
-    # Apply locators and formatters
-    ax.xaxis.set_major_locator(major_locator)
-    ax.xaxis.set_minor_locator(minor_locator)
-    ax.xaxis.set_major_formatter(major_formatter)
-
-    # Enable vertical grid only
-    ax.grid(
-        visible=True, which="major", axis="x", linestyle="-", linewidth=0.8, alpha=0.8
-    )
-    ax.grid(
-        visible=True, which="minor", axis="x", linestyle="--", linewidth=0.5, alpha=0.5
-    )
-
-    # Disable horizontal grid
-    ax.grid(visible=False, which="major", axis="y")
-    ax.grid(visible=False, which="minor", axis="y")
-
-
-def determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
-    """
-    Determine the appropriate time array based on the length of states.
-    """
-    train_index, val_index, _ = data_processor.get_split_indices()
-    if len_states == len(data_processor.data):
-        return data_processor.data.index.to_numpy()
-    elif len_states == len(train_index):
-        return data_processor.data.index[train_index].to_numpy()
-    else:
-        return np.concatenate(
-            [
-                data_processor.data.index[train_index].to_numpy(),
-                data_processor.data.index[val_index].to_numpy(),
-            ],
-            axis=0,
-        )
