@@ -8,7 +8,7 @@ up sinusoidal transitions with a fixed period.
 
 from typing import Optional
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 
 
 class Periodic(BaseComponent):

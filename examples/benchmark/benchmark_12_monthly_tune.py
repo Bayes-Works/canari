@@ -5,20 +5,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari.data_process import DataProcess
-from canari.baseline_component import LocalTrend, LocalAcceleration
-from canari.lstm_component import LstmNetwork
-from canari.white_noise_component import WhiteNoise
-from canari.model import Model
-from canari.SKF import SKF
-from canari.model_optimizer import ModelOptimizer
-from canari.SKF_optimizer import SKFOptimizer
-from canari.data_visualization import (
+from canari import (
+    DataProcess,
+    Model,
+    SKF,
+    ModelOptimizer,
+    SKFOptimizer,
     plot_data,
     plot_prediction,
-    plot_skf_states,
     plot_states,
+    plot_skf_states,
 )
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Fix parameters
 sigma_v_fix = 0.004402724885540067
