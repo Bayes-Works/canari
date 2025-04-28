@@ -4,21 +4,17 @@ from pytagi import Normalizer as normalizer
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from canari.data_process import DataProcess
-from canari.baseline_component import LocalTrend, LocalAcceleration
-from canari.lstm_component import LstmNetwork
-from canari.white_noise_component import WhiteNoise
-from canari.model import Model
-from canari.SKF import SKF
-from canari.data_visualization import (
+import pytagi.metric as metric
+from statsmodels.tsa.seasonal import seasonal_decompose
+from canari import (
+    DataProcess,
+    Model,
+    SKF,
     plot_data,
     plot_prediction,
     plot_skf_states,
-    plot_states,
 )
-
-import pytagi.metric as metric
-from statsmodels.tsa.seasonal import seasonal_decompose
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 
 # # Read data

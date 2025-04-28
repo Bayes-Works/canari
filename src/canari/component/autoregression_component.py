@@ -8,7 +8,7 @@ the autoregressive coefficient (`phi`) and process noise standard deviation (`st
 
 from typing import Optional
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 
 
 class Autoregression(BaseComponent):

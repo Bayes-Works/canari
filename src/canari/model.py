@@ -1,12 +1,11 @@
 import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
-from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
 
 
