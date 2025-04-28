@@ -42,7 +42,7 @@ df_raw = df_raw.iloc[:int(len(df_raw) * 1)]
 # Genetrate percentages_check from 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, ... , 1
 percentages_check = [i / 100 for i in range(10, 101, 1)]
 
-changepoint_prior_scale = 0.01
+# changepoint_prior_scale = 0.01
 threshold = 0.5
 
 anm_detect_point = None
@@ -50,7 +50,8 @@ anm_detect_point = None
 for i, percentage in enumerate(percentages_check):
     df = df_raw.iloc[:int(len(df_raw) * percentage)]
 
-    m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
+    # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
+    m = Prophet(changepoint_range=1)
     m.fit(df)
 
     # future = m.make_future_dataframe(periods=365)
@@ -106,12 +107,18 @@ for i, percentage in enumerate(percentages_check):
     ] if len(m.changepoints) > 0 else []
     if len(signif_changepoints) > 0:
         anm_detect_point = int(len(df_raw) * percentage)
+        # Get the change point
         break
 
-m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
+# m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
+m = Prophet(changepoint_range=1, changepoints=signif_changepoints)
 m.fit(df_raw)
 forecast = m.predict(df_raw)
 fig1 = m.plot(forecast)
 plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
-plt.axvline(x=m.history['ds'][anm_detect_point], color='r', linestyle='--')
+if anm_detect_point is not None:
+    plt.axvline(x=m.history['ds'][anm_detect_point], color='r', linestyle='--')
+    for cp in signif_changepoints:
+        plt.axvline(x=cp, color='g', linestyle='--')
+fig2 = m.plot_components(forecast)
 plt.show()
