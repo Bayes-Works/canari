@@ -1,15 +1,3 @@
-"""
-Data processing for time series tasks.
-
-This module provides the `DataProcess` class to facilitate:
-- Splitting into training, validation, and test sets
-- Adding time covariates (hour, day, month, etc.)
-- Normalizing the dataset based on training statistics
-- Generating lagged versions of features
-- Injecting synthetic anomalies for testing
-- Decomposing signals into trend, seasonality, and residual components
-"""
-
 from typing import Optional, Tuple, List, Dict
 import numpy as np
 import pandas as pd
@@ -18,22 +6,44 @@ from pytagi import Normalizer
 
 class DataProcess:
     """
-    A class for preprocessing time series data.
+    Data processing for time series.
+
+    This module provides the `DataProcess` class to facilitate:
+
+    - Standardize datasets based on training statistics
+    - Split data into training, validation, and test sets
+    - Add time covariates (hour, day, month, etc.) to data
+    - Generate lagged versions of features
+    - Add synthetic anomalies to data
 
     Args:
-        data (pd.DataFrame): Input time series data with a datetime index.
-        train_start (Optional[str]): Start datetime for training data.
-        train_end (Optional[str]): End datetime for training data.
-        validation_start (Optional[str]): Start datetime for validation data.
-        validation_end (Optional[str]): End datetime for validation data.
-        test_start (Optional[str]): Start datetime for test data.
-        test_end (Optional[str]): End datetime for test data.
-        train_split (Optional[float]): Proportion of data to allocate to training.
-        validation_split (Optional[float]): Proportion for validation data.
-        test_split (Optional[float]): Proportion for test data.
+        data (pd.DataFrame): Input DataFrame with a datetime or numeric index.
+        train_start (Optional[str]): Start index for training set.
+        train_end (Optional[str]): End index for training set.
+        validation_start (Optional[str]): Start index for validation set.
+        validation_end (Optional[str]): End index for validation set.
+        test_start (Optional[str]): Start index for test set.
+        test_end (Optional[str]): End index for test set.
+        train_split (Optional[float]): Proportion of data for training set.
+        validation_split (Optional[float]): Proportion for validation set.
+        test_split (Optional[float]): Proportion for test set.
         time_covariates (Optional[List[str]]): Time covariates added to dataset
-        output_col (list[int]): Indices of output columns in the data.
-        normalization (Optional[bool]): Whether to apply normalization.
+        output_col (list[int]): Column's indice for target variable.
+        normalization (Optional[bool]): Whether to apply data standardization
+                                        (zero mean, unit standard deviation).
+
+    Examples:
+        >>> import pandas as pd
+        >>> from canari import DataProcess
+        >>> dt_index = pd.date_range(start="2025-01-01", periods=11, freq="H")
+        >>> data = pd.DataFrame({'value': np.linspace(0.1, 1.0, 11)},
+                                index=dt_index)
+        >>> dp = DataProcess(data,
+                            train_split=0.7,
+                            validation_split=0.2,
+                            test_split=0.1,
+                            time_covariates = ["hour_of_day"],
+                            normalization=True,)
     """
 
     def __init__(
@@ -69,24 +79,26 @@ class DataProcess:
         self.data = data.copy()
         self.norm_const_mean, self.norm_const_std = None, None
 
-        self.add_time_covariates()
-        self.get_split_start_end_indices()
-        self.compute_normalization_constants()
+        self._add_time_covariates()
+        self._get_split_start_end_indices()
+        self._compute_normalization_constants()
 
         # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
 
-    def add_time_covariates(self):
+    def _add_time_covariates(self):
         """
         Add time covariates to the dataset.
         Supported covariates include:
+
         - hour_of_day
         - day_of_week
         - day_of_year
         - week_of_year
         - month_of_year
         - quarter_of_year
+
         """
         if self.time_covariates is not None:
             for time_cov in self.time_covariates:
@@ -105,7 +117,7 @@ class DataProcess:
                 elif time_cov == "quarter_of_year":
                     self.data["quarter"] = np.float32(self.data.index.quarter)
 
-    def get_split_start_end_indices(self):
+    def _get_split_start_end_indices(self):
         """
         Determine start and end indices for training, validation, and test splits.
         """
@@ -141,7 +153,7 @@ class DataProcess:
             else:
                 self.test_end = self.data.index.get_loc(self.test_end)
 
-    def compute_normalization_constants(self):
+    def _compute_normalization_constants(self):
         """
         Compute normalization statistics (mean, std) based on training data.
         """
@@ -155,6 +167,7 @@ class DataProcess:
 
     def normalize_data(self) -> np.ndarray:
         """
+        TODO: unnomalize data method
         Normalize the data using training statistics.
 
         Returns:
@@ -172,10 +185,13 @@ class DataProcess:
 
     def get_split_indices(self) -> Tuple[np.array, np.array, np.array]:
         """
-        Get the index ranges for the three data splits.
+        Get the index ranges for the train, validation, and test splits.
 
         Returns:
             Tuple[np.array, np.array, np.array]: Train, validation, and test indices.
+
+        Examples:
+            >>> train_index, val_index, test_index = dp.get_split_indices()
         """
         train_index = np.arange(self.train_start, self.train_end)
         validation_index = np.arange(self.validation_start, self.validation_end)
@@ -184,12 +200,20 @@ class DataProcess:
 
     def get_splits(
         self,
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    ) -> Tuple[
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+    ]:
         """
-        Retrieve the input, output pairs (x, y) for train, validation, and test sets.
+        Retrieve the input, output pairs (x, y) for train, validation, test sets, and all data.
 
         Returns:
             Tuple of dictionaries, each with keys "x" and "y".
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
         """
         data = self.normalize_data()
         return (
@@ -229,10 +253,13 @@ class DataProcess:
         Args:
             split (str): One of ['train', 'validation', 'test', 'all'].
             normalization (bool): Whether to normalize the output.
-            column (Optional[int]): Specific column index to fetch.
+            column (Optional[int]):  Column index.
 
         Returns:
             np.ndarray: The extracted values.
+
+        Examples:
+            >>> values = dp.get_data(split="train", normalization=True, column=[0])
         """
         if normalization:
             data = self.normalize_data()
@@ -267,6 +294,9 @@ class DataProcess:
 
         Returns:
             np.ndarray: Array of timestamps.
+
+        Examples:
+            >>> time = dp.get_time(split="train")
         """
         train_index, val_index, test_index = self.get_split_indices()
         if split == "train":
@@ -283,28 +313,33 @@ class DataProcess:
             )
 
     @staticmethod
-    def add_lagged_columns(df, lags_per_column):
+    def add_lagged_columns(
+        data: pd.DataFrame, lags_per_column: list[int]
+    ) -> pd.DataFrame:
         """
         Add lagged versions of each column in the dataset, then add to the dataset as
         new columns.
 
         Args:
-            df (pd.DataFrame): Input DataFrame with datetime index.
+            data (pd.DataFrame): Input DataFrame with datetime index.
             lags_per_column (list[int]): Number of lags per column.
 
         Returns:
             pd.DataFrame: New DataFrame with lagged columns.
+
+        Examples:
+            >>> data_lag = DataProcess.add_lagged_columns(data, [2])
         """
-        df_new = pd.DataFrame(index=df.index)
+        df_new = pd.DataFrame(index=data.index)
         for col_idx, num_lags in enumerate(lags_per_column):
-            col = df.iloc[:, col_idx]
+            col = data.iloc[:, col_idx]
             df_new[col.name] = col
             for lag in range(1, num_lags + 1):
                 df_new[f"{col.name}_lag{lag}"] = col.shift(lag).fillna(0)
 
-        if len(lags_per_column) < df.shape[1]:
-            for col_idx in range(len(lags_per_column), df.shape[1]):
-                col = df.iloc[:, col_idx]
+        if len(lags_per_column) < data.shape[1]:
+            for col_idx in range(len(lags_per_column), data.shape[1]):
+                col = data.iloc[:, col_idx]
                 df_new[col.name] = col
 
         return df_new
@@ -318,10 +353,14 @@ class DataProcess:
         anomaly_end: Optional[float] = 0.66,
     ) -> List[Dict[str, np.ndarray]]:
         """
-        Add synthetic anomalies to a time series dataset.
+        # TODO
+        Add synthetic anomalies randomly to a train, validation, or test sets.
+        From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
+        Following a uniform distribution, randomly choose in this window where the anomaly starts.
+        Data after the anomaly start is shifted a by `slope`.
 
         Args:
-            data (dict): Original data dict with "x" and "y".
+            data (dict): Data dict with "x" and "y".
             num_samples (int): Number of anomaly to generate.
             slope (list[float]): Slope for anomaly.
             anomaly_start (float): Start of anomaly window (0–1).
@@ -329,6 +368,14 @@ class DataProcess:
 
         Returns:
             list: Data dicts with anomalies injected.
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
+            >>> train_set_with_anomaly = DataProcess.add_synthetic_anomaly(
+                                            train_set,
+                                            num_samples=2,
+                                            slope=[0.01, 0.1],
+                                        )
         """
         _data_with_anomaly = []
         len_data = len(data["y"])
@@ -358,15 +405,21 @@ class DataProcess:
         ]
 
     @staticmethod
-    def decompose_data(data):
+    def decompose_data(data) -> Tuple[np.ndarray, float, np.ndarray, np.ndarray]:
         """
-        Decompose a signal into trend, seasonality, and residual using Fourier transform.
+        Decompose a time series into a linear trend, seasonality, and residual
+        using Fourier transform.
 
         Args:
-            data (array-like): 1D numeric time series.
+            data (np.ndarray): 1D array.
 
         Returns:
-            tuple: (trend, slope, seasonality, residual)
+            tuple: (trend, slope_of_trend, seasonality, residual)
+
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
+            >>> trend, slope_of_trend, seasonality, residual = DataProcess.decompose_data(train_set["y"].flatten())
         """
 
         def handle_missing_data(data):
