@@ -6,7 +6,6 @@ from prophet.plot import add_changepoints_to_plot
 df = pd.read_csv('https://raw.githubusercontent.com/facebook/prophet/main/examples/example_wp_log_peyton_manning.csv')
 df.head()
 
-# Keep 20% of the data
 df = df.iloc[:int(len(df) * 1)]
 
 m = Prophet(changepoint_range=1, n_changepoints =int(len(df) * 0.1), changepoint_prior_scale=0.005)
