@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>canari.data_process &mdash; canari v.0.0.1 documentation</title>
+  <title>canari.data_process &mdash; canari v.0.0.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=e3cb8337"></script>
+      <script src="../../_static/documentation_options.js?v=d433095d"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -74,19 +74,7 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.data_process</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Data processing for time series tasks.</span>
-
-<span class="sd">This module provides the `DataProcess` class to facilitate:</span>
-<span class="sd">- Splitting into training, validation, and test sets</span>
-<span class="sd">- Adding time covariates (hour, day, month, etc.)</span>
-<span class="sd">- Normalizing the dataset based on training statistics</span>
-<span class="sd">- Generating lagged versions of features</span>
-<span class="sd">- Injecting synthetic anomalies for testing</span>
-<span class="sd">- Decomposing signals into trend, seasonality, and residual components</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
@@ -96,22 +84,44 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">DataProcess</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class for preprocessing time series data.</span>
+<span class="sd">    Data processing for time series.</span>
+
+<span class="sd">    This module provides the `DataProcess` class to facilitate:</span>
+
+<span class="sd">    - Standardize datasets based on training statistics</span>
+<span class="sd">    - Split data into training, validation, and test sets</span>
+<span class="sd">    - Add time covariates (hour, day, month, etc.) to data</span>
+<span class="sd">    - Generate lagged versions of features</span>
+<span class="sd">    - Add synthetic anomalies to data</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        data (pd.DataFrame): Input time series data with a datetime index.</span>
-<span class="sd">        train_start (Optional[str]): Start datetime for training data.</span>
-<span class="sd">        train_end (Optional[str]): End datetime for training data.</span>
-<span class="sd">        validation_start (Optional[str]): Start datetime for validation data.</span>
-<span class="sd">        validation_end (Optional[str]): End datetime for validation data.</span>
-<span class="sd">        test_start (Optional[str]): Start datetime for test data.</span>
-<span class="sd">        test_end (Optional[str]): End datetime for test data.</span>
-<span class="sd">        train_split (Optional[float]): Proportion of data to allocate to training.</span>
-<span class="sd">        validation_split (Optional[float]): Proportion for validation data.</span>
-<span class="sd">        test_split (Optional[float]): Proportion for test data.</span>
+<span class="sd">        data (pd.DataFrame): Input DataFrame with a datetime or numeric index.</span>
+<span class="sd">        train_start (Optional[str]): Start index for training set.</span>
+<span class="sd">        train_end (Optional[str]): End index for training set.</span>
+<span class="sd">        validation_start (Optional[str]): Start index for validation set.</span>
+<span class="sd">        validation_end (Optional[str]): End index for validation set.</span>
+<span class="sd">        test_start (Optional[str]): Start index for test set.</span>
+<span class="sd">        test_end (Optional[str]): End index for test set.</span>
+<span class="sd">        train_split (Optional[float]): Proportion of data for training set.</span>
+<span class="sd">        validation_split (Optional[float]): Proportion for validation set.</span>
+<span class="sd">        test_split (Optional[float]): Proportion for test set.</span>
 <span class="sd">        time_covariates (Optional[List[str]]): Time covariates added to dataset</span>
-<span class="sd">        output_col (list[int]): Indices of output columns in the data.</span>
-<span class="sd">        normalization (Optional[bool]): Whether to apply normalization.</span>
+<span class="sd">        output_col (list[int]): Column&#39;s indice for target variable.</span>
+<span class="sd">        normalization (Optional[bool]): Whether to apply data standardization</span>
+<span class="sd">                                        (zero mean, unit standard deviation).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; from canari import DataProcess</span>
+<span class="sd">        &gt;&gt;&gt; dt_index = pd.date_range(start=&quot;2025-01-01&quot;, periods=11, freq=&quot;H&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; data = pd.DataFrame({&#39;value&#39;: np.linspace(0.1, 1.0, 11)},</span>
+<span class="sd">                                index=dt_index)</span>
+<span class="sd">        &gt;&gt;&gt; dp = DataProcess(data,</span>
+<span class="sd">                            train_split=0.7,</span>
+<span class="sd">                            validation_split=0.2,</span>
+<span class="sd">                            test_split=0.1,</span>
+<span class="sd">                            time_covariates = [&quot;hour_of_day&quot;],</span>
+<span class="sd">                            normalization=True,)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -147,26 +157,26 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_time_covariates</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">get_split_start_end_indices</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">compute_normalization_constants</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_time_covariates</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_split_start_end_indices</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_compute_normalization_constants</span><span class="p">()</span>
 
         <span class="c1"># Covariates columns</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">covariates_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">covariates_col</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_col</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
 
-<div class="viewcode-block" id="DataProcess.add_time_covariates">
-<a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.add_time_covariates">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">add_time_covariates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_time_covariates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add time covariates to the dataset.</span>
 <span class="sd">        Supported covariates include:</span>
+
 <span class="sd">        - hour_of_day</span>
 <span class="sd">        - day_of_week</span>
 <span class="sd">        - day_of_year</span>
 <span class="sd">        - week_of_year</span>
 <span class="sd">        - month_of_year</span>
 <span class="sd">        - quarter_of_year</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">time_cov</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span><span class="p">:</span>
@@ -183,12 +193,9 @@
                 <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;month_of_year&quot;</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;month&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;quarter_of_year&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;quarter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">quarter</span><span class="p">)</span></div>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;quarter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">quarter</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DataProcess.get_split_start_end_indices">
-<a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.get_split_start_end_indices">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_split_start_end_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_split_start_end_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Determine start and end indices for training, validation, and test splits.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -222,12 +229,9 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="o">=</span> <span class="n">num_data</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_end</span><span class="p">)</span></div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_end</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DataProcess.compute_normalization_constants">
-<a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.compute_normalization_constants">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compute_normalization_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_normalization_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute normalization statistics (mean, std) based on training data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -237,13 +241,13 @@
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></div>
-
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
 <div class="viewcode-block" id="DataProcess.normalize_data">
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.normalize_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        TODO: unnomalize data method</span>
 <span class="sd">        Normalize the data using training statistics.</span>
 
 <span class="sd">        Returns:</span>
@@ -264,10 +268,13 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.get_split_indices">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_split_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the index ranges for the three data splits.</span>
+<span class="sd">        Get the index ranges for the train, validation, and test splits.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple[np.array, np.array, np.array]: Train, validation, and test indices.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; train_index, val_index, test_index = dp.get_split_indices()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">train_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_end</span><span class="p">)</span>
         <span class="n">validation_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_end</span><span class="p">)</span>
@@ -279,12 +286,20 @@
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.get_splits">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_splits</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Retrieve the input, output pairs (x, y) for train, validation, and test sets.</span>
+<span class="sd">        Retrieve the input, output pairs (x, y) for train, validation, test sets, and all data.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple of dictionaries, each with keys &quot;x&quot; and &quot;y&quot;.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">(</span>
@@ -327,10 +342,13 @@
 <span class="sd">        Args:</span>
 <span class="sd">            split (str): One of [&#39;train&#39;, &#39;validation&#39;, &#39;test&#39;, &#39;all&#39;].</span>
 <span class="sd">            normalization (bool): Whether to normalize the output.</span>
-<span class="sd">            column (Optional[int]): Specific column index to fetch.</span>
+<span class="sd">            column (Optional[int]):  Column index.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: The extracted values.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; values = dp.get_data(split=&quot;train&quot;, normalization=True, column=[0])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
@@ -368,6 +386,9 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: Array of timestamps.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; time = dp.get_time(split=&quot;train&quot;)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">train_index</span><span class="p">,</span> <span class="n">val_index</span><span class="p">,</span> <span class="n">test_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">split</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
@@ -387,28 +408,33 @@
 <div class="viewcode-block" id="DataProcess.add_lagged_columns">
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.add_lagged_columns">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">add_lagged_columns</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">lags_per_column</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_lagged_columns</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">lags_per_column</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add lagged versions of each column in the dataset, then add to the dataset as</span>
 <span class="sd">        new columns.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df (pd.DataFrame): Input DataFrame with datetime index.</span>
+<span class="sd">            data (pd.DataFrame): Input DataFrame with datetime index.</span>
 <span class="sd">            lags_per_column (list[int]): Number of lags per column.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.DataFrame: New DataFrame with lagged columns.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; data_lag = DataProcess.add_lagged_columns(data, [2])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">df_new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">df_new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">col_idx</span><span class="p">,</span> <span class="n">num_lags</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lags_per_column</span><span class="p">):</span>
-            <span class="n">col</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
             <span class="n">df_new</span><span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span>
             <span class="k">for</span> <span class="n">lag</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_lags</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">df_new</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_lag</span><span class="si">{</span><span class="n">lag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">lag</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lags_per_column</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-            <span class="k">for</span> <span class="n">col_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lags_per_column</span><span class="p">),</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">col</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lags_per_column</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">col_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lags_per_column</span><span class="p">),</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
                 <span class="n">df_new</span><span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span>
 
         <span class="k">return</span> <span class="n">df_new</span></div>
@@ -425,10 +451,14 @@
         <span class="n">anomaly_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.66</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add synthetic anomalies to a time series dataset.</span>
+<span class="sd">        # TODO</span>
+<span class="sd">        Add synthetic anomalies randomly to a train, validation, or test sets.</span>
+<span class="sd">        From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).</span>
+<span class="sd">        Following a uniform distribution, randomly choose in this window where the anomaly starts.</span>
+<span class="sd">        Data after the anomaly start is shifted a by `slope`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            data (dict): Original data dict with &quot;x&quot; and &quot;y&quot;.</span>
+<span class="sd">            data (dict): Data dict with &quot;x&quot; and &quot;y&quot;.</span>
 <span class="sd">            num_samples (int): Number of anomaly to generate.</span>
 <span class="sd">            slope (list[float]): Slope for anomaly.</span>
 <span class="sd">            anomaly_start (float): Start of anomaly window (0–1).</span>
@@ -436,6 +466,14 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list: Data dicts with anomalies injected.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
+<span class="sd">            &gt;&gt;&gt; train_set_with_anomaly = DataProcess.add_synthetic_anomaly(</span>
+<span class="sd">                                            train_set,</span>
+<span class="sd">                                            num_samples=2,</span>
+<span class="sd">                                            slope=[0.01, 0.1],</span>
+<span class="sd">                                        )</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">_data_with_anomaly</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">len_data</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
@@ -468,15 +506,21 @@
 <div class="viewcode-block" id="DataProcess.decompose_data">
 <a class="viewcode-back" href="../../api/canari.html#canari.data_process.DataProcess.decompose_data">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">decompose_data</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decompose_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Decompose a signal into trend, seasonality, and residual using Fourier transform.</span>
+<span class="sd">        Decompose a time series into a linear trend, seasonality, and residual</span>
+<span class="sd">        using Fourier transform.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            data (array-like): 1D numeric time series.</span>
+<span class="sd">            data (np.ndarray): 1D array.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            tuple: (trend, slope, seasonality, residual)</span>
+<span class="sd">            tuple: (trend, slope_of_trend, seasonality, residual)</span>
+
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
+<span class="sd">            &gt;&gt;&gt; dp = DataProcess.decompose_data(train_set[&quot;y&quot;].flatten())</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">handle_missing_data</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
