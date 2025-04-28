@@ -7,7 +7,7 @@ with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a laten
 
 from typing import Optional
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 
 
 class WhiteNoise(BaseComponent):

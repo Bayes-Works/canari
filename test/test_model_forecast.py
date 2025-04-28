@@ -8,16 +8,8 @@ import matplotlib.pyplot as plt
 from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 
-from src import (
-    LocalTrend,
-    LstmNetwork,
-    Autoregression,
-    WhiteNoise,
-    Model,
-    plot_data,
-    plot_prediction,
-)
-from examples import DataProcess
+from canari import DataProcess, Model, plot_data, plot_prediction
+from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 
 def model_test_runner(model: Model, plot: bool) -> float:

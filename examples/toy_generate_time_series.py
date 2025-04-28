@@ -5,17 +5,14 @@ import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
-from canari.data_process import DataProcess
-from canari.baseline_component import LocalTrend
-from canari.lstm_component import LstmNetwork
-from canari.autoregression_component import Autoregression
-from canari.model import Model
-from canari.data_visualization import (
+from canari import (
+    DataProcess,
+    Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
-
+from canari.component import LocalTrend, LstmNetwork, Autoregression
 
 # # Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"

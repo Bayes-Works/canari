@@ -7,6 +7,7 @@ saved_results/
 *.egg-info/
 *.png
 dist
+docs
 data/demo_data
 data/benchmark_data/
 saved_params/

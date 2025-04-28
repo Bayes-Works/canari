@@ -25,18 +25,18 @@ Open-source library for probabilistic anomaly detection in time series
     pip install pycanari
     ```
 
-2. [Search pycanari and download pycanari-0.0.1.tar.gz file from the lastest version](https://pypi.org)
+2. [Search pycanari and download pycanari-0.0.2.tar.gz file from the lastest version](https://pypi.org)
 
-3. Copy the downloaded pycanari-0.0.1.tar file to the your working folder
+3. Copy the downloaded pycanari-0.0.2.tar file to the your working folder
 
-4. Extract the pycanari-0.0.1.tar file using:
+4. Extract the pycanari-0.0.2.tar file using:
 
     ```sh
-    tar -xvf pycanari-0.0.1.tar
+    tar -xvf pycanari-0.0.2.tar
     ```
 5. Set directory
     ```sh
-    cd pycanari-0.0.1
+    cd pycanari-0.0.2
     ```
 
 6. Run:
@@ -57,7 +57,7 @@ Open-source library for probabilistic anomaly detection in time series
     python -m examples.toy_forecast
     ```
 
-NOTE: Replace the name `pycanari-0.0.1` with the corresponding version, e.g. pycanari-0.0.2
+NOTE: Replace the name `pycanari-0.0.2` with the corresponding version, e.g. pycanari-0.0.3
 
 
 ## Code organization

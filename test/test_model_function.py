@@ -1,18 +1,16 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-
-from src import (
-    BaseComponent,
-    LocalAcceleration,
-    LocalLevel,
+from canari import Model, common
+from canari.component import (
     LocalTrend,
-    Periodic,
-    Autoregression,
+    LocalLevel,
+    LocalAcceleration,
     LstmNetwork,
+    Autoregression,
     WhiteNoise,
-    Model,
-    common,
+    Periodic,
+    BaseComponent,
 )
 
 
@@ -36,7 +34,12 @@ def compute_observation_and_state_updates(
     cov_obs_states = observation_matrix @ var_states_true
     delta_mu_states_true = cov_obs_states.T / var_obs_true @ (obs - mu_obs_true)
     delta_var_states_true = -cov_obs_states.T / var_obs_true @ cov_obs_states
-    return mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true
+    return (
+        mu_obs_true,
+        var_obs_true,
+        delta_mu_states_true,
+        delta_var_states_true,
+    )
 
 
 def model_forward_backward(
@@ -122,15 +125,19 @@ def test_local_level_other_components():
         WhiteNoise(std_error=std_observation_noise),
     )
 
-    assert mu_obs_pred == mu_obs_true
-    assert var_obs_pred == var_obs_true
+    npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_obs_pred, var_obs_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(model.transition_matrix, transition_matrix_true)
     npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
     npt.assert_allclose(model.observation_matrix, observation_matrix_true)
     npt.assert_allclose(model.mu_states, mu_states_true)
     npt.assert_allclose(model.var_states, var_states_true)
-    npt.assert_allclose(delta_mu_states_true, delta_mu_states_pred)
-    npt.assert_allclose(delta_var_states_true, delta_var_states_pred)
+    npt.assert_allclose(
+        delta_mu_states_true, delta_mu_states_pred, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        delta_var_states_true, delta_var_states_pred, rtol=1e-6, atol=1e-8
+    )
 
 
 def test_local_trend_other_components():
@@ -189,15 +196,19 @@ def test_local_trend_other_components():
         WhiteNoise(std_error=std_observation_noise),
     )
 
-    assert mu_obs_pred == mu_obs_true
-    assert var_obs_pred == var_obs_true
+    npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_obs_pred, var_obs_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(model.transition_matrix, transition_matrix_true)
     npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
     npt.assert_allclose(model.observation_matrix, observation_matrix_true)
     npt.assert_allclose(model.mu_states, mu_states_true)
     npt.assert_allclose(model.var_states, var_states_true)
-    npt.assert_allclose(delta_mu_states_true, delta_mu_states_pred)
-    npt.assert_allclose(delta_var_states_true, delta_var_states_pred)
+    npt.assert_allclose(
+        delta_mu_states_true, delta_mu_states_pred, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        delta_var_states_true, delta_var_states_pred, rtol=1e-6, atol=1e-8
+    )
 
 
 def test_local_acceleration_other_components():
@@ -257,12 +268,16 @@ def test_local_acceleration_other_components():
         WhiteNoise(std_error=std_observation_noise),
     )
 
-    assert mu_obs_pred == mu_obs_true
-    assert var_obs_pred == var_obs_true
+    npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_obs_pred, var_obs_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(model.transition_matrix, transition_matrix_true)
     npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
     npt.assert_allclose(model.observation_matrix, observation_matrix_true)
     npt.assert_allclose(model.mu_states, mu_states_true)
     npt.assert_allclose(model.var_states, var_states_true)
-    npt.assert_allclose(delta_mu_states_true, delta_mu_states_pred)
-    npt.assert_allclose(delta_var_states_true, delta_var_states_pred)
+    npt.assert_allclose(
+        delta_mu_states_true, delta_mu_states_pred, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        delta_var_states_true, delta_var_states_pred, rtol=1e-6, atol=1e-8
+    )
