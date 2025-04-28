@@ -9,7 +9,7 @@ df.head()
 # Keep 20% of the data
 df = df.iloc[:int(len(df) * 1)]
 
-m = Prophet(changepoint_range=1, n_changepoints =int(len(df) * 0.05), changepoint_prior_scale=0.001)
+m = Prophet(changepoint_range=1, n_changepoints =int(len(df) * 0.1), changepoint_prior_scale=0.005)
 m.fit(df)
 
 future = m.make_future_dataframe(periods=365)
