@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>canari &mdash; canari v.0.0.1 documentation</title>
+  <title>canari &mdash; canari v.0.0.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=e3cb8337"></script>
+      <script src="../_static/documentation_options.js?v=d433095d"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -53,12 +53,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#canari.data_process.DataProcess"><code class="docutils literal notranslate"><span class="pre">DataProcess</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.add_lagged_columns"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_lagged_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.add_synthetic_anomaly"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_synthetic_anomaly()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.add_time_covariates"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_time_covariates()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.compute_normalization_constants"><code class="docutils literal notranslate"><span class="pre">DataProcess.compute_normalization_constants()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.decompose_data"><code class="docutils literal notranslate"><span class="pre">DataProcess.decompose_data()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.get_data"><code class="docutils literal notranslate"><span class="pre">DataProcess.get_data()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.get_split_indices"><code class="docutils literal notranslate"><span class="pre">DataProcess.get_split_indices()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.get_split_start_end_indices"><code class="docutils literal notranslate"><span class="pre">DataProcess.get_split_start_end_indices()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.get_splits"><code class="docutils literal notranslate"><span class="pre">DataProcess.get_splits()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.get_time"><code class="docutils literal notranslate"><span class="pre">DataProcess.get_time()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#canari.data_process.DataProcess.normalize_data"><code class="docutils literal notranslate"><span class="pre">DataProcess.normalize_data()</span></code></a></li>
@@ -326,47 +323,62 @@
 <h1>canari<a class="headerlink" href="#canari" title="Link to this heading"></a></h1>
 <section id="module-canari.data_process">
 <span id="data-process"></span><h2>Data Process<a class="headerlink" href="#module-canari.data_process" title="Link to this heading"></a></h2>
-<p>Data processing for time series tasks.</p>
-<p>This module provides the <cite>DataProcess</cite> class to facilitate:
-- Splitting into training, validation, and test sets
-- Adding time covariates (hour, day, month, etc.)
-- Normalizing the dataset based on training statistics
-- Generating lagged versions of features
-- Injecting synthetic anomalies for testing
-- Decomposing signals into trend, seasonality, and residual components</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_process.</span></span><span class="sig-name descname"><span class="pre">DataProcess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A class for preprocessing time series data.</p>
+<p>Data processing for time series.</p>
+<p>This module provides the <cite>DataProcess</cite> class to facilitate:</p>
+<ul class="simple">
+<li><p>Standardize datasets based on training statistics</p></li>
+<li><p>Split data into training, validation, and test sets</p></li>
+<li><p>Add time covariates (hour, day, month, etc.) to data</p></li>
+<li><p>Generate lagged versions of features</p></li>
+<li><p>Add synthetic anomalies to data</p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>pd.DataFrame</em>) – Input time series data with a datetime index.</p></li>
-<li><p><strong>train_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start datetime for training data.</p></li>
-<li><p><strong>train_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End datetime for training data.</p></li>
-<li><p><strong>validation_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start datetime for validation data.</p></li>
-<li><p><strong>validation_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End datetime for validation data.</p></li>
-<li><p><strong>test_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start datetime for test data.</p></li>
-<li><p><strong>test_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End datetime for test data.</p></li>
-<li><p><strong>train_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion of data to allocate to training.</p></li>
-<li><p><strong>validation_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for validation data.</p></li>
-<li><p><strong>test_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for test data.</p></li>
+<li><p><strong>data</strong> (<em>pd.DataFrame</em>) – Input DataFrame with a datetime or numeric index.</p></li>
+<li><p><strong>train_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start index for training set.</p></li>
+<li><p><strong>train_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End index for training set.</p></li>
+<li><p><strong>validation_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start index for validation set.</p></li>
+<li><p><strong>validation_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End index for validation set.</p></li>
+<li><p><strong>test_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start index for test set.</p></li>
+<li><p><strong>test_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End index for test set.</p></li>
+<li><p><strong>train_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion of data for training set.</p></li>
+<li><p><strong>validation_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for validation set.</p></li>
+<li><p><strong>test_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for test set.</p></li>
 <li><p><strong>time_covariates</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Time covariates added to dataset</p></li>
-<li><p><strong>output_col</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Indices of output columns in the data.</p></li>
-<li><p><strong>normalization</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Whether to apply normalization.</p></li>
+<li><p><strong>output_col</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Column’s indice for target variable.</p></li>
+<li><p><strong>normalization</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Whether to apply data standardization
+(zero mean, unit standard deviation).</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dt_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s2">&quot;2025-01-01&quot;</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">&quot;H&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">11</span><span class="p">)},</span>
+<span class="go">                        index=dt_index)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+<span class="go">                    train_split=0.7,</span>
+<span class="go">                    validation_split=0.2,</span>
+<span class="go">                    test_split=0.1,</span>
+<span class="go">                    time_covariates = [&quot;hour_of_day&quot;],</span>
+<span class="go">                    normalization=True,)</span>
+</pre></div>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.add_lagged_columns">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_lagged_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lags_per_column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.add_lagged_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.add_lagged_columns" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_lagged_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lags_per_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.add_lagged_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.add_lagged_columns" title="Link to this definition"></a></dt>
 <dd><p>Add lagged versions of each column in the dataset, then add to the dataset as
 new columns.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<em>pd.DataFrame</em>) – Input DataFrame with datetime index.</p></li>
+<li><p><strong>data</strong> (<em>pd.DataFrame</em>) – Input DataFrame with datetime index.</p></li>
 <li><p><strong>lags_per_column</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Number of lags per column.</p></li>
 </ul>
 </dd>
@@ -377,16 +389,24 @@ new columns.</p>
 <dd class="field-odd"><p>pd.DataFrame</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data_lag</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">add_lagged_columns</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.add_synthetic_anomaly">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_synthetic_anomaly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.33</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.66</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.add_synthetic_anomaly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.add_synthetic_anomaly" title="Link to this definition"></a></dt>
-<dd><p>Add synthetic anomalies to a time series dataset.</p>
+<dd><p># TODO
+Add synthetic anomalies randomly to a train, validation, or test sets.
+From the orginal data, choose a window between <cite>anomaly_start</cite> and <cite>anomaly_end</cite> (ratio: 0-1).
+Following a uniform distribution, randomly choose in this window where the anomaly starts.
+Data after the anomaly start is shifted a by <cite>slope</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>dict</em>) – Original data dict with “x” and “y”.</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – Data dict with “x” and “y”.</p></li>
 <li><p><strong>num_samples</strong> (<em>int</em>) – Number of anomaly to generate.</p></li>
 <li><p><strong>slope</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – Slope for anomaly.</p></li>
 <li><p><strong>anomaly_start</strong> (<em>float</em>) – Start of anomaly window (0–1).</p></li>
@@ -400,42 +420,38 @@ new columns.</p>
 <dd class="field-odd"><p>list</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="canari.data_process.DataProcess.add_time_covariates">
-<span class="sig-name descname"><span class="pre">add_time_covariates</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.add_time_covariates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.add_time_covariates" title="Link to this definition"></a></dt>
-<dd><p>Add time covariates to the dataset.
-Supported covariates include:
-- hour_of_day
-- day_of_week
-- day_of_year
-- week_of_year
-- month_of_year
-- quarter_of_year</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="canari.data_process.DataProcess.compute_normalization_constants">
-<span class="sig-name descname"><span class="pre">compute_normalization_constants</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.compute_normalization_constants"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.compute_normalization_constants" title="Link to this definition"></a></dt>
-<dd><p>Compute normalization statistics (mean, std) based on training data.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">train_set_with_anomaly</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">add_synthetic_anomaly</span><span class="p">(</span>
+<span class="go">                                train_set,</span>
+<span class="go">                                num_samples=2,</span>
+<span class="go">                                slope=[0.01, 0.1],</span>
+<span class="go">                            )</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.decompose_data">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decompose_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.decompose_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.decompose_data" title="Link to this definition"></a></dt>
-<dd><p>Decompose a signal into trend, seasonality, and residual using Fourier transform.</p>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decompose_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.decompose_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.decompose_data" title="Link to this definition"></a></dt>
+<dd><p>Decompose a time series into a linear trend, seasonality, and residual
+using Fourier transform.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>array-like</em>) – 1D numeric time series.</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>np.ndarray</em>) – 1D array.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(trend, slope, seasonality, residual)</p>
+<dd class="field-even"><p>(trend, slope_of_trend, seasonality, residual)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">decompose_data</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -447,7 +463,7 @@ Supported covariates include:
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>split</strong> (<em>str</em>) – One of [‘train’, ‘validation’, ‘test’, ‘all’].</p></li>
 <li><p><strong>normalization</strong> (<em>bool</em>) – Whether to normalize the output.</p></li>
-<li><p><strong>column</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Specific column index to fetch.</p></li>
+<li><p><strong>column</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Column index.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -457,12 +473,16 @@ Supported covariates include:
 <dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">values</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.get_split_indices">
 <span class="sig-name descname"><span class="pre">get_split_indices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.get_split_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.get_split_indices" title="Link to this definition"></a></dt>
-<dd><p>Get the index ranges for the three data splits.</p>
+<dd><p>Get the index ranges for the train, validation, and test splits.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Train, validation, and test indices.</p>
@@ -471,23 +491,25 @@ Supported covariates include:
 <dd class="field-even"><p>Tuple[np.array, np.array, np.array]</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="canari.data_process.DataProcess.get_split_start_end_indices">
-<span class="sig-name descname"><span class="pre">get_split_start_end_indices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.get_split_start_end_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.get_split_start_end_indices" title="Link to this definition"></a></dt>
-<dd><p>Determine start and end indices for training, validation, and test splits.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_index</span><span class="p">,</span> <span class="n">val_index</span><span class="p">,</span> <span class="n">test_index</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">()</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.get_splits">
-<span class="sig-name descname"><span class="pre">get_splits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.get_splits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.get_splits" title="Link to this definition"></a></dt>
-<dd><p>Retrieve the input, output pairs (x, y) for train, validation, and test sets.</p>
+<span class="sig-name descname"><span class="pre">get_splits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.get_splits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.get_splits" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the input, output pairs (x, y) for train, validation, test sets, and all data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple of dictionaries, each with keys “x” and “y”.</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -505,12 +527,17 @@ Supported covariates include:
 <dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">time</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.normalize_data">
 <span class="sig-name descname"><span class="pre">normalize_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.normalize_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.normalize_data" title="Link to this definition"></a></dt>
-<dd><p>Normalize the data using training statistics.</p>
+<dd><p>TODO: unnomalize data method
+Normalize the data using training statistics.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Normalized dataset.</p>

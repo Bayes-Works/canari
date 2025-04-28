@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath("/Users/vuongdai/GitHub/canari/src"))
 project = "canari"
 copyright = "2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet"
 author = "Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet"
-release = "v.0.0.1"
+release = "v.0.0.2"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
