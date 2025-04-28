@@ -7,7 +7,7 @@ local trend, and local acceleration dynamics. Each class inherits from `BaseComp
 
 from typing import Optional
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 
 
 class LocalLevel(BaseComponent):

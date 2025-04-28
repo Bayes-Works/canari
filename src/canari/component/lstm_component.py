@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from canari.base_component import BaseComponent
+from canari.component.base_component import BaseComponent
 import pytagi
 from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
 

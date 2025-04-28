@@ -1,22 +1,10 @@
-import os
 import pandas as pd
 import numpy as np
-import pytest
 import matplotlib.pyplot as plt
 from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
-
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    SKF,
-    plot_skf_states,
-)
-from examples import DataProcess
+from canari import Model, SKF, DataProcess, plot_skf_states
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Components
 sigma_v = 5e-2
