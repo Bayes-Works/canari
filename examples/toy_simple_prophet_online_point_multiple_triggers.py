@@ -56,6 +56,7 @@ for i in range(len(df_raw)-begin_idx):
 
     m = Prophet(changepoint_range=1)
     m.fit(df)
+    changepoint_grid_width = m.changepoints.index[1]- m.changepoints.index[0]
 
     # future = m.make_future_dataframe(periods=365)
     # print(future.tail())
@@ -111,7 +112,7 @@ for i in range(len(df_raw)-begin_idx):
         else:
             for cp in signif_changepoints:
                 changepoint_increase = False
-                if cp > latest_changepoint:
+                if cp - pd.Timedelta(weeks=changepoint_grid_width) > latest_changepoint:
                     latest_changepoint = cp
                     change_points_predicted.append(cp)
                     changepoint_increase = True

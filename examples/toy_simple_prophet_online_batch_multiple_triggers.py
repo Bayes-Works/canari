@@ -57,6 +57,7 @@ for i, percentage in enumerate(percentages_check):
     # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
     m = Prophet(changepoint_range=1)
     m.fit(df)
+    changepoint_grid_width = m.changepoints.index[1]- m.changepoints.index[0]
 
     # future = m.make_future_dataframe(periods=365)
     # print(future.tail())
@@ -117,7 +118,7 @@ for i, percentage in enumerate(percentages_check):
                 changepoint_increase = False
                 print(cp)
                 print(latest_changepoint)
-                if cp > latest_changepoint:
+                if cp - pd.Timedelta(weeks=changepoint_grid_width) > latest_changepoint:
                     latest_changepoint = cp
                     change_points_predicted.append(cp)
                     changepoint_increase = True
