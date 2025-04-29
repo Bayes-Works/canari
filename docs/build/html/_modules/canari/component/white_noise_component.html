@@ -77,7 +77,7 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">White Noise Component for Canari</span>
 
-<span class="sd">This module defines the `WhiteNoise` component, a special case of a state-space model</span>
+
 <span class="sd">with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a latent process.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -90,18 +90,18 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.white_noise_component.WhiteNoise">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">WhiteNoise</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    White noise component for modeling i.i.d. Gaussian process errors.</span>
-
-<span class="sd">    This component represents a latent variable that has no memory or autoregression.</span>
+<span class="sd">    `WhiteNoise` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It is used to model i.i.d. Gaussian process errors.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Standard deviation of the white noise process. Default is 0.0.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the error. Default is 0.0.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; wn = WhiteNoise(std_error=0.5)</span>
-<span class="sd">        &gt;&gt;&gt; wn.transition_matrix</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import WhiteNoise</span>
+<span class="sd">        &gt;&gt;&gt; white_noise = WhiteNoise(std_error=0.5)</span>
+<span class="sd">        &gt;&gt;&gt; white_noise.transition_matrix</span>
 <span class="sd">        array([[0]])</span>
-<span class="sd">        &gt;&gt;&gt; wn.process_noise_matrix</span>
+<span class="sd">        &gt;&gt;&gt; white_noise.process_noise_matrix</span>
 <span class="sd">        array([[0.25]])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 

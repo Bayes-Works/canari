@@ -76,16 +76,72 @@
   <h1>Source code for canari.component.lstm_component</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pytagi</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi.nn</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequential</span><span class="p">,</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">Linear</span><span class="p">,</span> <span class="n">SLSTM</span><span class="p">,</span> <span class="n">SLinear</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 
 
 <div class="viewcode-block" id="LstmNetwork">
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.lstm_component.LstmNetwork">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LstmNetwork</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    LSTM component</span>
+<span class="sd">    LstmNetwork class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    This component configures a Bayesian LSTM neural network from `pyTAGI` library, and</span>
+<span class="sd">    it can be used in the same way as a traditional LSTM from PyTorch, e.g. to model</span>
+<span class="sd">    recurrent patterns such as seasonal and periodic patterns.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.</span>
+<span class="sd">        num_layer (Optional[int]): Number of LSTM layers. Defaults to 1.</span>
+<span class="sd">        num_hidden_unit (Optional[int] or list[int]): Number of hidden units per LSTM</span>
+<span class="sd">            layer. If an integer is provided, it is used for all layers. Defaults to 50.</span>
+<span class="sd">        look_back_len (Optional[int]): Number of past time steps the LSTM uses as input.</span>
+<span class="sd">            Defaults to 1.</span>
+<span class="sd">        num_features (Optional[int]): Number of input features. Defaults to 1.</span>
+<span class="sd">        num_output (Optional[int]): Number of output features predicted by the network.</span>
+<span class="sd">                                    Defaults to 1.</span>
+<span class="sd">        device (Optional[str]): Device for computation, either &quot;cpu&quot; or &quot;cuda&quot;. Defaults to &quot;cpu&quot;.</span>
+<span class="sd">        num_thread (Optional[int]): Number of CPU threads for computation. Defaults to 1.</span>
+<span class="sd">        manual_seed (Optional[int]): Seed for reproducibility, i.e. intializing LSTM&#39;s</span>
+<span class="sd">                                    weights and biases. Defaults to None (random initialization).</span>
+<span class="sd">        gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.</span>
+<span class="sd">        gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.</span>
+<span class="sd">        load_lstm_net (Optional[str]): TODO (provide variables): Path to a saved LSTM network</span>
+<span class="sd">                            file containing pretrained LSTM&#39;s weights and biases. Defaults to None.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+
+<span class="sd">    References:</span>
+<span class="sd">        Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and</span>
+<span class="sd">        state-space models through analytically tractable inference</span>
+<span class="sd">        &lt;https://www.sciencedirect.com/science/article/pii/S0169207024000335&gt;`_.</span>
+<span class="sd">        International Journal of Forecasting. Volume 41, Issue 1, Pages 128-140.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import LstmNetwork</span>
+<span class="sd">        &gt;&gt;&gt; lstm = LstmNetwork(</span>
+<span class="sd">        ...     std_error=0.1,</span>
+<span class="sd">        ...     num_layer=2,</span>
+<span class="sd">        ...     num_hidden_unit=[32, 16],</span>
+<span class="sd">        ...     look_back_len=5,</span>
+<span class="sd">        ...     num_features=3,</span>
+<span class="sd">        ...     device=&quot;cpu&quot;,</span>
+<span class="sd">        ...     manual_seed=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; lstm.states_name</span>
+<span class="sd">        [&#39;lstm&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; lstm.mu_states</span>
+<span class="sd">        array([[0.]])</span>
+<span class="sd">        &gt;&gt;&gt; lstm.var_states</span>
+<span class="sd">        array([[0.]])</span>
+<span class="sd">        &gt;&gt;&gt; lstm.transition_matrix</span>
+<span class="sd">        array([[0.]])</span>
+<span class="sd">        &gt;&gt;&gt; lstm.observation_matrix</span>
+<span class="sd">        array([[1.]])</span>
+<span class="sd">        &gt;&gt;&gt; lstm.process_noise_matrix</span>
+<span class="sd">        array([[0.01]])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -95,23 +151,21 @@
         <span class="n">num_hidden_unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
         <span class="n">look_back_len</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">num_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="n">input_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">num_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
         <span class="n">num_thread</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">manual_seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">gain_weight</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">gain_bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">load_lstm_net</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">std_error</span> <span class="o">=</span> <span class="n">std_error</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_layer</span> <span class="o">=</span> <span class="n">num_layer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_hidden_unit</span> <span class="o">=</span> <span class="n">num_hidden_unit</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">look_back_len</span> <span class="o">=</span> <span class="n">look_back_len</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_features</span> <span class="o">=</span> <span class="n">num_features</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">input_features</span> <span class="o">=</span> <span class="n">input_features</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_output</span> <span class="o">=</span> <span class="n">num_output</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_thread</span> <span class="o">=</span> <span class="n">num_thread</span>
@@ -184,6 +238,20 @@
 <div class="viewcode-block" id="LstmNetwork.initialize_lstm_network">
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.lstm_component.LstmNetwork.initialize_lstm_network">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_lstm_network</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequential</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Builds and returns the LSTM network as a `pytagi` Sequential model.</span>
+
+<span class="sd">        The network consists of:</span>
+
+<span class="sd">        - One or multiple LSTM layers, each with specified hidden units.</span>
+<span class="sd">        - A final Linear layer mapping to the desired output size.</span>
+
+<span class="sd">        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Sequential: A `pytagi` Sequential model representing the LSTM network.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">:</span>
             <span class="n">pytagi</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">)</span>
 

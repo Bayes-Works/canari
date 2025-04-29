@@ -74,15 +74,7 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.component.autoregression_component</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Autoregression Component for Canari</span>
-
-<span class="sd">This module defines an `Autoregression` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">It represents residuals following a univariate AR(1) process with optional learning of</span>
-<span class="sd">the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`).</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 
@@ -91,31 +83,52 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.autoregression_component.Autoregression">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Autoregression</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Autoregression component for modeling residual following a univariate AR(1) process.</span>
+<span class="sd">    `Autoregression` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models residuals following a univariate AR(1) process with optional learning of</span>
+<span class="sd">    the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`).</span>
 
 <span class="sd">    Parameters:</span>
-<span class="sd">        std_error (Optional[float]): Known standard deviation of the process noise. If None, it will be learned using AGVI.</span>
-<span class="sd">        phi (Optional[float]): Known autoregressive coefficient. If None, it will be learned using Gaussian Multiplicative Approximation (GMA).</span>
-<span class="sd">        mu_states (Optional[np.ndarray]): Initial mean values.</span>
-<span class="sd">        var_states (Optional[np.ndarray]): Initial covariance matrix.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to `None`.</span>
+<span class="sd">            If None, it will be learned using Approximate Gaussian Variance Inference (AGVI).</span>
+<span class="sd">        phi (Optional[float]): Autoregressive coefficient. Defaults to `None`.</span>
+<span class="sd">            If None, it will be learned using Gaussian Multiplicative Approximation (GMA).</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
 
 <span class="sd">    Behavior:</span>
-<span class="sd">        - Adds 2 extra states if `phi` is None.</span>
-<span class="sd">        - Adds 3 extra states if `std_error` is None.</span>
-<span class="sd">        - Initializes transition, observation, and noise matrices accordingly.</span>
+<span class="sd">        - Adds 2 extra (dummy) states if `phi` is None.</span>
+<span class="sd">        - Adds 3 extra (dummy) states if `std_error` is None.</span>
 
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.</span>
+<span class="sd">    References:</span>
+<span class="sd">        Deka, B., Nguyen, L.H. and Goulet, J.-A. (2024). `Analytically Tractable Heteroscedastic</span>
+<span class="sd">        Uncertainty Quantification in Bayesian Neural Networks for Regression Tasks</span>
+<span class="sd">        &lt;https://www.sciencedirect.com/science/article/abs/pii/S0925231223013061&gt;`_.</span>
+<span class="sd">        Neurocomputing. Volume 572, pp.127183.</span>
+
+<span class="sd">        Deka, B. and Goulet, J.-A. (2023). `Approximate Gaussian Variance Inference for State-Space</span>
+<span class="sd">        Models &lt;https://onlinelibrary.wiley.com/doi/full/10.1002/acs.3667&gt;`_.</span>
+<span class="sd">        International Journal of Adaptive Control and Signal Processing.</span>
+<span class="sd">        Volume 37, Issue 11, pp. 2934-2962.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; from my_module.autoregression import Autoregression</span>
-<span class="sd">        &gt;&gt;&gt; ar = Autoregression(std_error=None, phi=None)</span>
-<span class="sd">        &gt;&gt;&gt; print(ar.mu_states)</span>
-<span class="sd">        &gt;&gt;&gt; print(ar.var_states)</span>
-<span class="sd">        &gt;&gt;&gt; print(ar.states_name)</span>
-<span class="sd">        [&#39;autoregression&#39;, &#39;phi&#39;, &#39;phi_autoregression&#39;, &#39;AR_error&#39;, &#39;W2&#39;, &#39;W2bar&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import Autoregression</span>
+<span class="sd">        &gt;&gt;&gt; # With known parameters</span>
 <span class="sd">        &gt;&gt;&gt; ar = Autoregression(phi=0.9, std_error=0.1)</span>
+<span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; ar = Autoregression(mu_states=[0.1], var_states=[0.1], phi=0.9, std_error=0.1)</span>
+<span class="sd">        &gt;&gt;&gt; # With parameters to be estimated</span>
 <span class="sd">        &gt;&gt;&gt; ar = Autoregression()</span>
+<span class="sd">        &gt;&gt;&gt; ar.component_name</span>
+<span class="sd">        autoregression</span>
+<span class="sd">        &gt;&gt;&gt; ar.states_name</span>
+<span class="sd">        [&#39;autoregression&#39;, &#39;phi&#39;, &#39;phi_autoregression&#39;, &#39;AR_error&#39;, &#39;W2&#39;, &#39;W2bar&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; ar.mu_states</span>
+<span class="sd">        &gt;&gt;&gt; ar.var_states</span>
+<span class="sd">        &gt;&gt;&gt; ar.transition_matrix</span>
+<span class="sd">        &gt;&gt;&gt; ar.observation_matrix</span>
+<span class="sd">        &gt;&gt;&gt; ar.process_noise_matrix</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>

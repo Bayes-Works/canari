@@ -91,31 +91,38 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.periodic_component.Periodic">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Periodic</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Periodic component for modeling cyclic behavior with a fixed period.</span>
-
-<span class="sd">    The periodic component represents a two-dimensional latent process with fixed</span>
-<span class="sd">    frequency determined by the `period`. This is useful for capturing seasonality</span>
-<span class="sd">    or other repeating phenomena.</span>
+<span class="sd">    `Periodic` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models a cyclic behavior with a fixed period using a second-order harmonic</span>
+<span class="sd">    state-space model. It has two hidden states.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.</span>
-<span class="sd">        period (float): Length of one full cycle of the periodic component.</span>
-<span class="sd">        mu_states (Optional[np.ndarray]): Initial mean values.</span>
-<span class="sd">        var_states (Optional[np.ndarray]): Initial covariance matrix.</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If the shape of `mu_states` or `var_states` does not match the number of states.</span>
+<span class="sd">        period (float): Length of one full cycle of the periodic component</span>
+<span class="sd">          (number of time steps).</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; p = Periodic(std_error=0.1, period=52)</span>
-<span class="sd">        &gt;&gt;&gt; p.states_name</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import Periodic</span>
+<span class="sd">        &gt;&gt;&gt; # With known parameters and default mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; periodic = Periodic(std_error=0.1, period=52)</span>
+<span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; periodic = Periodic(mu_states=[0., 0.], var_states=[1., 1.], std_error=0.1, period=52)</span>
+<span class="sd">        &gt;&gt;&gt; periodic.states_name</span>
 <span class="sd">        [&#39;periodic 1&#39;, &#39;periodic 2&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; periodic.mu_states</span>
+<span class="sd">        &gt;&gt;&gt; periodic.var_states</span>
+<span class="sd">        &gt;&gt;&gt; periodic.transition_matrix</span>
+<span class="sd">        &gt;&gt;&gt; periodic.observation_matrix</span>
+<span class="sd">        &gt;&gt;&gt; periodic.process_noise_matrix</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
+        <span class="n">period</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">std_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-        <span class="n">period</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
@@ -147,9 +154,7 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.periodic_component.Periodic.initialize_transition_matrix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initializes the transition matrix to represent circular rotation dynamics.</span>
-
-<span class="sd">        This corresponds to:</span>
+<span class="sd">        Transition matrix:</span>
 <span class="sd">            [[cos(w), sin(w)],</span>
 <span class="sd">             [-sin(w), cos(w)]]</span>
 <span class="sd">        where w = 2π / period</span>

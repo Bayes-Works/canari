@@ -520,7 +520,7 @@
 
 <span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
-<span class="sd">            &gt;&gt;&gt; dp = DataProcess.decompose_data(train_set[&quot;y&quot;].flatten())</span>
+<span class="sd">            &gt;&gt;&gt; trend, slope_of_trend, seasonality, residual = DataProcess.decompose_data(train_set[&quot;y&quot;].flatten())</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">handle_missing_data</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>

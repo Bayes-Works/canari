@@ -449,7 +449,7 @@ using Fourier transform.</p>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">decompose_data</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trend</span><span class="p">,</span> <span class="n">slope_of_trend</span><span class="p">,</span> <span class="n">seasonality</span><span class="p">,</span> <span class="n">residual</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="o">.</span><span class="n">decompose_data</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -553,17 +553,23 @@ Normalize the data using training statistics.</p>
 </section>
 <section id="module-canari.component.base_component">
 <span id="component"></span><h2>Component<a class="headerlink" href="#module-canari.component.base_component" title="Link to this heading"></a></h2>
-<p>BaseComponent for Canari</p>
-<p>This module defines the <cite>BaseComponent</cite> abstract class. It defines the required
-structure for any Canari’s component.</p>
-<p>Subclasses must implement all abstract methods.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.base_component.</span></span><span class="sig-name descname"><span class="pre">BaseComponent</span></span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
-<p>Abstract base class for all Canari’s components.</p>
-<p>This class defines the interface and shared attributes for all components.</p>
-<p>Examples:</p>
+<p>This module defines the <cite>BaseComponent</cite> abstract class. It defines the required
+attributes and methods for any other Canari’s component.
+Subclasses must implement all abstract methods including:</p>
+<ul class="simple">
+<li><p>Initialize the component’s name</p></li>
+<li><p>Initialize the component’s number of hidden states</p></li>
+<li><p>Initialize hidden states’ names</p></li>
+<li><p>Initialize the mean values for hidden states</p></li>
+<li><p>Initialize the covariance matrix for hidden states</p></li>
+<li><p>Initialize the component’s transition matrix</p></li>
+<li><p>Initialize the component’s observation matrix</p></li>
+<li><p>Initialize the component’s process noise matrix</p></li>
+</ul>
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.component_name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">component_name</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.component_name" title="Link to this definition"></a></dt>
@@ -578,61 +584,55 @@ structure for any Canari’s component.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_component_name">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_mu_states">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_num_states">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_observation_matrix">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_process_noise_matrix">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_states_name">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_transition_matrix">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.initialize_var_states">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/base_component.html#BaseComponent.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.base_component.BaseComponent.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.mu_states">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mu_states</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.mu_states" title="Link to this definition"></a></dt>
-<dd><p>mean values.</p>
+<dd><p>mean values. 2D array.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -654,7 +654,7 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.observation_matrix">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">observation_matrix</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Observation matrix for the component.</p>
+<dd><p>Observation matrix for the component. 2D array.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -665,7 +665,7 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.process_noise_matrix">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">process_noise_matrix</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Process noise covariance matrix.</p>
+<dd><p>Process noise covariance matrix. 2D array.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -676,7 +676,7 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.states_name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">states_name</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.states_name" title="Link to this definition"></a></dt>
-<dd><p>Names of each hidden state.</p>
+<dd><p>Names of each hidden state in the component.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[str]</p>
@@ -687,7 +687,7 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.transition_matrix">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">transition_matrix</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Transition matrix for the component.</p>
+<dd><p>Transition matrix for the component. 2D array.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -698,7 +698,7 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dl class="py property">
 <dt class="sig sig-object py" id="canari.component.base_component.BaseComponent.var_states">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">var_states</span></span><a class="headerlink" href="#canari.component.base_component.BaseComponent.var_states" title="Link to this definition"></a></dt>
-<dd><p>covariance matrix.</p>
+<dd><p>covariance matrix. 2D array.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -708,267 +708,279 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 
 </dd></dl>
 
-<p id="module-canari.component.autoregression_component">Autoregression Component for Canari</p>
-<p>This module defines an <cite>Autoregression</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
-It represents residuals following a univariate AR(1) process with optional learning of
-the autoregressive coefficient (<cite>phi</cite>) and process noise standard deviation (<cite>std_error</cite>).</p>
-<dl class="py class">
+<dl class="py class" id="module-canari.component.autoregression_component">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.autoregression_component.</span></span><span class="sig-name descname"><span class="pre">Autoregression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>Autoregression component for modeling residual following a univariate AR(1) process.</p>
+<p><cite>Autoregression</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It models residuals following a univariate AR(1) process with optional learning of
+the autoregressive coefficient (<cite>phi</cite>) and process noise standard deviation (<cite>std_error</cite>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Known standard deviation of the process noise. If None, it will be learned using AGVI.</p></li>
-<li><p><strong>phi</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Known autoregressive coefficient. If None, it will be learned using Gaussian Multiplicative Approximation (GMA).</p></li>
-<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial mean values.</p></li>
-<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial covariance matrix.</p></li>
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to <cite>None</cite>.
+If None, it will be learned using Approximate Gaussian Variance Inference (AGVI).</p></li>
+<li><p><strong>phi</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Autoregressive coefficient. Defaults to <cite>None</cite>.
+If None, it will be learned using Gaussian Multiplicative Approximation (GMA).</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="simple">
 <dt>Behavior:</dt><dd><ul class="simple">
-<li><p>Adds 2 extra states if <cite>phi</cite> is None.</p></li>
-<li><p>Adds 3 extra states if <cite>std_error</cite> is None.</p></li>
-<li><p>Initializes transition, observation, and noise matrices accordingly.</p></li>
+<li><p>Adds 2 extra (dummy) states if <cite>phi</cite> is None.</p></li>
+<li><p>Adds 3 extra (dummy) states if <cite>std_error</cite> is None.</p></li>
 </ul>
 </dd>
 </dl>
-<dl class="field-list simple">
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – If dimensions of <cite>mu_states</cite> or <cite>var_states</cite> do not match expected number of states.</p>
-</dd>
-</dl>
+<p class="rubric">References</p>
+<p>Deka, B., Nguyen, L.H. and Goulet, J.-A. (2024). <a class="reference external" href="https://www.sciencedirect.com/science/article/abs/pii/S0925231223013061">Analytically Tractable Heteroscedastic
+Uncertainty Quantification in Bayesian Neural Networks for Regression Tasks</a>.
+Neurocomputing. Volume 572, pp.127183.</p>
+<p>Deka, B. and Goulet, J.-A. (2023). <a class="reference external" href="https://onlinelibrary.wiley.com/doi/full/10.1002/acs.3667">Approximate Gaussian Variance Inference for State-Space
+Models</a>.
+International Journal of Adaptive Control and Signal Processing.
+Volume 37, Issue 11, pp. 2934-2962.</p>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">my_module.autoregression</span><span class="w"> </span><span class="kn">import</span> <span class="n">Autoregression</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">Autoregression</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ar</span><span class="o">.</span><span class="n">mu_states</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ar</span><span class="o">.</span><span class="n">var_states</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ar</span><span class="o">.</span><span class="n">states_name</span><span class="p">)</span>
-<span class="go">[&#39;autoregression&#39;, &#39;phi&#39;, &#39;phi_autoregression&#39;, &#39;AR_error&#39;, &#39;W2&#39;, &#39;W2bar&#39;]</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">Autoregression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known parameters</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">Autoregression</span><span class="p">(</span><span class="n">phi</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">Autoregression</span><span class="p">(</span><span class="n">mu_states</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">],</span> <span class="n">var_states</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">],</span> <span class="n">phi</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With parameters to be estimated</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">Autoregression</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">component_name</span>
+<span class="go">autoregression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">states_name</span>
+<span class="go">[&#39;autoregression&#39;, &#39;phi&#39;, &#39;phi_autoregression&#39;, &#39;AR_error&#39;, &#39;W2&#39;, &#39;W2bar&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">transition_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">process_noise_matrix</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
 
-<p id="module-canari.component.baseline_component">Baseline components for Canari</p>
-<p>This module defines three state-space components for modeling local level,
-local trend, and local acceleration dynamics. Each class inherits from <cite>BaseComponent</cite>.</p>
-<dl class="py class">
+<dl class="py class" id="module-canari.component.baseline_component">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.baseline_component.</span></span><span class="sig-name descname"><span class="pre">LocalAcceleration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>Local acceleration component for modeling baselines with a constant acceleration over time.
-This component models three hidden states: level, slope, and acceleration in order to capture a curvature baseline.</p>
+<p><cite>LocalAcceleration</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It models baselines with a constant acceleration (linear speed and curvature level) over time.
+It has three hidden states <cite>local level</cite>, <cite>local trend</cite>, and <cite>local acceleration</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Process noise standard deviation. Default is 0.0.</p></li>
-<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial mean values.</p></li>
-<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial covariance matrix.</p></li>
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to 0.0.</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If dimensions of <cite>mu_states</cite> or <cite>var_states</cite> do not match expected number of states.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acc</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">acc</span><span class="o">.</span><span class="n">transition_matrix</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalAcceleration</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">(</span><span class="n">mu_states</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">var_states</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With default mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span><span class="o">.</span><span class="n">transition_matrix</span>
 <span class="go">array([[1. , 1. , 0.5],</span>
 <span class="go">       [0. , 1. , 1. ],</span>
 <span class="go">       [0. , 0. , 1. ]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="go">array([[1, 0, 0]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span><span class="o">.</span><span class="n">process_noise_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_acc</span><span class="o">.</span><span class="n">var_states</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalAcceleration.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalAcceleration.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalAcceleration.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.baseline_component.</span></span><span class="sig-name descname"><span class="pre">LocalLevel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.baseline_component.</span></span><span class="sig-name descname"><span class="pre">LocalLevel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>Local level component for modeling baselines with a constant level over time.</p>
+<p><cite>LocalLevel</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It models baselines with a constant level (zero speed) over time. It has one hidden state
+<cite>local level</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Process noise standard deviation. Default is 0.0.</p></li>
-<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial mean values.</p></li>
-<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial covariance matrix.</p></li>
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to 0.0.</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If dimensions of <cite>mu_states</cite> or <cite>var_states</cite> do not match expected number of states.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">level</span> <span class="o">=</span> <span class="n">LocalLevel</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">component_name</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalLevel</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span> <span class="o">=</span> <span class="n">LocalLevel</span><span class="p">(</span><span class="n">mu_states</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">var_states</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With default mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span> <span class="o">=</span> <span class="n">LocalLevel</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">component_name</span>
 <span class="go">local level</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">states_name</span>
+<span class="go">[&#39;local level&#39;]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">transition_matrix</span>
 <span class="go">array([[1]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="go">array([[1]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">process_noise_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">var_states</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalLevel.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalLevel.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalLevel.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
@@ -977,78 +989,86 @@ Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarra
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.baseline_component.</span></span><span class="sig-name descname"><span class="pre">LocalTrend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>Local trend component for modeling baselines with a constant speed over time.
-This component captures a latent linear trend with both intercept and slope terms.</p>
+<p><cite>LocalTrend</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It models baselines with a constant speed over time (linear level). It has two
+hidden states <cite>local level</cite> and <cite>local trend</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Process noise standard deviation. Default is 0.0.</p></li>
-<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial mean values.</p></li>
-<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial covariance matrix.</p></li>
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to 0.0.</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If dimensions of <cite>mu_states</cite> or <cite>var_states</cite> do not match expected number of states.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trend</span><span class="o">.</span><span class="n">states_name</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">(</span><span class="n">mu_states</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">var_states</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With default mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">component_name</span>
+<span class="go">local trend</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">states_name</span>
 <span class="go">[&#39;local level&#39;, &#39;local trend&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">transition_matrix</span>
+<span class="go">array([[1, 1],</span>
+<span class="go">       [0, 1]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="go">array([[1, 0]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">process_noise_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">var_states</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.baseline_component.LocalTrend.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/baseline_component.html#LocalTrend.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.baseline_component.LocalTrend.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1059,77 +1079,80 @@ a second-order harmonic state-space model. It inherits from <cite>BaseComponent<
 up sinusoidal transitions with a fixed period.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.periodic_component.</span></span><span class="sig-name descname"><span class="pre">Periodic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.periodic_component.</span></span><span class="sig-name descname"><span class="pre">Periodic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>Periodic component for modeling cyclic behavior with a fixed period.</p>
-<p>The periodic component represents a two-dimensional latent process with fixed
-frequency determined by the <cite>period</cite>. This is useful for capturing seasonality
-or other repeating phenomena.</p>
+<p><cite>Periodic</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It models a cyclic behavior with a fixed period using a second-order harmonic
+state-space model. It has two hidden states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Process noise standard deviation. Default is 0.0.</p></li>
-<li><p><strong>period</strong> (<em>float</em>) – Length of one full cycle of the periodic component.</p></li>
-<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial mean values.</p></li>
-<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em>) – Initial covariance matrix.</p></li>
+<li><p><strong>period</strong> (<em>float</em>) – Length of one full cycle of the periodic component
+(number of time steps).</p></li>
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to 0.0.</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If the shape of <cite>mu_states</cite> or <cite>var_states</cite> does not match the number of states.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Periodic</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">52</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">states_name</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">Periodic</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known parameters and default mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">Periodic</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">52</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">Periodic</span><span class="p">(</span><span class="n">mu_states</span><span class="o">=</span><span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">var_states</span><span class="o">=</span><span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">52</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">states_name</span>
 <span class="go">[&#39;periodic 1&#39;, &#39;periodic 2&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">var_states</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">transition_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">process_noise_matrix</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initializes the transition matrix to represent circular rotation dynamics.</p>
-<dl class="simple">
-<dt>This corresponds to:</dt><dd><dl class="simple">
+<dd><dl class="simple">
+<dt>Transition matrix:</dt><dd><dl class="simple">
 <dt>[[cos(w), sin(w)],</dt><dd><p>[-sin(w), cos(w)]]</p>
 </dd>
 </dl>
@@ -1141,152 +1164,213 @@ Must provide <cite>self._states_name</cite> with a list of strings.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.periodic_component.Periodic.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/periodic_component.html#Periodic.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.periodic_component.Periodic.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
 
 <p id="module-canari.component.white_noise_component">White Noise Component for Canari</p>
-<p>This module defines the <cite>WhiteNoise</cite> component, a special case of a state-space model
-with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a latent process.</p>
+<p>with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a latent process.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.white_noise_component.</span></span><span class="sig-name descname"><span class="pre">WhiteNoise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>White noise component for modeling i.i.d. Gaussian process errors.</p>
-<p>This component represents a latent variable that has no memory or autoregression.</p>
+<p><cite>WhiteNoise</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
+It is used to model i.i.d. Gaussian process errors.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the white noise process. Default is 0.0.</p>
+<dd class="field-odd"><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the error. Default is 0.0.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">wn</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">wn</span><span class="o">.</span><span class="n">transition_matrix</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">WhiteNoise</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">white_noise</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">white_noise</span><span class="o">.</span><span class="n">transition_matrix</span>
 <span class="go">array([[0]])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">wn</span><span class="o">.</span><span class="n">process_noise_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">white_noise</span><span class="o">.</span><span class="n">process_noise_matrix</span>
 <span class="go">array([[0.25]])</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.white_noise_component.WhiteNoise.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/white_noise_component.html#WhiteNoise.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.white_noise_component.WhiteNoise.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class" id="module-canari.component.lstm_component">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.lstm_component.</span></span><span class="sig-name descname"><span class="pre">LstmNetwork</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_hidden_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">look_back_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_thread</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gain_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gain_bias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_lstm_net</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.component.lstm_component.</span></span><span class="sig-name descname"><span class="pre">LstmNetwork</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_hidden_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">look_back_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_thread</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gain_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gain_bias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_lstm_net</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
-<p>LSTM component</p>
+<p>LstmNetwork class, inheriting from Canari’s <cite>BaseComponent</cite>.
+This component configures a Bayesian LSTM neural network from <cite>pyTAGI</cite> library, and
+it can be used in the same way as a traditional LSTM from PyTorch, e.g. to model
+recurrent patterns such as seasonal and periodic patterns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>std_error</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Standard deviation of the process noise. Defaults to 0.0.</p></li>
+<li><p><strong>num_layer</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of LSTM layers. Defaults to 1.</p></li>
+<li><p><strong>num_hidden_unit</strong> (<em>Optional</em><em>[</em><em>int</em><em>] or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Number of hidden units per LSTM
+layer. If an integer is provided, it is used for all layers. Defaults to 50.</p></li>
+<li><p><strong>look_back_len</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of past time steps the LSTM uses as input.
+Defaults to 1.</p></li>
+<li><p><strong>num_features</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of input features. Defaults to 1.</p></li>
+<li><p><strong>num_output</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of output features predicted by the network.
+Defaults to 1.</p></li>
+<li><p><strong>device</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Device for computation, either “cpu” or “cuda”. Defaults to “cpu”.</p></li>
+<li><p><strong>num_thread</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of CPU threads for computation. Defaults to 1.</p></li>
+<li><p><strong>manual_seed</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Seed for reproducibility, i.e. intializing LSTM’s
+weights and biases. Defaults to None (random initialization).</p></li>
+<li><p><strong>gain_weight</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Scaling factor for weight initialization. Defaults to 1.</p></li>
+<li><p><strong>gain_bias</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Scaling factor for bias initialization. Defaults to 1.</p></li>
+<li><p><strong>load_lstm_net</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – TODO (provide variables): Path to a saved LSTM network
+file containing pretrained LSTM’s weights and biases. Defaults to None.</p></li>
+<li><p><strong>mu_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial mean of the hidden state. Defaults:
+initialized to zeros.</p></li>
+<li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
+initialized to zeros.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0169207024000335">Coupling LSTM neural networks and
+state-space models through analytically tractable inference</a>.
+International Journal of Forecasting. Volume 41, Issue 1, Pages 128-140.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LstmNetwork</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span> <span class="o">=</span> <span class="n">LstmNetwork</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">num_layer</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">num_hidden_unit</span><span class="o">=</span><span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">look_back_len</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">num_features</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">states_name</span>
+<span class="go">[&#39;lstm&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">mu_states</span>
+<span class="go">array([[0.]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">var_states</span>
+<span class="go">array([[0.]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">transition_matrix</span>
+<span class="go">array([[0.]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">observation_matrix</span>
+<span class="go">array([[1.]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm</span><span class="o">.</span><span class="n">process_noise_matrix</span>
+<span class="go">array([[0.01]])</span>
+</pre></div>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_component_name">
 <span class="sig-name descname"><span class="pre">initialize_component_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_component_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_component_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the component’s name.</p>
+<dd><p>Initialize the component’s name. str.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_lstm_network">
 <span class="sig-name descname"><span class="pre">initialize_lstm_network</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Sequential</span></span></span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_lstm_network"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_lstm_network" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Builds and returns the LSTM network as a <cite>pytagi</cite> Sequential model.</p>
+<p>The network consists of:</p>
+<ul class="simple">
+<li><p>One or multiple LSTM layers, each with specified hidden units.</p></li>
+<li><p>A final Linear layer mapping to the desired output size.</p></li>
+</ul>
+<p>The first LSTM layer input size is determined by <cite>num_features + look_back_len - 1</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <cite>pytagi</cite> Sequential model representing the LSTM network.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sequential</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_mu_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the mean of the hidden states.
-Must define or validate the initial <cite>mu_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_num_states">
 <span class="sig-name descname"><span class="pre">initialize_num_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_num_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_num_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the number of hidden states.</p>
+<dd><p>Initialize the number of hidden states. int.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_observation_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the observation matrix.
-Must define <cite>self._observation_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_process_noise_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the process noise covariance matrix.
-Must define <cite>self._process_noise_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_states_name">
 <span class="sig-name descname"><span class="pre">initialize_states_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_states_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_states_name" title="Link to this definition"></a></dt>
-<dd><p>Initialize the names of all hidden states.
-Must provide <cite>self._states_name</cite> with a list of strings.</p>
+<dd><p>Initialize the names of all hidden states. list[str].</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_transition_matrix" title="Link to this definition"></a></dt>
-<dd><p>Initialize the transition matrix.
-Must define <cite>self._transition_matrix</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.lstm_component.LstmNetwork.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/lstm_component.html#LstmNetwork.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.lstm_component.LstmNetwork.initialize_var_states" title="Link to this definition"></a></dt>
-<dd><p>Initialize the variance of the hidden states.
-Must define or validate the initial <cite>var_states</cite> as a 2D NumPy ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
 </dd></dl>
 
 </dd></dl>

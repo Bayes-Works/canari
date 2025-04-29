@@ -74,14 +74,7 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.component.baseline_component</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Baseline components for Canari</span>
-
-<span class="sd">This module defines three state-space components for modeling local level,</span>
-<span class="sd">local trend, and local acceleration dynamics. Each class inherits from `BaseComponent`.</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 
@@ -90,29 +83,41 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.baseline_component.LocalLevel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalLevel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Local level component for modeling baselines with a constant level over time.</span>
+<span class="sd">    `LocalLevel` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models baselines with a constant level (zero speed) over time. It has one hidden state</span>
+<span class="sd">    `local level`.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.</span>
-<span class="sd">        mu_states (Optional[np.ndarray]): Initial mean values.</span>
-<span class="sd">        var_states (Optional[np.ndarray]): Initial covariance matrix.</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
 
 <span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import LocalLevel</span>
+<span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; level = LocalLevel(mu_states=[1], var_states=[1],std_error=0.5)</span>
+<span class="sd">        &gt;&gt;&gt; # With default mu_states and var_states</span>
 <span class="sd">        &gt;&gt;&gt; level = LocalLevel(std_error=0.5)</span>
-<span class="sd">        &gt;&gt;&gt; print(level.component_name)</span>
+<span class="sd">        &gt;&gt;&gt; level.component_name</span>
 <span class="sd">        local level</span>
+<span class="sd">        &gt;&gt;&gt; level.states_name</span>
+<span class="sd">        [&#39;local level&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; level.transition_matrix</span>
 <span class="sd">        array([[1]])</span>
+<span class="sd">        &gt;&gt;&gt; level.observation_matrix</span>
+<span class="sd">        array([[1]])</span>
+<span class="sd">        &gt;&gt;&gt; level.process_noise_matrix</span>
+<span class="sd">        &gt;&gt;&gt; level.mu_states</span>
+<span class="sd">        &gt;&gt;&gt; level.var_states</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">std_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-        <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">std_error</span> <span class="o">=</span> <span class="n">std_error</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">mu_states</span>
@@ -187,21 +192,36 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.baseline_component.LocalTrend">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalTrend</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Local trend component for modeling baselines with a constant speed over time.</span>
-<span class="sd">    This component captures a latent linear trend with both intercept and slope terms.</span>
+<span class="sd">    `LocalTrend` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models baselines with a constant speed over time (linear level). It has two</span>
+<span class="sd">    hidden states `local level` and `local trend`.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.</span>
-<span class="sd">        mu_states (Optional[np.ndarray]): Initial mean values.</span>
-<span class="sd">        var_states (Optional[np.ndarray]): Initial covariance matrix.</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; trend = LocalTrend(std_error=0.2)</span>
-<span class="sd">        &gt;&gt;&gt; trend.states_name</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import LocalTrend</span>
+<span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; local_trend = LocalAcceleration(mu_states=[1, 2], var_states=[1, 2], std_error=0.3)</span>
+<span class="sd">        &gt;&gt;&gt; # With default mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; local_trend = LocalTrend(std_error=0.2)</span>
+<span class="sd">        &gt;&gt;&gt; level.component_name</span>
+<span class="sd">        local trend</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.states_name</span>
 <span class="sd">        [&#39;local level&#39;, &#39;local trend&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.transition_matrix</span>
+<span class="sd">        array([[1, 1],</span>
+<span class="sd">               [0, 1]])</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.observation_matrix</span>
+<span class="sd">        array([[1, 0]])</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.process_noise_matrix</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.mu_states</span>
+<span class="sd">        &gt;&gt;&gt; local_trend.var_states</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -285,23 +305,32 @@
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.baseline_component.LocalAcceleration">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalAcceleration</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Local acceleration component for modeling baselines with a constant acceleration over time.</span>
-<span class="sd">    This component models three hidden states: level, slope, and acceleration in order to capture a curvature baseline.</span>
+<span class="sd">    `LocalAcceleration` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models baselines with a constant acceleration (linear speed and curvature level) over time.</span>
+<span class="sd">    It has three hidden states `local level`, `local trend`, and `local acceleration`.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.</span>
-<span class="sd">        mu_states (Optional[np.ndarray]): Initial mean values.</span>
-<span class="sd">        var_states (Optional[np.ndarray]): Initial covariance matrix.</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; acc = LocalAcceleration(std_error=0.3)</span>
-<span class="sd">        &gt;&gt;&gt; acc.transition_matrix</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import LocalAcceleration</span>
+<span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; local_acc = LocalAcceleration(mu_states = [1, 2, 3], var_states = [1, 2, 3], std_error=0.3)</span>
+<span class="sd">        &gt;&gt;&gt; # With default mu_states and var_states</span>
+<span class="sd">        &gt;&gt;&gt; local_acc = LocalAcceleration(std_error=0.3)</span>
+<span class="sd">        &gt;&gt;&gt; local_acc.transition_matrix</span>
 <span class="sd">        array([[1. , 1. , 0.5],</span>
 <span class="sd">               [0. , 1. , 1. ],</span>
 <span class="sd">               [0. , 0. , 1. ]])</span>
+<span class="sd">        &gt;&gt;&gt; local_acc.observation_matrix</span>
+<span class="sd">        array([[1, 0, 0]])</span>
+<span class="sd">        &gt;&gt;&gt; local_acc.process_noise_matrix</span>
+<span class="sd">        &gt;&gt;&gt; local_acc.mu_states</span>
+<span class="sd">        &gt;&gt;&gt; local_acc.var_states</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
