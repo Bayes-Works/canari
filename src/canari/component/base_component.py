@@ -1,22 +1,21 @@
-"""
-BaseComponent for Canari
-
-This module defines the `BaseComponent` abstract class. It defines the required
-structure for any Canari's component.
-
-Subclasses must implement all abstract methods.
-"""
-
 from abc import ABC, abstractmethod
 
 
 class BaseComponent(ABC):
     """
-    Abstract base class for all Canari's components.
+    This module defines the `BaseComponent` abstract class. It defines the required
+    attributes and methods for any other Canari's component.
+    Subclasses must implement all abstract methods including:
 
-    This class defines the interface and shared attributes for all components.
+    - Initialize the component's name
+    - Initialize the component's number of hidden states
+    - Initialize hidden states' names
+    - Initialize the mean values for hidden states
+    - Initialize the covariance matrix for hidden states
+    - Initialize the component's transition matrix
+    - Initialize the component's observation matrix
+    - Initialize the component's process noise matrix
 
-    Examples:
     """
 
     def __init__(self):
@@ -58,95 +57,89 @@ class BaseComponent(ABC):
     @property
     def states_name(self):
         """
-        list[str]: Names of each hidden state.
+        list[str]: Names of each hidden state in the component.
         """
         return self._states_name
 
     @property
     def transition_matrix(self):
         """
-        np.ndarray: Transition matrix for the component.
+        np.ndarray: Transition matrix for the component. 2D array.
         """
         return self._transition_matrix
 
     @property
     def observation_matrix(self):
         """
-        np.ndarray: Observation matrix for the component.
+        np.ndarray: Observation matrix for the component. 2D array.
         """
         return self._observation_matrix
 
     @property
     def process_noise_matrix(self):
         """
-        np.ndarray: Process noise covariance matrix.
+        np.ndarray: Process noise covariance matrix. 2D array.
         """
         return self._process_noise_matrix
 
     @property
     def mu_states(self):
         """
-        np.ndarray: mean values.
+        np.ndarray: mean values. 2D array.
         """
         return self._mu_states
 
     @property
     def var_states(self):
         """
-        np.ndarray: covariance matrix.
+        np.ndarray: covariance matrix. 2D array.
         """
         return self._var_states
 
     @abstractmethod
     def initialize_component_name(self):
         """
-        Initialize the component's name.
+        Initialize the component's name. str.
         """
 
     @abstractmethod
     def initialize_num_states(self):
         """
-        Initialize the number of hidden states.
+        Initialize the number of hidden states. int.
         """
 
     @abstractmethod
     def initialize_states_name(self):
         """
-        Initialize the names of all hidden states.
-        Must provide `self._states_name` with a list of strings.
+        Initialize the names of all hidden states. list[str].
         """
 
     @abstractmethod
     def initialize_mu_states(self):
         """
-        Initialize the mean of the hidden states.
-        Must define or validate the initial `mu_states` as a 2D NumPy ndarray.
+        Initialize the mean of the hidden states. 2D np.ndarray.
         """
 
     @abstractmethod
     def initialize_var_states(self):
         """
-        Initialize the variance of the hidden states.
-        Must define or validate the initial `var_states` as a 2D NumPy ndarray.
+        Initialize the covariance matrix of the hidden states. 2D np.ndarray.
         """
 
     @abstractmethod
     def initialize_transition_matrix(self):
         """
-        Initialize the transition matrix.
-        Must define `self._transition_matrix` as a 2D NumPy ndarray.
+        Initialize the transition matrix. 2D np.ndarray.
         """
 
     @abstractmethod
     def initialize_observation_matrix(self):
         """
-        Initialize the observation matrix.
-        Must define `self._observation_matrix` as a 2D NumPy ndarray.
+        Initialize the observation matrix. 2D np.ndarray.
         """
 
     @abstractmethod
     def initialize_process_noise_matrix(self):
         """
-        Initialize the process noise covariance matrix.
-        Must define `self._process_noise_matrix` as a 2D NumPy ndarray.
+        Initialize the process noise covariance matrix. 2D np.ndarray.
         """
