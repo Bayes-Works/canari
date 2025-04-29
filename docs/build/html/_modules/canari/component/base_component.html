@@ -74,27 +74,26 @@
            <div itemprop="articleBody">
              
   <h1>Source code for canari.component.base_component</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">BaseComponent for Canari</span>
-
-<span class="sd">This module defines the `BaseComponent` abstract class. It defines the required</span>
-<span class="sd">structure for any Canari&#39;s component.</span>
-
-<span class="sd">Subclasses must implement all abstract methods.</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 
 
 <div class="viewcode-block" id="BaseComponent">
 <a class="viewcode-back" href="../../../api/canari.html#canari.component.base_component.BaseComponent">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BaseComponent</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Abstract base class for all Canari&#39;s components.</span>
+<span class="sd">    This module defines the `BaseComponent` abstract class. It defines the required</span>
+<span class="sd">    attributes and methods for any other Canari&#39;s component.</span>
+<span class="sd">    Subclasses must implement all abstract methods including:</span>
 
-<span class="sd">    This class defines the interface and shared attributes for all components.</span>
+<span class="sd">    - Initialize the component&#39;s name</span>
+<span class="sd">    - Initialize the component&#39;s number of hidden states</span>
+<span class="sd">    - Initialize hidden states&#39; names</span>
+<span class="sd">    - Initialize the mean values for hidden states</span>
+<span class="sd">    - Initialize the covariance matrix for hidden states</span>
+<span class="sd">    - Initialize the component&#39;s transition matrix</span>
+<span class="sd">    - Initialize the component&#39;s observation matrix</span>
+<span class="sd">    - Initialize the component&#39;s process noise matrix</span>
 
-<span class="sd">    Examples:</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -136,42 +135,42 @@
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">states_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        list[str]: Names of each hidden state.</span>
+<span class="sd">        list[str]: Names of each hidden state in the component.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Transition matrix for the component.</span>
+<span class="sd">        np.ndarray: Transition matrix for the component. 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">observation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Observation matrix for the component.</span>
+<span class="sd">        np.ndarray: Observation matrix for the component. 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_observation_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">process_noise_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Process noise covariance matrix.</span>
+<span class="sd">        np.ndarray: Process noise covariance matrix. 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_noise_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">mu_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: mean values.</span>
+<span class="sd">        np.ndarray: mean values. 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">var_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: covariance matrix.</span>
+<span class="sd">        np.ndarray: covariance matrix. 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span>
 
@@ -180,7 +179,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_component_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the component&#39;s name.</span>
+<span class="sd">        Initialize the component&#39;s name. str.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -189,7 +188,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_num_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the number of hidden states.</span>
+<span class="sd">        Initialize the number of hidden states. int.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -198,8 +197,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the names of all hidden states.</span>
-<span class="sd">        Must provide `self._states_name` with a list of strings.</span>
+<span class="sd">        Initialize the names of all hidden states. list[str].</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -208,8 +206,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_mu_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the mean of the hidden states.</span>
-<span class="sd">        Must define or validate the initial `mu_states` as a 2D NumPy ndarray.</span>
+<span class="sd">        Initialize the mean of the hidden states. 2D np.ndarray.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -218,8 +215,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_var_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the variance of the hidden states.</span>
-<span class="sd">        Must define or validate the initial `var_states` as a 2D NumPy ndarray.</span>
+<span class="sd">        Initialize the covariance matrix of the hidden states. 2D np.ndarray.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -228,8 +224,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the transition matrix.</span>
-<span class="sd">        Must define `self._transition_matrix` as a 2D NumPy ndarray.</span>
+<span class="sd">        Initialize the transition matrix. 2D np.ndarray.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -238,8 +233,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_observation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the observation matrix.</span>
-<span class="sd">        Must define `self._observation_matrix` as a 2D NumPy ndarray.</span>
+<span class="sd">        Initialize the observation matrix. 2D np.ndarray.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -248,8 +242,7 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_process_noise_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the process noise covariance matrix.</span>
-<span class="sd">        Must define `self._process_noise_matrix` as a 2D NumPy ndarray.</span>
+<span class="sd">        Initialize the process noise covariance matrix. 2D np.ndarray.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 </div>
 
