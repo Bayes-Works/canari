@@ -1,11 +1,3 @@
-"""
-Autoregression Component for Canari
-
-This module defines an `Autoregression` class, inheriting from Canari's `BaseComponent`.
-It represents residuals following a univariate AR(1) process with optional learning of
-the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`).
-"""
-
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
@@ -13,31 +5,52 @@ from canari.component.base_component import BaseComponent
 
 class Autoregression(BaseComponent):
     """
-    Autoregression component for modeling residual following a univariate AR(1) process.
+    `Autoregression` class, inheriting from Canari's `BaseComponent`.
+    It models residuals following a univariate AR(1) process with optional learning of
+    the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`).
 
     Parameters:
-        std_error (Optional[float]): Known standard deviation of the process noise. If None, it will be learned using AGVI.
-        phi (Optional[float]): Known autoregressive coefficient. If None, it will be learned using Gaussian Multiplicative Approximation (GMA).
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults to `None`.
+            If None, it will be learned using Approximate Gaussian Variance Inference (AGVI).
+        phi (Optional[float]): Autoregressive coefficient. Defaults to `None`.
+            If None, it will be learned using Gaussian Multiplicative Approximation (GMA).
+        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+            initialized to zeros.
 
     Behavior:
-        - Adds 2 extra states if `phi` is None.
-        - Adds 3 extra states if `std_error` is None.
-        - Initializes transition, observation, and noise matrices accordingly.
+        - Adds 2 extra (dummy) states if `phi` is None.
+        - Adds 3 extra (dummy) states if `std_error` is None.
 
-    Raises:
-        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.
+    References:
+        Deka, B., Nguyen, L.H. and Goulet, J.-A. (2024). `Analytically Tractable Heteroscedastic
+        Uncertainty Quantification in Bayesian Neural Networks for Regression Tasks
+        <https://www.sciencedirect.com/science/article/abs/pii/S0925231223013061>`_.
+        Neurocomputing. Volume 572, pp.127183.
+
+        Deka, B. and Goulet, J.-A. (2023). `Approximate Gaussian Variance Inference for State-Space
+        Models <https://onlinelibrary.wiley.com/doi/full/10.1002/acs.3667>`_.
+        International Journal of Adaptive Control and Signal Processing.
+        Volume 37, Issue 11, pp. 2934-2962.
 
     Examples:
-        >>> from my_module.autoregression import Autoregression
-        >>> ar = Autoregression(std_error=None, phi=None)
-        >>> print(ar.mu_states)
-        >>> print(ar.var_states)
-        >>> print(ar.states_name)
-        ['autoregression', 'phi', 'phi_autoregression', 'AR_error', 'W2', 'W2bar']
+        >>> from canari.component import Autoregression
+        >>> # With known parameters
         >>> ar = Autoregression(phi=0.9, std_error=0.1)
+        >>> # With known mu_states and var_states
+        >>> ar = Autoregression(mu_states=[0.1], var_states=[0.1], phi=0.9, std_error=0.1)
+        >>> # With parameters to be estimated
         >>> ar = Autoregression()
+        >>> ar.component_name
+        autoregression
+        >>> ar.states_name
+        ['autoregression', 'phi', 'phi_autoregression', 'AR_error', 'W2', 'W2bar']
+        >>> ar.mu_states
+        >>> ar.var_states
+        >>> ar.transition_matrix
+        >>> ar.observation_matrix
+        >>> ar.process_noise_matrix
     """
 
     def __init__(

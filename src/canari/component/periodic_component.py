@@ -13,31 +13,38 @@ from canari.component.base_component import BaseComponent
 
 class Periodic(BaseComponent):
     """
-    Periodic component for modeling cyclic behavior with a fixed period.
-
-    The periodic component represents a two-dimensional latent process with fixed
-    frequency determined by the `period`. This is useful for capturing seasonality
-    or other repeating phenomena.
+    `Periodic` class, inheriting from Canari's `BaseComponent`.
+    It models a cyclic behavior with a fixed period using a second-order harmonic
+    state-space model. It has two hidden states.
 
     Args:
-        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.
-        period (float): Length of one full cycle of the periodic component.
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
-
-    Raises:
-        ValueError: If the shape of `mu_states` or `var_states` does not match the number of states.
+        period (float): Length of one full cycle of the periodic component
+          (number of time steps).
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.
+        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+            initialized to zeros.
 
     Examples:
-        >>> p = Periodic(std_error=0.1, period=52)
-        >>> p.states_name
+        >>> from canari.component import Periodic
+        >>> # With known parameters and default mu_states and var_states
+        >>> periodic = Periodic(std_error=0.1, period=52)
+        >>> # With known mu_states and var_states
+        >>> periodic = Periodic(mu_states=[0., 0.], var_states=[1., 1.], std_error=0.1, period=52)
+        >>> periodic.states_name
         ['periodic 1', 'periodic 2']
+        >>> periodic.mu_states
+        >>> periodic.var_states
+        >>> periodic.transition_matrix
+        >>> periodic.observation_matrix
+        >>> periodic.process_noise_matrix
     """
 
     def __init__(
         self,
+        period: float,
         std_error: Optional[float] = 0.0,
-        period: float = 0.0,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
     ):
@@ -58,9 +65,7 @@ class Periodic(BaseComponent):
 
     def initialize_transition_matrix(self):
         """
-        Initializes the transition matrix to represent circular rotation dynamics.
-
-        This corresponds to:
+        Transition matrix:
             [[cos(w), sin(w)],
              [-sin(w), cos(w)]]
         where w = 2π / period
