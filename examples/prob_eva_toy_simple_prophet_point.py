@@ -43,7 +43,7 @@ validation_start -= remove_begin_len
 test_start -= remove_begin_len
 
 # Load the CSV
-df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen_stationary.csv")
 # Containers for restored data
 restored_data = []
 for _, row in df.iterrows():
