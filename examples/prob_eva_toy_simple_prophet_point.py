@@ -43,7 +43,7 @@ validation_start -= remove_begin_len
 test_start -= remove_begin_len
 
 # Load the CSV
-df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen_stationary.csv")
 # Containers for restored data
 restored_data = []
 for _, row in df.iterrows():
@@ -55,10 +55,7 @@ for _, row in df.iterrows():
     
     restored_data.append((timestamps, values, anomaly_magnitude, anomaly_start_index))
 
-# Genetrate percentages_check from 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, ... , 1
-percentages_check = [i / 100 for i in range(10, 101, 1)]
-
-begin_idx = int(len(df_raw) * 0.1)
+begin_idx = int(len(df_raw) * 0.33)
 threshold = 0.5
 results_all = []
 
@@ -76,7 +73,7 @@ for ts_index in tqdm(range(len(restored_data))):
 
     new_df = pd.DataFrame({'ds': generate_dates, 'y': gen_time_series})
     df_raw = pd.concat([df_raw, new_df], ignore_index=True)
-    print(df_raw[test_start-5:test_start+5])
+    # print(df_raw[test_start-5:test_start+5])
 
     # Get true baseline
     anm_mag_normed = anm_mag
@@ -120,14 +117,14 @@ for ts_index in tqdm(range(len(restored_data))):
         # fig1 = m.plot(forecast)
         # a = add_changepoints_to_plot(fig1.gca(), m, forecast, threshold=threshold)
         
-        # if i != len(percentages_check) - 1:
+        # if i != len(df_raw) - begin_idx - 1:
         #     plt.pause(0.5)
         #     plt.close(fig1)
-        # elif i == len(percentages_check) - 1:
+        # elif i == len(df_raw) - begin_idx - 1:
         #     print("--------finished--------")
-        #     # fig2 = m.plot_components(forecast)
-        #     # plt.show()
-        #     # # # Get the ylimit of the first figure
+        #     fig2 = m.plot_components(forecast)
+        #     plt.show()
+        #     # # Get the ylimit of the first figure
         #     # print(fig1.gca().get_ylim())
         #     # print(fig1.gca().get_xlim())
 
@@ -137,8 +134,6 @@ for ts_index in tqdm(range(len(restored_data))):
         if len(signif_changepoints) > 0:
             signif_changepoints = signif_changepoints.tolist()
             if latest_changepoint is None:
-                # print(type(signif_changepoints))
-                # print(signif_changepoints)
                 latest_changepoint = signif_changepoints[-1]
                 change_points_predicted = change_points_predicted + signif_changepoints
                 anm_detect_points.append(current_idx)
@@ -207,6 +202,6 @@ for ts_index in tqdm(range(len(restored_data))):
 
     results_all.append([anm_mag, anm_start_index_global, anm_detected_index, mse_LL, mse_LT, detection_time])
 
-# Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/toy_simple_results_prophet_batch.csv", index=False)
+# # Save the results to a CSV file
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+# results_df.to_csv("saved_results/prob_eva/toy_simple_results_prophet_point.csv", index=False)
