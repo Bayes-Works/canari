@@ -223,6 +223,8 @@ for k in tqdm(range(len(restored_data))):
 
     p_anm_all = filter_marginal_abnorm_prob
 
+    all_detection_points = str(np.where(np.array(p_anm_all) > 0.5)[0].tolist())
+
     if (np.array(p_anm_all) > 0.5).any():
         anm_detected_index = np.where(np.array(p_anm_all) > 0.5)[0][0]
     else:
@@ -252,19 +254,21 @@ for k in tqdm(range(len(restored_data))):
         mu_LT_states[anm_start_index_global+1:],
         LT_baseline_true[anm_start_index_global+1:],
     )
-    # Compute MAPE for LL and LT
-    mape_LL = metric.mape(
-        mu_LL_states[anm_start_index_global+1:],
-        LL_baseline_true[anm_start_index_global+1:],
-    )
-    mape_LT = metric.mape(
-        mu_LT_states[anm_start_index_global+1:],
-        LT_baseline_true[anm_start_index_global+1:],
-    )
+    # # Compute MAPE for LL and LT
+    # mape_LL = metric.mape(
+    #     mu_LL_states[anm_start_index_global+1:],
+    #     LL_baseline_true[anm_start_index_global+1:],
+    # )
+    # mape_LT = metric.mape(
+    #     mu_LT_states[anm_start_index_global+1:],
+    #     LT_baseline_true[anm_start_index_global+1:],
+    # )
+    mape_LL = None
+    mape_LT = None
 
     detection_time = anm_detected_index - anm_start_index_global
 
-    results_all.append([anm_mag, anm_start_index_global, anm_detected_index, mse_LL, mse_LT, mape_LL, mape_LT, detection_time])
+    results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, mape_LL, mape_LT, detection_time])
 
     # #  Plot
     # state_type = "prior"
