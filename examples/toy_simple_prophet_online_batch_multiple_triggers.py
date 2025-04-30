@@ -3,6 +3,7 @@ from prophet import Prophet
 import matplotlib.pyplot as plt
 from prophet.plot import add_changepoints_to_plot
 import numpy as np
+import pytagi.metric as metric
 
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -36,8 +37,20 @@ anm_baseline[:anm_start_index] = 0
 df_raw["y"] = df_raw["y"].add(anm_baseline, axis=0)
 # Remove the last 52*5 rows in df_raw
 df_raw = df_raw[:-52*5]
-
 df_raw = df_raw.iloc[:int(len(df_raw) * 1)]
+
+# Get true baseline
+anm_mag_normed = anm_mag
+LL_baseline_true = np.zeros(len(df_raw))
+LT_baseline_true = np.zeros(len(df_raw))
+for i in range(1, len(df_raw)):
+    if i > anm_start_index:
+        LL_baseline_true[i] += anm_mag_normed * (i - anm_start_index)
+        LT_baseline_true[i] += anm_mag_normed
+
+# LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
+LL_baseline_true = LL_baseline_true.flatten()
+LT_baseline_true = LT_baseline_true.flatten()
 
 # Genetrate percentages_check from 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, ... , 1
 percentages_check = [i / 100 for i in range(10, 101, 1)]
@@ -112,17 +125,13 @@ for i, percentage in enumerate(percentages_check):
             latest_changepoint = signif_changepoints[-1]
             change_points_predicted = change_points_predicted + signif_changepoints
             anm_detect_points.append(current_idx)
-            print(change_points_predicted)
         else:
             for cp in signif_changepoints:
                 changepoint_increase = False
-                print(cp)
-                print(latest_changepoint)
                 if cp - pd.Timedelta(weeks=changepoint_grid_width) > latest_changepoint:
                     latest_changepoint = cp
                     change_points_predicted.append(cp)
                     changepoint_increase = True
-
             if changepoint_increase:
                 anm_detect_points.append(current_idx)
 
@@ -130,6 +139,37 @@ for i, percentage in enumerate(percentages_check):
 m = Prophet(changepoint_range=1, changepoints=change_points_predicted)
 m.fit(df_raw)
 forecast = m.predict(df_raw)
+
+LL_baseline_estimate = forecast["trend"]
+LT_baseline_estimate = LL_baseline_estimate.diff()
+# Convert LL_baseline_estimate to numpy array
+LL_baseline_estimate = LL_baseline_estimate.to_numpy().flatten()
+LT_baseline_estimate = LT_baseline_estimate.to_numpy().flatten()
+
+# Plot all the baselines, true and estimated
+plt.figure()
+plt.plot(m.history['ds'], LL_baseline_true, label="LL Baseline True", color='blue')
+plt.plot(m.history['ds'], LL_baseline_estimate, label="LL Baseline Estimate", color='green')
+plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+plt.ylabel('LL')
+
+plt.figure()
+plt.plot(m.history['ds'], LT_baseline_true, label="LT Baseline True", color='blue')
+plt.plot(m.history['ds'], LT_baseline_estimate, label="LT Baseline Estimate", color='green')
+plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+plt.ylabel('LT')
+
+mse_LL = metric.mse(
+    LL_baseline_estimate[anm_start_index+1:],
+    LL_baseline_true[anm_start_index+1:],
+)
+mse_LT = metric.mse(
+    LT_baseline_estimate[anm_start_index+1:],
+    LT_baseline_true[anm_start_index+1:],
+)
+print("MSE LL: ", mse_LL)
+print("MSE LT: ", mse_LT)
+
 fig1 = m.plot(forecast)
 plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
 if len(anm_detect_points)>0:
