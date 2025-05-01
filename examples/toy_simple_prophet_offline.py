@@ -21,7 +21,7 @@ df.head()
 # LT anomaly
 # anm_mag = 0.010416667/10
 anm_start_index = 52*10
-anm_mag = 0.3/52
+anm_mag = 0.1/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -42,7 +42,7 @@ df = df.iloc[:int(len(df) * 1)]
 # m = Prophet(changepoint_range=1, n_changepoints=int(len(df) * 0.1), changepoint_prior_scale=0.003, growth='linear')
 # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)), changepoint_prior_scale=0.009, growth='linear')
 # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)), changepoint_prior_scale=0.007, growth='linear')
-m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=0.005, growth='linear')
+m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), growth='linear')
 
 
 m.fit(df)
@@ -63,7 +63,7 @@ forecast['anomaly'] = ((df['y'] < forecast['yhat_lower']) | (df['y'] > forecast[
 # print(forecast)
 # Plot the anomalies in figure 1
 fig1 = m.plot(forecast)
-a = add_changepoints_to_plot(fig1.gca(), m, forecast)
+a = add_changepoints_to_plot(fig1.gca(), m, forecast, threshold=0.045)
 # for i in range(len(forecast)):
 #     if forecast['anomaly'][i] == 1:
 #         plt.plot(forecast['ds'][i], df['y'][i], 'r.')
