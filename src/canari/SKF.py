@@ -101,10 +101,10 @@ class SKF:
             # SKF‐related attributes
             mu_states_init (array‐like or None): Initial state means.
             var_states_init (array‐like or None): Initial state variances.
-            mu_states_prior (array‐like or None): Prior state means.
-            var_states_prior (array‐like or None): Prior state variances.
-            mu_states_posterior (array‐like or None): Posterior state means.
-            var_states_posterior (array‐like or None): Posterior state variances.
+            _mu_states_prior (array‐like or None): Prior state means.
+            _var_states_prior (array‐like or None): Prior state variances.
+            _mu_states_posterior (array‐like or None): Posterior state means.
+            _var_states_posterior (array‐like or None): Posterior state variances.
             transition_coef (dict): Coefficients from `self.transition()`.
             filter_marginal_prob_history (list): Filtered marginal‐probability history.
             smooth_marginal_prob_history (list): Smoothed marginal‐probability history.
@@ -135,10 +135,10 @@ class SKF:
         # SKF-related attributes
         self.mu_states_init = None
         self.var_states_init = None
-        self.mu_states_prior = None
-        self.var_states_prior = None
-        self.mu_states_posterior = None
-        self.var_states_posterior = None
+        self._mu_states_prior = None
+        self._var_states_prior = None
+        self._mu_states_posterior = None
+        self._var_states_posterior = None
 
         self.transition_coef = self.transition()
         self.filter_marginal_prob_history = self.prob_history()
@@ -342,12 +342,12 @@ class SKF:
         for transition_model in self.model.values():
             transition_model._save_states_history()
 
-        self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior)
-        self.states.var_posterior.append(self.var_states_posterior)
-        self.states.mu_smooth.append(self.mu_states_posterior)
-        self.states.var_smooth.append(self.var_states_posterior)
+        self.states.mu_prior.append(self._mu_states_prior)
+        self.states.var_prior.append(self._var_states_prior)
+        self.states.mu_posterior.append(self._mu_states_posterior)
+        self.states.var_posterior.append(self._var_states_posterior)
+        self.states.mu_smooth.append(self._mu_states_posterior)
+        self.states.var_smooth.append(self._var_states_posterior)
 
     def _compute_transition_likelihood(
         self,
@@ -624,7 +624,7 @@ class SKF:
         self.model["norm_norm"].mu_states = self.mu_states_init.copy()
         self.model["norm_norm"].var_states = self.var_states_init.copy()
 
-    def initialize_states_history(self):
+    def _initialize_states_history(self):
         """
         Initialize state history containers for all transition models.
 
@@ -636,7 +636,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model.initialize_states_history()
+            transition_model._initialize_states_history()
         self.states.initialize(self.states_name)
 
     def set_states(self):
@@ -652,8 +652,8 @@ class SKF:
 
         for transition_model in self.model.values():
             transition_model.set_states(
-                transition_model.mu_states_posterior,
-                transition_model.var_states_posterior,
+                transition_model._mu_states_posterior,
+                transition_model._var_states_posterior,
             )
 
     def set_memory(self, states: StatesHistory, time_step: int):
@@ -849,18 +849,18 @@ class SKF:
             var_pred_transit,
         )
 
-        mu_states_prior, var_states_prior, _, _ = self._collapse_states(
+        _mu_states_prior, _var_states_prior, _, _ = self._collapse_states(
             mu_states_transit, var_states_transit, state_type="prior"
         )
 
         mu_obs_pred, var_obs_pred = common.calc_observation(
-            mu_states_prior,
-            var_states_prior,
+            _mu_states_prior,
+            _var_states_prior,
             self.model["norm_norm"].observation_matrix,
         )
 
-        self.mu_states_prior = mu_states_prior
-        self.var_states_prior = var_states_prior
+        self._mu_states_prior = _mu_states_prior
+        self._var_states_prior = _var_states_prior
 
         return mu_obs_pred, var_obs_pred
 
@@ -875,7 +875,7 @@ class SKF:
             obs (float): Observation at current time step.
 
         Returns:
-            Tuple(mu_states_posterior, var_states_posterior): Posterior state estimates.
+            Tuple(_mu_states_posterior, _var_states_posterior): Posterior state estimates.
         """
 
         mu_states_transit = self.transition()
@@ -887,8 +887,8 @@ class SKF:
             )
 
         (
-            mu_states_posterior,
-            var_states_posterior,
+            _mu_states_posterior,
+            _var_states_posterior,
             mu_states_marginal,
             var_states_marginal,
         ) = self._collapse_states(
@@ -899,14 +899,14 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                self.model[transit].set_posterior_states(
+                self.model[transit]._set_posterior_states(
                     mu_states_marginal[origin_state], var_states_marginal[origin_state]
                 )
 
-        self.mu_states_posterior = mu_states_posterior
-        self.var_states_posterior = var_states_posterior
+        self._mu_states_posterior = _mu_states_posterior
+        self._var_states_posterior = _var_states_posterior
 
-        return mu_states_posterior, var_states_posterior
+        return _mu_states_posterior, _var_states_posterior
 
     def rts_smoother(self, time_step: int):
         """
@@ -1026,17 +1026,17 @@ class SKF:
 
         # Initialize hidden states
         self.set_same_states_transition_models()
-        self.initialize_states_history()
+        self._initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
-            mu_states_posterior, var_states_posterior = self.backward(y)
+            _mu_states_posterior, _var_states_posterior = self.backward(y)
 
             if self.lstm_net:
                 lstm_index = self.model["norm_norm"].get_states_index("lstm")
                 self.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[
+                    _mu_states_posterior[lstm_index],
+                    _var_states_posterior[
                         lstm_index,
                         lstm_index,
                     ],
