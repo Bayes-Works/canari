@@ -5,16 +5,14 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari.data_process import DataProcess
-from canari.component.baseline_component import LocalTrend
-from canari.component.lstm_component import LstmNetwork
-from canari.component.autoregression_component import Autoregression
-from canari.model import Model
-from canari.data_visualization import (
+from canari import (
+    DataProcess,
+    Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
+from canari.component import LocalTrend, LstmNetwork, Autoregression
 
 
 ###########################
