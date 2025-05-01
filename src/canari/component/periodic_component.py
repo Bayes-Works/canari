@@ -1,11 +1,3 @@
-"""
-Periodic Component for Canari
-
-This module defines the `Periodic` component, which models a cyclic behavior using
-a second-order harmonic state-space model. It inherits from `BaseComponent` and sets
-up sinusoidal transitions with a fixed period.
-"""
-
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class BaseComponent(ABC):
     """
-    This module defines the `BaseComponent` abstract class. It defines the required
+    `BaseComponent` abstract class. It defines the required
     attributes and methods for any other Canari's component.
     Subclasses must implement all abstract methods including:
 
