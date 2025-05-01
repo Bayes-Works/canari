@@ -295,7 +295,8 @@ class SKF:
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
     def set_same_states_transition_models(self):
-        """Synchronize all transition models to the same hidden-state initialization.
+        """
+        Synchronize all transition models to the same hidden-state initialization.
 
         Copies the initial mu_states and var_states from norm_norm to every model
         in self.model.
@@ -580,7 +581,8 @@ class SKF:
         return transition_coef
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
-        """Automatically initialize baseline states from data for normal model.
+        """
+        Automatically initialize baseline states from data for normal model.
 
         Delegates to the normal regime model to estimate initial state means and variances
         from observations, then saves these initial states.
@@ -596,7 +598,8 @@ class SKF:
         self.save_initial_states()
 
     def save_initial_states(self):
-        """Save initial SKF state mean/variance for reuse in subsequent runs.
+        """
+        Save initial SKF state mean/variance for reuse in subsequent runs.
 
         Stores copies of the normal model's current mu_states and var_states in
         self.mu_states_init and self.var_states_init.
@@ -609,7 +612,8 @@ class SKF:
         self.var_states_init = self.model["norm_norm"].var_states.copy()
 
     def load_initial_states(self):
-        """Restore saved initial states into the normal model.
+        """
+        Restore saved initial states into the normal model.
 
         Copies back self.mu_states_init and self.var_states_init into the normal model.
 
@@ -621,7 +625,8 @@ class SKF:
         self.model["norm_norm"].var_states = self.var_states_init.copy()
 
     def initialize_states_history(self):
-        """Initialize state history containers for all transition models.
+        """
+        Initialize state history containers for all transition models.
 
         Invokes each model's own initialization, then sets combined StatesHistory
         based on self.states_name.
@@ -635,7 +640,8 @@ class SKF:
         self.states.initialize(self.states_name)
 
     def set_states(self):
-        """Assign posterior states to be used as priors for next time step.
+        """
+        Assign posterior states to be used as priors for next time step.
 
         For each transition model, sets its mu_states and var_states from
         the latest posterior estimates.
@@ -651,7 +657,8 @@ class SKF:
             )
 
     def set_memory(self, states: StatesHistory, time_step: int):
-        """Set model memory at a given time step and optionally reset to initial.
+        """
+        Set model memory at a given time step and optionally reset to initial.
 
         Args:
             states (StatesHistory): StatesHistory object to load into norm_norm.
@@ -670,7 +677,8 @@ class SKF:
             self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
-        """Serialize the SKF and underlying models into a dictionary.
+        """
+        Serialize the SKF and underlying models into a dictionary.
 
         Returns:
             dict: Contains serialized normal/abnormal models, transition parameters,
@@ -691,7 +699,8 @@ class SKF:
 
     @staticmethod
     def load_dict(save_dict: dict):
-        """Reconstruct an SKF instance from its serialized dictionary.
+        """
+        Reconstruct an SKF instance from its serialized dictionary.
 
         Args:
             save_dict (dict): Dictionary produced by get_dict(), containing model states and params.
@@ -732,7 +741,8 @@ class SKF:
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
-        """Train the normal regime's LSTM network and record training history.
+        """
+        Train the normal regime's LSTM network and record training history.
 
         Args:
             train_data (dict): Input/observation arrays for training.
@@ -760,7 +770,8 @@ class SKF:
         evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
-        """Apply early stopping policy from the normal model's training.
+        """
+        Apply early stopping policy from the normal model's training.
 
         Args:
             mode (str): 'max' or 'min' to maximize or minimize the metric.
@@ -795,7 +806,8 @@ class SKF:
         obs: float,
         input_covariates: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Forward pass across all transition models to predict next observation.
+        """
+        Forward pass across all transition models to predict next observation.
 
         Args:
             obs (float): Current observation.
@@ -856,7 +868,8 @@ class SKF:
         self,
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Backward update step: collapse posterior states after observation.
+        """
+        Backward update step: collapse posterior states after observation.
 
         Args:
             obs (float): Observation at current time step.
@@ -896,7 +909,8 @@ class SKF:
         return mu_states_posterior, var_states_posterior
 
     def rts_smoother(self, time_step: int):
-        """Run Rauch–Tung–Striebel smoother at a given time step.
+        """
+        Run Rauch–Tung–Striebel smoother at a given time step.
 
         Updates smoothed state estimates and transition coefficients based on
         forward filter history and transition probabilities.
@@ -996,7 +1010,8 @@ class SKF:
         self,
         data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, StatesHistory]:
-        """Run filtering over a time series and record abnormal probabilities.
+        """
+        Run filtering over a time series and record abnormal probabilities.
 
         Args:
             data (dict): Contains 'x' (covariates) and 'y' (observations).
@@ -1045,7 +1060,8 @@ class SKF:
         )
 
     def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, StatesHistory]:
-        """Apply RTS smoothing over entire time series.
+        """
+        Apply RTS smoothing over entire time series.
 
         Args:
             data (dict): Contains 'x' and 'y' arrays for smoothing.
@@ -1075,7 +1091,8 @@ class SKF:
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
     ) -> Tuple[float, float]:
-        """Detect synthetic anomalies and compute detection/false-alarm rates.
+        """
+        Detect synthetic anomalies and compute detection/false-alarm rates.
 
         Args:
             data (list[dict]): List of original time series dicts.
