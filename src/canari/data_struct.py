@@ -1,17 +1,13 @@
-# """
-# Module for managing historical values for LSTM' output, cell and hidden states.
+"""
+This module manages historical values for LSTM' output, cell and hidden states.
 
-# This module provides two main data classes:
+It provides two data classes:
 
-# - `LstmOutputHistory`: Maintains a rolling history of LSTM mean and variance outputs.
-# - `StatesHistory`: Tracks prior, posterior, and smoothed estimates of hidden states across time,
-#   including their means, variances, and covariances.
+- `LstmOutputHistory`: Maintain a rolling history of LSTM mean and variance outputs.
+- `StatesHistory`: Save prior, posterior, and smoothed estimates of hidden states over time.
 
-# Example:
-#     >>> lstm_history = LstmOutputHistory()
-#     >>> lstm_history.initialize(look_back_len=10)
-#     >>> lstm_history.update(mu_lstm=np.array([0.5]), var_lstm=np.array([0.2]))
-# """
+"""
+
 from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
@@ -24,13 +20,20 @@ import numpy as np
 @dataclass
 class LstmOutputHistory:
     """
+    TODO: duplicate attributes.
     Container for saving a rolling history of LSTM output means and variances
     over a fixed look-back window. New predictions shift the window forward,
     saving the most recent predictions, and discard the oldest ones.
 
+    Examples:
+        >>> lstm_history = LstmOutputHistory()
+        >>> lstm_history.initialize(look_back_len=10)
+        >>> lstm_history.update(mu_lstm=np.array([0.5]), var_lstm=np.array([0.2]))
+
     Attributes:
         mu (np.ndarray): Rolling array storing the LSTM mean outputs.
         var (np.ndarray): Rolling array storing the LSTM variance outputs.
+
     """
 
     mu: np.ndarray = field(init=False)

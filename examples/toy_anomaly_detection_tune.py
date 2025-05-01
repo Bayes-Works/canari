@@ -8,7 +8,9 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
+    ModelOptimizer,
     SKF,
+    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,

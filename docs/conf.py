@@ -14,6 +14,7 @@ extensions = [
     "sphinx.ext.viewcode",  # Add source links
     "sphinx.ext.autosummary",  # Summary tables (optional)
     "nbsphinx",
+    "sphinx.ext.mathjax",
     # "sphinx_rtd_theme",
     "sphinx_book_theme",
 ]

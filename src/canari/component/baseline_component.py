@@ -1,3 +1,7 @@
+"""
+This module defines three components for modelling baselines including `LocalLevel`, `LocalTrend`, and `LocalAcceleration`.
+"""
+
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
