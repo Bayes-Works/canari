@@ -2,14 +2,19 @@ import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from canari.data_process import DataProcess
-from canari.component.baseline_component import LocalTrend, LocalAcceleration
-from canari.component.periodic_component import Periodic
-from canari.component.white_noise_component import WhiteNoise
-from canari.component.autoregression_component import Autoregression
-from canari.model import Model
-from canari.SKF import SKF
-from canari.data_visualization import plot_skf_states
+from canari import (
+    DataProcess,
+    Model,
+    SKF,
+    plot_skf_states,
+)
+from canari.component import (
+    LocalTrend,
+    LocalAcceleration,
+    WhiteNoise,
+    Periodic,
+    Autoregression,
+)
 
 # Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
