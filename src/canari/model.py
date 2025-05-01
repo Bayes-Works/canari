@@ -1,9 +1,23 @@
 """
-Hybrid LSTM-State Space Model (SSM).
+Hybrid LSTM-SSM model that combines Bayesian Long-short Term Memory (LSTM) Neural Networks
+and State-Space Models (SSM).
 
-This module defines the `Model` class, which is a hybrid model that couples
-Long Short-Term Memory (LSTM) and State-Space Modeling (SSM). The model supports
-forecasting, filtering, smoothing.
+This model supports a flexible architecture where multiple `components`
+are assembled to define a structured state-space model.
+
+On time series data, the model can:
+
+    - Provide forecasts with associated uncertainties.
+    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.
+    - Train its Bayesian LSTM network component.
+    - Support forecasting, filtering, and smoothing operations.
+    - Generate synthetic time series data, including synthetic anomaly injection.
+
+References:
+    Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and
+    state-space models through analytically tractable inference
+    <https://www.sciencedirect.com/science/article/pii/S0169207024000335>`_.
+    International Journal of Forecasting. Volume 41, Issue 1, Pages 128-140.
 
 """
 
@@ -20,34 +34,72 @@ from canari.data_process import DataProcess
 
 class Model:
     """
-    Hybrid LSTM/State-Space Model.
+    `Model` class for the Hybrid LSTM/SSM model.
 
-    This model supports a flexible architecture where multiple `BaseComponent`s
-    are assembled to define a structured state-space system.
+    Args:
+        *components (BaseComponent): One or more instances of classes derived from
+                            :class:`~canari.component.base_component.BaseComponent`.
 
-    The model can:
-        - Forecast future observations with uncertainty quantification.
-        - Filter observations using Bayesian updates.
-        - Apply the RTS smoother for optimal state estimation.
-        - Train its LSTM network component.
-        - Automatically initialize or restore model states.
-        - Generate synthetic time series data, including anomaly injection.
-        - Perform online autoregressive updates.
-
-    Attributes:
-        components (Dict[str, BaseComponent]): Dictionary of named state-space components.
-        states (StatesHistory): Container for tracking state evolution.
-        lstm_net (Optional[LstmNetwork]): LSTM neural network instance, if present.
-        lstm_output_history (LstmOutputHistory): Rolling buffer of LSTM predictions.
-        observation_matrix (np.ndarray): Matrix mapping hidden states to observations.
-        transition_matrix (np.ndarray): State transition matrix.
-        process_noise_matrix (np.ndarray): Covariance of process noise.
-        mu_states, var_states (np.ndarray): Mean and variance of the hidden states.
-        mu_obs_predict, var_obs_predict (np.ndarray): Predicted mean and variance of observations.
-
-    Usage:
+    Examples:
         >>> model = Model(LocalTrend(), Periodic(),WhiteNoise())
         >>> mu_pred, std_pred, _ = model.forecast(data)
+
+    Attributes:
+        components (Dict[str, BaseComponent]):
+            Dictionary to save model components' configurations.
+        num_states (int):
+            Number of hidden states.
+        states_names (list[str]):
+            Names of hidden states.
+        mu_states (np.ndarray):
+            Mean vector for the hidden states :math:`x_t` at the time step `t`.
+        var_states (np.ndarray):
+            Covariance matrix for the hidden states :math:`x_t` at the time step `t`.
+        mu_states_prior (np.ndarray):
+            Prior mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+        var_states_prior (np.ndarray):
+            Prior covariance matrix for the hidden states :math:`x_{t+1}`at the time step `t+1`.
+        mu_states_posterior (np.ndarray):
+            Posteriror mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+        var_states_posterior (np.ndarray):
+            Posteriror covariance matrix for the hidden states :math:`x_{t+1}` at the time
+            step `t+1`.
+        observation_matrix (np.ndarray):
+            Global observation matrix constructed from all components.
+        transition_matrix (np.ndarray):
+            Global transition matrix constructed from all components.
+        process_noise_matrix (np.ndarray):
+            Global process noise matrix constructed from all components.
+        lstm_net (:class:`pytagi.Sequential`):
+            LSTM neural network that is generated from the
+            :class:`~canari.component.lstm_component.LstmNetwork` component, if present.
+            It is a :class:`pytagi.Sequential` instance.
+        lstm_output_history (LstmOutputHistory):
+            Container for saving a rolling history of LSTM output over a fixed look-back window.
+        states (StatesHistory):
+            Container for storing prior, posterior, and smoothed values of hidden states over time.
+        mu_obs_predict (np.ndarray):
+            Means for predictions at a time step `t+1`.
+        var_obs_predict (np.ndarray):
+            Variances for predictions at a time step `t+1`.
+
+        # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component
+
+        early_stop_metric (float):
+            Best value of the metric being monitored.
+        early_stop_metric_history (List[float]):
+            Logged history of metric values across epochs.
+        early_stop_lstm_param (Dict):
+            LSTM's weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.
+        early_stop_init_mu_states (np.ndarray):
+            Copy of `mu_states` at time step :math:`t=0` of the optimal epoch .
+        early_stop_init_var_states (np.ndarray):
+            Copy of `var_states` at time step :math:`t=0` of the optimal epoch .
+        optimal_epoch (int):
+            Epoch at which the monitored metric was best.
+        stop_training (bool):
+            Flag indicating whether training has been stopped due to
+            early stopping.
     """
 
     def __init__(
@@ -55,10 +107,7 @@ class Model:
         *components: BaseComponent,
     ):
         """
-        Initialize the model with a list of components.
-
-        Args:
-            components (BaseComponent): One or more state-space components.
+        Initialize the model from components.
         """
 
         self._initialize_attributes()
@@ -71,16 +120,12 @@ class Model:
     def _initialize_attributes(self):
         """
         Initialize default model attributes.
-
-        Sets up component containers, state metadata, matrix placeholders, LSTM and
-        autoregression attributes, and early stopping criteria.
         """
 
         # General attributes
         self.components = {}
         self.num_states = 0
         self.states_name = []
-        self.component_name = None
 
         # State-space model matrices
         self.mu_states = None
@@ -99,6 +144,7 @@ class Model:
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
 
+        # TODO: use internal variables
         # Autoregression-related attributes
         self.mu_W2bar = None
         self.var_W2bar = None
@@ -128,12 +174,11 @@ class Model:
 
     def _assemble_matrices(self):
         """
-        Assemble block-diagonal matrices:
+        Assemble global matrices:
             - Transition matrix
             - Process noise matrix
             - Observation matrix
-
-        Extracted from all components in the model.
+        from all components in the model.
         """
 
         # Assemble transition matrices
@@ -157,8 +202,6 @@ class Model:
     def _assemble_states(self):
         """
         Concatenate state means and variances from all components.
-
-        Sets internal metadata such as state names, component names, and state count.
         """
 
         self.mu_states = np.vstack(
@@ -168,9 +211,6 @@ class Model:
             [component.var_states for component in self.components.values()]
         )
         self.var_states = np.diagflat(self.var_states)
-        self.component_name = ", ".join(
-            [component.component_name for component in self.components.values()]
-        )
         self.states_name = [
             state
             for component in self.components.values()
@@ -182,9 +222,7 @@ class Model:
 
     def _initialize_lstm_network(self):
         """
-        Initialize and configure LSTM network if a component named 'lstm' is found.
-
-        Sets up forward prediction and gradient update mechanisms.
+        Initialize and configure LSTM network if there is a LstmNetwork component is used.
         """
 
         lstm_component = next(
@@ -202,8 +240,8 @@ class Model:
 
     def _initialize_autoregression(self):
         """
-        Initialize autoregression-related states such as W2, W2bar, and associated variances.
-        Only applicable when the component 'autoregression' exists.
+        Initialize autoregression-related attributes.
+        Only applicable when using the Autoregression component.
         """
 
         autoregression_component = next(
@@ -225,11 +263,11 @@ class Model:
         delta_var_lstm: np.ndarray,
     ):
         """
-        Update LSTM parameters using filtered signal deltas.
+        Update LSTM neural network's parameters.
 
         Args:
-            delta_mu_lstm (np.ndarray): Delta mean signal from backward update.
-            delta_var_lstm (np.ndarray): Delta variance signal from backward update.
+            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
+            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
         """
 
         self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
@@ -258,7 +296,8 @@ class Model:
 
     def _save_states_history(self):
         """
-        Save current prior, posterior states, and cross-covariaces for later smoothing use.
+        Save current prior, posterior hidden states, and cross-covariaces between hidden states
+        at two consecutive time steps for later use in Kalman's smoother.
         """
 
         self.states.mu_prior.append(self.mu_states_prior)
@@ -295,7 +334,7 @@ class Model:
         Export model attributes into a serializable dictionary.
 
         Returns:
-            dict: Serializable model dictionary containing all major attributes.
+            dict: Serializable model dictionary containing neccessary attributes.
         """
 
         save_dict = {}
@@ -316,13 +355,13 @@ class Model:
     @staticmethod
     def load_dict(save_dict: dict):
         """
-        Load model from dictionary.
+        Load model from a dictionary.
 
         Args:
             save_dict (dict): Dictionary containing saved model structure and parameters.
 
         Returns:
-            Model: Instantiated and parameterized model.
+            Model: An instance of :class:`~canari.model.Model` generated from the input dictionary.
         """
 
         components = list(save_dict["components"].values())
@@ -351,15 +390,17 @@ class Model:
         )
         return index
 
-    def auto_initialize_baseline_states(self, y: np.ndarray):
+    def auto_initialize_baseline_states(self, data: np.ndarray):
         """
-        Automatically assign initial baseline states values using trend decomposition.
+        Automatically assign initial means and variances for baseline hidden states (local level,
+        local trend, and local acceleration) from input data using time series decomposition defined in
+        :meth:`~canari.data_process.DataProcess.decompose_data`.
 
         Args:
-            y (np.ndarray): Time series data.
+            data (np.ndarray): Time series data.
         """
 
-        trend, slope, _, _ = DataProcess.decompose_data(y.flatten())
+        trend, slope, _, _ = DataProcess.decompose_data(data.flatten())
 
         for i, _state_name in enumerate(self.states_name):
             if _state_name == "local level":
@@ -383,7 +424,9 @@ class Model:
         new_var_states: np.ndarray,
     ):
         """
-        Set the posterior state values.
+        Set values the posterior hidden states, i.e.,
+        :attr:`~canari.model.Model.mu_states_posterior` and
+        :attr:`~canari.model.Model.var_states_posterior`
 
         Args:
             new_mu_states (np.ndarray): Posterior state means.

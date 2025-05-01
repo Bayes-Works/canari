@@ -407,8 +407,12 @@ class DataProcess:
     @staticmethod
     def decompose_data(data) -> Tuple[np.ndarray, float, np.ndarray, np.ndarray]:
         """
-        Decompose a time series into a linear trend, seasonality, and residual
-        using Fourier transform.
+        Decompose a time series into a linear trend, seasonality, and residual following:
+
+         - Use Fourier transform to estimate seasonality.
+         - `Deseasonalized_data = data - seasonality`
+         - Estimate a linear trend by fitting `Deseasonalized_data` with a first oder polynomial
+         - Estimate residual
 
         Args:
             data (np.ndarray): 1D array.

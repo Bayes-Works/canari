@@ -135,7 +135,7 @@ class LstmNetwork(BaseComponent):
 
     def initialize_lstm_network(self) -> Sequential:
         """
-        Builds and returns the LSTM network as a `pytagi` Sequential model.
+        Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
 
         The network consists of:
 
@@ -145,7 +145,7 @@ class LstmNetwork(BaseComponent):
         The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
 
         Returns:
-            Sequential: A `pytagi` Sequential model representing the LSTM network.
+            Sequential: a :class:`pytagi.Sequential` instance representing the LSTM network.
         """
 
         if self.manual_seed:

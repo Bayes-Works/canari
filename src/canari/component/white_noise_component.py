@@ -1,10 +1,3 @@
-"""
-White Noise Component for Canari
-
-
-with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a latent process.
-"""
-
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
