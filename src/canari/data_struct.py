@@ -1,18 +1,17 @@
-"""
-Module for managing historical values for LSTM' output, cell and hidden states.
+# """
+# Module for managing historical values for LSTM' output, cell and hidden states.
 
-This module provides two main data classes:
+# This module provides two main data classes:
 
-- `LstmOutputHistory`: Maintains a rolling history of LSTM mean and variance outputs.
-- `StatesHistory`: Tracks prior, posterior, and smoothed estimates of hidden states across time,
-  including their means, variances, and covariances.
+# - `LstmOutputHistory`: Maintains a rolling history of LSTM mean and variance outputs.
+# - `StatesHistory`: Tracks prior, posterior, and smoothed estimates of hidden states across time,
+#   including their means, variances, and covariances.
 
-Example:
-    >>> lstm_history = LstmOutputHistory()
-    >>> lstm_history.initialize(look_back_len=10)
-    >>> lstm_history.update(mu_lstm=np.array([0.5]), var_lstm=np.array([0.2]))
-"""
-
+# Example:
+#     >>> lstm_history = LstmOutputHistory()
+#     >>> lstm_history.initialize(look_back_len=10)
+#     >>> lstm_history.update(mu_lstm=np.array([0.5]), var_lstm=np.array([0.2]))
+# """
 from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
@@ -25,10 +24,9 @@ import numpy as np
 @dataclass
 class LstmOutputHistory:
     """
-    Container for managing a rolling history of LSTM output mean and variance.
-
-    This class keeps track of the LSTM's predicted output statistics over a fixed look-back
-    window. New predictions shift the window forward, maintaining a history of values.
+    Container for saving a rolling history of LSTM output means and variances
+    over a fixed look-back window. New predictions shift the window forward,
+    saving the most recent predictions, and discard the oldest ones.
 
     Attributes:
         mu (np.ndarray): Rolling array storing the LSTM mean outputs.
@@ -40,7 +38,7 @@ class LstmOutputHistory:
 
     def initialize(self, look_back_len: int):
         """
-        Initialize the history arrays with a specified look-back length.
+        Initialize mu and var with a specified look-back length.
 
         Args:
             look_back_len (int): Number of time steps to keep in history.
@@ -67,20 +65,22 @@ class LstmOutputHistory:
 @dataclass
 class StatesHistory:
     """
-    Tracks historical estimates of hidden states in a filtering/smoothing system.
+    TODO: duplicates attibutes.
+    Save estimates of hidden states over time.
 
-    Stores the evolution of prior, posterior, and smoothed state distributions over time,
-    along with their covariance matrices. Useful for diagnostic analysis in state-space
-    models like Kalman filters or probabilistic RNNs.
+    Stores the evolution of prior, posterior, and smoothed values for hidden states over time,
+    along with cross-covariances between hidden states at two consecutive timesteps `t` and `t+1`.
 
     Attributes:
-        mu_prior (List[np.ndarray]): Mean of the prior state estimates.
-        var_prior (List[np.ndarray]): Variance of the prior state estimates.
-        mu_posterior (List[np.ndarray]): Mean of the posterior state estimates.
-        var_posterior (List[np.ndarray]): Variance of the posterior state estimates.
-        mu_smooth (List[np.ndarray]): Mean of the smoothed state estimates.
-        var_smooth (List[np.ndarray]): Variance of the smoothed state estimates.
-        cov_states (List[np.ndarray]): Full cross-covariance matrices for the states.
+        mu_prior (List[np.ndarray]): Mean of the prior hidden states.
+        var_prior (List[np.ndarray]): Covariance matrix for the prior hiddens states.
+        mu_posterior (List[np.ndarray]): Mean of the posterior hidden states.
+        var_posterior (List[np.ndarray]): Covariance matrix forthe posterior hidden states.
+        mu_smooth (List[np.ndarray]): Mean of the smoothed estimates for hidden states.
+        var_smooth (List[np.ndarray]): Covariance matrix for the smoothed estimates
+                                        for hidden states.
+        cov_states (List[np.ndarray]):  Cross-covariance matrix for the hidden states
+                                        at two consecutive timesteps `t` and `t+1`.
         states_name (List[str]): Names of the tracked hidden states.
     """
 
@@ -95,10 +95,11 @@ class StatesHistory:
 
     def initialize(self, states_name: List[str]):
         """
-        Initialize the internal storage for state means, variances, and names.
+        Initialize `mu_prior`, `var_prior`, `mu_posterior`, `var_posterior`,
+        `mu_smooth`, `var_smooth`, and `cov_states` as empty lists.
 
         Args:
-            states_name (List[str]): List of hidden state names to be tracked.
+            states_name (List[str]): List of hidden state names.
         """
         self.mu_prior = []
         self.var_prior = []
@@ -115,13 +116,14 @@ class StatesHistory:
         states_name: Optional[list[str]] = "all",
     ) -> dict[str, np.ndarray]:
         """
-        Retrieve the time series of mean values for the specified hidden states.
+        TODO: output type as a list.
+        Retrieve the mean values over time for a specified hidden states.
 
         Args:
-            states_type (str, optional): Type of state estimate to return ('prior', 'posterior', 'smooth').
+            states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
-            states_name (list[str] or str, optional): Subset of state names to extract, or "all" for all.
-                Defaults to "all".
+            states_name (list[str] or str, optional): Subset of state names to extract,
+                or "all" for all hidden states. Defaults to "all".
 
         Returns:
             dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of means over time.
@@ -154,16 +156,17 @@ class StatesHistory:
         states_name: Optional[list[str]] = "all",
     ) -> dict[str, np.ndarray]:
         """
-        Retrieve the time series of standard deviation values for the specified hidden states.
+        Retrieve the standard deviation values over time for a specified hidden states.
 
         Args:
-            states_type (str, optional): Type of state estimate to return ('prior', 'posterior', 'smooth').
+            states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
-            states_name (list[str] or str, optional): Subset of state names to extract, or "all" for all.
-                Defaults to "all".
+            states_name (list[str] or str, optional): Subset of state names to extract,
+                or "all" for all hidden states. Defaults to "all".
 
         Returns:
-            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of standard deviations over time.
+            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of standard
+                                    deviations over time.
         """
         standard_deviation = {}
 

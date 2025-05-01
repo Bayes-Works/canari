@@ -1,7 +1,7 @@
-example\_model\_definition module
+canari.data\_visualization
 =================================
 
-.. automodule:: example_model_definition
+.. automodule:: canari.data_visualization
    :members:
    :undoc-members:
    :show-inheritance:
