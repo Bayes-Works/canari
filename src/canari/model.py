@@ -58,32 +58,35 @@ class Model:
         mu_states_prior (np.ndarray):
             Prior mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
         var_states_prior (np.ndarray):
-            Prior covariance matrix for the hidden states :math:`x_{t+1}`at the time step `t+1`.
+            Prior covariance matrix for the hidden states :math:`x_{t+1}` at the time step `t+1`.
         mu_states_posterior (np.ndarray):
             Posteriror mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
         var_states_posterior (np.ndarray):
             Posteriror covariance matrix for the hidden states :math:`x_{t+1}` at the time
             step `t+1`.
-        observation_matrix (np.ndarray):
-            Global observation matrix constructed from all components.
-        transition_matrix (np.ndarray):
-            Global transition matrix constructed from all components.
-        process_noise_matrix (np.ndarray):
-            Global process noise matrix constructed from all components.
-        lstm_net (:class:`pytagi.Sequential`):
-            LSTM neural network that is generated from the
-            :class:`~canari.component.lstm_component.LstmNetwork` component, if present.
-            It is a :class:`pytagi.Sequential` instance.
-        lstm_output_history (LstmOutputHistory):
-            Container for saving a rolling history of LSTM output over a fixed look-back window.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of hidden states over time.
         mu_obs_predict (np.ndarray):
             Means for predictions at a time step `t+1`.
         var_obs_predict (np.ndarray):
             Variances for predictions at a time step `t+1`.
+        observation_matrix (np.ndarray):
+            Global observation matrix constructed from all components.
+        transition_matrix (np.ndarray):
+            Global transition matrix constructed from all components.
+        process_noise_matrix (np.ndarray):
+            Global process noise matrix constructed from all components.
 
-        # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component
+        # LSTM-related attributes: only being used when a :class:`~canari.component.lstm_component.LstmNetwork` component is found.
+
+        lstm_net (:class:`pytagi.Sequential`):
+            LSTM neural network that is generated from the
+            :class:`~canari.component.lstm_component.LstmNetwork` component, if present.
+            It is a :class:`pytagi.Sequential` instance.
+        lstm_output_history (LstmOutputHistory):
+            Container for saving a rolling history of LSTM output over a fixed look-back window.
+
+        # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
 
         early_stop_metric (float):
             Best value of the metric being monitored.
@@ -343,6 +346,7 @@ class Model:
         save_dict["var_states"] = self.var_states
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
+        # TODO: do save_dict["states_name"], remove saving indexes
         if "phi" in self.states_name:
             save_dict["phi_index"] = self.states_name.index("phi")
         if "autoregression" in self.states_name:
@@ -418,7 +422,7 @@ class Model:
 
         self._mu_local_level = trend[0]
 
-    def set_posterior_states(
+    def _set_posterior_states(
         self,
         new_mu_states: np.ndarray,
         new_var_states: np.ndarray,
@@ -454,7 +458,10 @@ class Model:
 
     def initialize_states_with_smoother_estimates(self):
         """
-        Set states to the first smoothed values after smoothing.
+        Set hidden states :attr:`~canari.model.Model.mu_states` and
+        :attr:`~canari.model.Model.var_states` using the smoothed estimates for hidden states
+        at the first time step `t=1` stored in :attr:`~canari.model.Model.states`. This new hidden
+        states act as the inital hidden states at `t=0` in the next epoch.
         """
 
         self.mu_states = self.states.mu_smooth[0].copy()
@@ -465,7 +472,8 @@ class Model:
 
     def initialize_states_history(self):
         """
-        Start a new history buffer for priors, posteriors, and smoothers.
+        Reinitialize prior, posterior, and smoothed values for hidden states in
+        :attr:`~canari.model.Model.states` with empty lists.
         """
 
         self.states.initialize(self.states_name)
@@ -666,7 +674,7 @@ class Model:
                     var_states_prior[lstm_index, lstm_index],
                 )
 
-            self.set_posterior_states(mu_states_prior, var_states_prior)
+            self._set_posterior_states(mu_states_prior, var_states_prior)
             self._save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
