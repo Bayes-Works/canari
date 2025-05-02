@@ -52,9 +52,18 @@ class Model:
         states_names (list[str]):
             Names of hidden states.
         mu_states (np.ndarray):
-            Current mean vector for the hidden states :math:`x_t` at the time step `t`.
+            Mean vector for the hidden states :math:`x_t` at the time step `t`.
         var_states (np.ndarray):
-            Current covariance matrix for the hidden states :math:`x_t` at the time step `t`.
+            Covariance matrix for the hidden states :math:`x_t` at the time step `t`.
+        mu_states_prior (np.ndarray):
+            Prior mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+        var_states_prior (np.ndarray):
+            Prior covariance matrix for the hidden states :math:`x_{t+1}`at the time step `t+1`.
+        mu_states_posterior (np.ndarray):
+            Posteriror mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+        var_states_posterior (np.ndarray):
+            Posteriror covariance matrix for the hidden states :math:`x_{t+1}` at the time
+            step `t+1`.
         observation_matrix (np.ndarray):
             Global observation matrix constructed from all components.
         transition_matrix (np.ndarray):
@@ -69,6 +78,10 @@ class Model:
             Container for saving a rolling history of LSTM output over a fixed look-back window.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of hidden states over time.
+        mu_obs_predict (np.ndarray):
+            Means for predictions at a time step `t+1`.
+        var_obs_predict (np.ndarray):
+            Variances for predictions at a time step `t+1`.
 
         # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component
 
@@ -79,10 +92,8 @@ class Model:
         early_stop_lstm_param (Dict):
             LSTM's weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.
         early_stop_init_mu_states (np.ndarray):
-            TODO: private or not
             Copy of `mu_states` at time step :math:`t=0` of the optimal epoch .
         early_stop_init_var_states (np.ndarray):
-            TODO: private or not
             Copy of `var_states` at time step :math:`t=0` of the optimal epoch .
         optimal_epoch (int):
             Epoch at which the monitored metric was best.
@@ -119,15 +130,15 @@ class Model:
         # State-space model matrices
         self.mu_states = None
         self.var_states = None
+        self.mu_states_prior = None
+        self.var_states_prior = None
+        self.mu_states_posterior = None
+        self.var_states_posterior = None
+        self.mu_obs_predict = None
+        self.var_obs_predict = None
         self.transition_matrix = None
         self.process_noise_matrix = None
         self.observation_matrix = None
-        self._mu_states_prior = None
-        self._var_states_prior = None
-        self._mu_states_posterior = None
-        self._var_states_posterior = None
-        self._mu_obs_predict = None
-        self._var_obs_predict = None
 
         # LSTM-related attributes
         self.lstm_net = None
@@ -289,32 +300,14 @@ class Model:
         at two consecutive time steps for later use in Kalman's smoother.
         """
 
-        self.states.mu_prior.append(self._mu_states_prior)
-        self.states.var_prior.append(self._var_states_prior)
-        self.states.mu_posterior.append(self._mu_states_posterior)
-        self.states.var_posterior.append(self._var_states_posterior)
+        self.states.mu_prior.append(self.mu_states_prior)
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior)
+        self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
         self.states.cov_states.append(cov_states)
-        self.states.mu_smooth.append(self._mu_states_posterior)
-        self.states.var_smooth.append(self._var_states_posterior)
-
-    def _set_posterior_states(
-        self,
-        new_mu_states: np.ndarray,
-        new_var_states: np.ndarray,
-    ):
-        """
-        Set values the posterior hidden states, i.e.,
-        :attr:`~canari.model.Model._mu_states_posterior` and
-        :attr:`~canari.model.Model._var_states_posterior`
-
-        Args:
-            new_mu_states (np.ndarray): Posterior state means.
-            new_var_states (np.ndarray): Posterior state variances.
-        """
-
-        self._mu_states_posterior = new_mu_states.copy()
-        self._var_states_posterior = new_var_states.copy()
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
 
     def __deepcopy__(self, memo):
         """
@@ -348,7 +341,6 @@ class Model:
         save_dict["components"] = self.components
         save_dict["mu_states"] = self.mu_states
         save_dict["var_states"] = self.var_states
-        # TODO: do save_dict["states_name"], remove saving indexes
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
         if "phi" in self.states_name:
@@ -401,8 +393,8 @@ class Model:
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
         Automatically assign initial means and variances for baseline hidden states (local level,
-        local trend, and local acceleration) from input data using time series decomposition
-        defined in :meth:`~canari.data_process.DataProcess.decompose_data`.
+        local trend, and local acceleration) from input data using time series decomposition defined in
+        :meth:`~canari.data_process.DataProcess.decompose_data`.
 
         Args:
             data (np.ndarray): Time series data.
@@ -426,15 +418,31 @@ class Model:
 
         self._mu_local_level = trend[0]
 
+    def set_posterior_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
+    ):
+        """
+        Set values the posterior hidden states, i.e.,
+        :attr:`~canari.model.Model.mu_states_posterior` and
+        :attr:`~canari.model.Model.var_states_posterior`
+
+        Args:
+            new_mu_states (np.ndarray): Posterior state means.
+            new_var_states (np.ndarray): Posterior state variances.
+        """
+
+        self.mu_states_posterior = new_mu_states.copy()
+        self.var_states_posterior = new_var_states.copy()
+
     def set_states(
         self,
         new_mu_states: np.ndarray,
         new_var_states: np.ndarray,
     ):
         """
-        Set new values for hidden states, i.e.,
-        :attr:`~canari.model.Model.mu_states` and
-        :attr:`~canari.model.Model.var_states`
+        Set new values for states.
 
         Args:
             new_mu_states (np.ndarray): Mean values to be set.
@@ -444,12 +452,9 @@ class Model:
         self.mu_states = new_mu_states.copy()
         self.var_states = new_var_states.copy()
 
-    def __initialize_states_with_smoother_estimates(self):
+    def initialize_states_with_smoother_estimates(self):
         """
-        Set hidden states :attr:`~canari.model.Model.mu_states` and
-        :attr:`~canari.model.Model.var_states` using the smoothed estimates for hidden states
-        at the first time step `t=1` stored in :attr:`~canari.model.Model.states`. This new hidden
-        states act as the inital hidden states at `t=0` in the next epoch.
+        Set states to the first smoothed values after smoothing.
         """
 
         self.mu_states = self.states.mu_smooth[0].copy()
@@ -458,9 +463,9 @@ class Model:
             local_level_index = self.get_states_index("local level")
             self.mu_states[local_level_index] = self._mu_local_level
 
-    def _initialize_states_history(self):
+    def initialize_states_history(self):
         """
-        Delete and reinitialize :attr:`~canari.model.Model.states`.
+        Start a new history buffer for priors, posteriors, and smoothers.
         """
 
         self.states.initialize(self.states_name)
@@ -475,7 +480,7 @@ class Model:
         """
 
         if time_step == 0:
-            self.__initialize_states_with_smoother_estimates()
+            self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
                 lstm_states = self.lstm_net.get_lstm_states()
@@ -524,7 +529,7 @@ class Model:
             var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM.
 
         Returns:
-            Tuple: (mu_obs_pred, var_obs_pred, _mu_states_prior, _var_states_prior)
+            Tuple: (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior)
         """
 
         # LSTM prediction:
@@ -538,7 +543,7 @@ class Model:
             )
 
         # State-space model prediction:
-        mu_obs_pred, var_obs_pred, _mu_states_prior, _var_states_prior = common.forward(
+        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
             self.transition_matrix,
@@ -551,16 +556,16 @@ class Model:
 
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
-            _mu_states_prior, _var_states_prior = self._online_AR_forward_modification(
-                _mu_states_prior, _var_states_prior
+            mu_states_prior, var_states_prior = self._online_AR_forward_modification(
+                mu_states_prior, var_states_prior
             )
 
-        self._mu_states_prior = _mu_states_prior
-        self._var_states_prior = _var_states_prior
-        self._mu_obs_predict = mu_obs_pred
-        self._var_obs_predict = var_obs_pred
+        self.mu_states_prior = mu_states_prior
+        self.var_states_prior = var_states_prior
+        self.mu_obs_predict = mu_obs_pred
+        self.var_obs_predict = var_obs_pred
 
-        return mu_obs_pred, var_obs_pred, _mu_states_prior, _var_states_prior
+        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
 
     def backward(
         self,
@@ -578,32 +583,32 @@ class Model:
 
         delta_mu_states, delta_var_states = common.backward(
             obs,
-            self._mu_obs_predict,
-            self._var_obs_predict,
-            self._var_states_prior,
+            self.mu_obs_predict,
+            self.var_obs_predict,
+            self.var_states_prior,
             self.observation_matrix,
         )
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
-        _mu_states_posterior = self._mu_states_prior + delta_mu_states
-        _var_states_posterior = self._var_states_prior + delta_var_states
+        mu_states_posterior = self.mu_states_prior + delta_mu_states
+        var_states_posterior = self.var_states_prior + delta_var_states
 
         if "autoregression" in self.states_name:
-            _mu_states_posterior, _var_states_posterior = (
+            mu_states_posterior, var_states_posterior = (
                 self._online_AR_backward_modification(
-                    _mu_states_posterior,
-                    _var_states_posterior,
+                    mu_states_posterior,
+                    var_states_posterior,
                 )
             )
 
-        self._mu_states_posterior = _mu_states_posterior
-        self._var_states_posterior = _var_states_posterior
+        self.mu_states_posterior = mu_states_posterior
+        self.var_states_posterior = var_states_posterior
 
         return (
             delta_mu_states,
             delta_var_states,
-            _mu_states_posterior,
-            _var_states_posterior,
+            mu_states_posterior,
+            var_states_posterior,
         )
 
     def rts_smoother(
@@ -650,20 +655,20 @@ class Model:
         std_obs_preds = []
 
         for x in data["x"]:
-            mu_obs_pred, var_obs_pred, _mu_states_prior, _var_states_prior = (
-                self.forward(x)
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
+                x
             )
 
             if self.lstm_net:
                 lstm_index = self.get_states_index("lstm")
                 self.lstm_output_history.update(
-                    _mu_states_prior[lstm_index],
-                    _var_states_prior[lstm_index, lstm_index],
+                    mu_states_prior[lstm_index],
+                    var_states_prior[lstm_index, lstm_index],
                 )
 
-            self._set_posterior_states(_mu_states_prior, _var_states_prior)
+            self.set_posterior_states(mu_states_prior, var_states_prior)
             self._save_states_history()
-            self.set_states(_mu_states_prior, _var_states_prior)
+            self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
         return (
@@ -761,22 +766,22 @@ class Model:
                 anm_begin_all.append(anomaly_time)
 
             for i, x in enumerate(input_covariates):
-                _, _, _mu_states_prior, _var_states_prior = self.forward(x)
+                _, _, mu_states_prior, var_states_prior = self.forward(x)
 
                 if "lstm" in self.states_name:
                     lstm_index = self.states_name.index("lstm")
                     if not sample_from_lstm_pred:
-                        _var_states_prior[lstm_index, :] = 0
-                        _var_states_prior[:, lstm_index] = 0
+                        var_states_prior[lstm_index, :] = 0
+                        var_states_prior[:, lstm_index] = 0
 
                 state_sample = np.random.multivariate_normal(
-                    _mu_states_prior.flatten(), _var_states_prior
+                    mu_states_prior.flatten(), var_states_prior
                 ).reshape(-1, 1)
 
                 if "lstm" in self.states_name:
                     self.lstm_output_history.update(
                         state_sample[lstm_index],
-                        np.zeros_like(_var_states_prior[lstm_index, lstm_index]),
+                        np.zeros_like(var_states_prior[lstm_index, lstm_index]),
                     )
 
                 obs_gen = self.observation_matrix @ state_sample
@@ -788,7 +793,7 @@ class Model:
                             obs_gen += anomaly_mag * (i - anomaly_time)  # LT anomaly
                         elif anomaly_type == "level":
                             obs_gen += anomaly_mag  # LL anomaly
-                self.set_states(state_sample, np.zeros_like(_var_states_prior))
+                self.set_states(state_sample, np.zeros_like(var_states_prior))
                 one_time_series.append(obs_gen)
 
             self.set_states(mu_states_temp, var_states_temp)
@@ -825,38 +830,38 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
-        self._initialize_states_history()
+        self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
-            mu_obs_pred, var_obs_pred, _, _var_states_prior = self.forward(x)
+            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
                 delta_mu_states,
                 delta_var_states,
-                _mu_states_posterior,
-                _var_states_posterior,
+                mu_states_posterior,
+                var_states_posterior,
             ) = self.backward(y)
 
             if self.lstm_net:
                 lstm_index = self.get_states_index("lstm")
                 delta_mu_lstm = np.array(
                     delta_mu_states[lstm_index]
-                    / _var_states_prior[lstm_index, lstm_index]
+                    / var_states_prior[lstm_index, lstm_index]
                 )
                 delta_var_lstm = np.array(
                     delta_var_states[lstm_index, lstm_index]
-                    / _var_states_prior[lstm_index, lstm_index] ** 2
+                    / var_states_prior[lstm_index, lstm_index] ** 2
                 )
                 if train_lstm:
                     self.lstm_net.update_param(
                         np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
                     )
                 self.lstm_output_history.update(
-                    _mu_states_posterior[lstm_index],
-                    _var_states_posterior[lstm_index, lstm_index],
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
                 )
 
             self._save_states_history()
-            self.set_states(_mu_states_posterior, _var_states_posterior)
+            self.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
@@ -987,7 +992,7 @@ class Model:
             self.early_stop_metric_history,
         )
 
-    def _online_AR_forward_modification(self, _mu_states_prior, _var_states_prior):
+    def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
         Apply forward path autoregressive (AR) moment transformations.
 
@@ -996,11 +1001,11 @@ class Model:
         pass when AR components are present.
 
         Args:
-            _mu_states_prior (np.ndarray): Prior mean vector of the states.
-            _var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
+            mu_states_prior (np.ndarray): Prior mean vector of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (_mu_states_prior, _var_states_prior).
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).
         """
 
         if "AR_error" in self.states_name:
@@ -1011,32 +1016,32 @@ class Model:
 
             # Forward path to compute the moments of W
             # # W2bar
-            _mu_states_prior[W2bar_index] = self.mu_W2bar
-            _var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+            mu_states_prior[W2bar_index] = self.mu_W2bar
+            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
 
             # # From W2bar to W2
             self.mu_W2_prior = self.mu_W2bar
             self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-            _mu_states_prior[W2_index] = self.mu_W2_prior
-            _var_states_prior[W2_index, W2_index] = self.var_W2_prior
+            mu_states_prior[W2_index] = self.mu_W2_prior
+            var_states_prior[W2_index, W2_index] = self.var_W2_prior
 
             # # From W2 to W
-            _mu_states_prior[ar_error_index] = 0
-            _var_states_prior[ar_error_index, :] = np.zeros_like(
-                _var_states_prior[ar_error_index, :]
+            mu_states_prior[ar_error_index] = 0
+            var_states_prior[ar_error_index, :] = np.zeros_like(
+                var_states_prior[ar_error_index, :]
             )
-            _var_states_prior[:, ar_error_index] = np.zeros_like(
-                _var_states_prior[:, ar_error_index]
+            var_states_prior[:, ar_error_index] = np.zeros_like(
+                var_states_prior[:, ar_error_index]
             )
-            _var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
-            _var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
-            _var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
-        return _mu_states_prior, _var_states_prior
+            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+        return mu_states_prior, var_states_prior
 
     def _online_AR_backward_modification(
         self,
-        _mu_states_posterior,
-        _var_states_posterior,
+        mu_states_posterior,
+        var_states_posterior,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Apply backward AR moment updates during state-space filtering.
@@ -1046,18 +1051,18 @@ class Model:
         GMA transformations when "phi" is involved in the model.
 
         Args:
-            _mu_states_posterior (np.ndarray): Posterior mean vector of the states.
-            _var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
+            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (_mu_states_posterior, _var_states_posterior).
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
         """
 
         if "phi" in self.states_name:
             # GMA operations
-            _mu_states_posterior, _var_states_posterior = GMA(
-                _mu_states_posterior,
-                _var_states_posterior,
+            mu_states_posterior, var_states_posterior = GMA(
+                mu_states_posterior,
+                var_states_posterior,
                 index1=self.get_states_index("phi"),
                 index2=self.get_states_index("autoregression"),
                 replace_index=self.get_states_index("phi_autoregression"),
@@ -1072,23 +1077,23 @@ class Model:
             # Backward path to update W2 and W2bar
             # # From W to W2
             mu_W2_posterior = (
-                _mu_states_posterior[ar_error_index] ** 2
-                + _var_states_posterior[ar_error_index, ar_error_index]
+                mu_states_posterior[ar_error_index] ** 2
+                + var_states_posterior[ar_error_index, ar_error_index]
             )
             var_W2_posterior = (
-                2 * _var_states_posterior[ar_error_index, ar_error_index] ** 2
+                2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
                 + 4
-                * _var_states_posterior[ar_error_index, ar_error_index]
-                * _mu_states_posterior[ar_error_index] ** 2
+                * var_states_posterior[ar_error_index, ar_error_index]
+                * mu_states_posterior[ar_error_index] ** 2
             )
-            _mu_states_posterior[W2_index] = mu_W2_posterior
-            _var_states_posterior[W2_index, :] = np.zeros_like(
-                _var_states_posterior[W2_index, :]
+            mu_states_posterior[W2_index] = mu_W2_posterior
+            var_states_posterior[W2_index, :] = np.zeros_like(
+                var_states_posterior[W2_index, :]
             )
-            _var_states_posterior[:, W2_index] = np.zeros_like(
-                _var_states_posterior[:, W2_index]
+            var_states_posterior[:, W2_index] = np.zeros_like(
+                var_states_posterior[:, W2_index]
             )
-            _var_states_posterior[W2_index, W2_index] = var_W2_posterior
+            var_states_posterior[W2_index, W2_index] = var_W2_posterior
 
             # # From W2 to W2bar
             K = self.var_W2bar / self.var_W2_prior
@@ -1096,18 +1101,18 @@ class Model:
             self.var_W2bar = self.var_W2bar + K**2 * (
                 var_W2_posterior - self.var_W2_prior
             )
-            _mu_states_posterior[W2bar_index] = self.mu_W2bar
-            _var_states_posterior[W2bar_index, :] = np.zeros_like(
-                _var_states_posterior[W2bar_index, :]
+            mu_states_posterior[W2bar_index] = self.mu_W2bar
+            var_states_posterior[W2bar_index, :] = np.zeros_like(
+                var_states_posterior[W2bar_index, :]
             )
-            _var_states_posterior[:, W2bar_index] = np.zeros_like(
-                _var_states_posterior[:, W2bar_index]
+            var_states_posterior[:, W2bar_index] = np.zeros_like(
+                var_states_posterior[:, W2bar_index]
             )
-            _var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
 
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
-        return _mu_states_posterior, _var_states_posterior
+        return mu_states_posterior, var_states_posterior
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
