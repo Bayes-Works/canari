@@ -899,7 +899,7 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
-                self.model[transit].set_posterior_states(
+                self.model[transit]._set_posterior_states(
                     mu_states_marginal[origin_state], var_states_marginal[origin_state]
                 )
 
