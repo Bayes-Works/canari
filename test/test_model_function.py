@@ -51,7 +51,7 @@ def model_forward_backward(
     """
 
     model = Model(*components)
-    mu_obs_pred, var_obs_pred, _, _var_states_prior = common.forward(
+    mu_obs_pred, var_obs_pred, _, var_states_prior = common.forward(
         model.mu_states,
         model.var_states,
         model.transition_matrix,
@@ -63,7 +63,7 @@ def model_forward_backward(
         obs,
         mu_obs_pred,
         var_obs_pred,
-        _var_states_prior,
+        var_states_prior,
         model.observation_matrix,
     )
     return mu_obs_pred, var_obs_pred, delta_mu_states_pred, delta_var_states_pred, model

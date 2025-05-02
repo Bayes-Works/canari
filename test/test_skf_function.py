@@ -120,8 +120,8 @@ def test_skf_filter():
     skf.filter(data=data)
 
     assert (
-        skf.model["norm_norm"]._var_obs_predict
-        == skf.model["abnorm_norm"]._var_obs_predict
+        skf.model["norm_norm"].var_obs_predict
+        == skf.model["abnorm_norm"].var_obs_predict
     )
 
     # Check if lstm's memory is clear at at end of SKF.filer
