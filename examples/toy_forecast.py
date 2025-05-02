@@ -57,6 +57,7 @@ for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        current_epoch=epoch,
     )
 
     # Unstandardize the predictions
@@ -85,6 +86,8 @@ for epoch in range(num_epoch):
     if model.stop_training:
         break
 
+plt.plot(model.early_stop_metric_history)
+plt.show()
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
