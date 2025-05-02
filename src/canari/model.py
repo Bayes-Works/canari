@@ -301,6 +301,7 @@ class Model:
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
     ):
         """
+        TODO: remove epoch from input
         Apply exponential decay to white noise standard deviation over epochs.
 
         Args:
@@ -1014,6 +1015,7 @@ class Model:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
+        current_epoch: int,
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
@@ -1031,6 +1033,7 @@ class Model:
                 Dictionary with keys `'x'` and `'y'` for training inputs and targets.
             validation_data (Dict[str, np.ndarray]):
                 Dictionary with keys `'x'` and `'y'` for validation inputs and targets.
+            current_epoch (int): current epoch
             white_noise_decay (bool, optional):
                 If True, apply an exponential decay on the white noise standard deviation
                 over epochs, if a white noise component exists. Defaults to True.
@@ -1056,7 +1059,7 @@ class Model:
         # Decaying observation's variance
         if white_noise_decay and self.get_states_index("white noise") is not None:
             self._white_noise_decay(
-                self._current_epoch, white_noise_max_std, white_noise_decay_factor
+                current_epoch, white_noise_max_std, white_noise_decay_factor
             )
         self.filter(train_data)
         self.smoother()
@@ -1071,9 +1074,9 @@ class Model:
 
     def early_stopping(
         self,
+        evaluate_metric: float,
         current_epoch: int,
         max_epoch: int,
-        evaluate_metric: float,
         mode: Optional[str] = "min",
         patience: Optional[int] = 20,
         skip_epoch: Optional[int] = 5,
@@ -1122,6 +1125,7 @@ class Model:
         self.early_stop_metric_history.append(evaluate_metric)
 
         # Check for improvement
+        improved = False
         improved = current_epoch > skip_epoch and (
             (mode == "max" and evaluate_metric > self.early_stop_metric)
             or (mode == "min" and evaluate_metric < self.early_stop_metric)
