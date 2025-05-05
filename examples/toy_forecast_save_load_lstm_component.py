@@ -95,7 +95,9 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 
 # Saved the trained lstm network
+import os
 params_path = "saved_params/lstm_net_test.pth"
+os.makedirs(os.path.dirname(params_path), exist_ok=True)
 model.lstm_net.load_state_dict(model.early_stop_lstm_param)
 model.lstm_net.save(filename=params_path)
 

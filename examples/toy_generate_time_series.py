@@ -142,7 +142,9 @@ model_dict["states_optimal"] = states_optim
 
 # Save model_dict to local
 import pickle
+import os
 
+os.makedirs("saved_params", exist_ok=True)
 with open("saved_params/toy_model_dict.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
