@@ -42,33 +42,44 @@ for i in range(df_values.shape[1]):
     data_processors.append(data_processor)
 
 # load target data
-data_file_target = "./data/benchmark_data/test_4_data.csv" # 11 shows very nice results
-df_target = pd.read_csv(
-    data_file_target,
-    usecols=[0, 1],  # Read only the first two columns
-    skiprows=1,
-    header=None,
-    names=["date_time", "values"],
-    parse_dates=["date_time"],
-    index_col="date_time",
-)
-# Resample weekly averages
-df_target = df_target.resample("W").mean()
-df_target['values'] = df_target['values'].interpolate(method='time')
-df_target['values'] = df_target['values'].bfill().ffill()
+data_files = [
+    "./data/benchmark_data/test_1_data.csv",
+    "./data/benchmark_data/test_4_data.csv",
+    "./data/benchmark_data/test_5_data.csv",
+    "./data/benchmark_data/test_6_data.csv",
+    "./data/benchmark_data/test_7_data.csv",
+    "./data/benchmark_data/test_8_data.csv",
+    "./data/benchmark_data/test_9_data.csv",
+    "./data/benchmark_data/test_10_data.csv",
+    "./data/benchmark_data/test_11_data.csv",
+]
+for data_file_target in data_files:
+    df_target = pd.read_csv(
+        data_file_target,
+        usecols=[0, 1],  # Read only the first two columns
+        skiprows=1,
+        header=None,
+        names=["date_time", "values"],
+        parse_dates=["date_time"],
+        index_col="date_time",
+    )
+    # Resample weekly averages
+    df_target = df_target.resample("W").mean()
+    df_target["values"] = df_target["values"].interpolate(method="time")
+    df_target["values"] = df_target["values"].bfill().ffill()
 
-# Apply detrending
-df_target['values'] = detrend(df_target['values'].values)
+    # Apply detrending
+    df_target["values"] = detrend(df_target["values"].values)
 
-# Build data processor for the target series
-data_processor = DataProcess(
-    data=df_target,
-    time_covariates=["week_of_year"],
-    train_split=0.3,
-    validation_split=0.1,
-    output_col=[0],
-)
-data_processors.append(data_processor)
+    # Build data processor for the target series
+    data_processor = DataProcess(
+        data=df_target,
+        time_covariates=["week_of_year"],
+        train_split=0.3,
+        validation_split=0.1,
+        output_col=[0],
+    )
+    data_processors.append(data_processor)
 
 # iterate over the data processors and split per time series
 data_splits = {}
