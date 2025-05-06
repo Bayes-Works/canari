@@ -10,7 +10,7 @@ from canari.component.base_component import BaseComponent
 class LocalLevel(BaseComponent):
     """
     `LocalLevel` class, inheriting from Canari's `BaseComponent`.
-    It models baselines with a constant level (zero speed) over time. It has one hidden state
+    It models baselines with a locally constant level (zero speed) over time. It has one hidden state
     `local level`.
 
     Args:
@@ -92,7 +92,7 @@ class LocalLevel(BaseComponent):
 class LocalTrend(BaseComponent):
     """
     `LocalTrend` class, inheriting from Canari's `BaseComponent`.
-    It models baselines with a constant speed over time (linear level). It has two
+    It models baselines with a locally constant speed over time (linear level). It has two
     hidden states `local level` and `local trend`.
 
     Args:
@@ -178,7 +178,7 @@ class LocalTrend(BaseComponent):
 class LocalAcceleration(BaseComponent):
     """
     `LocalAcceleration` class, inheriting from Canari's `BaseComponent`.
-    It models baselines with a constant acceleration (linear speed and curvature level) over time.
+    It models baselines with a locally constant acceleration (linear speed and curvature level) over time.
     It has three hidden states `local level`, `local trend`, and `local acceleration`.
 
     Args:
