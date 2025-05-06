@@ -114,7 +114,9 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    skf.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == skf.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
@@ -127,7 +129,7 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = smooth_marginal_abnorm_prob

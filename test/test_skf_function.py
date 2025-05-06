@@ -105,10 +105,6 @@ def test_skf_transition_models():
 def test_skf_filter():
     """Test SKF.filter"""
 
-    # Test same hidden states for each transition model:
-    # or: self.set_same_states_transition_models()
-    # Check if the first predictions from "norm_norm" and "abnorm_norm" are the same
-
     new_mu_states = 0.1 * np.ones(skf.model["norm_norm"].mu_states.shape)
     new_var_states = 0.2 * np.ones(skf.model["norm_norm"].var_states.shape)
     skf.model["norm_norm"].set_states(new_mu_states, new_var_states)
@@ -129,8 +125,8 @@ def test_skf_filter():
     lstm_output_history_init.initialize(lstm_look_back_len)
     npt.assert_allclose(skf.lstm_output_history.mu, lstm_output_history_init.mu)
     npt.assert_allclose(skf.lstm_output_history.var, lstm_output_history_init.var)
-    assert skf.marginal_prob_current["norm"] == skf.norm_model_prior_prob
-    assert skf.marginal_prob_current["abnorm"] == 1 - skf.norm_model_prior_prob
+    assert skf.marginal_prob["norm"] == skf.norm_model_prior_prob
+    assert skf.marginal_prob["abnorm"] == 1 - skf.norm_model_prior_prob
 
 
 def test_detect_synthetic_anomaly():
