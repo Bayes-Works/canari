@@ -9,6 +9,7 @@ saved_results/
 dist/
 data/demo_data
 data/benchmark_data/
+data/detrended_data/
 saved_params/
 
 # Docs
