@@ -12,7 +12,7 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class SKFOptimizer:
     """
-    Optimize hyperparameters for :class:`~canari.skf.SKF` using Ray Tune.
+    Optimize hyperparameters for :class:`~canari.skf.SKF` using the Ray Tune external library.
 
     Args:
         initialize_skf (Callable): Function that returns an SKF instance given a configuration.
@@ -20,11 +20,11 @@ class SKFOptimizer:
                             :meth:`~canari.model.Model.get_dict`.
         param_space (dict): Parameter search space: two-value lists [min, max] for optimization.
         data (dict): Input data for adding synthetic anomalies.
-        detection_threshold (float, optional): Threshold for detection rate for anomaly detection.
+        detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.
                                                 Defauls to 0.5.
-        false_rate_threshold (float, optional): Threshold for false rate.
+        false_rate_threshold (float, optional): Threshold for the maximal false detection rate.
                                                 Defauls to 0.0.
-        max_timestep_to_detect (int, optional): Max timesteps to allow detection.
+        max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.
                                                 Defauls to None (to the end of time series).
         num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as
                             many time series, because one time series contains only one

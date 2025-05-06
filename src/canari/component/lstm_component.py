@@ -17,15 +17,16 @@ class LstmNetwork(BaseComponent):
         num_layer (Optional[int]): Number of LSTM layers. Defaults to 1.
         num_hidden_unit (Optional[int] or list[int]): Number of hidden units per LSTM
             layer. If an integer is provided, it is used for all layers. Defaults to 50.
-        look_back_len (Optional[int]): Number of past time steps the LSTM uses as input.
+        look_back_len (Optional[int]): Number of past LSTM's outputs used as input features.
             Defaults to 1.
         num_features (Optional[int]): Number of input features. Defaults to 1.
         num_output (Optional[int]): Number of output features predicted by the network.
                                     Defaults to 1.
         device (Optional[str]): Device for computation, either "cpu" or "cuda". Defaults to "cpu".
         num_thread (Optional[int]): Number of CPU threads for computation. Defaults to 1.
-        manual_seed (Optional[int]): Seed for reproducibility, i.e. intializing LSTM's
-                                    weights and biases. Defaults to None (random initialization).
+        manual_seed (Optional[int]): Initial seed for reproducing random number generation
+                                    , i.e. intializing LSTM's weights and biases.
+                                    Defaults to None (random initialization).
         gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.
         gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.
         load_lstm_net (Optional[str]): TODO (provide variables): Path to a saved LSTM network
@@ -140,7 +141,7 @@ class LstmNetwork(BaseComponent):
         The network consists of:
 
         - One or multiple LSTM layers, each with specified hidden units.
-        - A final Linear layer mapping to the desired output size.
+        - A final Linear layer mapping the LSTM's output to the desired output size.
 
         The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
 
