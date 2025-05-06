@@ -12,7 +12,8 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class ModelOptimizer:
     """
-    Optimize hyperparameters for :class:`~canari.model.Model` using Ray Tune.
+    Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune
+    external library.
 
     Args:
         initialize_model (Callable):
@@ -21,7 +22,8 @@ class ModelOptimizer:
             Function that define the training procedure a model, it should return
             `trained_model.early_stop_metric`.
         param_space (Dict[str, list]):
-            Parameter search space: two-value lists [min, max] for optimization.
+            Parameter search space: two-value lists [min, max] for defining the
+            bounds of the optimization.
         data_processor (DataProcess):
             DataProcess instance for data preparation.
         num_optimization_trial (int, optional):
