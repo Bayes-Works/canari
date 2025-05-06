@@ -5,7 +5,7 @@ and State-Space Models (SSM).
 This model supports a flexible architecture where multiple `components`
 are assembled to define a structured state-space model.
 
-On time series data, the model can:
+On time series data, this model can:
 
     - Provide forecasts with associated uncertainties.
     - Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.
@@ -41,8 +41,14 @@ class Model:
                             :class:`~canari.component.base_component.BaseComponent`.
 
     Examples:
-        >>> model = Model(LocalTrend(), Periodic(),WhiteNoise())
-        >>> mu_pred, std_pred, _ = model.forecast(data)
+        >>> from canari.component import LocalTrend, Periodic, WhiteNoise
+        >>> from canari import Model
+        >>> # Components
+        >>> local_trend = LocalTrend(mu_states=[1,0.5], var_states=[1,0.5])
+        >>> periodic = Periodic(mu_states=[1,1],var_states=[2,2],period=52)
+        >>> residual = WhiteNoise(std_error=0.04168)
+        >>> # Define model
+        >>> model = Model(local_trend, periodic, residual)
 
     Attributes:
         components (Dict[str, BaseComponent]):
@@ -525,6 +531,9 @@ class Model:
 
         Returns:
             dict: Serializable model dictionary containing neccessary attributes.
+
+        Examples:
+            >>> saved_dict = model.get_dict()
         """
 
         save_dict = {}
@@ -546,13 +555,17 @@ class Model:
     @staticmethod
     def load_dict(save_dict: dict):
         """
-        Load model from a dictionary.
+        Reconstruct a model instance from a saved dictionary.
 
         Args:
             save_dict (dict): Dictionary containing saved model structure and parameters.
 
         Returns:
             Model: An instance of :class:`~canari.model.Model` generated from the input dictionary.
+
+        Examples:
+            >>> saved_dict = model.get_dict()
+            >>> loaded_model = Model.load_dict(saved_dict)
         """
 
         components = list(save_dict["components"].values())
@@ -572,6 +585,10 @@ class Model:
 
         Returns:
             int or None: Index of the state, or None if not found.
+
+        Examples:
+            >>> lstm_index = model.get_states_index("lstm")
+            >>> local_level_index = model.get_states_index("local level")
         """
 
         index = (
@@ -589,6 +606,10 @@ class Model:
 
         Args:
             data (np.ndarray): Time series data.
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
+            >>> model.auto_initialize_baseline_states(train_data["y"][0 : 52])
         """
 
         trend, slope, _, _ = DataProcess.decompose_data(data.flatten())
@@ -665,7 +686,6 @@ class Model:
             time_step (int): Index of timestep to restore.
 
         Examples:
-            >>> model = Model()
             >>> # If the next analysis starts from the beginning of the time series
             >>> model.set_memory(states=model.states, time_step=0))
             >>> # If the next analysis starts from t = 200
@@ -706,7 +726,7 @@ class Model:
 
     def forward(
         self,
-        input_covariates: np.ndarray,
+        input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -719,7 +739,7 @@ class Model:
         This function is used at one-time-step level.
 
         Args:
-            input_covariates (np.ndarray): Input covariates for LSTM at time `t`.
+            input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.
             mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM at time `t+1`, used when
                 dont want LSTM to make predictions, but use LSTM predictions already have.
             var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM at time `t+1`, used
@@ -890,6 +910,9 @@ class Model:
                     The standard deviations for forecasts.
                 - :attr:`~canari.model.Model.states`:
                     The history of hidden states over time.
+
+        Examples:
+            >>> mu_preds_val, std_preds_val, states = model.forecast(val_set)
         """
 
         mu_obs_preds = []
@@ -946,6 +969,9 @@ class Model:
                     The standard deviations for forecasts.
                 - :attr:`~canari.model.Model.states`:
                     The history of hidden states over time.
+
+        Examples:
+            >>> mu_preds_train, std_preds_train, states = model.filter(train_set)
         """
 
         mu_obs_preds = []
@@ -1003,6 +1029,10 @@ class Model:
         Returns:
             StatesHistory:
                 :attr:`~canari.model.Model.states`: The history of hidden states over time.
+
+        Examples:
+            >>> mu_preds_train, std_preds_train, states = model.filter(train_set)
+            >>> states = model.smoother()
         """
 
         num_time_steps = len(self.states.mu_smooth)
@@ -1015,7 +1045,6 @@ class Model:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
-        current_epoch: int,
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
@@ -1033,7 +1062,6 @@ class Model:
                 Dictionary with keys `'x'` and `'y'` for training inputs and targets.
             validation_data (Dict[str, np.ndarray]):
                 Dictionary with keys `'x'` and `'y'` for validation inputs and targets.
-            current_epoch (int): current epoch
             white_noise_decay (bool, optional):
                 If True, apply an exponential decay on the white noise standard deviation
                 over epochs, if a white noise component exists. Defaults to True.
@@ -1054,18 +1082,23 @@ class Model:
                     The standard deviations for multi-step-ahead predictions for the validation set.
                 - :attr:`~canari.model.Model.states`:
                     The history of hidden states over time.
+
+        Examples:
+            >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
 
         # Decaying observation's variance
         if white_noise_decay and self.get_states_index("white noise") is not None:
             self._white_noise_decay(
-                current_epoch, white_noise_max_std, white_noise_decay_factor
+                self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
         self.filter(train_data)
         self.smoother()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
         # self.set_memory(states=self.states, time_step=0)
 
+        # TODO: to delete this internal count
+        self._current_epoch += 1
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),
@@ -1082,7 +1115,7 @@ class Model:
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
         """
-        Check and apply early stopping based on a monitored metric.
+        Apply early stopping based on a monitored metric when training a LSTM neural network.
 
         This method records `evaluate_metric` at each epoch,
         if there is an improvement on it,
@@ -1117,6 +1150,9 @@ class Model:
                 - optimal_epoch: Epoch index of when having best metric.
                 - early_stop_metric: Best evaluate_metric. .
                 - early_stop_metric_history: History of `evaluate_metric` at all epochs.
+
+        Examples:
+            >>> model.early_stopping(evaluate_metric=mse, current_epoch=1, max_epoch=50)
         """
 
         if current_epoch == 0:

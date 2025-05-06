@@ -126,7 +126,9 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    model.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
 
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
