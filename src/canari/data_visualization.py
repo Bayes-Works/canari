@@ -1,11 +1,11 @@
 """
 Visualization for Canari's results.
 
-This module provides plotting functions for:
-- Raw or normalized data (train, validation, and test splits)
+This module provides functions to plot:
+- Raw or normalized data
 - Prediction results with uncertainty (mean ± standard deviation)
-- Hidden state estimates (posterior or prior) from state-space models
-- Abnormal regime-switching probabilities from Switching Kalman filters
+- Hidden state estimates
+- Probability of regime changes (anomalies) from Switching Kalman filter (SKF)
 
 """
 
@@ -121,8 +121,8 @@ def plot_data(
     Plot train, validation, and test data with optional normalization and NaN filtering.
 
     Args:
-        data_processor (DataProcess): Object that wraps the dataset and split metadata.
-        normalization (bool, optional): Normalize the data using stored statistics.
+        data_processor (DataProcess): Data processing object.
+        normalization (bool, optional): Normalize the data using stored training's statistics.
         plot_train_data (bool, optional): If True, plot training data.
         plot_validation_data (bool, optional): If True, plot validation data.
         plot_test_data (bool, optional): If True, plot test data.
@@ -133,7 +133,27 @@ def plot_data(
         train_label (str, optional): Legend label for training data.
         validation_label (str, optional): Legend label for validation data.
         test_label (str, optional): Legend label for test data.
-        plot_nan (bool, optional): Whether to include NaN values in the plot.
+        plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.
+
+    Examples:
+        >>> from canari import DataProcess, plot_data
+        >>> # Create data
+        >>> dt_index = pd.date_range(start="2025-01-01", periods=11, freq="H")
+        >>> data = pd.DataFrame({'value': np.linspace(0.1, 1.0, 11)},
+                        index=dt_index)
+        >>> dp = DataProcess(data,
+                    train_split=0.7,
+                    validation_split=0.2,
+                    test_split=0.1,
+                    time_covariates = ["hour_of_day"],
+                    normalization=True)
+        >>> fig, ax = plt.subplots(figsize=(12, 4))
+        >>> plot_data(
+                data_processor=dp,
+                normalization=True,
+                plot_validation_data=True,
+                plot_test_data=True,
+            )
     """
 
     if sub_plot is None:
@@ -209,16 +229,25 @@ def plot_prediction(
         mean_train_pred (np.ndarray, optional): Predicted means for training.
         std_train_pred (np.ndarray, optional): Standard deviations for training predictions.
         mean_validation_pred (np.ndarray, optional): Predicted means for validation.
-        std_validation_pred (np.ndarray, optional): Standard deviations for validation.
-        mean_test_pred (np.ndarray, optional): Predicted means for test.
-        std_test_pred (np.ndarray, optional): Standard deviations for test.
+        std_validation_pred (np.ndarray, optional): Standard deviations for validation predictions.
+        mean_test_pred (np.ndarray, optional): Predicted means for test predictions.
+        std_test_pred (np.ndarray, optional): Standard deviations for test predictions.
         num_std (int, optional): Number of std deviations for uncertainty bands.
-        sub_plot (plt.Axes, optional): Axis to plot on.
+        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Line color.
         linestyle (str, optional): Line style.
         train_label (List[str], optional): [mean_label, std_label] for train.
         validation_label (List[str], optional): [mean_label, std_label] for validation.
         test_label (List[str], optional): [mean_label, std_label] for test.
+
+    Examples:
+        >>> from canari import plot_prediction
+        >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
+        >>> plot_prediction(
+                data_processor=dp,
+                mean_validation_pred=mu_preds_val,
+                std_validation_pred=std_preds_val,
+            )
     """
 
     if sub_plot is None:
@@ -267,16 +296,25 @@ def plot_states(
     Plot hidden states with mean and uncertainty intervals.
 
     Args:
-        data_processor (DataProcess): Data and metadata handler.
-        states (StatesHistory): Object containing state estimates.
+        data_processor (DataProcess): Data processing object.
+        states (StatesHistory): Object containing hidden states history over time.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
-        states_type (str, optional): Type of state ('posterior' or 'prior').
+        states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
         normalization (bool, optional): Whether to unnormalize the states.
-        num_std (int, optional): Number of standard deviations for error bands.
-        sub_plot (plt.Axes, optional): Single shared axis to plot all states.
+        num_std (int, optional): Number of standard deviations for uncertainty bands.
+        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Color for mean line and uncertainty fill.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Legend placement for first state subplot.
+
+    Examples:
+        >>> from canari import plot_states
+        >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
+        >>> fig, ax = plot_states(
+                data_processor=dp,
+                states=states,
+                states_type="posterior"
+            )
     """
 
     if states_to_plot == "all":
@@ -359,21 +397,32 @@ def plot_skf_states(
     plot_nan: Optional[bool] = True,
 ):
     """
-    Plot hidden states along with model-switching probabilities.
+    Plot hidden states along with probabilities of regime changes.
 
     Args:
-        data_processor (DataProcess): Input data and splits.
-        states (StatesHistory): Posterior/prior state values.
+        data_processor (DataProcess): Data processing object.
+        states (StatesHistory): Object containing hidden states history over time.
         model_prob (np.ndarray): Probabilities of abnormal regime.
-        states_to_plot (list[str] or "all", optional): Which states to visualize.
-        states_type (str, optional): Type of state (posterior/prior).
-        normalization (bool, optional): Whether to convert states back to original scale.
-        num_std (int, optional): Width of uncertainty interval in std units.
-        plot_observation (bool, optional): Whether to include observed data.
+        states_to_plot (list[str] or "all", optional): Names of states to plot.
+        states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
+        normalization (bool, optional):  Whether to unnormalize the states.
+        num_std (int, optional): Number of standard deviations for uncertainty bands.
+        plot_observation (bool, optional): Whether to include observed data into "local_level" plot.
         color (str, optional): Line color for states.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Location of legend in top subplot.
-        plot_nan (bool, optional): Whether to include NaNs in observed values.
+        plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.
+
+    Examples:
+        >>> from canari import plot_skf_states
+        >>> filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
+        >>> fig, ax = plot_skf_states(
+                data_processor=dp,
+                states=states,
+                states_type="posterior",
+                model_prob=filter_marginal_abnorm_prob,
+            )
+
     """
 
     if states_to_plot == "all":

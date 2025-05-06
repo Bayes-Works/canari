@@ -102,7 +102,9 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     val_log_lik = metric.log_likelihood(mu_pred_unnorm, obs_validation, std_pred_unnorm)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-val_log_lik, mode="min")
+    model.early_stopping(
+        evaluate_metric=-val_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == model.optimal_epoch:
         optimal_mu_val_preds = mu_validation_preds.copy()
         optimal_std_val_preds = std_validation_preds.copy()
@@ -157,7 +159,7 @@ pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 
 # filter and smoother
 pretrained_model.filter(normalized_data, train_lstm=False)
-pretrained_model.smoother(normalized_data)
+pretrained_model.smoother()
 
 
 # # Plotting results at the optimal epoch when training model
