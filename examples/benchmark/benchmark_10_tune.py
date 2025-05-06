@@ -270,7 +270,11 @@ def training(model, data_processor, num_epoch: int = 50):
             std=std_validation_preds_unnorm,
         )
 
-        model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        model.early_stopping(
+            evaluate_metric=-validation_log_lik,
+            current_epoch=epoch,
+            max_epoch=num_epoch,
+        )
 
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds.copy()

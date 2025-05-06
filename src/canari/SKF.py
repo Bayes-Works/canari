@@ -1,3 +1,17 @@
+"""
+Switching Kalman Filter (SKF) for detecting regime changes on time series data. It takes as inputs
+two instances of :class:`~canari.model`, one model is used to model a normal regime, the other is
+used to model an abnormal regime. At each time step, SKF estimates the probability of each model to
+determine the probability of anomalies where regimes switch.
+
+On time series data, this model can:
+
+    - Train its Bayesian LSTM network component from the normal model.
+    - Detect regime changes (anomalies) and provide probabilities of these regime changes.
+    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.
+
+"""
+
 from typing import Tuple, Dict, Optional
 import copy
 import numpy as np
@@ -10,18 +24,106 @@ from canari.data_process import DataProcess
 
 class SKF:
     """
-    Switching Kalman Filter (SKF)
+    `SKF` class for Switching Kalman Filter.
 
-    Combines two state-space models (normal and abnormal) into a probabilistic
-    switching framework. It supports anomaly detection by computing probabilities of both models.
+    Args:
+        norm_model (Model): Model representing normal behavior.
+        abnorm_model (Model): Model representing abnormal behavior.
+        std_transition_error (float): Std deviation of transition error.
+        norm_to_abnorm_prob (float): Transition probability from normal to abnormal.
+        abnorm_to_norm_prob (float): Transition probability  from abnormal to normal.
+        norm_model_prior_prob (float): Prior probability of the normal model.
+        conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+
+    Examples:
+        >>> from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+        >>> from canari import Model, SKF
+        >>> # Components
+        >>> local_trend = LocalTrend()
+        >>> local_acceleration = LocalAcceleration()
+        >>> lstm_network = LstmNetwork(
+                look_back_len=10,
+                num_features=2,
+                num_layer=1,
+                num_hidden_unit=50,
+                device="cpu",
+                manual_seed=1,
+            )
+        >>> residual = WhiteNoise(std_error=0.05)
+        >>> # Define model
+        >>> normal_model = Model(local_trend, lstm_network, residual)
+        >>> abnormal_model = Model(local_acceleration, lstm_network, residual)
+        >>> skf = SKF(
+                norm_model=normal_model,
+                abnorm_model=abnormal_model,
+                std_transition_error=1e-4,
+                norm_to_abnorm_prob=1e-4,
+                abnorm_to_norm_prob=1e-1,
+                norm_model_prior_prob=0.99,
+            )
 
     Attributes:
+        model (dict): Dictionary containing 4 instances of :class:`~canari.model`, i.e., 4
+            transition models including
+            'norm_norm': transition from normal to normal;
+            'norm_abnorm': transition from normal to abnormal;
+            'abnorm_norm': transition from abnormal to normal;
+            'abnorm_abnorm': transition from abnormal to abnormal;
+        num_states (int):
+            Number of hidden states.
+        states_names (list[str]):
+            Names of hidden states.
+        mu_states_init (np.ndarray):
+            Mean vector for the hidden states :math:`x_0` at the time step `t=0`.
+        var_states_init (np.ndarray):
+            Covariance matrix for the hidden states :math:`x_0` at the time step `t=0`.
+        mu_states_prior (np.ndarray):
+            Prior mean vector for the marginal hidden states :math:`x_{t+1}` at the time step `t+1`.
+        var_states_prior (np.ndarray):
+            Prior covariance matrix for the marginal hidden states :math:`x_{t+1}`
+            at the time step `t+1`.
+        mu_states_posterior (np.ndarray):
+            Posteriror mean vector for the marginal hidden states :math:`x_{t+1}`
+            at the time step `t+1`.
+        var_states_posterior (np.ndarray):
+            Posteriror covariance matrix for the marginal hidden states :math:`x_{t+1}` at the time
+            step `t+1`.
+        states (StatesHistory):
+            Container for storing prior, posterior, and smoothed values of marginal hidden states
+            over time.
+        transition_prob (dict): Transition probability matrix: 'norm_norm', 'norm_abnorm',
+                                'abnorm_norm', 'abnorm_abnorm'.
+        marginal_prob (dict): Current marginal probability for 'normal' and 'abnormal' at time `t`.
+        filter_marginal_prob_history (dict): Filter marginal probability history for 'normal'
+                                            and 'abnormal' over time.
+        smooth_marginal_prob_history (dict): Smoother margina probability history for 'normal'
+                                             and 'abnormal' over time.
         norm_to_abnorm_prob (float): Transition probability from normal to abnormal.
-        abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
-        norm_model_prior_prob (float): Prior probability of being in the normal state.
-        model (dict): Dictionary of transition model instances (norm_norm, norm_abnorm, etc.).
-        states (StatesHistory): History of collapsed marginal states.
-        transition_coef (dict): Transition coefficients computed per timestep.
+        abnorm_to_norm_prob (float): Transition probability  from abnormal to normal.
+        norm_model_prior_prob (float): Prior probability of the normal model.
+        conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+
+        # LSTM-related attributes: only being used when a :class:`~canari.component.lstm_component.LstmNetwork` component is found.
+
+        lstm_net (:class:`pytagi.Sequential`):
+            It is a :class:`pytagi.Sequential` instance. LSTM neural network linked from
+            'norm_norm' of :attr:`~canari.skf.SKF.model`, if LSTM component presents.
+
+        lstm_output_history (LstmOutputHistory):
+            Container for saving a rolling history of LSTM output over a fixed look-back window. Linked
+            from 'norm_norm' of :attr:`~canari.skf.SKF.model`, if LSTM component presents.
+
+        # Early stopping attributes: TODO: duplicates with model, only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
+
+        early_stop_metric (float):
+            Best value of the metric being monitored.
+        early_stop_metric_history (List[float]):
+            Logged history of metric values across epochs.
+        optimal_epoch (int):
+            Epoch at which the monitored metric was best.
+        stop_training (bool):
+            Flag indicating whether training has been stopped due to
+            early stopping or reaching maximum number of epoch.
     """
 
     def __init__(
@@ -35,16 +137,7 @@ class SKF:
         conditional_likelihood: Optional[bool] = False,
     ):
         """
-        Initialize the SKF with two base models and transition probabilities.
-
-        Args:
-            norm_model (Model): Model representing normal behavior.
-            abnorm_model (Model): Model representing abnormal behavior.
-            std_transition_error (float): Std deviation of transition noise.
-            norm_to_abnorm_prob (float): P(abnormal | normal).
-            abnorm_to_norm_prob (float): P(normal | abnormal).
-            norm_model_prior_prob (float): Initial P(normal).
-            conditional_likelihood (bool): Whether to use sampled noise in likelihood.
+        Initialization
         """
 
         self.std_transition_error = std_transition_error
@@ -52,22 +145,30 @@ class SKF:
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
         self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
-        self.model = self.transition()
+        self.model = self._transition()
         self.states = StatesHistory()
         self._initialize_attributes()
         self._initialize_model(norm_model, abnorm_model)
 
     @staticmethod
-    def prob_history():
-        """Create a dictionary to save marginal probability history"""
+    def _prob_history():
+        """
+        Create a dictionary to save marginal probability (normal and abnormal) history over time.
+        """
         return {
             "norm": [],
             "abnorm": [],
         }
 
     @staticmethod
-    def transition():
-        """Create a dictionary for transition"""
+    def _transition():
+        """
+        Create a dictionary for transitions:
+        'norm_norm': transition model from normal to normal;
+        'norm_abnorm': from normal to abnormal;
+        'abnorm_norm': from abnormal to normal;
+        'abnorm_abnorm': from abnormal to abnormal;
+        """
         return {
             "norm_norm": None,
             "abnorm_abnorm": None,
@@ -76,56 +177,18 @@ class SKF:
         }
 
     @staticmethod
-    def marginal():
-        """Create a dictionary for mariginal"""
+    def _marginal():
+        """
+        Create a dictionary for mariginal: normal and abnormal
+        """
         return {
             "norm": None,
             "abnorm": None,
         }
 
     def _initialize_attributes(self):
-        """Initialize all internal attributes to their default values.
-
-        This private helper sets up:
-        1. General model bookkeeping (number and names of states),
-        2. State‐space Kalman filter (SKF) buffers and priors/posteriors,
-        3. Transition coefficients and marginal probability histories,
-        4. LSTM network placeholders,
-        5. Early‐stopping flags and history.
-
-        Attributes:
-            # General attributes
-            num_states (int): Number of hidden states. Defaults to 0.
-            states_name (list[str]): Labels for each state. Defaults to [].
-
-            # SKF‐related attributes
-            mu_states_init (array‐like or None): Initial state means.
-            var_states_init (array‐like or None): Initial state variances.
-            mu_states_prior (array‐like or None): Prior state means.
-            var_states_prior (array‐like or None): Prior state variances.
-            mu_states_posterior (array‐like or None): Posterior state means.
-            var_states_posterior (array‐like or None): Posterior state variances.
-            transition_coef (dict): Coefficients from `self.transition()`.
-            filter_marginal_prob_history (list): Filtered marginal‐probability history.
-            smooth_marginal_prob_history (list): Smoothed marginal‐probability history.
-            marginal_list (set[str]): Allowed marginal labels, e.g. {'norm', 'abnorm'}.
-            transition_prob (dict): Transition probabilities between margins:
-                • 'norm_norm', 'norm_abnorm', 'abnorm_norm', 'abnorm_abnorm'.
-            marginal_prob_current (dict): Current marginal probabilities:
-                • 'norm', 'abnorm'.
-
-            # LSTM‐related attributes
-            lstm_net (torch.nn.Module or None): The LSTM model instance.
-            lstm_output_history (list): Collected LSTM outputs over time.
-
-            # Early‐stopping attributes
-            stop_training (bool): Whether to halt training early.
-            optimal_epoch (int): Epoch index yielding best early‐stop metric.
-            early_stop_metric_history (list[float]): History of the monitored metric.
-            early_stop_metric (float or None): Latest value of the early‐stop metric.
-
-        Returns:
-            None
+        """
+        Initialize all attributes.
         """
 
         # General attributes
@@ -140,20 +203,20 @@ class SKF:
         self.mu_states_posterior = None
         self.var_states_posterior = None
 
-        self.transition_coef = self.transition()
-        self.filter_marginal_prob_history = self.prob_history()
-        self.smooth_marginal_prob_history = self.prob_history()
+        self.transition_coef = self._transition()
+        self.filter_marginal_prob_history = self._prob_history()
+        self.smooth_marginal_prob_history = self._prob_history()
         self.marginal_list = {"norm", "abnorm"}
 
-        self.transition_prob = self.transition()
+        self.transition_prob = self._transition()
         self.transition_prob["norm_norm"] = 1 - self.norm_to_abnorm_prob
         self.transition_prob["norm_abnorm"] = self.norm_to_abnorm_prob
         self.transition_prob["abnorm_norm"] = self.abnorm_to_norm_prob
         self.transition_prob["abnorm_abnorm"] = 1 - self.abnorm_to_norm_prob
 
-        self.marginal_prob_current = self.marginal()
-        self.marginal_prob_current["norm"] = self.norm_model_prior_prob
-        self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
+        self.marginal_prob = self._marginal()
+        self.marginal_prob["norm"] = self.norm_model_prior_prob
+        self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
         # LSTM-related attributes
         self.lstm_net = None
@@ -188,7 +251,7 @@ class SKF:
 
     @staticmethod
     def _create_compatible_models(soure_model, target_model) -> None:
-        """Pad and align two models so they share the same state dimensions and names.
+        """Pad and align two models so they share the same hidden state dimensions and names.
 
         When source_model has fewer states than target_model, new rows/columns of zeros
         are inserted into its state vectors and matrices at the appropriate indices.
@@ -240,7 +303,7 @@ class SKF:
         norm_model: Model,
         abnorm_model: Model,
     ):
-        """Build four regime-transition models and store them in self.model.
+        """Build 4 transition models and store them in self.model.
 
         Copies of the input normal and abnormal models are made to represent:
         - norm_norm: stay in normal regime
@@ -249,8 +312,8 @@ class SKF:
         - abnorm_norm: transition from abnormal to normal
 
         Args:
-            norm_model (Model): Base model for the normal regime.
-            abnorm_model (Model): Base model for the abnormal regime.
+            norm_model (Model): Model for the normal regime.
+            abnorm_model (Model): Model for the abnormal regime.
 
         Returns:
             None
@@ -279,7 +342,7 @@ class SKF:
         self.model["abnorm_norm"] = abnorm_norm
 
     def _link_skf_to_model(self):
-        """Attach SKF attributes (state count, names, LSTM) from norm_norm model.
+        """Attach SKF attributes (state count, names, LSTM) from 'norm_norm' model.
 
         Copies the number of states, state names, and LSTM network/reference to
         self.num_states, self.states_name, self.lstm_net, and self.lstm_output_history.
@@ -294,12 +357,10 @@ class SKF:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
-    def set_same_states_transition_models(self):
+    def _set_same_states_transition_models(self):
         """
-        Synchronize all transition models to the same hidden-state initialization.
-
-        Copies the initial mu_states and var_states from norm_norm to every model
-        in self.model.
+        Synchronize all transition models to the same hidden-state initialization as
+        in 'norm_norm' from :attr:`.model`.
 
         Returns:
             None
@@ -311,10 +372,11 @@ class SKF:
             )
 
     def _initialize_smoother(self):
-        """Initialize smoothed state estimates at the final time step.
+        """
+        Initialize smoothed hidden states at the final time step.
 
-        Sets the last entries of mu_smooth and var_smooth to the mixture of posteriors
-        from norm_norm and abnorm_abnorm, weighted by the final filter marginals.
+        Sets the mu_smooth and var_smooth in the last time step to the mixture of posterior
+        hidden states from self.model['norm_norm'] and self.model['abnorm_abnorm'].
 
         Returns:
             None
@@ -330,13 +392,9 @@ class SKF:
         )
 
     def _save_states_history(self):
-        """Archive the current priors, posteriors, and smooth estimates.
-
-        Invokes each transition model's internal _save_states_history, then appends
-        the latest mu/var priors and posteriors (and duplicates for smoothing) to self.states.
-
-        Returns:
-            None
+        """
+        Save current prior, posterior hidden states for 4 transition  models as well as
+        the marginal model.
         """
 
         for transition_model in self.model.values():
@@ -355,23 +413,23 @@ class SKF:
         mu_pred_transit: Dict[str, np.ndarray],
         var_pred_transit: Dict[str, np.ndarray],
     ) -> Dict[str, float]:
-        """Compute observation likelihood under each transition hypothesis.
+        """
+        Compute the likelihoods under each transition hypothesis given the observation.
 
         If obs is NaN, returns likelihood=1 for all transitions. Otherwise:
         - When conditional_likelihood=True, adds white-noise realizations to the mean and
           averages the exponentiated log-likelihoods.
-        - Otherwise, directly exponentiates the Gaussian log-likelihood per transition.
 
         Args:
-            obs (float): Observed value at current time step.
+            obs (float): Observation.
             mu_pred_transit (dict): Predicted means for each transition model.
             var_pred_transit (dict): Predicted variances for each transition model.
 
         Returns:
-            dict[str, float]: Likelihood of obs for each transition key.
+            dict[str, float]: Likelihood for each transition key.
         """
 
-        transition_likelihood = self.transition()
+        transition_likelihood = self._transition()
         if np.isnan(obs):
             for transit in transition_likelihood:
                 transition_likelihood[transit] = 1
@@ -421,8 +479,8 @@ class SKF:
             var_states_transit (dict[str, np.ndarray]): Smoothed variances per transition.
         """
 
-        mu_states_transit = self.transition()
-        var_states_transit = self.transition()
+        mu_states_transit = self._transition()
+        var_states_transit = self._transition()
 
         for transit, transition_model in self.model.items():
             mu_states_transit[transit] = transition_model.states.mu_smooth[time_step]
@@ -458,8 +516,8 @@ class SKF:
             - var_marginal (dict[str, np.ndarray]): Regime-specific marginal variances.
         """
 
-        mu_states_marginal = self.marginal()
-        var_states_marginal = self.marginal()
+        mu_states_marginal = self._marginal()
+        var_states_marginal = self._marginal()
 
         if state_type == "smooth":
             norm_keys = ("norm_norm", "norm_abnorm")
@@ -506,10 +564,10 @@ class SKF:
         mu_states_combined, var_states_combined = common.gaussian_mixture(
             mu_states_marginal["norm"],
             var_states_marginal["norm"],
-            self.marginal_prob_current["norm"],
+            self.marginal_prob["norm"],
             mu_states_marginal["abnorm"],
             var_states_marginal["abnorm"],
-            self.marginal_prob_current["abnorm"],
+            self.marginal_prob["abnorm"],
         )
 
         return (
@@ -541,13 +599,13 @@ class SKF:
         """
 
         epsilon = 0 * 1e-20
-        transition_coef = self.transition()
+        transition_coef = self._transition()
         transition_likelihood = self._compute_transition_likelihood(
             obs, mu_pred_transit, var_pred_transit
         )
 
         #
-        trans_prob = self.transition()
+        trans_prob = self._transition()
         sum_trans_prob = 0
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -555,7 +613,7 @@ class SKF:
                 trans_prob[transit] = (
                     transition_likelihood[transit]
                     * self.transition_prob[transit]
-                    * self.marginal_prob_current[origin_state]
+                    * self.marginal_prob[origin_state]
                 )
                 sum_trans_prob += trans_prob[transit]
         for transit in trans_prob:
@@ -564,10 +622,8 @@ class SKF:
             )
 
         #
-        self.marginal_prob_current["norm"] = (
-            trans_prob["norm_norm"] + trans_prob["abnorm_norm"]
-        )
-        self.marginal_prob_current["abnorm"] = (
+        self.marginal_prob["norm"] = trans_prob["norm_norm"] + trans_prob["abnorm_norm"]
+        self.marginal_prob["abnorm"] = (
             trans_prob["abnorm_abnorm"] + trans_prob["norm_abnorm"]
         )
         #
@@ -575,23 +631,22 @@ class SKF:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
                 transition_coef[transit] = trans_prob[transit] / np.maximum(
-                    self.marginal_prob_current[arrival_state], epsilon
+                    self.marginal_prob[arrival_state], epsilon
                 )
 
         return transition_coef
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
-        Automatically initialize baseline states from data for normal model.
-
-        Delegates to the normal regime model to estimate initial state means and variances
-        from observations, then saves these initial states.
+        Automatically assign initial means and variances for baseline hidden states (local level,
+        local trend, and local acceleration) from input data using time series decomposition
+        defined in :meth:`~canari.data_process.DataProcess.decompose_data`.
 
         Args:
-            y (np.ndarray): Observed data for baseline initialization.
+            data (np.ndarray): Time series data.
 
-        Returns:
-            None
+        Examples:
+            >>> skf.auto_initialize_baseline_states(train_set["y"][0:23])
         """
 
         self.model["norm_norm"].auto_initialize_baseline_states(y)
@@ -599,13 +654,11 @@ class SKF:
 
     def save_initial_states(self):
         """
-        Save initial SKF state mean/variance for reuse in subsequent runs.
+        Save initial SKF hidden states (mean/variance) for reuse in subsequent runs.
 
-        Stores copies of the normal model's current mu_states and var_states in
-        self.mu_states_init and self.var_states_init.
+        Set :attr:`.mu_states_init` and :attr:`.var_states_init` using the
+        mu_states and var_states from the transition model 'norm_norm' stored in :attr:`.model`.
 
-        Returns:
-            None
         """
 
         self.mu_states_init = self.model["norm_norm"].mu_states.copy()
@@ -613,12 +666,8 @@ class SKF:
 
     def load_initial_states(self):
         """
-        Restore saved initial states into the normal model.
+        Restore saved initial states into the transition model 'norm_norm' stored in :attr:`.model`.
 
-        Copies back self.mu_states_init and self.var_states_init into the normal model.
-
-        Returns:
-            None
         """
 
         self.model["norm_norm"].mu_states = self.mu_states_init.copy()
@@ -626,13 +675,8 @@ class SKF:
 
     def initialize_states_history(self):
         """
-        Initialize state history containers for all transition models.
-
-        Invokes each model's own initialization, then sets combined StatesHistory
-        based on self.states_name.
-
-        Returns:
-            None
+        Reinitialize prior, posterior, and smoothed values for marginal hidden states in
+        :attr:`.states` with empty lists, as well as for all transition models in :attr:`.model`.
         """
 
         for transition_model in self.model.values():
@@ -641,13 +685,7 @@ class SKF:
 
     def set_states(self):
         """
-        Assign posterior states to be used as priors for next time step.
-
-        For each transition model, sets its mu_states and var_states from
-        the latest posterior estimates.
-
-        Returns:
-            None
+        Set 'mu_states' and 'var_states' for each transition models in :attr:`.model` using their posterior.
         """
 
         for transition_model in self.model.values():
@@ -658,31 +696,35 @@ class SKF:
 
     def set_memory(self, states: StatesHistory, time_step: int):
         """
-        Set model memory at a given time step and optionally reset to initial.
+        Apply :meth:`~canari.model.Model.set_memory` for the transition model 'norm_norm' stored in :attr:`.model`.
+        If `time_step=0`, reset :attr:`.marginal_prob` using :attr:`.norm_model_prior_prob`.
 
         Args:
-            states (StatesHistory): StatesHistory object to load into norm_norm.
-            time_step (int): Index of time step; if 0, reload initial states and reset marginals.
+            states (StatesHistory): Full history of hidden states over time.
+            time_step (int): Index of timestep to restore.
 
-        Returns:
-            None
+        Examples:
+            >>> # If the next analysis starts from the beginning of the time series
+            >>> skf.set_memory(states=skf.states, time_step=0))
+            >>> # If the next analysis starts from t = 200
+            >>> skf.set_memory(states=skf.states, time_step=200))
         """
 
-        self.model["norm_norm"].set_memory(
-            states=self.model["norm_norm"].states, time_step=0
-        )
+        self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
-            self.marginal_prob_current["norm"] = self.norm_model_prior_prob
-            self.marginal_prob_current["abnorm"] = 1 - self.norm_model_prior_prob
+            self.marginal_prob["norm"] = self.norm_model_prior_prob
+            self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
         """
-        Serialize the SKF and underlying models into a dictionary.
+        Export an SKF object into a dictionary.
 
         Returns:
-            dict: Contains serialized normal/abnormal models, transition parameters,
-            prior probabilities, and any trained LSTM parameters.
+            dict: Serializable model dictionary containing neccessary attributes.
+
+        Examples:
+            >>> saved_dict = skf.get_dict()
         """
 
         save_dict = {}
@@ -700,13 +742,17 @@ class SKF:
     @staticmethod
     def load_dict(save_dict: dict):
         """
-        Reconstruct an SKF instance from its serialized dictionary.
+        Reconstruct an SKF instance from a saved serialized dictionary.
 
         Args:
-            save_dict (dict): Dictionary produced by get_dict(), containing model states and params.
+            save_dict (dict): Dictionary produced by get_dict().
 
         Returns:
             SKF: A new SKF object with loaded parameters and states.
+
+        Examples:
+            >>> saved_dict = skf.get_dict()
+            >>> loaded_skf = SKF.load_dict(saved_dict)
         """
 
         # Create normal model
@@ -742,17 +788,41 @@ class SKF:
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        Train the normal regime's LSTM network and record training history.
+        TODO: keep or not, duplicate with model.lstm_train().
+
+        Train the :class:`~canari.component.lstm_component.LstmNetwork` component
+        on the provided training set, then evaluate on the validation set.
+
+        Recalling :meth:`~canari.model.Model.lstm_train` for 'norm_norm' in :attr:`.model`
 
         Args:
-            train_data (dict): Input/observation arrays for training.
-            validation_data (dict): Data for validation during training.
-            white_noise_decay (bool): Whether to decay noise over epochs.
-            white_noise_max_std (float): Maximum std for injected white noise.
-            white_noise_decay_factor (float): Multiplicative decay per epoch.
+            train_data (Dict[str, np.ndarray]):
+                Dictionary with keys `'x'` and `'y'` for training inputs and targets.
+            validation_data (Dict[str, np.ndarray]):
+                Dictionary with keys `'x'` and `'y'` for validation inputs and targets.
+            white_noise_decay (bool, optional):
+                If True, apply an exponential decay on the white noise standard deviation
+                over epochs, if a white noise component exists. Defaults to True.
+            white_noise_max_std (float, optional):
+                Upper bound on the white-noise standard deviation when decaying.
+                Defaults to 5.
+            white_noise_decay_factor (float, optional):
+                Multiplicative decay factor applied to the white‐noise standard
+                deviation each epoch. Defaults to 0.9.
 
         Returns:
-            Tuple containing training losses, validation losses, and StatesHistory.
+            Tuple[np.ndarray, np.ndarray, StatesHistory]:
+                A tuple containing:
+
+                - **mu_obs_preds** (np.ndarray):
+                    The means for multi-step-ahead predictions for the validation set.
+                - **std_obs_preds** (np.ndarray):
+                    The standard deviations for multi-step-ahead predictions for the validation set.
+                - :attr:`~canari.model.Model.states`:
+                    The history of hidden states over time.
+
+        Examples:
+            >>> mu_preds_val, std_preds_val, states = skf.lstm_train(train_data=train_set,validation_data=val_set)
         """
 
         return self.model["norm_norm"].lstm_train(
@@ -765,22 +835,43 @@ class SKF:
 
     def early_stopping(
         self,
-        mode: Optional[str] = "max",
+        evaluate_metric: float,
+        current_epoch: int,
+        max_epoch: int,
+        mode: Optional[str] = "min",
         patience: Optional[int] = 20,
-        evaluate_metric: Optional[float] = None,
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
         """
-        Apply early stopping policy from the normal model's training.
+        TODO: keep or not, duplicate with model.lstm_train().
+
+        Apply early stopping based on a monitored metric when training a LSTM neural network.
+
+        Recalling :meth:`~canari.model.Model.early_stopping` for 'norm_norm' in :attr:`.model`.
 
         Args:
-            mode (str): 'max' or 'min' to maximize or minimize the metric.
-            patience (int): Number of epochs without improvement allowed.
-            evaluate_metric (Optional[float]): Current metric value to evaluate.
-            skip_epoch (int): Epoch count before starting to monitor.
+            current_epoch (int):
+                Current epoch
+            max_epoch (int):
+                Maximum number of epoch
+            evaluate_metric (float):
+                Current metric value for this epoch.
+            mode (Optional[str]):
+                Direction for early stopping: 'min' (default).
+            patience (Optional[int]):
+                Number of epochs without improvement before stopping. Defaults to 20.
+            skip_epoch (Optional[int]):
+                Number of initial epochs to ignore when looking for improvements. Defaults to 5.
 
         Returns:
-            Tuple indicating (stop_flag, optimal_epoch, best_metric, history_list).
+            Tuple[bool, int, float, List[float]]:
+                - stop_training: True if training stops.
+                - optimal_epoch: Epoch index of when having best metric.
+                - early_stop_metric: Best evaluate_metric. .
+                - early_stop_metric_history: History of `evaluate_metric` at all epochs.
+
+        Examples:
+            >>> skf.early_stopping(evaluate_metric=mse, current_epoch=1, max_epoch=50)
         """
 
         (
@@ -789,6 +880,8 @@ class SKF:
             self.early_stop_metric,
             self.early_stop_metric_history,
         ) = self.model["norm_norm"].early_stopping(
+            current_epoch=current_epoch,
+            max_epoch=max_epoch,
             mode=mode,
             patience=patience,
             evaluate_metric=evaluate_metric,
@@ -807,20 +900,31 @@ class SKF:
         input_covariates: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Forward pass across all transition models to predict next observation.
+        Prediction step in Switching Kalman filter. This makes a one-step-ahead prediction.
+        It is a mixtured prediction from all transition models in :attr:`.model`.
+
+        Recall :meth:`~canari.common.forward` for all transition models.
+
+        This function is used at one-time-step level.
 
         Args:
             obs (float): Current observation.
-            input_covariates (Optional[np.ndarray]): Exogenous inputs for LSTM.
+            input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.
 
         Returns:
-            Tuple(mu_obs_pred, var_obs_pred): Predicted observation mean and variance.
+            Tuple[np.ndarray, np.ndarray]:
+                A tuple containing:
+
+                - :attr:`~canari.model.Model.mu_obs_predict` (np.ndarray):
+                    The predictive mean of the observation at `t+1`.
+                - :attr:`~canari.model.Model.var_obs_predict` (np.ndarray):
+                    The predictive variance of the observation at `t+1`.
         """
 
-        mu_pred_transit = self.transition()
-        var_pred_transit = self.transition()
-        mu_states_transit = self.transition()
-        var_states_transit = self.transition()
+        mu_pred_transit = self._transition()
+        var_pred_transit = self._transition()
+        mu_states_transit = self._transition()
+        var_states_transit = self._transition()
 
         if self.lstm_net:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -869,7 +973,10 @@ class SKF:
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Backward update step: collapse posterior states after observation.
+        Update step for Swithching Kalman filter.
+        Recall :meth:`~canari.common.backward` for all transition models in :attr:`.model`.
+
+        This function is used at one-time-step level.
 
         Args:
             obs (float): Observation at current time step.
@@ -878,8 +985,8 @@ class SKF:
             Tuple(mu_states_posterior, var_states_posterior): Posterior state estimates.
         """
 
-        mu_states_transit = self.transition()
-        var_states_transit = self.transition()
+        mu_states_transit = self._transition()
+        var_states_transit = self._transition()
 
         for transit, transition_model in self.model.items():
             _, _, mu_states_transit[transit], var_states_transit[transit] = (
@@ -910,10 +1017,11 @@ class SKF:
 
     def rts_smoother(self, time_step: int):
         """
-        Run Rauch–Tung–Striebel smoother at a given time step.
+        Smoother for Switching Kalman filter at a given time step.
 
-        Updates smoothed state estimates and transition coefficients based on
-        forward filter history and transition probabilities.
+        Recall :meth:`~canari.common.rts_smoother` for all transition models in :attr:`.model`.
+
+        This function is used at one-time-step level.
 
         Args:
             time_step (int): Index at which to perform smoothing.
@@ -926,8 +1034,8 @@ class SKF:
         for transition_model in self.model.values():
             transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
 
-        joint_transition_prob = self.transition()
-        arrival_state_marginal = self.marginal()
+        joint_transition_prob = self._transition()
+        arrival_state_marginal = self._marginal()
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -952,7 +1060,7 @@ class SKF:
                     transit
                 ] / np.maximum(arrival_state_marginal[arrival_state], epsilon)
 
-        joint_future_prob = self.transition()
+        joint_future_prob = self._transition()
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
@@ -961,25 +1069,25 @@ class SKF:
                     * self.smooth_marginal_prob_history[arrival_state][time_step + 1]
                 )
 
-        self.marginal_prob_current["norm"] = (
+        self.marginal_prob["norm"] = (
             joint_future_prob["norm_norm"] + joint_future_prob["norm_abnorm"]
         )
-        self.marginal_prob_current["abnorm"] = (
+        self.marginal_prob["abnorm"] = (
             joint_future_prob["abnorm_norm"] + joint_future_prob["abnorm_abnorm"]
         )
 
-        self.smooth_marginal_prob_history["norm"][time_step] = (
-            self.marginal_prob_current["norm"]
-        )
-        self.smooth_marginal_prob_history["abnorm"][time_step] = (
-            self.marginal_prob_current["abnorm"]
-        )
+        self.smooth_marginal_prob_history["norm"][time_step] = self.marginal_prob[
+            "norm"
+        ]
+        self.smooth_marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
+            "abnorm"
+        ]
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
                 self.transition_coef[transit] = joint_future_prob[transit] / np.maximum(
-                    self.marginal_prob_current[origin_state], epsilon
+                    self.marginal_prob[origin_state], epsilon
                 )
 
         mu_states_transit, var_states_transit = self._get_smooth_states_transition(
@@ -1011,21 +1119,34 @@ class SKF:
         data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
-        Run filtering over a time series and record abnormal probabilities.
+        Perform Kalman filter over an entire dataset.
+
+        This function is used at entire-dataset-level. Recall repeatedly the function
+        :meth:`.forward` and :meth:`.backward` at
+        one-time-step level from :class:`~canari.skf.SKF`.
 
         Args:
-            data (dict): Contains 'x' (covariates) and 'y' (observations).
+            data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
 
         Returns:
-            Tuple(abnorm_probs, StatesHistory): Abnormal marginal probabilities and state history.
+            Tuple[np.ndarray, StatesHistory]:
+                A tuple containing:
+
+                - **filter_marginal_prob_abnorm** (np.ndarray):
+                    A history of filtering marginal probability for the abnorm model.
+                - :attr:`~canari.model.Model.states`:
+                    The history of marginal hidden states over time.
+
+        Examples:
+            >>> anomaly_prob, states = skf.filter(data=train_set)
         """
 
         mu_obs_preds = []
         var_obs_preds = []
-        self.filter_marginal_prob_history = self.prob_history()
+        self.filter_marginal_prob_history = self._prob_history()
 
         # Initialize hidden states
-        self.set_same_states_transition_models()
+        self._set_same_states_transition_models()
         self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
@@ -1046,11 +1167,9 @@ class SKF:
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
             var_obs_preds.append(var_obs_pred)
-            self.filter_marginal_prob_history["norm"].append(
-                self.marginal_prob_current["norm"]
-            )
+            self.filter_marginal_prob_history["norm"].append(self.marginal_prob["norm"])
             self.filter_marginal_prob_history["abnorm"].append(
-                self.marginal_prob_current["abnorm"]
+                self.marginal_prob["abnorm"]
             )
 
         self.set_memory(states=self.model["norm_norm"].states, time_step=0)
@@ -1059,18 +1178,27 @@ class SKF:
             self.states,
         )
 
-    def smoother(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, StatesHistory]:
+    def smoother(self) -> Tuple[np.ndarray, StatesHistory]:
         """
-        Apply RTS smoothing over entire time series.
+        Perform Kalman smoother over an entire time series data.
+
+        This function is used at entire-dataset-level. Recall repeatedly the function
+        :meth:`.rts_smoother` at one-time-step level from :class:`~canari.skf.SKF`.
 
         Args:
             data (dict): Contains 'x' and 'y' arrays for smoothing.
 
         Returns:
-            Tuple(smoothed_abnorm_probs, StatesHistory): Smoothed abnormal probabilities and history.
+            Tuple[np.ndarray, StatesHistory]:
+                A tuple containing:
+
+                - **smooth_marginal_prob_abnorm** (np.ndarray):
+                    A history of smoother marginal probability for the abnorm model.
+                - :attr:`~canari.model.Model.states`:
+                    The history of marginal hidden states over time.
         """
 
-        num_time_steps = len(data["y"])
+        num_time_steps = len(self.states.mu_smooth)
         self.smooth_marginal_prob_history = copy.copy(self.filter_marginal_prob_history)
         self._initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
@@ -1083,7 +1211,7 @@ class SKF:
 
     def detect_synthetic_anomaly(
         self,
-        data: list[Dict[str, np.ndarray]],
+        data: Dict[str, np.ndarray],
         threshold: Optional[float] = 0.5,
         max_timestep_to_detect: Optional[int] = None,
         num_anomaly: Optional[int] = None,
@@ -1092,21 +1220,26 @@ class SKF:
         anomaly_end: Optional[float] = 0.66,
     ) -> Tuple[float, float]:
         """
-        Detect synthetic anomalies and compute detection/false-alarm rates.
+        Add synthetic anomalies to an orginal data, use Switching Kalman filter to detect those
+        added anomalies, and compute detection/false-alarm rates.
 
         Args:
-            data (list[dict]): List of original time series dicts.
-            threshold (float): Probability cutoff for anomaly detection.
-            max_timestep_to_detect (int): Window length post-anomaly for detection.
-            num_anomaly (int): Number of synthetic anomalies to insert.
+            data (Dict[str, np.ndarray]): Original time series data.
+            threshold (float): Threshold for detection rate for anomaly detection.
+                                Defauls to 0.5.
+            max_timestep_to_detect (int): Window length for detecting anomalies.
+                                        Defauls to None (to the end of time series).
+            num_anomaly (int): Number of synthetic anomalies to add. This will create as
+                                many time series, because one time series contains only one
+                                anomaly.
             slope_anomaly (float): Magnitude of anomaly slope.
             anomaly_start (float): Fractional start position of anomaly.
             anomaly_end (float): Fractional end position of anomaly.
 
         Returns:
             Tuple(detection_rate, false_rate, false_alarm_train):
-                detection_rate (float): Fraction of anomalies detected.
-                false_rate (float): Fraction of false alarms post-insertion.
+                detection_rate (float): # time series where anomalies detected / # total synthetic time series with anomalies added.
+                false_rate (float): # time series where anomalies NOT detected / # total synthetic time series with anomalies added.
                 false_alarm_train (str): 'Yes' if any alarm during training data.
         """
 
