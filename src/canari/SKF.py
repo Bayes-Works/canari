@@ -1,14 +1,13 @@
 """
-Switching Kalman Filter (SKF) for detecting regime changes on time series data. It takes as inputs
+Switching Kalman Filter (SKF) for detecting regime changes in time series data. It takes as inputs
 two instances of :class:`~canari.model`, one model is used to model a normal regime, the other is
-used to model an abnormal regime. At each time step, SKF estimates the probability of each model to
-determine the probability of anomalies where regimes switch.
+used to model an abnormal one. At each time step, SKF estimates the probability of each model.
 
 On time series data, this model can:
 
     - Train its Bayesian LSTM network component from the normal model.
-    - Detect regime changes (anomalies) and provide probabilities of these regime changes.
-    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.
+    - Detect regime changes (anomalies) and provide probabilities of regime switch.
+    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and the associate uncertainties for these hidden states.
 
 """
 
@@ -74,19 +73,19 @@ class SKF:
         states_names (list[str]):
             Names of hidden states.
         mu_states_init (np.ndarray):
-            Mean vector for the hidden states :math:`x_0` at the time step `t=0`.
+            Mean vector for the hidden states :math:`X_0` at the time step `t=0`.
         var_states_init (np.ndarray):
-            Covariance matrix for the hidden states :math:`x_0` at the time step `t=0`.
+            Covariance matrix for the hidden states :math:`X_0` at the time step `t=0`.
         mu_states_prior (np.ndarray):
-            Prior mean vector for the marginal hidden states :math:`x_{t+1}` at the time step `t+1`.
+            Prior mean vector for the marginal hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         var_states_prior (np.ndarray):
-            Prior covariance matrix for the marginal hidden states :math:`x_{t+1}`
+            Prior covariance matrix for the marginal hidden states :math:`X_{t+1|t}`
             at the time step `t+1`.
         mu_states_posterior (np.ndarray):
-            Posteriror mean vector for the marginal hidden states :math:`x_{t+1}`
+            Posteriror mean vector for the marginal hidden states :math:`X_{t+1|t+1}`
             at the time step `t+1`.
         var_states_posterior (np.ndarray):
-            Posteriror covariance matrix for the marginal hidden states :math:`x_{t+1}` at the time
+            Posteriror covariance matrix for the marginal hidden states :math:`X_{t+1|t+1}` at the time
             step `t+1`.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of marginal hidden states
@@ -96,10 +95,10 @@ class SKF:
         marginal_prob (dict): Current marginal probability for 'normal' and 'abnormal' at time `t`.
         filter_marginal_prob_history (dict): Filter marginal probability history for 'normal'
                                             and 'abnormal' over time.
-        smooth_marginal_prob_history (dict): Smoother margina probability history for 'normal'
+        smooth_marginal_prob_history (dict): Smoother marginal probability history for 'normal'
                                              and 'abnormal' over time.
         norm_to_abnorm_prob (float): Transition probability from normal to abnormal.
-        abnorm_to_norm_prob (float): Transition probability  from abnormal to normal.
+        abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
 
@@ -123,7 +122,7 @@ class SKF:
             Epoch at which the monitored metric was best.
         stop_training (bool):
             Flag indicating whether training has been stopped due to
-            early stopping or reaching maximum number of epoch.
+            early stopping or reaching the maximum number of epochs.
     """
 
     def __init__(
@@ -393,7 +392,7 @@ class SKF:
 
     def _save_states_history(self):
         """
-        Save current prior, posterior hidden states for 4 transition  models as well as
+        Save current prior, posterior hidden states for 4 transition models as well as
         the marginal model.
         """
 
@@ -501,7 +500,7 @@ class SKF:
 
         Performs two levels of Gaussian mixtures:
         1) Mix origin→arrival pairs for each regime to get marginal means/vars.
-        2) Mix the regime marginals by current marginal probabilities.
+        2) Mix the regime marginals with their probabilities.
 
         Args:
             mu_states_transit (dict[str, np.ndarray]): Predicted means per transition.
@@ -585,8 +584,8 @@ class SKF:
     ) -> Dict[str, float]:
         """Estimate transition coefficients given observation and predicted transitions.
 
-        Computes joint transition probabilities combining prior transitions,
-        predicted likelihoods, and current marginals, then normalizes to yield
+        Computes the joint transition probabilities combining prior probabilities,
+        transition probabilities and likelihoods, then normalizes to yield
         conditional transition coefficients.
 
         Args:
@@ -900,12 +899,12 @@ class SKF:
         input_covariates: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Prediction step in Switching Kalman filter. This makes a one-step-ahead prediction.
-        It is a mixtured prediction from all transition models in :attr:`.model`.
+        Prediction step in the Switching Kalman filter. This makes a one-step-ahead prediction.
+        It is a mixture prediction from all transition models in :attr:`.model`.
 
         Recall :meth:`~canari.common.forward` for all transition models.
 
-        This function is used at one-time-step level.
+        This function is used at the one-time-step level.
 
         Args:
             obs (float): Current observation.
@@ -976,10 +975,10 @@ class SKF:
         Update step for Swithching Kalman filter.
         Recall :meth:`~canari.common.backward` for all transition models in :attr:`.model`.
 
-        This function is used at one-time-step level.
+        This function is used at the one-time-step level.
 
         Args:
-            obs (float): Observation at current time step.
+            obs (float): Observation at the current time step.
 
         Returns:
             Tuple(mu_states_posterior, var_states_posterior): Posterior state estimates.
@@ -1017,11 +1016,11 @@ class SKF:
 
     def rts_smoother(self, time_step: int):
         """
-        Smoother for Switching Kalman filter at a given time step.
+        Smoother for the Switching Kalman filter at a given time step.
 
         Recall :meth:`~canari.common.rts_smoother` for all transition models in :attr:`.model`.
 
-        This function is used at one-time-step level.
+        This function is used at the one-time-step level.
 
         Args:
             time_step (int): Index at which to perform smoothing.
@@ -1119,9 +1118,9 @@ class SKF:
         data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
-        Perform Kalman filter over an entire dataset.
+        Run the Kalman filter over an entire dataset.
 
-        This function is used at entire-dataset-level. Recall repeatedly the function
+        This function is used at the entire-dataset-level. Recall repeatedly the function
         :meth:`.forward` and :meth:`.backward` at
         one-time-step level from :class:`~canari.skf.SKF`.
 
@@ -1180,9 +1179,9 @@ class SKF:
 
     def smoother(self) -> Tuple[np.ndarray, StatesHistory]:
         """
-        Perform Kalman smoother over an entire time series data.
+        Run the Kalman smoother over an entire time series data.
 
-        This function is used at entire-dataset-level. Recall repeatedly the function
+        This function is used at the entire-dataset-level. Recall repeatedly the function
         :meth:`.rts_smoother` at one-time-step level from :class:`~canari.skf.SKF`.
 
         Args:
@@ -1220,19 +1219,19 @@ class SKF:
         anomaly_end: Optional[float] = 0.66,
     ) -> Tuple[float, float]:
         """
-        Add synthetic anomalies to an orginal data, use Switching Kalman filter to detect those
-        added anomalies, and compute detection/false-alarm rates.
+        Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
+        synthetic anomalies, and compute the detection/false-alarm rates.
 
         Args:
             data (Dict[str, np.ndarray]): Original time series data.
-            threshold (float): Threshold for detection rate for anomaly detection.
+            threshold (float): Threshold for the maximal target anomaly detection rate.
                                 Defauls to 0.5.
-            max_timestep_to_detect (int): Window length for detecting anomalies.
+            max_timestep_to_detect (int): Maximum number of timesteps to allow detection.
                                         Defauls to None (to the end of time series).
             num_anomaly (int): Number of synthetic anomalies to add. This will create as
                                 many time series, because one time series contains only one
                                 anomaly.
-            slope_anomaly (float): Magnitude of anomaly slope.
+            slope_anomaly (float): Magnitude of the anomaly slope.
             anomaly_start (float): Fractional start position of anomaly.
             anomaly_end (float): Fractional end position of anomaly.
 
