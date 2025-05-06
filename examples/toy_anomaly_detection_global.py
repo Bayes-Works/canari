@@ -16,7 +16,7 @@ from canari import (
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # load target data
-data_file_target = "./data/benchmark_data/test_4_data.csv" # 11 shows very nice results
+data_file_target = "./data/benchmark_data/test_11_data.csv"
 df_target = pd.read_csv(
     data_file_target,
     usecols=[0, 1],  # Read only the first two columns
@@ -38,7 +38,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 0.3
+sigma_v = 0.2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
@@ -48,7 +48,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    load_lstm_net="./saved_params/lstm_net_test.pth",
+    # load_lstm_net="./saved_params/lstm_net_test.pth",
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -75,10 +75,10 @@ skf = SKF(
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
 )
-skf.auto_initialize_baseline_states(train_data["y"][0:52])
+skf.auto_initialize_baseline_states(train_data["y"][0:104])
 
 #  Training
-num_epoch = 50
+num_epoch = 200
 states_optim = None
 mu_validation_preds_optim = None
 std_validation_preds_optim = None
@@ -119,12 +119,17 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+        state_dict = skf.lstm_net.state_dict()
     if skf.stop_training:
         break
 
 print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
-# 
+
+# Load the optimal model
+skf.lstm_net.load_state_dict(state_dict)
+
+
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
