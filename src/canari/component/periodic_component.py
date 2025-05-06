@@ -6,8 +6,8 @@ from canari.component.base_component import BaseComponent
 class Periodic(BaseComponent):
     """
     `Periodic` class, inheriting from Canari's `BaseComponent`.
-    It models a cyclic behavior with a fixed period using a second-order harmonic
-    state-space model. It has two hidden states.
+    It models a cyclic behavior with a fixed period using a Fourrier-form harmonic.
+    It has two hidden states.
 
     Args:
         period (float): Length of one full cycle of the periodic component

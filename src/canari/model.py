@@ -58,24 +58,24 @@ class Model:
         states_names (list[str]):
             Names of hidden states.
         mu_states (np.ndarray):
-            Mean vector for the hidden states :math:`x_t` at the time step `t`.
+            Mean vector for the hidden states :math:`X_{t|t}` at the time step `t`.
         var_states (np.ndarray):
-            Covariance matrix for the hidden states :math:`x_t` at the time step `t`.
+            Covariance matrix for the hidden states :math:`X_{t|t}` at the time step `t`.
         mu_states_prior (np.ndarray):
-            Prior mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+            Prior mean vector for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         var_states_prior (np.ndarray):
-            Prior covariance matrix for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+            Prior covariance matrix for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         mu_states_posterior (np.ndarray):
-            Posteriror mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.
+            Posteriror mean vector for the hidden states :math:`X_{t+1|t+1}` at the time step `t+1`.
         var_states_posterior (np.ndarray):
-            Posteriror covariance matrix for the hidden states :math:`x_{t+1}` at the time
+            Posteriror covariance matrix for the hidden states :math:`X_{t+1|t+1}` at the time
             step `t+1`.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of hidden states over time.
         mu_obs_predict (np.ndarray):
-            Means for predictions at a time step `t+1`.
+            Means for observation predictions at a time step `t+1`.
         var_obs_predict (np.ndarray):
-            Variances for predictions at a time step `t+1`.
+            Variances for observation predictions at a time step `t+1`.
         observation_matrix (np.ndarray):
             Global observation matrix constructed from all components.
         transition_matrix (np.ndarray):
@@ -309,6 +309,8 @@ class Model:
         """
         TODO: remove epoch from input
         Apply exponential decay to white noise standard deviation over epochs.
+        This decaying noise structure is meant to improve the training performance
+        of TAGI-LSTM.
 
         Args:
             epoch (int): Current training epoch.
@@ -731,19 +733,19 @@ class Model:
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Make a one-step-ahead prediction. Prediction step in Kalman filter.
+        Make a one-step-ahead prediction using the prediction step of the Kalman filter.
         If no `input_covariates`
         for LSTM, use an empty `np.ndarray`. Recall :meth:`~canari.common.forward`
         from :class:`~canari.common`.
 
-        This function is used at one-time-step level.
+        This function is used at the one-time-step level.
 
         Args:
             input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.
             mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM at time `t+1`, used when
-                dont want LSTM to make predictions, but use LSTM predictions already have.
+                we dont want LSTM to make predictions, but use LSTM predictions already have.
             var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM at time `t+1`, used
-                when dont want LSTM to make predictions, but use LSTM predictions already have.
+                when we dont want LSTM to make predictions, but use LSTM predictions already have.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -800,9 +802,9 @@ class Model:
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Update step in Kalman filter (for one time step).
+        Update step in the Kalman filter for one time step.
 
-        This function is used at one-time-step level. Recall :meth:`~canari.common.backward`
+        This function is used at a one-time-step level. Recall :meth:`~canari.common.backward`
         from :class:`~canari.common`.
 
         Args:
@@ -858,16 +860,16 @@ class Model:
         matrix_inversion_tol: Optional[float] = 1e-12,
     ):
         """
-        Apply RTS smoothing equation for a specity timestep. As a result of this function,
+        Apply RTS smoothing equations for a specity timestep. As a result of this function,
         the smoothed estimates for hidden states at the specific time step will be updated in
         :attr:`~canari.model.Model.states`.
 
-        This function is used at one-time-step level. Recall :meth:`~canari.common.rts_smoother`
+        This function is used at a one-time-step level. Recall :meth:`~canari.common.rts_smoother`
         from :class:`~canari.common`.
 
         Args:
             time_step (int): Target smoothing index.
-            matrix_inversion_tol (float): Numerical stability threshold.
+            matrix_inversion_tol (float): Numerical stability threshold for matrix pseudoinversion (pinv).
         """
 
         (
@@ -947,10 +949,10 @@ class Model:
         train_lstm: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        Perform Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
+        Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
         update steps over multiple time steps.
 
-        This function is used at entire-dataset-level. Recall repeatedly the function
+        This function is used at the entire-dataset-level. Recall repeatedly the function
         :meth:`~canari.model.Model.forward` and :meth:`~canari.model.Model.backward` at
         one-time-step level from :class:`~canari.model.Model`.
 
@@ -1019,10 +1021,10 @@ class Model:
 
     def smoother(self) -> StatesHistory:
         """
-        Perform Kalman smoother over an entire time series data, i.e. repeatly apply the
+        Run the Kalman smoother over an entire time series data, i.e. repeatly apply the
         RTS smoothing equation over multiple time steps.
 
-        This function is used at entire-dataset-level. Recall repeatedly the function
+        This function is used at the entire-dataset-level. Recall repeatedly the function
         :meth:`~canari.model.Model.rts_smoother` at
         one-time-step level from :class:`~canari.model.Model`.
 
@@ -1134,7 +1136,7 @@ class Model:
             current_epoch (int):
                 Current epoch
             max_epoch (int):
-                Maximum number of epoch
+                Maximum number of epochs
             evaluate_metric (float):
                 Current metric value for this epoch.
             mode (Optional[str]):
@@ -1210,7 +1212,7 @@ class Model:
     ) -> np.ndarray:
         """
         Generate synthetic time series data based on the model components,
-        with optional injected synthetic anomalies.
+        with optional synthetic anomaly injection.
 
         Args:
             num_time_series (int):
@@ -1218,8 +1220,8 @@ class Model:
             num_time_steps (int):
                 Number of timesteps per generated series.
             sample_from_lstm_pred (bool, optional):
-                If False, zeroes out LSTM‐derived variance so that generation
-                ignores LSTM uncertainty. Defaults to True.
+                If False, zeroes out LSTM‐derived variance so that the generation
+                ignores the LSTM uncertainty. Defaults to True.
             time_covariates (np.ndarray of shape (num_time_steps, cov_dim), optional):
                 Time‐varying covariates to include in generation. If provided,
                 these will be standardized using `time_covariate_info` and
