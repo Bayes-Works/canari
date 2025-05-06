@@ -10,11 +10,11 @@ class DataProcess:
 
     This module provides the `DataProcess` class to facilitate:
 
-    - Standardize datasets based on training statistics
-    - Split data into training, validation, and test sets
-    - Add time covariates (hour, day, month, etc.) to data
-    - Generate lagged versions of features
-    - Add synthetic anomalies to data
+    - Standardization of datasets based on training statistics
+    - Splitting data into training, validation, and test sets
+    - Adding time covariates (hour, day, month, etc.) to data
+    - Generating lagged versions of features
+    - Adding synthetic anomalies to data
 
     Args:
         data (pd.DataFrame): Input DataFrame with a datetime or numeric index.
@@ -24,9 +24,9 @@ class DataProcess:
         validation_end (Optional[str]): End index for validation set.
         test_start (Optional[str]): Start index for test set.
         test_end (Optional[str]): End index for test set.
-        train_split (Optional[float]): Proportion of data for training set.
-        validation_split (Optional[float]): Proportion for validation set.
-        test_split (Optional[float]): Proportion for test set.
+        train_split (Optional[float]): Fraction of data for training set.
+        validation_split (Optional[float]): Fraction for validation set.
+        test_split (Optional[float]): Fraction for test set.
         time_covariates (Optional[List[str]]): Time covariates added to dataset
         output_col (list[int]): Column's indice for target variable.
         normalization (Optional[bool]): Whether to apply data standardization
@@ -242,7 +242,7 @@ class DataProcess:
 
         Args:
             split (str): One of ['train', 'validation', 'test', 'all'].
-            normalization (bool): Whether to normalize the output.
+            Standardization (bool): Whether to standardize the output.
             column (Optional[int]):  Column index.
 
         Returns:
@@ -344,17 +344,18 @@ class DataProcess:
     ) -> List[Dict[str, np.ndarray]]:
         """
         # TODO
-        Add synthetic anomalies randomly to a train, validation, or test sets.
+        Add synthetic randoml generated anomalies to a train, validation, or test sets.
         From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
-        Following a uniform distribution, randomly choose in this window where the anomaly starts.
-        Data after the anomaly start is shifted a by `slope`.
+        Following a uniform distribution, it randomly choose in this window where the anomaly starts.
+        After the anomaly start, the data is linearly shifted with a rate of change define by
+        `slope`.
 
         Args:
             data (dict): Data dict with "x" and "y".
-            num_samples (int): Number of anomaly to generate.
-            slope (list[float]): Slope for anomaly.
-            anomaly_start (float): Start of anomaly window (0–1).
-            anomaly_end (float): End of anomaly window (0–1).
+            num_samples (int): Number of anomalies to generate.
+            slope (list[float]): Slope for an anomaly.
+            anomaly_start (float): Start of theanomaly window (0–1).
+            anomaly_end (float): End of the anomaly window (0–1).
 
         Returns:
             list: Data dicts with anomalies injected.
@@ -399,9 +400,9 @@ class DataProcess:
         """
         Decompose a time series into a linear trend, seasonality, and residual following:
 
-         - Use Fourier transform to estimate seasonality.
+         - Use a Fourier transform to estimate seasonality.
          - `Deseasonalized_data = data - seasonality`
-         - Estimate a linear trend by fitting `Deseasonalized_data` with a first oder polynomial
+         - Estimate a linear trend by fitting `Deseasonalized_data` with a first order polynomial
          - Estimate residual
 
         Args:

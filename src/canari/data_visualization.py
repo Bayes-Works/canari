@@ -222,7 +222,8 @@ def plot_prediction(
     test_label: Optional[List[str]] = ["", ""],
 ):
     """
-    Plot predicted mean and uncertainty (standard deviation) for each data split.
+    Plot predicted mean and uncertainty for each data split. The uncertainty is represented by
+    confidence regions based on a multiple of the associated variable's standard deviation.
 
     Args:
         data_processor (DataProcess): Data processing object.
@@ -232,7 +233,7 @@ def plot_prediction(
         std_validation_pred (np.ndarray, optional): Standard deviations for validation predictions.
         mean_test_pred (np.ndarray, optional): Predicted means for test predictions.
         std_test_pred (np.ndarray, optional): Standard deviations for test predictions.
-        num_std (int, optional): Number of std deviations for uncertainty bands.
+        num_std (int, optional): Number of std deviations for confidence region.
         sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Line color.
         linestyle (str, optional): Line style.
@@ -293,7 +294,7 @@ def plot_states(
     legend_location: Optional[str] = None,
 ):
     """
-    Plot hidden states with mean and uncertainty intervals.
+    Plot hidden states with mean and confidence regions.
 
     Args:
         data_processor (DataProcess): Data processing object.
@@ -301,9 +302,9 @@ def plot_states(
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
         normalization (bool, optional): Whether to unnormalize the states.
-        num_std (int, optional): Number of standard deviations for uncertainty bands.
+        num_std (int, optional): Number of standard deviations for confidence region.
         sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
-        color (str, optional): Color for mean line and uncertainty fill.
+        color (str, optional): Color for mean line and confidence region fill.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Legend placement for first state subplot.
 
@@ -366,7 +367,7 @@ def plot_states(
                 )
 
         # Plot horizontal line at y=0.0 for specific states
-        if plot_state in ["local trend", "local acceleration"]:
+        if plot_state in ["trend", "acceleration"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
         # Set ylabel to the name of the current state
@@ -402,12 +403,12 @@ def plot_skf_states(
     Args:
         data_processor (DataProcess): Data processing object.
         states (StatesHistory): Object containing hidden states history over time.
-        model_prob (np.ndarray): Probabilities of abnormal regime.
+        model_prob (np.ndarray): Probabilities of the abnormal regime.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
         normalization (bool, optional):  Whether to unnormalize the states.
-        num_std (int, optional): Number of standard deviations for uncertainty bands.
-        plot_observation (bool, optional): Whether to include observed data into "local_level" plot.
+        num_std (int, optional): Number of standard deviations for confidence regions.
+        plot_observation (bool, optional): Whether to include observed data into "level" plot.
         color (str, optional): Line color for states.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Location of legend in top subplot.
@@ -462,7 +463,7 @@ def plot_skf_states(
         )
 
         # Plot horizontal line at y=0.0 for specific states
-        if plot_state in ["local trend", "local acceleration"]:
+        if plot_state in ["trend", "acceleration"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
         # Set ylabel to the name of the current state
@@ -513,7 +514,7 @@ def plot_with_uncertainty(
     ax: Optional[plt.Axes] = None,
 ):
     """
-    Plot mean and confidence interval for a variable.
+    Plot mean and confidence region for a variable.
 
     Args:
         time (np.ndarray): Time vector.
@@ -521,9 +522,9 @@ def plot_with_uncertainty(
         std (np.ndarray): Standard deviation values.
         color (str, optional): Line/fill color.
         linestyle (str, optional): Line style.
-        label (List[str], optional): Labels for mean and band.
+        label (List[str], optional): Labels for mean and confidence region.
         index (int, optional): Index if plotting from multivariate tensor.
-        num_std (int, optional): Number of standard deviations to shade.
+        num_std (int, optional): Number of standard deviations for confidence region.
         ax (plt.Axes, optional): Axis to use for plotting.
     """
 
