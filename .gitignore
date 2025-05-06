@@ -13,6 +13,5 @@ saved_params/
 
 # VSCode
 .vscode
-
 !saved_results/time_series_toy.png
-!docs/build/
+!docs/_build/html/index.html
