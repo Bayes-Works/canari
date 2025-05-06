@@ -1,5 +1,5 @@
 """
-Utility functions
+Utility functions that are used in mulitple classes.
 """
 
 from typing import Tuple, Optional
@@ -41,7 +41,7 @@ def calc_observation(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Predict observation mean and variance from state estimates.
+    Estimate observation mean and variance from hidden states and the observation_matrix.
 
     Args:
         mu_states (np.ndarray): Mean of the state variables.
@@ -67,17 +67,17 @@ def forward(
     lstm_indice: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Perform the forward pass for Kalman filtering.
+    Perform the prediction step in Kalman filter.
 
     Args:
-        mu_states_posterior (np.ndarray): Posterior state means.
-        var_states_posterior (np.ndarray): Posterior state covariance.
-        transition_matrix (np.ndarray): State transition matrix.
-        process_noise_matrix (np.ndarray): Covariance of the process noise.
-        observation_matrix (np.ndarray): Observation model matrix.
-        mu_lstm_pred (Optional[np.ndarray]): LSTM predicted mean (optional).
-        var_lstm_pred (Optional[np.ndarray]): LSTM predicted variance (optional).
-        lstm_indice (Optional[int]): Index to insert LSTM predictions (optional).
+        mu_states_posterior (np.ndarray): Posterior hidden states mean vector.
+        var_states_posterior (np.ndarray): Posterior hidden state covariance matrix.
+        transition_matrix (np.ndarray): Transition matrix.
+        process_noise_matrix (np.ndarray): Process noise matrix.
+        observation_matrix (np.ndarray): Observation matrix.
+        mu_lstm_pred (Optional[np.ndarray]): LSTM predicted mean.
+        var_lstm_pred (Optional[np.ndarray]): LSTM predicted variance.
+        lstm_indice (Optional[int]): Index to insert LSTM predictions.
 
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Predicted observation mean/var and state prior mean/var.
@@ -110,17 +110,17 @@ def backward(
     observation_matrix: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Perform the backward pass for Kalman update.
+    Perform the backward step in Kalman filter.
 
     Args:
-        obs (float): Actual observation value.
-        mu_obs_predict (np.ndarray): Predicted observation mean.
-        var_obs_predict (np.ndarray): Predicted observation variance.
-        var_states_prior (np.ndarray): Prior state covariance matrix.
-        observation_matrix (np.ndarray): Observation model matrix.
+        obs (float): Observation.
+        mu_obs_predict (np.ndarray): Predicted mean.
+        var_obs_predict (np.ndarray): Predicted variance.
+        var_states_prior (np.ndarray): Prior covariance matrix for hidden states .
+        observation_matrix (np.ndarray): Observation matrix.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: Correction for state mean and covariance.
+        Tuple[np.ndarray, np.ndarray]: Delta/Correction for hidden states' mean and covariance matrix.
     """
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
@@ -151,7 +151,7 @@ def rts_smoother(
         var_states_smooth (np.ndarray): Smoothed covariance matrix.
         mu_states_posterior (np.ndarray): Posterior mean vector.
         var_states_posterior (np.ndarray): Posterior covariance matrix.
-        cross_cov_states (np.ndarray): Cross-covariance matrix between states at two consecutive time steps.
+        cross_cov_states (np.ndarray): Cross-covariance matrix between hidden states at two consecutive time steps.
         matrix_inversion_tol (Optional[float]): Regularization tolerance.
 
     Returns:

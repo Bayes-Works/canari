@@ -5,20 +5,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari.data_process import DataProcess
-from canari.component.baseline_component import LocalTrend, LocalAcceleration
-from canari.component.lstm_component import LstmNetwork
-from canari.component.white_noise_component import WhiteNoise
-from canari.model import Model
-from canari.SKF import SKF
-from canari.model_optimizer import ModelOptimizer
-from canari.SKF_optimizer import SKFOptimizer
-from canari.data_visualization import (
+from canari import (
+    DataProcess,
+    Model,
+    ModelOptimizer,
+    SKF,
+    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
     plot_states,
 )
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+
 
 # Fix parameters grid search
 sigma_v_fix = 0.048157582719331495
@@ -286,7 +285,11 @@ def training(model, data_processor, num_epoch: int = 50):
             std=std_validation_preds_unnorm,
         )
 
-        model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        model.early_stopping(
+            evaluate_metric=-validation_log_lik,
+            current_epoch=epoch,
+            max_epoch=num_epoch,
+        )
 
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds.copy()

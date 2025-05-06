@@ -92,13 +92,17 @@ def SKF_anomaly_detection_runner(
         )
 
         # Early-stopping
-        skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        skf.early_stopping(
+            evaluate_metric=-validation_log_lik,
+            current_epoch=epoch,
+            max_epoch=num_epoch,
+        )
         if skf.stop_training:
             break
 
     # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+    smooth_marginal_abnorm_prob, states = skf.smoother()
 
     # Check anomalies
     condition1 = np.any(

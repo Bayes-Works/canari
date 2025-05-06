@@ -90,7 +90,7 @@ def main(
 
     # # #
     model.filter(data=train_data)
-    model.smoother(data=train_data)
+    model.smoother()
 
     # #  Plot
     plot_states(

@@ -41,8 +41,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
     # Initialize model
     model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 2])
-
-    for _ in range(5):
+    num_epoch = 30
+    for epoch in range(num_epoch):
         (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
@@ -65,7 +65,9 @@ def model_test_runner(model: Model, plot: bool) -> float:
         mse = metric.mse(mu_validation_preds, validation_obs)
 
         # Early-stopping
-        model.early_stopping(evaluate_metric=mse, mode="min")
+        model.early_stopping(
+            evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
+        )
         if model.stop_training:
             break
 

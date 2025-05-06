@@ -145,7 +145,9 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    model_lstm.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    model_lstm.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == model_lstm.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
@@ -162,7 +164,7 @@ print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
 skf.model["norm_norm"].lstm_net = model_lstm.lstm_net
 skf.lstm_net = model_lstm.lstm_net
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob

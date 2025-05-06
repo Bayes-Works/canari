@@ -7,12 +7,11 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
+    plot_states,
     plot_data,
     plot_prediction,
-    plot_states,
 )
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -82,7 +81,7 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, mode="min")
+    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -125,7 +124,7 @@ lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 
 # # #
 model2.filter(data=train_data, train_lstm=False)
-model2.smoother(data=train_data)
+model2.smoother()
 mu_validation_preds2, std_validation_preds2, _ = model2.forecast(validation_data)
 
 lstm_params_after_filter = copy.deepcopy(model2.lstm_net.state_dict())
