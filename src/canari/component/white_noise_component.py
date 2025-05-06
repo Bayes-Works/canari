@@ -6,10 +6,10 @@ from canari.component.base_component import BaseComponent
 class WhiteNoise(BaseComponent):
     """
     `WhiteNoise` class, inheriting from Canari's `BaseComponent`.
-    It is used to model i.i.d. Gaussian process errors.
+    It is used to model zero-mean i.i.d. Gaussian errors.
 
     Args:
-        std_error (Optional[float]): Standard deviation of the error. Default is 0.0.
+        std_error (Optional[float]): Standard deviation of the error. Default is 0.05.
 
     Examples:
         >>> from canari.component import WhiteNoise
@@ -22,7 +22,7 @@ class WhiteNoise(BaseComponent):
 
     def __init__(
         self,
-        std_error: Optional[float] = 0.0,
+        std_error: Optional[float] = 0.05,
     ):
         self.std_error = std_error
         super().__init__()

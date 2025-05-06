@@ -116,7 +116,7 @@ def backward(
         obs (float): Observation.
         mu_obs_predict (np.ndarray): Predicted mean.
         var_obs_predict (np.ndarray): Predicted variance.
-        var_states_prior (np.ndarray): Prior covariance matrix for hidden states .
+        var_states_prior (np.ndarray): Prior covariance matrix for hidden states.
         observation_matrix (np.ndarray): Observation matrix.
 
     Returns:
@@ -251,16 +251,16 @@ def gaussian_mixture(
 
 def unstandardize_states(mu_norm, std_norm, norm_const_mean, norm_const_std):
     """
-    Unstandardize normalized mean and standard deviation of states.
+    Unstandardize standardized mean and standard deviation of states.
 
     Args:
-        mu_norm (dict): Normalized means by key.
-        std_norm (dict): Normalized stds by key.
-        norm_const_mean (float): Mean normalization constant.
-        norm_const_std (float): Standard deviation normalization constant.
+        mu_norm (dict): Standardized means by key.
+        std_norm (dict): Standardized stds by key.
+        norm_const_mean (float): Mean standardization constant.
+        norm_const_std (float): Standard deviation standardization constant.
 
     Returns:
-        Tuple[dict, dict]: Unnormalized means and stds.
+        Tuple[dict, dict]: Unstandardized means and stds.
     """
     mu_unnorm = {}
     std_unnorm = {}
@@ -279,7 +279,9 @@ class GMA(object):
     """
     Gaussian Multiplicative Approximation (GMA).
 
-    Provides a way to augment and approximate the product of two Gaussian variables.
+    Approximate the product of two Gaussian variables by a Gausian distribution
+    with exact moments calculation. The class allow augmenting the size of the
+     state vector in order to include the product term.
 
     Attributes:
         mu (np.ndarray): Mean vector.
@@ -303,7 +305,8 @@ class GMA(object):
 
     def multiply_and_augment(self, index1, index2):
         """
-        Augment mean and covariance with the product of two variables.
+        Augment the state vector with mean and covariance from the product of
+        the two variables referred by the two input indices.
         """
         GMA_mu = np.vstack((self.mu, 0))
         GMA_var = np.append(self.var, np.zeros((1, self.var.shape[1])), axis=0)
