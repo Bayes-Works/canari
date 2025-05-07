@@ -48,7 +48,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    # load_lstm_net="./saved_params/lstm_net_test.pth",
+    load_lstm_net="./saved_params/lstm_net_test.pth",
 )
 noise = WhiteNoise(std_error=sigma_v)
 
