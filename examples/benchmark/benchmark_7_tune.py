@@ -123,7 +123,7 @@ def main(
         data_processor=data_processor,
         states=states_optim,
         normalization=True,
-        states_to_plot=["local level"],
+        states_to_plot=["level"],
         sub_plot=ax,
     )
     plt.legend()
@@ -218,7 +218,7 @@ def main(
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["local level", "local trend", "lstm", "white noise"],
+        states_to_plot=["level", "trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",
