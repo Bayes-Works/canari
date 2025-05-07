@@ -787,7 +787,7 @@ class Model:
     
     def BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
         """
-        BAR forward modification
+        BAR backward modification
         """
 
         ar_index = self.get_states_index("autoregression")
