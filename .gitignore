@@ -14,8 +14,6 @@ saved_params/
 # Docs
 docs/_build/*
 !docs/_build/html/
-docs/_build/html/*
-!docs/_build/html/index.html
 
 # Figures
 !saved_results/time_series_toy.png
