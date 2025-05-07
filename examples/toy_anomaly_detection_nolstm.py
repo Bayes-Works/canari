@@ -39,7 +39,7 @@ data_processor = DataProcess(
     data=df_raw,
     train_split=1,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 _, _, _, all_data = data_processor.get_splits()
 

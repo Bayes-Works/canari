@@ -47,26 +47,26 @@ data_processor = DataProcess(
     validation_split=train_val_split[1],
     output_col=output_col,
 )
-obs_norm_const_mean = data_processor.norm_const_mean[output_col].item()
-obs_norm_const_std = data_processor.norm_const_std[output_col].item()
-time_covariate_norm_const_mean = data_processor.norm_const_mean[
+obs_std_const_mean = data_processor.std_const_mean[output_col].item()
+obs_std_const_std = data_processor.std_const_std[output_col].item()
+time_covariate_std_const_mean = data_processor.std_const_mean[
     data_processor.covariates_col
 ].item()
-time_covariate_norm_const_std = data_processor.norm_const_std[
+time_covariate_std_const_std = data_processor.std_const_std[
     data_processor.covariates_col
 ].item()
 
-trend_true_norm = trend_true / (obs_norm_const_std + 1e-10)
-level_true_norm = (5.0 - obs_norm_const_mean) / (obs_norm_const_std + 1e-10)
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+trend_true_norm = trend_true / (obs_std_const_std + 1e-10)
+level_true_norm = (5.0 - obs_std_const_mean) / (obs_std_const_std + 1e-10)
+train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 train_index, val_index, test_index = data_processor.get_split_indices()
 time_covariate_info = {
     "initial_time_covariate": data_processor.data.values[
         val_index[-1], data_processor.covariates_col
     ].item(),
-    "mu": time_covariate_norm_const_mean,
-    "std": time_covariate_norm_const_std,
+    "mu": time_covariate_std_const_mean,
+    "std": time_covariate_std_const_std,
 }
 
 LSTM = LstmNetwork(
@@ -107,12 +107,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        obs_norm_const_mean,
-        obs_norm_const_std,
+        obs_std_const_mean,
+        obs_std_const_std,
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        obs_norm_const_std,
+        obs_std_const_std,
     )
 
     # Calculate the evaluation metric
@@ -231,7 +231,7 @@ fig, ax = plot_states(
 )
 plot_data(
     data_processor=data_processor,
-    normalization=False,
+    standardization=False,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
