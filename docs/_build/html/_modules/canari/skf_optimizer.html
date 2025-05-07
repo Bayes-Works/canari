@@ -300,7 +300,8 @@ document.write(`
 <span class="sd">        initialize_skf (Callable): Function that returns an SKF instance given a configuration.</span>
 <span class="sd">        model_param (dict): Serializable dictionary for :class:`~canari.model.Model` obtained from</span>
 <span class="sd">                            :meth:`~canari.model.Model.get_dict`.</span>
-<span class="sd">        param_space (dict): Parameter search space: two-value lists [min, max] for optimization.</span>
+<span class="sd">        param_space (dict): Parameter search space: two-value lists [min, max] for defining the</span>
+<span class="sd">                            bounds of the optimization.</span>
 <span class="sd">        data (dict): Input data for adding synthetic anomalies.</span>
 <span class="sd">        detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.</span>
 <span class="sd">                                                Defaults to 0.5.</span>

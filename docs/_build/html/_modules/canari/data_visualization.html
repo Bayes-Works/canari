@@ -282,7 +282,7 @@ document.write(`
 <span class="sd">Visualization for Canari&#39;s results.</span>
 
 <span class="sd">This module provides functions to plot:</span>
-<span class="sd">- Raw or normalized data</span>
+<span class="sd">- Raw or standardized data</span>
 <span class="sd">- Prediction results with uncertainty (mean ± standard deviation)</span>
 <span class="sd">- Hidden state estimates</span>
 <span class="sd">- Probability of regime changes (anomalies) from Switching Kalman filter (SKF)</span>
@@ -386,7 +386,7 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_data">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_data</span><span class="p">(</span>
     <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
-    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">plot_train_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">plot_validation_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">plot_test_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -400,11 +400,11 @@ document.write(`
     <span class="n">plot_nan</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Plot train, validation, and test data with optional normalization and NaN filtering.</span>
+<span class="sd">    Plot train, validation, and test data with optional standardization and NaN filtering.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        data_processor (DataProcess): Data processing object.</span>
-<span class="sd">        normalization (bool, optional): Normalize the data using stored training&#39;s statistics.</span>
+<span class="sd">        standardization (bool, optional): Plot data in standardized or original space</span>
 <span class="sd">        plot_train_data (bool, optional): If True, plot training data.</span>
 <span class="sd">        plot_validation_data (bool, optional): If True, plot validation data.</span>
 <span class="sd">        plot_test_data (bool, optional): If True, plot test data.</span>
@@ -428,11 +428,11 @@ document.write(`
 <span class="sd">                    validation_split=0.2,</span>
 <span class="sd">                    test_split=0.1,</span>
 <span class="sd">                    time_covariates = [&quot;hour_of_day&quot;],</span>
-<span class="sd">                    normalization=True)</span>
+<span class="sd">                    standardization=True)</span>
 <span class="sd">        &gt;&gt;&gt; fig, ax = plt.subplots(figsize=(12, 4))</span>
 <span class="sd">        &gt;&gt;&gt; plot_data(</span>
 <span class="sd">                data_processor=dp,</span>
-<span class="sd">                normalization=True,</span>
+<span class="sd">                standardization=True,</span>
 <span class="sd">                plot_validation_data=True,</span>
 <span class="sd">                plot_test_data=True,</span>
 <span class="sd">            )</span>
@@ -446,8 +446,8 @@ document.write(`
     <span class="k">if</span> <span class="n">plot_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">plot_column</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
 
-    <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">standardization</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">standardize_data</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>
 
@@ -574,7 +574,7 @@ document.write(`
     <span class="n">states</span><span class="p">:</span> <span class="n">StatesHistory</span><span class="p">,</span>
     <span class="n">states_to_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
     <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
-    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">sub_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span>
@@ -589,7 +589,7 @@ document.write(`
 <span class="sd">        states (StatesHistory): Object containing hidden states history over time.</span>
 <span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
 <span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
-<span class="sd">        normalization (bool, optional): Whether to unnormalize the states.</span>
+<span class="sd">        standardization (bool, optional): Whether to plot hidden states in standardized or original space.</span>
 <span class="sd">        num_std (int, optional): Number of standard deviations for confidence region.</span>
 <span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
 <span class="sd">        color (str, optional): Color for mean line and confidence region fill.</span>
@@ -625,12 +625,12 @@ document.write(`
     <span class="c1"># Mean and std to plot</span>
     <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
     <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">normalization</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
         <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
             <span class="n">mu_states</span><span class="p">,</span>
             <span class="n">std_states</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
         <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
@@ -680,7 +680,7 @@ document.write(`
     <span class="n">model_prob</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">states_to_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
     <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
-    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">plot_observation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span>
@@ -697,7 +697,7 @@ document.write(`
 <span class="sd">        model_prob (np.ndarray): Probabilities of the abnormal regime.</span>
 <span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
 <span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
-<span class="sd">        normalization (bool, optional):  Whether to unnormalize the states.</span>
+<span class="sd">        standardization (bool, optional):  Whether to plot hidden states in standardized or original space.</span>
 <span class="sd">        num_std (int, optional): Number of standard deviations for confidence regions.</span>
 <span class="sd">        plot_observation (bool, optional): Whether to include observed data into &quot;level&quot; plot.</span>
 <span class="sd">        color (str, optional): Line color for states.</span>
@@ -731,12 +731,12 @@ document.write(`
     <span class="c1"># Mean and std to plot</span>
     <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
     <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">normalization</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
         <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
             <span class="n">mu_states</span><span class="p">,</span>
             <span class="n">std_states</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
         <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
@@ -765,7 +765,7 @@ document.write(`
         <span class="n">plot_data</span><span class="p">(</span>
             <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
             <span class="n">plot_column</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">,</span>
-            <span class="n">normalization</span><span class="o">=</span><span class="n">normalization</span><span class="p">,</span>
+            <span class="n">standardization</span><span class="o">=</span><span class="n">standardization</span><span class="p">,</span>
             <span class="n">sub_plot</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
             <span class="n">plot_nan</span><span class="o">=</span><span class="n">plot_nan</span><span class="p">,</span>
         <span class="p">)</span>

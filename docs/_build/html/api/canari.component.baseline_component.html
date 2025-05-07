@@ -377,7 +377,7 @@ document.write(`
 <dd><p>Bases: <a class="reference internal" href="canari.component.base_component.html#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
 <p><cite>LocalAcceleration</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
 It models baselines with a locally constant acceleration (linear speed and curvature level) over time.
-It has three hidden states <cite>local level</cite>, <cite>local trend</cite>, and <cite>local acceleration</cite>.</p>
+It has three hidden states <cite>level</cite>, <cite>trend</cite>, and <cite>acceleration</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -462,7 +462,7 @@ initialized to zeros.</p></li>
 <dd><p>Bases: <a class="reference internal" href="canari.component.base_component.html#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
 <p><cite>LocalLevel</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
 It models baselines with a locally constant level (zero speed) over time. It has one hidden state
-<cite>local level</cite>.</p>
+<cite>level</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -481,9 +481,9 @@ initialized to zeros.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># With default mu_states and var_states</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span> <span class="o">=</span> <span class="n">LocalLevel</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">component_name</span>
-<span class="go">local level</span>
+<span class="go">&#39;local level&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">states_name</span>
-<span class="go">[&#39;local level&#39;]</span>
+<span class="go">[&#39;level&#39;]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">transition_matrix</span>
 <span class="go">array([[1]])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">observation_matrix</span>
@@ -549,7 +549,7 @@ initialized to zeros.</p></li>
 <dd><p>Bases: <a class="reference internal" href="canari.component.base_component.html#canari.component.base_component.BaseComponent" title="canari.component.base_component.BaseComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseComponent</span></code></a></p>
 <p><cite>LocalTrend</cite> class, inheriting from Canari’s <cite>BaseComponent</cite>.
 It models baselines with a locally constant speed over time (linear level). It has two
-hidden states <cite>local level</cite> and <cite>local trend</cite>.</p>
+hidden states <cite>level</cite> and <cite>trend</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -568,9 +568,9 @@ initialized to zeros.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># With default mu_states and var_states</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">level</span><span class="o">.</span><span class="n">component_name</span>
-<span class="go">local trend</span>
+<span class="go">&#39;local trend&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">states_name</span>
-<span class="go">[&#39;local level&#39;, &#39;local trend&#39;]</span>
+<span class="go">[&#39;level&#39;, &#39;trend&#39;]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">local_trend</span><span class="o">.</span><span class="n">transition_matrix</span>
 <span class="go">array([[1, 1],</span>
 <span class="go">       [0, 1]])</span>

@@ -357,7 +357,8 @@ document.write(`
 <li><p><strong>initialize_skf</strong> (<em>Callable</em>) – Function that returns an SKF instance given a configuration.</p></li>
 <li><p><strong>model_param</strong> (<em>dict</em>) – Serializable dictionary for <a class="reference internal" href="canari.model.html#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a> obtained from
 <a class="reference internal" href="canari.model.html#canari.model.Model.get_dict" title="canari.model.Model.get_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_dict()</span></code></a>.</p></li>
-<li><p><strong>param_space</strong> (<em>dict</em>) – Parameter search space: two-value lists [min, max] for optimization.</p></li>
+<li><p><strong>param_space</strong> (<em>dict</em>) – Parameter search space: two-value lists [min, max] for defining the
+bounds of the optimization.</p></li>
 <li><p><strong>data</strong> (<em>dict</em>) – Input data for adding synthetic anomalies.</p></li>
 <li><p><strong>detection_threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for the target maximal anomaly detection rate.
 Defaults to 0.5.</p></li>

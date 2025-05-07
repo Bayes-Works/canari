@@ -709,8 +709,8 @@ early stopping or reaching maximum number of epoch.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.auto_initialize_baseline_states">
 <span class="sig-name descname"><span class="pre">auto_initialize_baseline_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.auto_initialize_baseline_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.auto_initialize_baseline_states" title="Link to this definition">#</a></dt>
-<dd><p>Automatically assign initial means and variances for baseline hidden states (local level,
-local trend, and local acceleration) from input data using time series decomposition
+<dd><p>Automatically assign initial means and variances for baseline hidden states (level,
+trend, and acceleration) from input data using time series decomposition
 defined in <a class="reference internal" href="canari.data_process.html#canari.data_process.DataProcess.decompose_data" title="canari.data_process.DataProcess.decompose_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">decompose_data()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1045,7 +1045,7 @@ starts, “level”: a constant shift after anomaly starts. Defaults to “trend
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;lstm&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">local_level_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;local level&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;level&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1208,8 +1208,7 @@ states outside in the code using <cite>Model.lstm_net.set_lstm_states(lstm_cell_
 <dd><p>Run the Kalman smoother over an entire time series data, i.e. repeatly apply the
 RTS smoothing equation over multiple time steps.</p>
 <p>This function is used at the entire-dataset-level. Recall repeatedly the function
-<a class="reference internal" href="#canari.model.Model.rts_smoother" title="canari.model.Model.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> at
-one-time-step level from <a class="reference internal" href="#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a>.</p>
+<a class="reference internal" href="#canari.model.Model.rts_smoother" title="canari.model.Model.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> at one-time-step level from <a class="reference internal" href="#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a>: The history of hidden states over time.</p>
