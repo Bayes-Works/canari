@@ -203,7 +203,6 @@ class Model:
         save_dict["var_states"] = self.var_states
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-            save_dict["lstm_network_states"] = self.lstm_net.get_lstm_states()
         if "phi" in self.states_name:
             save_dict["phi_index"] = self.states_name.index("phi")
         if "autoregression" in self.states_name:
@@ -224,7 +223,6 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            model.lstm_net.set_lstm_states(save_dict["lstm_network_states"])
 
         return model
 
@@ -680,7 +678,7 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        self.set_memory(states=self.states, time_step=0)
+        # self.set_memory(states=self.states, time_step=0)
 
         return (
             np.array(mu_validation_preds).flatten(),

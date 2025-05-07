@@ -82,16 +82,19 @@ for epoch in range(num_epoch):
             states
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
+        lstm_optim_states = model.lstm_net.get_lstm_states()
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory to states_optim
 model.load_dict(model_optim_dict)
+model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(states_optim, time_step=data_processor.test_start)
-
 
 # filter from on the test set
 mu_test_preds, std_test_preds, test_states = model.forecast(
@@ -136,7 +139,7 @@ plot_prediction(
     mean_test_pred=mu_test_preds,
     std_test_pred=std_test_preds,
     test_label=[r"$\mu^{\prime}$", r"$\pm\sigma^{\prime}$"],
-    color = "purple",
+    color="purple",
 )
 plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
 plt.tight_layout()

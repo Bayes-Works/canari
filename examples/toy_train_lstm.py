@@ -31,8 +31,8 @@ num_epoch = 200
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day"],
-    train_split=0.6,
-    validation_split=0.2,
+    train_split=0.8,
+    validation_split=0.1,
     output_col=output_col,
 )
 
@@ -77,9 +77,6 @@ for epoch in range(num_epoch):
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
-    # reset memory
-    model.set_memory(states=model.states, time_step=0)
-
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
@@ -104,14 +101,19 @@ for epoch in range(num_epoch):
             model.states
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
+        lstm_optim_states = model.lstm_net.get_lstm_states()
     if model.stop_training:
         break
+    else:
+        # reset memory
+        model.set_memory(states=model.states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
+model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
@@ -164,17 +166,4 @@ plot_prediction(
 )
 plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
 plt.tight_layout()
-plt.show()
-
-# plot states
-fig, ax = plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type="smooth",
-    states_to_plot=[
-        "local level",
-        "local trend",
-        "lstm",
-    ],
-)
 plt.show()

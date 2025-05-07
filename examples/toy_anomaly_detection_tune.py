@@ -15,6 +15,8 @@ from canari import (
     plot_states,
 )
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+from canari.model_optimizer import ModelOptimizer
+from canari.SKF_optimizer import SKFOptimizer
 
 # Fix parameters grid search
 sigma_v_fix = 0.015519087402266298
@@ -25,7 +27,7 @@ SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = False,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data

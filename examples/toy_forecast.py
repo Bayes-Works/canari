@@ -85,6 +85,8 @@ for epoch in range(num_epoch):
         )  # If we want to plot the states, plot those from optimal epoch
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
