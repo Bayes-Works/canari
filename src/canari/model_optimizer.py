@@ -1,3 +1,9 @@
+"""
+This module automates the search for optimal hyperparameters of a
+:class:`~canari.model.Model` instance by leveraging the Ray Tune
+external library.
+"""
+
 import signal
 from typing import Callable, Optional
 from ray import tune
