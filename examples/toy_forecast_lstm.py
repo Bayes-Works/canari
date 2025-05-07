@@ -96,7 +96,7 @@ model.load_dict(model_optim_dict)
 model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(states_optim, time_step=data_processor.test_start)
 
-# filter from on the test set
+# forecat on the test set
 mu_test_preds, std_test_preds, test_states = model.forecast(
     data=test_data,
 )

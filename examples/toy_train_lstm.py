@@ -74,6 +74,9 @@ for epoch in range(num_epoch):
     # smooth on train data
     model.smoother(train_data)
 
+    # set memory for validation
+    model.set_memory(states=model.states, time_step=data_processor.validation_start)
+
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
