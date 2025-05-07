@@ -292,7 +292,7 @@ document.write(`
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalLevel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    `LocalLevel` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">    It models baselines with a constant level (zero speed) over time. It has one hidden state</span>
+<span class="sd">    It models baselines with a locally constant level (zero speed) over time. It has one hidden state</span>
 <span class="sd">    `local level`.</span>
 
 <span class="sd">    Args:</span>
@@ -401,7 +401,7 @@ document.write(`
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalTrend</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    `LocalTrend` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">    It models baselines with a constant speed over time (linear level). It has two</span>
+<span class="sd">    It models baselines with a locally constant speed over time (linear level). It has two</span>
 <span class="sd">    hidden states `local level` and `local trend`.</span>
 
 <span class="sd">    Args:</span>
@@ -514,7 +514,7 @@ document.write(`
 <span class="k">class</span><span class="w"> </span><span class="nc">LocalAcceleration</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    `LocalAcceleration` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">    It models baselines with a constant acceleration (linear speed and curvature level) over time.</span>
+<span class="sd">    It models baselines with a locally constant acceleration (linear speed and curvature level) over time.</span>
 <span class="sd">    It has three hidden states `local level`, `local trend`, and `local acceleration`.</span>
 
 <span class="sd">    Args:</span>

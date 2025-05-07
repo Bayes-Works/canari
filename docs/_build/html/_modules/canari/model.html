@@ -282,7 +282,7 @@ document.write(`
 <span class="sd">Hybrid LSTM-SSM model that combines Bayesian Long-short Term Memory (LSTM) Neural Networks</span>
 <span class="sd">and State-Space Models (SSM).</span>
 
-<span class="sd">This model supports a flexible architecture where multiple `components`</span>
+<span class="sd">This model supports a flexible architecture where multiple `component`</span>
 <span class="sd">are assembled to define a structured state-space model.</span>
 
 <span class="sd">On time series data, this model can:</span>
@@ -340,24 +340,27 @@ document.write(`
 <span class="sd">        states_names (list[str]):</span>
 <span class="sd">            Names of hidden states.</span>
 <span class="sd">        mu_states (np.ndarray):</span>
-<span class="sd">            Mean vector for the hidden states :math:`x_t` at the time step `t`.</span>
+<span class="sd">            Mean vector for the hidden states :math:`X_{t|t}` at the time step `t`.</span>
 <span class="sd">        var_states (np.ndarray):</span>
-<span class="sd">            Covariance matrix for the hidden states :math:`x_t` at the time step `t`.</span>
+<span class="sd">            Covariance matrix for the hidden states :math:`X_{t|t}` at the time step `t`.</span>
 <span class="sd">        mu_states_prior (np.ndarray):</span>
-<span class="sd">            Prior mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.</span>
+<span class="sd">            Prior mean vector for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.</span>
 <span class="sd">        var_states_prior (np.ndarray):</span>
-<span class="sd">            Prior covariance matrix for the hidden states :math:`x_{t+1}` at the time step `t+1`.</span>
+<span class="sd">            Prior covariance matrix for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.</span>
 <span class="sd">        mu_states_posterior (np.ndarray):</span>
-<span class="sd">            Posteriror mean vector for the hidden states :math:`x_{t+1}` at the time step `t+1`.</span>
+<span class="sd">            Posteriror mean vector for the hidden states :math:`X_{t+1|t+1}` at the time step `t+1`.</span>
+<span class="sd">            In case of missing data (NaN observation), having the same values</span>
+<span class="sd">            as :attr:`mu_states_prior`.</span>
 <span class="sd">        var_states_posterior (np.ndarray):</span>
-<span class="sd">            Posteriror covariance matrix for the hidden states :math:`x_{t+1}` at the time</span>
-<span class="sd">            step `t+1`.</span>
+<span class="sd">            Posteriror covariance matrix for the hidden states :math:`X_{t+1|t+1}` at the time</span>
+<span class="sd">            step `t+1`. In case of missing data (NaN observation), having the same values</span>
+<span class="sd">            as :attr:`var_states_prior`.</span>
 <span class="sd">        states (StatesHistory):</span>
 <span class="sd">            Container for storing prior, posterior, and smoothed values of hidden states over time.</span>
 <span class="sd">        mu_obs_predict (np.ndarray):</span>
-<span class="sd">            Means for predictions at a time step `t+1`.</span>
+<span class="sd">            Means for observation predictions at a time step `t+1`.</span>
 <span class="sd">        var_obs_predict (np.ndarray):</span>
-<span class="sd">            Variances for predictions at a time step `t+1`.</span>
+<span class="sd">            Variances for observation predictions at a time step `t+1`.</span>
 <span class="sd">        observation_matrix (np.ndarray):</span>
 <span class="sd">            Global observation matrix constructed from all components.</span>
 <span class="sd">        transition_matrix (np.ndarray):</span>
@@ -591,6 +594,8 @@ document.write(`
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        TODO: remove epoch from input</span>
 <span class="sd">        Apply exponential decay to white noise standard deviation over epochs.</span>
+<span class="sd">        This decaying noise structure is meant to improve the training performance</span>
+<span class="sd">        of TAGI-LSTM.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            epoch (int): Current training epoch.</span>
@@ -1039,31 +1044,30 @@ document.write(`
         <span class="n">var_lstm_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Make a one-step-ahead prediction. Prediction step in Kalman filter.</span>
-<span class="sd">        If no `input_covariates`</span>
-<span class="sd">        for LSTM, use an empty `np.ndarray`. Recall :meth:`~canari.common.forward`</span>
-<span class="sd">        from :class:`~canari.common`.</span>
+<span class="sd">        Make a one-step-ahead prediction using the prediction step of the Kalman filter.</span>
+<span class="sd">        If no `input_covariates` for LSTM, use an empty `np.ndarray`.</span>
+<span class="sd">        Recall :meth:`~canari.common.forward` from :class:`~canari.common`.</span>
 
-<span class="sd">        This function is used at one-time-step level.</span>
+<span class="sd">        This function is used at the one-time-step level.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.</span>
 <span class="sd">            mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM at time `t+1`, used when</span>
-<span class="sd">                dont want LSTM to make predictions, but use LSTM predictions already have.</span>
+<span class="sd">                we dont want LSTM to make predictions, but use LSTM predictions already have.</span>
 <span class="sd">            var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM at time `t+1`, used</span>
-<span class="sd">                when dont want LSTM to make predictions, but use LSTM predictions already have.</span>
+<span class="sd">                when we dont want LSTM to make predictions, but use LSTM predictions already have.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:</span>
 <span class="sd">                A tuple containing:</span>
 
-<span class="sd">                - :attr:`~canari.model.Model.mu_obs_predict` (np.ndarray):</span>
+<span class="sd">                - :attr:`mu_obs_predict` (np.ndarray):</span>
 <span class="sd">                    The predictive mean of the observation at `t+1`.</span>
-<span class="sd">                - :attr:`~canari.model.Model.var_obs_predict` (np.ndarray):</span>
+<span class="sd">                - :attr:`var_obs_predict` (np.ndarray):</span>
 <span class="sd">                    The predictive variance of the observation at `t+1`.</span>
-<span class="sd">                - :attr:`~canari.model.Model.mu_states_prior` (np.ndarray):</span>
+<span class="sd">                - :attr:`mu_states_prior` (np.ndarray):</span>
 <span class="sd">                    The prior mean of the hidden state at `t+1`.</span>
-<span class="sd">                - :attr:`~canari.model.Model.var_states_prior` (np.ndarray):</span>
+<span class="sd">                - :attr:`var_states_prior` (np.ndarray):</span>
 <span class="sd">                    The prior variance of the hidden state at `t+1`.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1111,9 +1115,9 @@ document.write(`
         <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Update step in Kalman filter (for one time step).</span>
+<span class="sd">        Update step in the Kalman filter for one time step.</span>
 
-<span class="sd">        This function is used at one-time-step level. Recall :meth:`~canari.common.backward`</span>
+<span class="sd">        This function is used at the one-time-step level. Recall :meth:`~canari.common.backward`</span>
 <span class="sd">        from :class:`~canari.common`.</span>
 
 <span class="sd">        Args:</span>
@@ -1124,12 +1128,12 @@ document.write(`
 <span class="sd">                A tuple containing:</span>
 
 <span class="sd">                - **delta_mu** (np.ndarray):</span>
-<span class="sd">                    The delta for updating :attr:`~canari.model.Model.mu_states_prior`.</span>
+<span class="sd">                    The delta for updating :attr:`mu_states_prior`.</span>
 <span class="sd">                - **delta_var** (np.ndarray):</span>
-<span class="sd">                    The delta for updating :attr:`~canari.model.Model.var_states_prior`.</span>
-<span class="sd">                - :attr:`~canari.model.Model.mu_states_posterior` (np.ndarray):</span>
+<span class="sd">                    The delta for updating :attr:`var_states_prior`.</span>
+<span class="sd">                - :attr:`mu_states_posterior` (np.ndarray):</span>
 <span class="sd">                    The posterior mean of the hidden states.</span>
-<span class="sd">                - :attr:`~canari.model.Model.var_states_posterior` (np.ndarray):</span>
+<span class="sd">                - :attr:`var_states_posterior` (np.ndarray):</span>
 <span class="sd">                    The posterior variance of the hidden states.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -1172,16 +1176,17 @@ document.write(`
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Apply RTS smoothing equation for a specity timestep. As a result of this function,</span>
+<span class="sd">        Apply RTS smoothing equations for a specity timestep. As a result of this function,</span>
 <span class="sd">        the smoothed estimates for hidden states at the specific time step will be updated in</span>
-<span class="sd">        :attr:`~canari.model.Model.states`.</span>
+<span class="sd">        :attr:`states`.</span>
 
-<span class="sd">        This function is used at one-time-step level. Recall :meth:`~canari.common.rts_smoother`</span>
+<span class="sd">        This function is used at the one-time-step level. Recall :meth:`~canari.common.rts_smoother`</span>
 <span class="sd">        from :class:`~canari.common`.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            time_step (int): Target smoothing index.</span>
-<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold.</span>
+<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
+<span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-12.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="p">(</span>
@@ -1209,9 +1214,8 @@ document.write(`
 <span class="sd">        one-step-ahead predictions, i.e., reapeatly apply the</span>
 <span class="sd">        Kalman prediction step over multiple time steps.</span>
 
-<span class="sd">        This function is used at entire-dataset-level. Recall repeatedly the function</span>
-<span class="sd">        :meth:`~canari.model.Model.forward` at one-time-step level</span>
-<span class="sd">        from :class:`~canari.model.Model`.</span>
+<span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
+<span class="sd">        :meth:`forward` at one-time-step level from :class:`~canari.model.Model`.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            data (Dict[str, np.ndarray]): A dictionary containing key &#39;x&#39; as input covariates,</span>
@@ -1225,7 +1229,7 @@ document.write(`
 <span class="sd">                    The means for forecasts.</span>
 <span class="sd">                - **std_obs_preds** (np.ndarray):</span>
 <span class="sd">                    The standard deviations for forecasts.</span>
-<span class="sd">                - :attr:`~canari.model.Model.states`:</span>
+<span class="sd">                - :attr:`states`:</span>
 <span class="sd">                    The history of hidden states over time.</span>
 
 <span class="sd">        Examples:</span>
@@ -1267,11 +1271,11 @@ document.write(`
         <span class="n">train_lstm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Perform Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and</span>
+<span class="sd">        Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and</span>
 <span class="sd">        update steps over multiple time steps.</span>
 
-<span class="sd">        This function is used at entire-dataset-level. Recall repeatedly the function</span>
-<span class="sd">        :meth:`~canari.model.Model.forward` and :meth:`~canari.model.Model.backward` at</span>
+<span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
+<span class="sd">        :meth:`forward` and :meth:`backward` at</span>
 <span class="sd">        one-time-step level from :class:`~canari.model.Model`.</span>
 
 <span class="sd">        Args:</span>
@@ -1287,7 +1291,7 @@ document.write(`
 <span class="sd">                    The means for forecasts.</span>
 <span class="sd">                - **std_obs_preds** (np.ndarray):</span>
 <span class="sd">                    The standard deviations for forecasts.</span>
-<span class="sd">                - :attr:`~canari.model.Model.states`:</span>
+<span class="sd">                - :attr:`states`:</span>
 <span class="sd">                    The history of hidden states over time.</span>
 
 <span class="sd">        Examples:</span>
@@ -1342,10 +1346,10 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.smoother">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Perform Kalman smoother over an entire time series data, i.e. repeatly apply the</span>
+<span class="sd">        Run the Kalman smoother over an entire time series data, i.e. repeatly apply the</span>
 <span class="sd">        RTS smoothing equation over multiple time steps.</span>
 
-<span class="sd">        This function is used at entire-dataset-level. Recall repeatedly the function</span>
+<span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
 <span class="sd">        :meth:`~canari.model.Model.rts_smoother` at</span>
 <span class="sd">        one-time-step level from :class:`~canari.model.Model`.</span>
 
@@ -1463,7 +1467,7 @@ document.write(`
 <span class="sd">            current_epoch (int):</span>
 <span class="sd">                Current epoch</span>
 <span class="sd">            max_epoch (int):</span>
-<span class="sd">                Maximum number of epoch</span>
+<span class="sd">                Maximum number of epochs</span>
 <span class="sd">            evaluate_metric (float):</span>
 <span class="sd">                Current metric value for this epoch.</span>
 <span class="sd">            mode (Optional[str]):</span>
@@ -1542,7 +1546,7 @@ document.write(`
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generate synthetic time series data based on the model components,</span>
-<span class="sd">        with optional injected synthetic anomalies.</span>
+<span class="sd">        with optional synthetic anomaly injection.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            num_time_series (int):</span>
@@ -1550,8 +1554,8 @@ document.write(`
 <span class="sd">            num_time_steps (int):</span>
 <span class="sd">                Number of timesteps per generated series.</span>
 <span class="sd">            sample_from_lstm_pred (bool, optional):</span>
-<span class="sd">                If False, zeroes out LSTM‐derived variance so that generation</span>
-<span class="sd">                ignores LSTM uncertainty. Defaults to True.</span>
+<span class="sd">                If False, zeroes out LSTM‐derived variance so that the generation</span>
+<span class="sd">                ignores the LSTM uncertainty. Defaults to True.</span>
 <span class="sd">            time_covariates (np.ndarray of shape (num_time_steps, cov_dim), optional):</span>
 <span class="sd">                Time‐varying covariates to include in generation. If provided,</span>
 <span class="sd">                these will be standardized using `time_covariate_info` and</span>

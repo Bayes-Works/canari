@@ -294,7 +294,8 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelOptimizer</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Optimize hyperparameters for :class:`~canari.model.Model` using Ray Tune.</span>
+<span class="sd">    Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune</span>
+<span class="sd">    external library.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        initialize_model (Callable):</span>
@@ -303,7 +304,8 @@ document.write(`
 <span class="sd">            Function that define the training procedure a model, it should return</span>
 <span class="sd">            `trained_model.early_stop_metric`.</span>
 <span class="sd">        param_space (Dict[str, list]):</span>
-<span class="sd">            Parameter search space: two-value lists [min, max] for optimization.</span>
+<span class="sd">            Parameter search space: two-value lists [min, max] for defining the</span>
+<span class="sd">            bounds of the optimization.</span>
 <span class="sd">        data_processor (DataProcess):</span>
 <span class="sd">            DataProcess instance for data preparation.</span>
 <span class="sd">        num_optimization_trial (int, optional):</span>

@@ -279,16 +279,15 @@ document.write(`
                   
   <h1>Source code for canari.skf</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Switching Kalman Filter (SKF) for detecting regime changes on time series data. It takes as inputs</span>
+<span class="sd">Switching Kalman Filter (SKF) for detecting regime changes in time series data. It takes as inputs</span>
 <span class="sd">two instances of :class:`~canari.model`, one model is used to model a normal regime, the other is</span>
-<span class="sd">used to model an abnormal regime. At each time step, SKF estimates the probability of each model to</span>
-<span class="sd">determine the probability of anomalies where regimes switch.</span>
+<span class="sd">used to model an abnormal one. At each time step, SKF estimates the probability of each model.</span>
 
 <span class="sd">On time series data, this model can:</span>
 
 <span class="sd">    - Train its Bayesian LSTM network component from the normal model.</span>
-<span class="sd">    - Detect regime changes (anomalies) and provide probabilities of these regime changes.</span>
-<span class="sd">    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.</span>
+<span class="sd">    - Detect regime changes (anomalies) and provide probabilities of regime switch.</span>
+<span class="sd">    - Decompose orginal time serires data into unobserved hidden states. Provide mean values and the associate uncertainties for these hidden states.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -356,19 +355,19 @@ document.write(`
 <span class="sd">        states_names (list[str]):</span>
 <span class="sd">            Names of hidden states.</span>
 <span class="sd">        mu_states_init (np.ndarray):</span>
-<span class="sd">            Mean vector for the hidden states :math:`x_0` at the time step `t=0`.</span>
+<span class="sd">            Mean vector for the hidden states :math:`X_0` at the time step `t=0`.</span>
 <span class="sd">        var_states_init (np.ndarray):</span>
-<span class="sd">            Covariance matrix for the hidden states :math:`x_0` at the time step `t=0`.</span>
+<span class="sd">            Covariance matrix for the hidden states :math:`X_0` at the time step `t=0`.</span>
 <span class="sd">        mu_states_prior (np.ndarray):</span>
-<span class="sd">            Prior mean vector for the marginal hidden states :math:`x_{t+1}` at the time step `t+1`.</span>
+<span class="sd">            Prior mean vector for the marginal hidden states :math:`X_{t+1|t}` at the time step `t+1`.</span>
 <span class="sd">        var_states_prior (np.ndarray):</span>
-<span class="sd">            Prior covariance matrix for the marginal hidden states :math:`x_{t+1}`</span>
+<span class="sd">            Prior covariance matrix for the marginal hidden states :math:`X_{t+1|t}`</span>
 <span class="sd">            at the time step `t+1`.</span>
 <span class="sd">        mu_states_posterior (np.ndarray):</span>
-<span class="sd">            Posteriror mean vector for the marginal hidden states :math:`x_{t+1}`</span>
+<span class="sd">            Posteriror mean vector for the marginal hidden states :math:`X_{t+1|t+1}`</span>
 <span class="sd">            at the time step `t+1`.</span>
 <span class="sd">        var_states_posterior (np.ndarray):</span>
-<span class="sd">            Posteriror covariance matrix for the marginal hidden states :math:`x_{t+1}` at the time</span>
+<span class="sd">            Posteriror covariance matrix for the marginal hidden states :math:`X_{t+1|t+1}` at the time</span>
 <span class="sd">            step `t+1`.</span>
 <span class="sd">        states (StatesHistory):</span>
 <span class="sd">            Container for storing prior, posterior, and smoothed values of marginal hidden states</span>
@@ -378,10 +377,10 @@ document.write(`
 <span class="sd">        marginal_prob (dict): Current marginal probability for &#39;normal&#39; and &#39;abnormal&#39; at time `t`.</span>
 <span class="sd">        filter_marginal_prob_history (dict): Filter marginal probability history for &#39;normal&#39;</span>
 <span class="sd">                                            and &#39;abnormal&#39; over time.</span>
-<span class="sd">        smooth_marginal_prob_history (dict): Smoother margina probability history for &#39;normal&#39;</span>
+<span class="sd">        smooth_marginal_prob_history (dict): Smoother marginal probability history for &#39;normal&#39;</span>
 <span class="sd">                                             and &#39;abnormal&#39; over time.</span>
 <span class="sd">        norm_to_abnorm_prob (float): Transition probability from normal to abnormal.</span>
-<span class="sd">        abnorm_to_norm_prob (float): Transition probability  from abnormal to normal.</span>
+<span class="sd">        abnorm_to_norm_prob (float): Transition probability from abnormal to normal.</span>
 <span class="sd">        norm_model_prior_prob (float): Prior probability of the normal model.</span>
 <span class="sd">        conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.</span>
 
@@ -405,7 +404,7 @@ document.write(`
 <span class="sd">            Epoch at which the monitored metric was best.</span>
 <span class="sd">        stop_training (bool):</span>
 <span class="sd">            Flag indicating whether training has been stopped due to</span>
-<span class="sd">            early stopping or reaching maximum number of epoch.</span>
+<span class="sd">            early stopping or reaching the maximum number of epochs.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -675,7 +674,7 @@ document.write(`
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Save current prior, posterior hidden states for 4 transition  models as well as</span>
+<span class="sd">        Save current prior, posterior hidden states for 4 transition models as well as</span>
 <span class="sd">        the marginal model.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -783,7 +782,7 @@ document.write(`
 
 <span class="sd">        Performs two levels of Gaussian mixtures:</span>
 <span class="sd">        1) Mix origin→arrival pairs for each regime to get marginal means/vars.</span>
-<span class="sd">        2) Mix the regime marginals by current marginal probabilities.</span>
+<span class="sd">        2) Mix the regime marginals with their probabilities.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            mu_states_transit (dict[str, np.ndarray]): Predicted means per transition.</span>
@@ -867,8 +866,8 @@ document.write(`
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Estimate transition coefficients given observation and predicted transitions.</span>
 
-<span class="sd">        Computes joint transition probabilities combining prior transitions,</span>
-<span class="sd">        predicted likelihoods, and current marginals, then normalizes to yield</span>
+<span class="sd">        Computes the joint transition probabilities combining prior probabilities,</span>
+<span class="sd">        transition probabilities and likelihoods, then normalizes to yield</span>
 <span class="sd">        conditional transition coefficients.</span>
 
 <span class="sd">        Args:</span>
@@ -1214,12 +1213,12 @@ document.write(`
         <span class="n">input_covariates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Prediction step in Switching Kalman filter. This makes a one-step-ahead prediction.</span>
-<span class="sd">        It is a mixtured prediction from all transition models in :attr:`.model`.</span>
+<span class="sd">        Prediction step in the Switching Kalman filter. This makes a one-step-ahead prediction.</span>
+<span class="sd">        It is a mixture prediction from all transition models in :attr:`.model`.</span>
 
 <span class="sd">        Recall :meth:`~canari.common.forward` for all transition models.</span>
 
-<span class="sd">        This function is used at one-time-step level.</span>
+<span class="sd">        This function is used at the one-time-step level.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            obs (float): Current observation.</span>
@@ -1293,10 +1292,10 @@ document.write(`
 <span class="sd">        Update step for Swithching Kalman filter.</span>
 <span class="sd">        Recall :meth:`~canari.common.backward` for all transition models in :attr:`.model`.</span>
 
-<span class="sd">        This function is used at one-time-step level.</span>
+<span class="sd">        This function is used at the one-time-step level.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            obs (float): Observation at current time step.</span>
+<span class="sd">            obs (float): Observation at the current time step.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple(mu_states_posterior, var_states_posterior): Posterior state estimates.</span>
@@ -1337,11 +1336,11 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.skf.html#canari.skf.SKF.rts_smoother">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">rts_smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Smoother for Switching Kalman filter at a given time step.</span>
+<span class="sd">        Smoother for the Switching Kalman filter at a given time step.</span>
 
 <span class="sd">        Recall :meth:`~canari.common.rts_smoother` for all transition models in :attr:`.model`.</span>
 
-<span class="sd">        This function is used at one-time-step level.</span>
+<span class="sd">        This function is used at the one-time-step level.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            time_step (int): Index at which to perform smoothing.</span>
@@ -1442,9 +1441,9 @@ document.write(`
         <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Perform Kalman filter over an entire dataset.</span>
+<span class="sd">        Run the Kalman filter over an entire dataset.</span>
 
-<span class="sd">        This function is used at entire-dataset-level. Recall repeatedly the function</span>
+<span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
 <span class="sd">        :meth:`.forward` and :meth:`.backward` at</span>
 <span class="sd">        one-time-step level from :class:`~canari.skf.SKF`.</span>
 
@@ -1506,9 +1505,9 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.skf.html#canari.skf.SKF.smoother">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Perform Kalman smoother over an entire time series data.</span>
+<span class="sd">        Run the Kalman smoother over an entire time series data.</span>
 
-<span class="sd">        This function is used at entire-dataset-level. Recall repeatedly the function</span>
+<span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
 <span class="sd">        :meth:`.rts_smoother` at one-time-step level from :class:`~canari.skf.SKF`.</span>
 
 <span class="sd">        Args:</span>
@@ -1549,19 +1548,19 @@ document.write(`
         <span class="n">anomaly_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.66</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add synthetic anomalies to an orginal data, use Switching Kalman filter to detect those</span>
-<span class="sd">        added anomalies, and compute detection/false-alarm rates.</span>
+<span class="sd">        Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those</span>
+<span class="sd">        synthetic anomalies, and compute the detection/false-alarm rates.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            data (Dict[str, np.ndarray]): Original time series data.</span>
-<span class="sd">            threshold (float): Threshold for detection rate for anomaly detection.</span>
+<span class="sd">            threshold (float): Threshold for the maximal target anomaly detection rate.</span>
 <span class="sd">                                Defauls to 0.5.</span>
-<span class="sd">            max_timestep_to_detect (int): Window length for detecting anomalies.</span>
+<span class="sd">            max_timestep_to_detect (int): Maximum number of timesteps to allow detection.</span>
 <span class="sd">                                        Defauls to None (to the end of time series).</span>
 <span class="sd">            num_anomaly (int): Number of synthetic anomalies to add. This will create as</span>
 <span class="sd">                                many time series, because one time series contains only one</span>
 <span class="sd">                                anomaly.</span>
-<span class="sd">            slope_anomaly (float): Magnitude of anomaly slope.</span>
+<span class="sd">            slope_anomaly (float): Magnitude of the anomaly slope.</span>
 <span class="sd">            anomaly_start (float): Fractional start position of anomaly.</span>
 <span class="sd">            anomaly_end (float): Fractional end position of anomaly.</span>
 

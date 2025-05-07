@@ -41,7 +41,7 @@ class LstmOutputHistory:
 
     def initialize(self, look_back_len: int):
         """
-        Initialize mu and var with a specified lookback length.
+        Initialize :attr:`mu` and :attr:`var` with a specified lookback length.
 
         Args:
             look_back_len (int): Number of time steps to keep in history.
@@ -122,7 +122,7 @@ class StatesHistory:
         TODO: output type as a list.
         Retrieve the mean values over time for a specified hidden states and for either
         a) the prior predicted value, b) the posterior updated values after the filter step,
-        or c) the posterior updated values after the smoother step.
+        or c) the posterior updated values after the smoother step (smoothed estimates).
 
         Args:
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
@@ -163,7 +163,7 @@ class StatesHistory:
         """
         Retrieve the standard deviation values over time for a specified hidden states and for either
         a) the prior predicted value, b) the posterior updated values after the filter step,
-        or c) the posterior updated values after the smoother step.
+        or c) the posterior updated values after the smoother step (smoothed estimates).
 
         Args:
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').

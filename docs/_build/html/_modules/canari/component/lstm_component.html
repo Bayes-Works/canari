@@ -289,7 +289,7 @@ document.write(`
 <a class="viewcode-back" href="../../../api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LstmNetwork</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    LstmNetwork class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    `LstmNetwork` class, inheriting from Canari&#39;s `BaseComponent`.</span>
 <span class="sd">    This component configures a Bayesian LSTM neural network from `pyTAGI` library, and</span>
 <span class="sd">    it can be used in the same way as a traditional LSTM from PyTorch, e.g. to model</span>
 <span class="sd">    recurrent patterns such as seasonal and periodic patterns.</span>
@@ -299,15 +299,16 @@ document.write(`
 <span class="sd">        num_layer (Optional[int]): Number of LSTM layers. Defaults to 1.</span>
 <span class="sd">        num_hidden_unit (Optional[int] or list[int]): Number of hidden units per LSTM</span>
 <span class="sd">            layer. If an integer is provided, it is used for all layers. Defaults to 50.</span>
-<span class="sd">        look_back_len (Optional[int]): Number of past time steps the LSTM uses as input.</span>
+<span class="sd">        look_back_len (Optional[int]): Number of past LSTM&#39;s outputs used as input features.</span>
 <span class="sd">            Defaults to 1.</span>
 <span class="sd">        num_features (Optional[int]): Number of input features. Defaults to 1.</span>
 <span class="sd">        num_output (Optional[int]): Number of output features predicted by the network.</span>
 <span class="sd">                                    Defaults to 1.</span>
 <span class="sd">        device (Optional[str]): Device for computation, either &quot;cpu&quot; or &quot;cuda&quot;. Defaults to &quot;cpu&quot;.</span>
 <span class="sd">        num_thread (Optional[int]): Number of CPU threads for computation. Defaults to 1.</span>
-<span class="sd">        manual_seed (Optional[int]): Seed for reproducibility, i.e. intializing LSTM&#39;s</span>
-<span class="sd">                                    weights and biases. Defaults to None (random initialization).</span>
+<span class="sd">        manual_seed (Optional[int]): Initial seed for reproducing random number generation</span>
+<span class="sd">                                    , i.e. intializing LSTM&#39;s weights and biases.</span>
+<span class="sd">                                    Defaults to None (random initialization).</span>
 <span class="sd">        gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.</span>
 <span class="sd">        gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.</span>
 <span class="sd">        load_lstm_net (Optional[str]): TODO (provide variables): Path to a saved LSTM network</span>
@@ -448,7 +449,7 @@ document.write(`
 <span class="sd">        The network consists of:</span>
 
 <span class="sd">        - One or multiple LSTM layers, each with specified hidden units.</span>
-<span class="sd">        - A final Linear layer mapping to the desired output size.</span>
+<span class="sd">        - A final Linear layer mapping the LSTM&#39;s output to the desired output size.</span>
 
 <span class="sd">        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.</span>
 

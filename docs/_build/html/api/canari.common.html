@@ -361,7 +361,11 @@ document.write(`
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">GMA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Gaussian Multiplicative Approximation (GMA).</p>
-<p>Provides a way to augment and approximate the product of two Gaussian variables.</p>
+<p>Approximate the product of two Gaussian variables by a Gausian distribution
+with exact moments calculation. The class allow augmenting the size of the</p>
+<blockquote>
+<div><p>state vector in order to include the product term.</p>
+</div></blockquote>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.common.GMA.mu">
 <span class="sig-name descname"><span class="pre">mu</span></span><a class="headerlink" href="#canari.common.GMA.mu" title="Link to this definition">#</a></dt>
@@ -386,7 +390,7 @@ document.write(`
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.common.GMA.delete">
-<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.delete" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.delete" title="Link to this definition">#</a></dt>
 <dd><p>Remove a variable from the mean and covariance structures.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -397,7 +401,7 @@ document.write(`
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.common.GMA.get_results">
-<span class="sig-name descname"><span class="pre">get_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.get_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.get_results" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#GMA.get_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.get_results" title="Link to this definition">#</a></dt>
 <dd><p>Get the current mean and covariance.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -411,13 +415,22 @@ document.write(`
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.common.GMA.multiply_and_augment">
-<span class="sig-name descname"><span class="pre">multiply_and_augment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.multiply_and_augment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.multiply_and_augment" title="Link to this definition">#</a></dt>
-<dd><p>Augment mean and covariance with the product of two variables.</p>
+<span class="sig-name descname"><span class="pre">multiply_and_augment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.multiply_and_augment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.multiply_and_augment" title="Link to this definition">#</a></dt>
+<dd><p>Augment the state vector with mean and covariance from the product of
+the two variables referred by the two input indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index1</strong> (<em>int</em>) – Index of the first variable.</p></li>
+<li><p><strong>index2</strong> (<em>int</em>) – Index of the second variable.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.common.GMA.swap">
-<span class="sig-name descname"><span class="pre">swap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.swap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.swap" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">swap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#GMA.swap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.GMA.swap" title="Link to this definition">#</a></dt>
 <dd><p>Swap two variables in the mean and covariance structures.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -441,7 +454,7 @@ document.write(`
 <li><p><strong>obs</strong> (<em>float</em>) – Observation.</p></li>
 <li><p><strong>mu_obs_predict</strong> (<em>np.ndarray</em>) – Predicted mean.</p></li>
 <li><p><strong>var_obs_predict</strong> (<em>np.ndarray</em>) – Predicted variance.</p></li>
-<li><p><strong>var_states_prior</strong> (<em>np.ndarray</em>) – Prior covariance matrix for hidden states .</p></li>
+<li><p><strong>var_states_prior</strong> (<em>np.ndarray</em>) – Prior covariance matrix for hidden states.</p></li>
 <li><p><strong>observation_matrix</strong> (<em>np.ndarray</em>) – Observation matrix.</p></li>
 </ul>
 </dd>
@@ -544,7 +557,7 @@ document.write(`
 
 <dl class="py function">
 <dt class="sig sig-object py" id="canari.common.pad_matrix">
-<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">pad_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_row</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#pad_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.pad_matrix" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">pad_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_row</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/canari/common.html#pad_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.pad_matrix" title="Link to this definition">#</a></dt>
 <dd><p>Add a row and/or column padding to the matrix.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -612,19 +625,19 @@ document.write(`
 
 <dl class="py function">
 <dt class="sig sig-object py" id="canari.common.unstandardize_states">
-<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">unstandardize_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_norm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_norm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_const_mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_const_std</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/common.html#unstandardize_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.unstandardize_states" title="Link to this definition">#</a></dt>
-<dd><p>Unstandardize normalized mean and standard deviation of states.</p>
+<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">unstandardize_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_const_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_const_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#unstandardize_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.unstandardize_states" title="Link to this definition">#</a></dt>
+<dd><p>Unstandardize standardized mean and standard deviation of states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mu_norm</strong> (<em>dict</em>) – Normalized means by key.</p></li>
-<li><p><strong>std_norm</strong> (<em>dict</em>) – Normalized stds by key.</p></li>
-<li><p><strong>norm_const_mean</strong> (<em>float</em>) – Mean normalization constant.</p></li>
-<li><p><strong>norm_const_std</strong> (<em>float</em>) – Standard deviation normalization constant.</p></li>
+<li><p><strong>mu_norm</strong> (<em>dict</em>) – Standardized means by key.</p></li>
+<li><p><strong>std_norm</strong> (<em>dict</em>) – Standardized stds by key.</p></li>
+<li><p><strong>norm_const_mean</strong> (<em>float</em>) – Mean standardization constant.</p></li>
+<li><p><strong>norm_const_std</strong> (<em>float</em>) – Standard deviation standardization constant.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Unnormalized means and stds.</p>
+<dd class="field-even"><p>Unstandardized means and stds.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple[dict, dict]</p>

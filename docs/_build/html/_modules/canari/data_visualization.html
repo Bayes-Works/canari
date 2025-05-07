@@ -507,7 +507,8 @@ document.write(`
     <span class="n">test_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">],</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Plot predicted mean and uncertainty (standard deviation) for each data split.</span>
+<span class="sd">    Plot predicted mean and uncertainty for each data split. The uncertainty is represented by</span>
+<span class="sd">    confidence regions based on a multiple of the associated variable&#39;s standard deviation.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        data_processor (DataProcess): Data processing object.</span>
@@ -517,7 +518,7 @@ document.write(`
 <span class="sd">        std_validation_pred (np.ndarray, optional): Standard deviations for validation predictions.</span>
 <span class="sd">        mean_test_pred (np.ndarray, optional): Predicted means for test predictions.</span>
 <span class="sd">        std_test_pred (np.ndarray, optional): Standard deviations for test predictions.</span>
-<span class="sd">        num_std (int, optional): Number of std deviations for uncertainty bands.</span>
+<span class="sd">        num_std (int, optional): Number of std deviations for confidence region.</span>
 <span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
 <span class="sd">        color (str, optional): Line color.</span>
 <span class="sd">        linestyle (str, optional): Line style.</span>
@@ -581,7 +582,7 @@ document.write(`
     <span class="n">legend_location</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Plot hidden states with mean and uncertainty intervals.</span>
+<span class="sd">    Plot hidden states with mean and confidence regions.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        data_processor (DataProcess): Data processing object.</span>
@@ -589,9 +590,9 @@ document.write(`
 <span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
 <span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
 <span class="sd">        normalization (bool, optional): Whether to unnormalize the states.</span>
-<span class="sd">        num_std (int, optional): Number of standard deviations for uncertainty bands.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations for confidence region.</span>
 <span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
-<span class="sd">        color (str, optional): Color for mean line and uncertainty fill.</span>
+<span class="sd">        color (str, optional): Color for mean line and confidence region fill.</span>
 <span class="sd">        linestyle (str, optional): Line style.</span>
 <span class="sd">        legend_location (str, optional): Legend placement for first state subplot.</span>
 
@@ -654,7 +655,7 @@ document.write(`
                 <span class="p">)</span>
 
         <span class="c1"># Plot horizontal line at y=0.0 for specific states</span>
-        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;local acceleration&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;trend&quot;</span><span class="p">,</span> <span class="s2">&quot;acceleration&quot;</span><span class="p">]:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
 
         <span class="c1"># Set ylabel to the name of the current state</span>
@@ -693,12 +694,12 @@ document.write(`
 <span class="sd">    Args:</span>
 <span class="sd">        data_processor (DataProcess): Data processing object.</span>
 <span class="sd">        states (StatesHistory): Object containing hidden states history over time.</span>
-<span class="sd">        model_prob (np.ndarray): Probabilities of abnormal regime.</span>
+<span class="sd">        model_prob (np.ndarray): Probabilities of the abnormal regime.</span>
 <span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
 <span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
 <span class="sd">        normalization (bool, optional):  Whether to unnormalize the states.</span>
-<span class="sd">        num_std (int, optional): Number of standard deviations for uncertainty bands.</span>
-<span class="sd">        plot_observation (bool, optional): Whether to include observed data into &quot;local_level&quot; plot.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations for confidence regions.</span>
+<span class="sd">        plot_observation (bool, optional): Whether to include observed data into &quot;level&quot; plot.</span>
 <span class="sd">        color (str, optional): Line color for states.</span>
 <span class="sd">        linestyle (str, optional): Line style.</span>
 <span class="sd">        legend_location (str, optional): Location of legend in top subplot.</span>
@@ -753,7 +754,7 @@ document.write(`
         <span class="p">)</span>
 
         <span class="c1"># Plot horizontal line at y=0.0 for specific states</span>
-        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;local acceleration&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;trend&quot;</span><span class="p">,</span> <span class="s2">&quot;acceleration&quot;</span><span class="p">]:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
 
         <span class="c1"># Set ylabel to the name of the current state</span>
@@ -807,7 +808,7 @@ document.write(`
     <span class="n">ax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Plot mean and confidence interval for a variable.</span>
+<span class="sd">    Plot mean and confidence region for a variable.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        time (np.ndarray): Time vector.</span>
@@ -815,9 +816,9 @@ document.write(`
 <span class="sd">        std (np.ndarray): Standard deviation values.</span>
 <span class="sd">        color (str, optional): Line/fill color.</span>
 <span class="sd">        linestyle (str, optional): Line style.</span>
-<span class="sd">        label (List[str], optional): Labels for mean and band.</span>
+<span class="sd">        label (List[str], optional): Labels for mean and confidence region.</span>
 <span class="sd">        index (int, optional): Index if plotting from multivariate tensor.</span>
-<span class="sd">        num_std (int, optional): Number of standard deviations to shade.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations for confidence region.</span>
 <span class="sd">        ax (plt.Axes, optional): Axis to use for plotting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 

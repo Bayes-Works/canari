@@ -278,7 +278,11 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for canari.data_process</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Data processing for time series.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
@@ -288,15 +292,13 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">DataProcess</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Data processing for time series.</span>
-
 <span class="sd">    This module provides the `DataProcess` class to facilitate:</span>
 
-<span class="sd">    - Standardize datasets based on training statistics</span>
-<span class="sd">    - Split data into training, validation, and test sets</span>
-<span class="sd">    - Add time covariates (hour, day, month, etc.) to data</span>
-<span class="sd">    - Generate lagged versions of features</span>
-<span class="sd">    - Add synthetic anomalies to data</span>
+<span class="sd">    - Standardization of datasets based on training statistics</span>
+<span class="sd">    - Splitting data into training, validation, and test sets</span>
+<span class="sd">    - Adding time covariates (hour, day, month, etc.) to data</span>
+<span class="sd">    - Generating lagged versions of features</span>
+<span class="sd">    - Adding synthetic anomalies to data</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        data (pd.DataFrame): Input DataFrame with a datetime or numeric index.</span>
@@ -306,9 +308,9 @@ document.write(`
 <span class="sd">        validation_end (Optional[str]): End index for validation set.</span>
 <span class="sd">        test_start (Optional[str]): Start index for test set.</span>
 <span class="sd">        test_end (Optional[str]): End index for test set.</span>
-<span class="sd">        train_split (Optional[float]): Proportion of data for training set.</span>
-<span class="sd">        validation_split (Optional[float]): Proportion for validation set.</span>
-<span class="sd">        test_split (Optional[float]): Proportion for test set.</span>
+<span class="sd">        train_split (Optional[float]): Fraction of data for training set.</span>
+<span class="sd">        validation_split (Optional[float]): Fraction for validation set.</span>
+<span class="sd">        test_split (Optional[float]): Fraction for test set.</span>
 <span class="sd">        time_covariates (Optional[List[str]]): Time covariates added to dataset</span>
 <span class="sd">        output_col (list[int]): Column&#39;s indice for target variable.</span>
 <span class="sd">        normalization (Optional[bool]): Whether to apply data standardization</span>
@@ -545,7 +547,7 @@ document.write(`
 
 <span class="sd">        Args:</span>
 <span class="sd">            split (str): One of [&#39;train&#39;, &#39;validation&#39;, &#39;test&#39;, &#39;all&#39;].</span>
-<span class="sd">            normalization (bool): Whether to normalize the output.</span>
+<span class="sd">            Standardization (bool): Whether to standardize the output.</span>
 <span class="sd">            column (Optional[int]):  Column index.</span>
 
 <span class="sd">        Returns:</span>
@@ -656,17 +658,18 @@ document.write(`
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        # TODO</span>
-<span class="sd">        Add synthetic anomalies randomly to a train, validation, or test sets.</span>
+<span class="sd">        Add synthetic randomly generated anomalies to original data.</span>
 <span class="sd">        From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).</span>
-<span class="sd">        Following a uniform distribution, randomly choose in this window where the anomaly starts.</span>
-<span class="sd">        Data after the anomaly start is shifted a by `slope`.</span>
+<span class="sd">        Following a uniform distribution, it randomly chooses within this window where the anomaly starts.</span>
+<span class="sd">        After the anomaly start, the data is linearly shifted with a rate of change define by</span>
+<span class="sd">        `slope`.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            data (dict): Data dict with &quot;x&quot; and &quot;y&quot;.</span>
-<span class="sd">            num_samples (int): Number of anomaly to generate.</span>
-<span class="sd">            slope (list[float]): Slope for anomaly.</span>
-<span class="sd">            anomaly_start (float): Start of anomaly window (0–1).</span>
-<span class="sd">            anomaly_end (float): End of anomaly window (0–1).</span>
+<span class="sd">            num_samples (int): Number of anomalies to generate.</span>
+<span class="sd">            slope (list[float]): Slope for an anomaly.</span>
+<span class="sd">            anomaly_start (float, optional): Start of the anomaly window (0-1). Defaults to 0.33.</span>
+<span class="sd">            anomaly_end (float, optional): End of the anomaly window (0-1). Defaults to 0.66.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list: Data dicts with anomalies injected.</span>
@@ -714,10 +717,10 @@ document.write(`
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Decompose a time series into a linear trend, seasonality, and residual following:</span>
 
-<span class="sd">         - Use Fourier transform to estimate seasonality.</span>
+<span class="sd">         - Use a Fourier transform to estimate seasonality.</span>
 <span class="sd">         - `Deseasonalized_data = data - seasonality`</span>
-<span class="sd">         - Estimate a linear trend by fitting `Deseasonalized_data` with a first oder polynomial</span>
-<span class="sd">         - Estimate residual</span>
+<span class="sd">         - Estimate a linear trend by fitting `Deseasonalized_data` with a first order polynomial</span>
+<span class="sd">         - Estimate residual = data - trend - seasonality</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            data (np.ndarray): 1D array.</span>

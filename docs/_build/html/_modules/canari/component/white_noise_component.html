@@ -288,10 +288,10 @@ document.write(`
 <span class="k">class</span><span class="w"> </span><span class="nc">WhiteNoise</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    `WhiteNoise` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">    It is used to model i.i.d. Gaussian process errors.</span>
+<span class="sd">    It is used to model zero-mean i.i.d. Gaussian errors.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Standard deviation of the error. Default is 0.0.</span>
+<span class="sd">        std_error (Optional[float]): Standard deviation of the error. Default is 0.05.</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; from canari.component import WhiteNoise</span>
@@ -304,7 +304,7 @@ document.write(`
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">std_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">std_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">std_error</span> <span class="o">=</span> <span class="n">std_error</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
