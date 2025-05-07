@@ -1,6 +1,9 @@
 canari.component
 ========================
 
+The module contains a collection of modular components that users can use  
+to build a structured states-space models. 
+
 .. toctree::
    :maxdepth: 1
 

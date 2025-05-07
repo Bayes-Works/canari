@@ -1,3 +1,9 @@
+"""
+This module automates the search for optimal hyperparameters of a
+:class:`~canari.skf.SKF` instance by leveraging the Ray Tune
+external library.
+"""
+
 from ray import tune
 from ray.tune import Callback, Stopper
 from typing import Callable, Optional
