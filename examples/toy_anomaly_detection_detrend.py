@@ -67,8 +67,8 @@ data_values = np.concatenate(
 )
 all_data_norm = normalizer.standardize(
     data=data_values,
-    mu=data_processor.norm_const_mean,
-    std=data_processor.norm_const_std,
+    mu=data_processor.std_const_mean,
+    std=data_processor.std_const_std,
 )
 all_data = {}
 all_data["x"] = all_data_norm[:, data_processor.covariates_col]
@@ -128,13 +128,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
@@ -170,7 +170,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
-    normalization=True,
+    standardization=True,
     plot_test_data=False,
     validation_label="y",
 )
@@ -191,7 +191,7 @@ time = data_processor.get_time("all")
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     plot_observation=False,
-    normalization=True,
+    standardization=True,
     states=states,
     model_prob=marginal_abnorm_prob_plot,
     color="b",

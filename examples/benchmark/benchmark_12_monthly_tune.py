@@ -105,7 +105,7 @@ def main(
     fig, ax = plt.subplots(figsize=(10, 6))
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_test_data=False,
         plot_column=output_col,
         validation_label="y",
@@ -121,7 +121,7 @@ def main(
     plot_states(
         data_processor=data_processor,
         states=states_optim,
-        normalization=True,
+        standardization=True,
         states_to_plot=["level"],
         sub_plot=ax,
     )
@@ -160,7 +160,7 @@ def main(
     )
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
@@ -253,7 +253,7 @@ def training(model, data_processor, num_epoch: int = 100):
     # plt.scatter(t_plot, y1, color="k")
     # plt.plot(
     #     data_processor.get_time("train"),
-    #     data_processor.get_data("train", normalization=True),
+    #     data_processor.get_data("train", standardization=True),
     #     color="r",
     # )
     # plt.show()
@@ -271,13 +271,13 @@ def training(model, data_processor, num_epoch: int = 100):
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.norm_const_mean[data_processor.output_col],
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_mean[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
         std_validation_preds_unnorm = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
         validation_obs = data_processor.get_data("validation").flatten()
