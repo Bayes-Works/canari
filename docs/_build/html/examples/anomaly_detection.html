@@ -594,13 +594,13 @@ document.write(`
 
     <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
         <span class="n">mu_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
 
     <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
         <span class="n">std_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
 
     <span class="n">validation_obs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -643,7 +643,7 @@ Validation MSE      :-0.8030
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 <span class="n">plot_data</span><span class="p">(</span>
     <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
-    <span class="n">normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">plot_test_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">plot_column</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
     <span class="n">validation_label</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span>
@@ -684,13 +684,13 @@ Validation MSE      :-0.8030
 <section id="Filter-results">
 <h3>Filter results<a class="headerlink" href="#Filter-results" title="Link to this heading">#</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
     <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
     <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
-    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;local level&quot;</span><span class="p">,</span> <span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="s2">&quot;white noise&quot;</span><span class="p">],</span>
+    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">,</span> <span class="s2">&quot;trend&quot;</span><span class="p">,</span> <span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="s2">&quot;white noise&quot;</span><span class="p">],</span>
     <span class="n">model_prob</span><span class="o">=</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span>
     <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span>
     <span class="n">legend_location</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>

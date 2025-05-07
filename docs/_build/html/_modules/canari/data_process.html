@@ -313,7 +313,7 @@ document.write(`
 <span class="sd">        test_split (Optional[float]): Fraction for test set.</span>
 <span class="sd">        time_covariates (Optional[List[str]]): Time covariates added to dataset</span>
 <span class="sd">        output_col (list[int]): Column&#39;s indice for target variable.</span>
-<span class="sd">        normalization (Optional[bool]): Whether to apply data standardization</span>
+<span class="sd">        standardization (Optional[bool]): Whether to apply data standardization</span>
 <span class="sd">                                        (zero mean, unit standard deviation).</span>
 
 <span class="sd">    Examples:</span>
@@ -327,7 +327,7 @@ document.write(`
 <span class="sd">                            validation_split=0.2,</span>
 <span class="sd">                            test_split=0.1,</span>
 <span class="sd">                            time_covariates = [&quot;hour_of_day&quot;],</span>
-<span class="sd">                            normalization=True,)</span>
+<span class="sd">                            standardization=True,)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -344,7 +344,7 @@ document.write(`
         <span class="n">test_split</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="n">time_covariates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">output_col</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-        <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_start</span> <span class="o">=</span> <span class="n">train_start</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_end</span> <span class="o">=</span> <span class="n">train_end</span>
@@ -352,7 +352,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">validation_end</span> <span class="o">=</span> <span class="n">validation_end</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">test_start</span> <span class="o">=</span> <span class="n">test_start</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="o">=</span> <span class="n">test_end</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span> <span class="o">=</span> <span class="n">normalization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">standardization</span> <span class="o">=</span> <span class="n">standardization</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_split</span> <span class="o">=</span> <span class="n">train_split</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">validation_split</span> <span class="o">=</span> <span class="n">validation_split</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">test_split</span> <span class="o">=</span> <span class="n">test_split</span>
@@ -361,11 +361,11 @@ document.write(`
 
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_time_covariates</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_split_start_end_indices</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_compute_normalization_constants</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_compute_standardization_constants</span><span class="p">()</span>
 
         <span class="c1"># Covariates columns</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">covariates_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
@@ -437,21 +437,21 @@ document.write(`
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">test_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_end</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_normalization_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_standardization_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute normalization statistics (mean, std) based on training data.</span>
+<span class="sd">        Compute standardization statistics (mean, std) based on training data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">compute_mean_std</span><span class="p">(</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardization</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">compute_mean_std</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">train_start</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_end</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
-<div class="viewcode-block" id="DataProcess.normalize_data">
-<a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess.normalize_data">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">normalize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="DataProcess.standardize_data">
+<a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess.standardize_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">standardize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        TODO: unnomalize data method</span>
 <span class="sd">        Normalize the data using training statistics.</span>
@@ -462,10 +462,10 @@ document.write(`
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">Normalizer</span><span class="o">.</span><span class="n">standardize</span><span class="p">(</span>
                 <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
-                <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">,</span>
-                <span class="n">std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">,</span>
+                <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardization</span>
             <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>
         <span class="p">)</span></div>
 
@@ -507,7 +507,7 @@ document.write(`
 <span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardize_data</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="c1"># Train split</span>
             <span class="p">{</span>
@@ -539,7 +539,7 @@ document.write(`
     <span class="k">def</span><span class="w"> </span><span class="nf">get_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -554,10 +554,10 @@ document.write(`
 <span class="sd">            np.ndarray: The extracted values.</span>
 
 <span class="sd">        Examples:</span>
-<span class="sd">            &gt;&gt;&gt; values = dp.get_data(split=&quot;train&quot;, normalization=True, column=[0])</span>
+<span class="sd">            &gt;&gt;&gt; values = dp.get_data(split=&quot;train&quot;, standardization=True, column=[0])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">standardization</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardize_data</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>
 

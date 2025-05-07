@@ -97,13 +97,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[data_processor.output_col],
-        data_processor.norm_const_std[data_processor.output_col],
+        data_processor.std_const_mean[data_processor.output_col],
+        data_processor.std_const_std[data_processor.output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[data_processor.output_col],
+        data_processor.std_const_std[data_processor.output_col],
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
@@ -137,7 +137,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
-    normalization=True,
+    standardization=True,
     plot_test_data=False,
     sub_plot=ax,
     validation_label="y",
@@ -161,7 +161,7 @@ fig, ax = plot_skf_states(
     states=states,
     states_to_plot=["level", "trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
-    # normalization=True,
+    # standardization=True,
     color="b",
     legend_location="upper left",
 )
