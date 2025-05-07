@@ -30,7 +30,7 @@ data_processor = DataProcess(
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 train_data, validation_data, _, _ = data_processor.get_splits()
 
