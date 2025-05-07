@@ -1,3 +1,7 @@
+"""
+Data processing for time series.
+"""
+
 from typing import Optional, Tuple, List, Dict
 import numpy as np
 import pandas as pd
@@ -6,8 +10,6 @@ from pytagi import Normalizer
 
 class DataProcess:
     """
-    Data processing for time series.
-
     This module provides the `DataProcess` class to facilitate:
 
     - Standardization of datasets based on training statistics
@@ -354,9 +356,9 @@ class DataProcess:
     ) -> List[Dict[str, np.ndarray]]:
         """
         # TODO
-        Add synthetic randoml generated anomalies to a train, validation, or test sets.
+        Add synthetic randomly generated anomalies to original data.
         From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
-        Following a uniform distribution, it randomly choose in this window where the anomaly starts.
+        Following a uniform distribution, it randomly chooses within this window where the anomaly starts.
         After the anomaly start, the data is linearly shifted with a rate of change define by
         `slope`.
 
@@ -364,8 +366,8 @@ class DataProcess:
             data (dict): Data dict with "x" and "y".
             num_samples (int): Number of anomalies to generate.
             slope (list[float]): Slope for an anomaly.
-            anomaly_start (float): Start of theanomaly window (0–1).
-            anomaly_end (float): End of the anomaly window (0–1).
+            anomaly_start (float, optional): Start of the anomaly window (0-1). Defaults to 0.33.
+            anomaly_end (float, optional): End of the anomaly window (0-1). Defaults to 0.66.
 
         Returns:
             list: Data dicts with anomalies injected.
@@ -413,7 +415,7 @@ class DataProcess:
          - Use a Fourier transform to estimate seasonality.
          - `Deseasonalized_data = data - seasonality`
          - Estimate a linear trend by fitting `Deseasonalized_data` with a first order polynomial
-         - Estimate residual
+         - Estimate residual = data - trend - seasonality
 
         Args:
             data (np.ndarray): 1D array.
