@@ -18,14 +18,15 @@ class SKFOptimizer:
         initialize_skf (Callable): Function that returns an SKF instance given a configuration.
         model_param (dict): Serializable dictionary for :class:`~canari.model.Model` obtained from
                             :meth:`~canari.model.Model.get_dict`.
-        param_space (dict): Parameter search space: two-value lists [min, max] for optimization.
+        param_space (dict): Parameter search space: two-value lists [min, max] for defining the
+                            bounds of the optimization.
         data (dict): Input data for adding synthetic anomalies.
         detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.
-                                                Defauls to 0.5.
+                                                Defaults to 0.5.
         false_rate_threshold (float, optional): Threshold for the maximal false detection rate.
-                                                Defauls to 0.0.
+                                                Defaults to 0.0.
         max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.
-                                                Defauls to None (to the end of time series).
+                                                Defaults to None (to the end of time series).
         num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as
                             many time series, because one time series contains only one
                             anomaly. Defaults to 50.

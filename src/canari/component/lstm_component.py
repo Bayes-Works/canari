@@ -7,7 +7,7 @@ from canari.component.base_component import BaseComponent
 
 class LstmNetwork(BaseComponent):
     """
-    LstmNetwork class, inheriting from Canari's `BaseComponent`.
+    `LstmNetwork` class, inheriting from Canari's `BaseComponent`.
     This component configures a Bayesian LSTM neural network from `pyTAGI` library, and
     it can be used in the same way as a traditional LSTM from PyTorch, e.g. to model
     recurrent patterns such as seasonal and periodic patterns.
