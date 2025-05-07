@@ -1,0 +1,912 @@
+
+<!DOCTYPE html>
+
+
+<html lang="EN" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>canari.data_visualization &#8212; Canari Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/canari/data_visualization';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="EN"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Canari Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting.html">Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/canari.html">canari</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for canari.data_visualization</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Visualization for Canari&#39;s results.</span>
+
+<span class="sd">This module provides functions to plot:</span>
+<span class="sd">- Raw or normalized data</span>
+<span class="sd">- Prediction results with uncertainty (mean ± standard deviation)</span>
+<span class="sd">- Hidden state estimates</span>
+<span class="sd">- Probability of regime changes (anomalies) from Switching Kalman filter (SKF)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatesHistory</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.dates</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mdates</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.dates</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">YearLocator</span><span class="p">,</span>
+    <span class="n">MonthLocator</span><span class="p">,</span>
+    <span class="n">WeekdayLocator</span><span class="p">,</span>
+    <span class="n">DayLocator</span><span class="p">,</span>
+    <span class="n">HourLocator</span><span class="p">,</span>
+    <span class="n">DateFormatter</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="n">common</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_dynamic_grids</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add time-aware x-axis grids depending on data range.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ax (plt.Axes): Axis to configure.</span>
+<span class="sd">        time (np.ndarray): Time array (datetime-indexed).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Calculate the time range</span>
+    <span class="n">start_date</span> <span class="o">=</span> <span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">end_date</span> <span class="o">=</span> <span class="n">time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">time_range</span> <span class="o">=</span> <span class="n">end_date</span> <span class="o">-</span> <span class="n">start_date</span>
+
+    <span class="k">if</span> <span class="n">time_range</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">15</span> <span class="o">*</span> <span class="mi">365</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">):</span>  <span class="c1"># More than 15 years</span>
+        <span class="n">major_locator</span> <span class="o">=</span> <span class="n">YearLocator</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">minor_locator</span> <span class="o">=</span> <span class="n">YearLocator</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">major_formatter</span> <span class="o">=</span> <span class="n">DateFormatter</span><span class="p">(</span><span class="s2">&quot;%Y&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">time_range</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">365</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">):</span>  <span class="c1"># More than a year</span>
+        <span class="n">major_locator</span> <span class="o">=</span> <span class="n">YearLocator</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">minor_locator</span> <span class="o">=</span> <span class="n">MonthLocator</span><span class="p">(</span><span class="n">bymonth</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+        <span class="n">major_formatter</span> <span class="o">=</span> <span class="n">DateFormatter</span><span class="p">(</span><span class="s2">&quot;%Y&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">time_range</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">):</span>  <span class="c1"># More than a month</span>
+        <span class="n">major_locator</span> <span class="o">=</span> <span class="n">MonthLocator</span><span class="p">()</span>
+        <span class="n">minor_locator</span> <span class="o">=</span> <span class="n">WeekdayLocator</span><span class="p">(</span><span class="n">byweekday</span><span class="o">=</span><span class="n">mdates</span><span class="o">.</span><span class="n">MONDAY</span><span class="p">)</span>  <span class="c1"># Weekly on Mondays</span>
+        <span class="n">major_formatter</span> <span class="o">=</span> <span class="n">DateFormatter</span><span class="p">(</span><span class="s2">&quot;%b %Y&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Less than a month</span>
+        <span class="n">major_locator</span> <span class="o">=</span> <span class="n">DayLocator</span><span class="p">()</span>
+        <span class="n">minor_locator</span> <span class="o">=</span> <span class="n">HourLocator</span><span class="p">(</span><span class="n">byhour</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">18</span><span class="p">])</span>  <span class="c1"># 4 times a day</span>
+        <span class="n">major_formatter</span> <span class="o">=</span> <span class="n">DateFormatter</span><span class="p">(</span><span class="s2">&quot;%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Apply locators and formatters</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">major_locator</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_minor_locator</span><span class="p">(</span><span class="n">minor_locator</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">major_formatter</span><span class="p">)</span>
+
+    <span class="c1"># Enable vertical grid only</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span>
+        <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;major&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span>
+    <span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span>
+        <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;minor&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Disable horizontal grid</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">visible</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;major&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">visible</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;minor&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_determine_time</span><span class="p">(</span><span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span> <span class="n">len_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Infer which segment of the time index to use for state plots.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_processor (DataProcess): Provides split index mapping.</span>
+<span class="sd">        len_states (int): Number of states in time.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: Time values corresponding to the state sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">train_index</span><span class="p">,</span> <span class="n">val_index</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">len_states</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">len_states</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">train_index</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">train_index</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">val_index</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="plot_data">
+<a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_data</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">plot_train_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">plot_validation_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">plot_test_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">plot_column</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">sub_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="n">train_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">validation_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">test_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plot_nan</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot train, validation, and test data with optional normalization and NaN filtering.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_processor (DataProcess): Data processing object.</span>
+<span class="sd">        normalization (bool, optional): Normalize the data using stored training&#39;s statistics.</span>
+<span class="sd">        plot_train_data (bool, optional): If True, plot training data.</span>
+<span class="sd">        plot_validation_data (bool, optional): If True, plot validation data.</span>
+<span class="sd">        plot_test_data (bool, optional): If True, plot test data.</span>
+<span class="sd">        plot_column (list[int], optional): List of column indices to plot.</span>
+<span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
+<span class="sd">        color (str, optional): Line color for plot lines.</span>
+<span class="sd">        linestyle (str, optional): Line style (e.g., &#39;-&#39;, &#39;--&#39;).</span>
+<span class="sd">        train_label (str, optional): Legend label for training data.</span>
+<span class="sd">        validation_label (str, optional): Legend label for validation data.</span>
+<span class="sd">        test_label (str, optional): Legend label for test data.</span>
+<span class="sd">        plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari import DataProcess, plot_data</span>
+<span class="sd">        &gt;&gt;&gt; # Create data</span>
+<span class="sd">        &gt;&gt;&gt; dt_index = pd.date_range(start=&quot;2025-01-01&quot;, periods=11, freq=&quot;H&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; data = pd.DataFrame({&#39;value&#39;: np.linspace(0.1, 1.0, 11)},</span>
+<span class="sd">                        index=dt_index)</span>
+<span class="sd">        &gt;&gt;&gt; dp = DataProcess(data,</span>
+<span class="sd">                    train_split=0.7,</span>
+<span class="sd">                    validation_split=0.2,</span>
+<span class="sd">                    test_split=0.1,</span>
+<span class="sd">                    time_covariates = [&quot;hour_of_day&quot;],</span>
+<span class="sd">                    normalization=True)</span>
+<span class="sd">        &gt;&gt;&gt; fig, ax = plt.subplots(figsize=(12, 4))</span>
+<span class="sd">        &gt;&gt;&gt; plot_data(</span>
+<span class="sd">                data_processor=dp,</span>
+<span class="sd">                normalization=True,</span>
+<span class="sd">                plot_validation_data=True,</span>
+<span class="sd">                plot_test_data=True,</span>
+<span class="sd">            )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">sub_plot</span>
+
+    <span class="k">if</span> <span class="n">plot_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plot_column</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+
+    <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">normalize_data</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">train_label</span><span class="p">,</span> <span class="n">validation_label</span><span class="p">,</span> <span class="n">test_label</span><span class="p">]</span>
+    <span class="n">plot_flags</span> <span class="o">=</span> <span class="p">[</span><span class="n">plot_train_data</span><span class="p">,</span> <span class="n">plot_validation_data</span><span class="p">,</span> <span class="n">plot_test_data</span><span class="p">]</span>
+    <span class="n">split_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_processor</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">())</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">plot_flag</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_flags</span><span class="p">,</span> <span class="n">split_indices</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plot_flag</span><span class="p">:</span>
+            <span class="n">data_plot</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">plot_column</span><span class="p">]</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="n">total_time</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">time</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">plot_nan</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">data_plot</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data_plot</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                    <span class="n">time</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                    <span class="n">data_plot</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                    <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                    <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">plot_validation_data</span>
+        <span class="ow">and</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">validation_start</span> <span class="o">!=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">validation_end</span>
+    <span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">validation_start</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">validation_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+            <span class="n">edgecolor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">_add_dynamic_grids</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">total_time</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plot_prediction">
+<a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_prediction">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_prediction</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">mean_train_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">std_train_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mean_validation_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">std_validation_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mean_test_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">std_test_pred</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">sub_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="n">train_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">],</span>
+    <span class="n">validation_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">],</span>
+    <span class="n">test_label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">],</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot predicted mean and uncertainty (standard deviation) for each data split.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_processor (DataProcess): Data processing object.</span>
+<span class="sd">        mean_train_pred (np.ndarray, optional): Predicted means for training.</span>
+<span class="sd">        std_train_pred (np.ndarray, optional): Standard deviations for training predictions.</span>
+<span class="sd">        mean_validation_pred (np.ndarray, optional): Predicted means for validation.</span>
+<span class="sd">        std_validation_pred (np.ndarray, optional): Standard deviations for validation predictions.</span>
+<span class="sd">        mean_test_pred (np.ndarray, optional): Predicted means for test predictions.</span>
+<span class="sd">        std_test_pred (np.ndarray, optional): Standard deviations for test predictions.</span>
+<span class="sd">        num_std (int, optional): Number of std deviations for uncertainty bands.</span>
+<span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
+<span class="sd">        color (str, optional): Line color.</span>
+<span class="sd">        linestyle (str, optional): Line style.</span>
+<span class="sd">        train_label (List[str], optional): [mean_label, std_label] for train.</span>
+<span class="sd">        validation_label (List[str], optional): [mean_label, std_label] for validation.</span>
+<span class="sd">        test_label (List[str], optional): [mean_label, std_label] for test.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari import plot_prediction</span>
+<span class="sd">        &gt;&gt;&gt; mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)</span>
+<span class="sd">        &gt;&gt;&gt; plot_prediction(</span>
+<span class="sd">                data_processor=dp,</span>
+<span class="sd">                mean_validation_pred=mu_preds_val,</span>
+<span class="sd">                std_validation_pred=std_preds_val,</span>
+<span class="sd">            )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">sub_plot</span>
+
+    <span class="n">split_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_processor</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">())</span>
+    <span class="n">mean_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">mean_train_pred</span><span class="p">,</span> <span class="n">mean_validation_pred</span><span class="p">,</span> <span class="n">mean_test_pred</span><span class="p">]</span>
+    <span class="n">std_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">std_train_pred</span><span class="p">,</span> <span class="n">std_validation_pred</span><span class="p">,</span> <span class="n">std_test_pred</span><span class="p">]</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">train_label</span><span class="p">,</span> <span class="n">validation_label</span><span class="p">,</span> <span class="n">test_label</span><span class="p">]</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">mean_value</span><span class="p">,</span> <span class="n">std_value</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+        <span class="n">split_indices</span><span class="p">,</span> <span class="n">mean_values</span><span class="p">,</span> <span class="n">std_values</span><span class="p">,</span> <span class="n">labels</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">mean_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="n">total_time</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">time</span><span class="p">))</span>
+            <span class="n">plot_with_uncertainty</span><span class="p">(</span>
+                <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
+                <span class="n">mu</span><span class="o">=</span><span class="n">mean_value</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="n">std_value</span><span class="p">,</span>
+                <span class="n">num_std</span><span class="o">=</span><span class="n">num_std</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>
+                <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+    <span class="c1"># _add_dynamic_grids(ax, total_time)</span>
+
+
+<div class="viewcode-block" id="plot_states">
+<a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_states">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">states</span><span class="p">:</span> <span class="n">StatesHistory</span><span class="p">,</span>
+    <span class="n">states_to_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
+    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">sub_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="n">legend_location</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot hidden states with mean and uncertainty intervals.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_processor (DataProcess): Data processing object.</span>
+<span class="sd">        states (StatesHistory): Object containing hidden states history over time.</span>
+<span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
+<span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
+<span class="sd">        normalization (bool, optional): Whether to unnormalize the states.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations for uncertainty bands.</span>
+<span class="sd">        sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.</span>
+<span class="sd">        color (str, optional): Color for mean line and uncertainty fill.</span>
+<span class="sd">        linestyle (str, optional): Line style.</span>
+<span class="sd">        legend_location (str, optional): Legend placement for first state subplot.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari import plot_states</span>
+<span class="sd">        &gt;&gt;&gt; mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)</span>
+<span class="sd">        &gt;&gt;&gt; fig, ax = plot_states(</span>
+<span class="sd">                data_processor=dp,</span>
+<span class="sd">                states=states,</span>
+<span class="sd">                states_type=&quot;posterior&quot;</span>
+<span class="sd">            )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">states_to_plot</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+        <span class="n">states_to_plot</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">states_name</span>
+
+    <span class="c1"># Create new figure or use predefined subplot</span>
+    <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">axes</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">sub_plot</span><span class="p">]</span>
+
+    <span class="c1"># Time determination</span>
+    <span class="n">len_states</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">_determine_time</span><span class="p">(</span><span class="n">data_processor</span><span class="p">,</span> <span class="n">len_states</span><span class="p">)</span>
+
+    <span class="c1"># Mean and std to plot</span>
+    <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
+    <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">normalization</span><span class="p">:</span>
+        <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
+            <span class="n">mu_states</span><span class="p">,</span>
+            <span class="n">std_states</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">sub_plot</span>
+
+        <span class="c1"># Plot with uncertainty</span>
+        <span class="n">plot_with_uncertainty</span><span class="p">(</span>
+            <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
+            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">num_std</span><span class="o">=</span><span class="n">num_std</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Add legends for the first subplot</span>
+        <span class="k">if</span> <span class="n">legend_location</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+                    <span class="p">[</span><span class="sa">r</span><span class="s2">&quot;$\mu$&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;$\pm</span><span class="si">{</span><span class="n">num_std</span><span class="si">}</span><span class="s2">\sigma$&quot;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="n">legend_location</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">2</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Plot horizontal line at y=0.0 for specific states</span>
+        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;local acceleration&quot;</span><span class="p">]:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+
+        <span class="c1"># Set ylabel to the name of the current state</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">plot_state</span><span class="p">)</span>
+        <span class="n">_add_dynamic_grids</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">time</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span></div>
+
+
+
+<div class="viewcode-block" id="plot_skf_states">
+<a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_skf_states">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_skf_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">states</span><span class="p">:</span> <span class="n">StatesHistory</span><span class="p">,</span>
+    <span class="n">model_prob</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">states_to_plot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
+    <span class="n">normalization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">plot_observation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="n">legend_location</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plot_nan</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot hidden states along with probabilities of regime changes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_processor (DataProcess): Data processing object.</span>
+<span class="sd">        states (StatesHistory): Object containing hidden states history over time.</span>
+<span class="sd">        model_prob (np.ndarray): Probabilities of abnormal regime.</span>
+<span class="sd">        states_to_plot (list[str] or &quot;all&quot;, optional): Names of states to plot.</span>
+<span class="sd">        states_type (str, optional): Type of state (&#39;posterior&#39; or &#39;prior&#39; or &#39;smooth&#39;).</span>
+<span class="sd">        normalization (bool, optional):  Whether to unnormalize the states.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations for uncertainty bands.</span>
+<span class="sd">        plot_observation (bool, optional): Whether to include observed data into &quot;local_level&quot; plot.</span>
+<span class="sd">        color (str, optional): Line color for states.</span>
+<span class="sd">        linestyle (str, optional): Line style.</span>
+<span class="sd">        legend_location (str, optional): Location of legend in top subplot.</span>
+<span class="sd">        plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from canari import plot_skf_states</span>
+<span class="sd">        &gt;&gt;&gt; filter_marginal_abnorm_prob, states = skf.filter(data=all_data)</span>
+<span class="sd">        &gt;&gt;&gt; fig, ax = plot_skf_states(</span>
+<span class="sd">                data_processor=dp,</span>
+<span class="sd">                states=states,</span>
+<span class="sd">                states_type=&quot;posterior&quot;,</span>
+<span class="sd">                model_prob=filter_marginal_abnorm_prob,</span>
+<span class="sd">            )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">states_to_plot</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+        <span class="n">states_to_plot</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">states_name</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">axes</span><span class="p">]</span>
+
+    <span class="c1"># Time determination</span>
+    <span class="n">len_states</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">_determine_time</span><span class="p">(</span><span class="n">data_processor</span><span class="p">,</span> <span class="n">len_states</span><span class="p">)</span>
+
+    <span class="c1"># Mean and std to plot</span>
+    <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
+    <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">normalization</span><span class="p">:</span>
+        <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
+            <span class="n">mu_states</span><span class="p">,</span>
+            <span class="n">std_states</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">norm_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+        <span class="c1"># Plot with uncertainty</span>
+        <span class="n">plot_with_uncertainty</span><span class="p">(</span>
+            <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
+            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">num_std</span><span class="o">=</span><span class="n">num_std</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Plot horizontal line at y=0.0 for specific states</span>
+        <span class="k">if</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;local acceleration&quot;</span><span class="p">]:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+
+        <span class="c1"># Set ylabel to the name of the current state</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">plot_state</span><span class="p">)</span>
+        <span class="n">_add_dynamic_grids</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">time</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">plot_observation</span><span class="p">:</span>
+        <span class="n">plot_data</span><span class="p">(</span>
+            <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+            <span class="n">plot_column</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">,</span>
+            <span class="n">normalization</span><span class="o">=</span><span class="n">normalization</span><span class="p">,</span>
+            <span class="n">sub_plot</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">plot_nan</span><span class="o">=</span><span class="n">plot_nan</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">_add_dynamic_grids</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time</span><span class="p">)</span>
+
+    <span class="c1"># Add legends for the first subplot</span>
+    <span class="k">if</span> <span class="n">legend_location</span><span class="p">:</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+            <span class="p">[</span><span class="sa">r</span><span class="s2">&quot;$\mu$&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;$\pm</span><span class="si">{</span><span class="n">num_std</span><span class="si">}</span><span class="s2">\sigma$&quot;</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;$y$&quot;</span><span class="p">],</span>
+            <span class="n">loc</span><span class="o">=</span><span class="n">legend_location</span><span class="p">,</span>
+            <span class="n">ncol</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Plot abnormal model probability</span>
+    <span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">model_prob</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Pr(Abnormal)&quot;</span><span class="p">)</span>
+    <span class="n">_add_dynamic_grids</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)],</span> <span class="n">time</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Time&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">legend_location</span><span class="p">:</span>
+        <span class="n">axes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">)]</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s2">&quot;Pr(Abnormal)&quot;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span></div>
+
+
+
+<div class="viewcode-block" id="plot_with_uncertainty">
+<a class="viewcode-back" href="../../api/canari.data_visualization.html#canari.data_visualization.plot_with_uncertainty">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_with_uncertainty</span><span class="p">(</span>
+    <span class="n">time</span><span class="p">,</span>
+    <span class="n">mu</span><span class="p">,</span>
+    <span class="n">std</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="n">label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">],</span>
+    <span class="n">index</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">num_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">ax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot mean and confidence interval for a variable.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        time (np.ndarray): Time vector.</span>
+<span class="sd">        mu (np.ndarray): Mean values to plot.</span>
+<span class="sd">        std (np.ndarray): Standard deviation values.</span>
+<span class="sd">        color (str, optional): Line/fill color.</span>
+<span class="sd">        linestyle (str, optional): Line style.</span>
+<span class="sd">        label (List[str], optional): Labels for mean and band.</span>
+<span class="sd">        index (int, optional): Index if plotting from multivariate tensor.</span>
+<span class="sd">        num_std (int, optional): Number of standard deviations to shade.</span>
+<span class="sd">        ax (plt.Axes, optional): Axis to use for plotting.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mu_states</span> <span class="o">=</span> <span class="n">mu</span><span class="p">[:,</span> <span class="n">index</span><span class="p">]</span>
+        <span class="n">std_states</span> <span class="o">=</span> <span class="n">std</span><span class="p">[:,</span> <span class="n">index</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mu_states</span> <span class="o">=</span> <span class="n">mu</span>
+        <span class="n">std_states</span> <span class="o">=</span> <span class="n">std</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">mu_states</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span>
+        <span class="n">time</span><span class="p">,</span>
+        <span class="n">mu_states</span> <span class="o">-</span> <span class="n">num_std</span> <span class="o">*</span> <span class="n">std_states</span><span class="p">,</span>
+        <span class="n">mu_states</span> <span class="o">+</span> <span class="n">num_std</span> <span class="o">*</span> <span class="n">std_states</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
