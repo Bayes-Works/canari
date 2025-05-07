@@ -369,10 +369,10 @@ class Model:
             mu_states_prior, var_states_prior = self.online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
-        if "bounded autoregression" in self.states_name:
-            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
-                mu_states_prior, var_states_prior, self.observation_matrix
-            )
+        # if "bounded autoregression" in self.states_name:
+        #     mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
+        #         mu_states_prior, var_states_prior, self.observation_matrix
+        #     )
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -407,6 +407,11 @@ class Model:
                     mu_states_posterior,
                     var_states_posterior,
                 )
+            )
+
+        if "bounded autoregression" in self.states_name:
+            mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
+                mu_states_posterior, var_states_posterior
             )
 
         self.mu_states_posterior = mu_states_posterior
@@ -780,18 +785,17 @@ class Model:
             var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
         return mu_states_prior, var_states_prior
     
-    def BAR_forward_modification(self, mu_states_prior, var_states_prior, observation_matrix):
+    def BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
         """
-        BAR backward modification
+        BAR forward modification
         """
-        from canari.common import calc_observation
 
         ar_index = self.get_states_index("autoregression")
         bar_index = self.get_states_index("bounded autoregression")
 
-        mu_AR = mu_states_prior[ar_index]
-        var_AR = var_states_prior[ar_index, ar_index]
-        cov_AR = var_states_prior[ar_index, :]
+        mu_AR = mu_states_posterior[ar_index]
+        var_AR = var_states_posterior[ar_index, ar_index]
+        cov_AR = var_states_posterior[ar_index, :]
 
         bound = (self.components["bounded autoregression"].gamma * 
                     np.sqrt(self.components["bounded autoregression"].std_error**2 / 
@@ -805,52 +809,14 @@ class Model:
         mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) + bound
         var_U = (u_bar**2 + var_AR) * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
 
-        mu_states_prior[bar_index] = mu_L + mu_U - mu_AR
+        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
         cov_bar = cov_AR * (scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_prior[bar_index] - mu_AR)**2 - var_AR)
-        var_states_prior[bar_index, :] = cov_bar
-        var_states_prior[:, bar_index] = cov_bar
-        var_states_prior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
-
-        # Recalculate the observation prediction
-        mu_obs_predict, var_obs_predict = calc_observation(
-            mu_states_prior, var_states_prior, observation_matrix
-            )
+        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        var_states_posterior[bar_index, :] = cov_bar
+        var_states_posterior[:, bar_index] = cov_bar
+        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
         
-        return np.float32(mu_obs_predict), np.float32(var_obs_predict), np.float32(mu_states_prior), np.float32(var_states_prior)
-    
-    def BAR(muAR_t_t:np.ndarray, covX_t_t:np.ndarray, gamma_val:np.ndarray, phi_AR, Q_AR):
-        """ Kalman filter for one time step. This function includes prediction and filter step
-        Args:
-            muAR_t_t (np.ndarray): expected value of AR after transition step, [1,]
-            covX_t_t (np.ndarray): variance of AR after transition step, [# hidden states-1,]
-            gamma_val (np.ndarray): bounding coefficient, [1,]
-            A_AR (float): phi_AR, [1,]
-            Q_AR (float): (sigma^AR_w)^2, [1,]
-
-        Returns:
-            muBAR_t_t_ (np.ndarray): expected value of BAR at time t after bounding, [1,]
-            covBAR_t_t_ (np.ndarray): covariance matrix of hidden states at time t after bounding, [1,]
-            cov_XAR_XBAR_t_t (np.ndarray): covariance between XAR and XBAR, [1,]
-        """
-        covAR_t_t = covX_t_t[-1]
-        b_val = gamma_val*np.sqrt(Q_AR/(1-phi_AR**2))
-
-        l_bar = muAR_t_t + b_val
-        mu_L = l_bar * scipy.stats.norm.cdf(l_bar/np.sqrt(covAR_t_t)) + np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(l_bar/np.sqrt(covAR_t_t)) - b_val
-        var_L = (l_bar**2 + covAR_t_t) * scipy.stats.norm.cdf(l_bar/np.sqrt(covAR_t_t)) + l_bar * np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(l_bar/np.sqrt(covAR_t_t)) - (mu_L + b_val)**2
-        # cov_LAR = (l_bar**2 + covAR_t_t) * scipy.stats.norm.cdf(l_bar/np.sqrt(covAR_t_t)) + l_bar * np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(l_bar/np.sqrt(covAR_t_t)) - (mu_L + b_val) * l_bar
-
-        u_bar = -muAR_t_t + b_val
-        mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(covAR_t_t)) - np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(u_bar/np.sqrt(covAR_t_t)) + b_val
-        var_U = (u_bar**2 + covAR_t_t) * scipy.stats.norm.cdf(u_bar/np.sqrt(covAR_t_t)) + u_bar * np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(u_bar/np.sqrt(covAR_t_t)) - (-mu_U+b_val)**2
-        # cov_UAR = (u_bar**2 + covAR_t_t) * scipy.stats.norm.cdf(u_bar/np.sqrt(covAR_t_t)) + u_bar * np.sqrt(covAR_t_t) * scipy.stats.norm.pdf(u_bar/np.sqrt(covAR_t_t)) - (-mu_U+b_val) * u_bar
-
-        muBAR_t_t_ = mu_L + mu_U - muAR_t_t
-        covBAR_t_t_ = var_L + (mu_L - muAR_t_t)**2 + var_U + (mu_U - muAR_t_t)**2 - (muBAR_t_t_ - muAR_t_t)**2 - covAR_t_t
-        covBAR_t_t_ = np.maximum(covBAR_t_t_, 1e-8) # For numerical stability
-        cov_X_XBAR_t_t = covX_t_t * (scipy.stats.norm.cdf(l_bar/np.sqrt(covAR_t_t)) + scipy.stats.norm.cdf(u_bar/np.sqrt(covAR_t_t)) - 1)
-        return muBAR_t_t_, covBAR_t_t_, cov_X_XBAR_t_t
+        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
     def online_AR_backward_modification(
         self,
