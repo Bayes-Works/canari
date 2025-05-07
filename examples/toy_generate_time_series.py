@@ -223,7 +223,7 @@ fig, ax = plot_states(
     data_processor=data_processor,
     states=model.states,
     states_type=state_type,
-    states_to_plot=["local level", "local trend", "lstm", "autoregression"],
+    states_to_plot=["level", "trend", "lstm", "autoregression"],
 )
 plot_data(
     data_processor=data_processor,

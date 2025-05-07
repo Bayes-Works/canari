@@ -637,8 +637,8 @@ class SKF:
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
-        Automatically assign initial means and variances for baseline hidden states (local level,
-        local trend, and local acceleration) from input data using time series decomposition
+        Automatically assign initial means and variances for baseline hidden states (level,
+        trend, and acceleration) from input data using time series decomposition
         defined in :meth:`~canari.data_process.DataProcess.decompose_data`.
 
         Args:
