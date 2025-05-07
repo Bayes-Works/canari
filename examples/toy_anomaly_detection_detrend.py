@@ -153,7 +153,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     if model_lstm.stop_training:
         break
     else:
-        model.set_memory(states=states, time_step=0)
+        model_lstm.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model_lstm.optimal_epoch}")
 print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")

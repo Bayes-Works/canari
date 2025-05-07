@@ -23,14 +23,14 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 200
+num_epoch = 50
 
 # Build data processor
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day"],
-    train_split=0.5,
-    validation_split=0.225,
+    train_split=0.6,
+    validation_split=0.2,
     output_col=output_col,
 )
 
@@ -41,12 +41,12 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 sigma_v = 0.001
 model = Model(
     LstmNetwork(
-        look_back_len=19,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
-        num_hidden_unit=50,
+        num_hidden_unit=40,
         device="cpu",
-        manual_seed=1,
+        manual_seed=235,
     ),
     WhiteNoise(std_error=sigma_v),
 )

@@ -25,7 +25,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 200
+num_epoch = 50
 
 # Build data processor
 data_processor = DataProcess(
@@ -44,12 +44,12 @@ sigma_v = 0.003
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=24,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=1,
+        manual_seed=235,
     ),
     WhiteNoise(std_error=sigma_v),
 )

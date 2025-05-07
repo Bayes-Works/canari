@@ -301,6 +301,8 @@ def training(model, data_processor, num_epoch: int = 50):
             states_optim = copy.copy(states)
         if model.stop_training:
             break
+        else:
+            model.set_memory(states=states, time_step=0)
 
     return (
         model,
