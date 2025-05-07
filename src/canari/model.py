@@ -2,7 +2,7 @@
 Hybrid LSTM-SSM model that combines Bayesian Long-short Term Memory (LSTM) Neural Networks
 and State-Space Models (SSM).
 
-This model supports a flexible architecture where multiple `components`
+This model supports a flexible architecture where multiple `component`
 are assembled to define a structured state-space model.
 
 On time series data, this model can:
@@ -58,18 +58,21 @@ class Model:
         states_names (list[str]):
             Names of hidden states.
         mu_states (np.ndarray):
-            Mean vector for the hidden states :math:`X_{.|t}` at the time step `t`.
+            Mean vector for the hidden states :math:`X_{t|t}` at the time step `t`.
         var_states (np.ndarray):
-            Covariance matrix for the hidden states :math:`X_{.|t}` at the time step `t`.
+            Covariance matrix for the hidden states :math:`X_{t|t}` at the time step `t`.
         mu_states_prior (np.ndarray):
             Prior mean vector for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         var_states_prior (np.ndarray):
             Prior covariance matrix for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         mu_states_posterior (np.ndarray):
             Posteriror mean vector for the hidden states :math:`X_{t+1|t+1}` at the time step `t+1`.
+            In case of missing data (NaN observation), having the same values
+            as :attr:`mu_states_prior`.
         var_states_posterior (np.ndarray):
             Posteriror covariance matrix for the hidden states :math:`X_{t+1|t+1}` at the time
-            step `t+1`.
+            step `t+1`. In case of missing data (NaN observation), having the same values
+            as :attr:`var_states_prior`.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of hidden states over time.
         mu_obs_predict (np.ndarray):
@@ -734,9 +737,8 @@ class Model:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
-        If no `input_covariates`
-        for LSTM, use an empty `np.ndarray`. Recall :meth:`~canari.common.forward`
-        from :class:`~canari.common`.
+        If no `input_covariates` for LSTM, use an empty `np.ndarray`.
+        Recall :meth:`~canari.common.forward` from :class:`~canari.common`.
 
         This function is used at the one-time-step level.
 
@@ -751,13 +753,13 @@ class Model:
             Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
                 A tuple containing:
 
-                - :attr:`~canari.model.Model.mu_obs_predict` (np.ndarray):
+                - :attr:`mu_obs_predict` (np.ndarray):
                     The predictive mean of the observation at `t+1`.
-                - :attr:`~canari.model.Model.var_obs_predict` (np.ndarray):
+                - :attr:`var_obs_predict` (np.ndarray):
                     The predictive variance of the observation at `t+1`.
-                - :attr:`~canari.model.Model.mu_states_prior` (np.ndarray):
+                - :attr:`mu_states_prior` (np.ndarray):
                     The prior mean of the hidden state at `t+1`.
-                - :attr:`~canari.model.Model.var_states_prior` (np.ndarray):
+                - :attr:`var_states_prior` (np.ndarray):
                     The prior variance of the hidden state at `t+1`.
 
         """
@@ -804,7 +806,7 @@ class Model:
         """
         Update step in the Kalman filter for one time step.
 
-        This function is used at a one-time-step level. Recall :meth:`~canari.common.backward`
+        This function is used at the one-time-step level. Recall :meth:`~canari.common.backward`
         from :class:`~canari.common`.
 
         Args:
@@ -815,12 +817,12 @@ class Model:
                 A tuple containing:
 
                 - **delta_mu** (np.ndarray):
-                    The delta for updating :attr:`~canari.model.Model.mu_states_prior`.
+                    The delta for updating :attr:`mu_states_prior`.
                 - **delta_var** (np.ndarray):
-                    The delta for updating :attr:`~canari.model.Model.var_states_prior`.
-                - :attr:`~canari.model.Model.mu_states_posterior` (np.ndarray):
+                    The delta for updating :attr:`var_states_prior`.
+                - :attr:`mu_states_posterior` (np.ndarray):
                     The posterior mean of the hidden states.
-                - :attr:`~canari.model.Model.var_states_posterior` (np.ndarray):
+                - :attr:`var_states_posterior` (np.ndarray):
                     The posterior variance of the hidden states.
         """
 
@@ -862,14 +864,15 @@ class Model:
         """
         Apply RTS smoothing equations for a specity timestep. As a result of this function,
         the smoothed estimates for hidden states at the specific time step will be updated in
-        :attr:`~canari.model.Model.states`.
+        :attr:`states`.
 
-        This function is used at a one-time-step level. Recall :meth:`~canari.common.rts_smoother`
+        This function is used at the one-time-step level. Recall :meth:`~canari.common.rts_smoother`
         from :class:`~canari.common`.
 
         Args:
             time_step (int): Target smoothing index.
-            matrix_inversion_tol (float): Numerical stability threshold for matrix pseudoinversion (pinv).
+            matrix_inversion_tol (float): Numerical stability threshold for matrix
+                                            pseudoinversion (pinv). Defaults to 1E-12.
         """
 
         (
@@ -894,9 +897,8 @@ class Model:
         one-step-ahead predictions, i.e., reapeatly apply the
         Kalman prediction step over multiple time steps.
 
-        This function is used at entire-dataset-level. Recall repeatedly the function
-        :meth:`~canari.model.Model.forward` at one-time-step level
-        from :class:`~canari.model.Model`.
+        This function is used at the entire-dataset-level. Recall repeatedly the function
+        :meth:`forward` at one-time-step level from :class:`~canari.model.Model`.
 
         Args:
             data (Dict[str, np.ndarray]): A dictionary containing key 'x' as input covariates,
@@ -910,7 +912,7 @@ class Model:
                     The means for forecasts.
                 - **std_obs_preds** (np.ndarray):
                     The standard deviations for forecasts.
-                - :attr:`~canari.model.Model.states`:
+                - :attr:`states`:
                     The history of hidden states over time.
 
         Examples:
@@ -953,7 +955,7 @@ class Model:
         update steps over multiple time steps.
 
         This function is used at the entire-dataset-level. Recall repeatedly the function
-        :meth:`~canari.model.Model.forward` and :meth:`~canari.model.Model.backward` at
+        :meth:`forward` and :meth:`backward` at
         one-time-step level from :class:`~canari.model.Model`.
 
         Args:
@@ -969,7 +971,7 @@ class Model:
                     The means for forecasts.
                 - **std_obs_preds** (np.ndarray):
                     The standard deviations for forecasts.
-                - :attr:`~canari.model.Model.states`:
+                - :attr:`states`:
                     The history of hidden states over time.
 
         Examples:
@@ -1025,12 +1027,11 @@ class Model:
         RTS smoothing equation over multiple time steps.
 
         This function is used at the entire-dataset-level. Recall repeatedly the function
-        :meth:`~canari.model.Model.rts_smoother` at
-        one-time-step level from :class:`~canari.model.Model`.
+        :meth:`rts_smoother` at one-time-step level from :class:`~canari.model.Model`.
 
         Returns:
             StatesHistory:
-                :attr:`~canari.model.Model.states`: The history of hidden states over time.
+                :attr:`states`: The history of hidden states over time.
 
         Examples:
             >>> mu_preds_train, std_preds_train, states = model.filter(train_set)
