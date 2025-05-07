@@ -40,7 +40,7 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
 sigma_v = 1e-2
@@ -68,12 +68,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     # Calculate the log-likelihood metric
@@ -136,18 +136,18 @@ print(
 # Unstandardize the predictions
 mu_validation_preds2 = normalizer.unstandardize(
     mu_validation_preds2,
-    data_processor.norm_const_mean[output_col],
-    data_processor.norm_const_std[output_col],
+    data_processor.std_const_mean[output_col],
+    data_processor.std_const_std[output_col],
 )
 std_validation_preds2 = normalizer.unstandardize_std(
     std_validation_preds2,
-    data_processor.norm_const_std[output_col],
+    data_processor.std_const_std[output_col],
 )
 
 #  Plot
 plot_data(
     data_processor=data_processor,
-    normalization=False,
+    standardization=False,
     plot_column=output_col,
     validation_label="y",
 )

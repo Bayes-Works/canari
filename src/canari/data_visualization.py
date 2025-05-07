@@ -2,7 +2,7 @@
 Visualization for Canari's results.
 
 This module provides functions to plot:
-- Raw or normalized data
+- Raw or standardized data
 - Prediction results with uncertainty (mean ± standard deviation)
 - Hidden state estimates
 - Probability of regime changes (anomalies) from Switching Kalman filter (SKF)
@@ -104,7 +104,7 @@ def _determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
 
 def plot_data(
     data_processor: DataProcess,
-    normalization: Optional[bool] = False,
+    standardization: Optional[bool] = False,
     plot_train_data: Optional[bool] = True,
     plot_validation_data: Optional[bool] = True,
     plot_test_data: Optional[bool] = True,
@@ -118,11 +118,11 @@ def plot_data(
     plot_nan: Optional[bool] = True,
 ):
     """
-    Plot train, validation, and test data with optional normalization and NaN filtering.
+    Plot train, validation, and test data with optional standardization and NaN filtering.
 
     Args:
         data_processor (DataProcess): Data processing object.
-        normalization (bool, optional): Normalize the data using stored training's statistics.
+        standardization (bool, optional): Plot data in standardized or original space
         plot_train_data (bool, optional): If True, plot training data.
         plot_validation_data (bool, optional): If True, plot validation data.
         plot_test_data (bool, optional): If True, plot test data.
@@ -146,11 +146,11 @@ def plot_data(
                     validation_split=0.2,
                     test_split=0.1,
                     time_covariates = ["hour_of_day"],
-                    normalization=True)
+                    standardization=True)
         >>> fig, ax = plt.subplots(figsize=(12, 4))
         >>> plot_data(
                 data_processor=dp,
-                normalization=True,
+                standardization=True,
                 plot_validation_data=True,
                 plot_test_data=True,
             )
@@ -164,8 +164,8 @@ def plot_data(
     if plot_column is None:
         plot_column = data_processor.output_col
 
-    if normalization:
-        data = data_processor.normalize_data()
+    if standardization:
+        data = data_processor.standardize_data()
     else:
         data = data_processor.data.values
 
@@ -286,7 +286,7 @@ def plot_states(
     states: StatesHistory,
     states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
-    normalization: Optional[bool] = False,
+    standardization: Optional[bool] = False,
     num_std: Optional[int] = 1,
     sub_plot: Optional[plt.Axes] = None,
     color: Optional[str] = "b",
@@ -301,7 +301,7 @@ def plot_states(
         states (StatesHistory): Object containing hidden states history over time.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        normalization (bool, optional): Whether to unnormalize the states.
+        standardization (bool, optional): Whether to plot hidden states in standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence region.
         sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Color for mean line and confidence region fill.
@@ -337,12 +337,12 @@ def plot_states(
     # Mean and std to plot
     mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
     std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
-    if not normalization:
+    if not standardization:
         mu_states, std_states = common.unstandardize_states(
             mu_states,
             std_states,
-            data_processor.norm_const_mean[data_processor.output_col],
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_mean[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
     for idx, plot_state in enumerate(states_to_plot):
@@ -389,7 +389,7 @@ def plot_skf_states(
     model_prob: np.ndarray,
     states_to_plot: Optional[list[str]] = "all",
     states_type: Optional[str] = "posterior",
-    normalization: Optional[bool] = False,
+    standardization: Optional[bool] = False,
     num_std: Optional[int] = 1,
     plot_observation: Optional[bool] = True,
     color: Optional[str] = "b",
@@ -406,7 +406,7 @@ def plot_skf_states(
         model_prob (np.ndarray): Probabilities of the abnormal regime.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        normalization (bool, optional):  Whether to unnormalize the states.
+        standardization (bool, optional):  Whether to plot hidden states in standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence regions.
         plot_observation (bool, optional): Whether to include observed data into "level" plot.
         color (str, optional): Line color for states.
@@ -440,12 +440,12 @@ def plot_skf_states(
     # Mean and std to plot
     mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
     std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
-    if not normalization:
+    if not standardization:
         mu_states, std_states = common.unstandardize_states(
             mu_states,
             std_states,
-            data_processor.norm_const_mean[data_processor.output_col],
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_mean[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
     for idx, plot_state in enumerate(states_to_plot):
@@ -474,7 +474,7 @@ def plot_skf_states(
         plot_data(
             data_processor=data_processor,
             plot_column=data_processor.output_col,
-            normalization=normalization,
+            standardization=standardization,
             sub_plot=axes[0],
             plot_nan=plot_nan,
         )

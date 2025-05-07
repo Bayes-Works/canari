@@ -64,7 +64,7 @@ canari
 |    |      (v0) read data
 |    |      (v0) resampling 
 |    |      (v0) split data into train/validation/test sets 
-|    |      (v0) normalization/unnormalization (from pytagi)
+|    |      (v0) standardization/unstandardization (from pytagi)
 |    |      (v1) automated outliers removal 
 |    |      (v1) save data 
 |    |
