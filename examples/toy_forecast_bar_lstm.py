@@ -68,7 +68,7 @@ bar = BoundedAutoregression(
     phi=0.9,
     mu_states=[0, 0],
     var_states=[1e-6, 1e-6],
-    gamma=1,
+    gamma=2,
 )
 
 model = Model(

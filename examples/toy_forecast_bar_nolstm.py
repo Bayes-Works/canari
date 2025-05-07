@@ -57,7 +57,7 @@ bar = BoundedAutoregression(
     phi=0.9,
     mu_states=[-0.0621, -0.0621],
     var_states=[6.36e-05, 6.36e-05],
-    gamma=3,
+    gamma=2,
 )
 
 # Normal model
