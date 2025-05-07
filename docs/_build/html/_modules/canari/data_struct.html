@@ -304,7 +304,7 @@ document.write(`
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    TODO: duplicate attributes.</span>
 <span class="sd">    Container for saving a rolling history of LSTM output means and variances</span>
-<span class="sd">    over a fixed look-back window. New predictions shift the window forward,</span>
+<span class="sd">    over a fixed lookback window. New predictions shift the window forward,</span>
 <span class="sd">    saving the most recent predictions, and discard the oldest ones.</span>
 
 <span class="sd">    Examples:</span>
@@ -325,7 +325,7 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">look_back_len</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize mu and var with a specified look-back length.</span>
+<span class="sd">        Initialize :attr:`mu` and :attr:`var` with a specified lookback length.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            look_back_len (int): Number of time steps to keep in history.</span>
@@ -416,7 +416,9 @@ document.write(`
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        TODO: output type as a list.</span>
-<span class="sd">        Retrieve the mean values over time for a specified hidden states.</span>
+<span class="sd">        Retrieve the mean values over time for a specified hidden states and for either</span>
+<span class="sd">        a) the prior predicted value, b) the posterior updated values after the filter step,</span>
+<span class="sd">        or c) the posterior updated values after the smoother step (smoothed estimates).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>
@@ -458,7 +460,9 @@ document.write(`
         <span class="n">states_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Retrieve the standard deviation values over time for a specified hidden states.</span>
+<span class="sd">        Retrieve the standard deviation values over time for a specified hidden states and for either</span>
+<span class="sd">        a) the prior predicted value, b) the posterior updated values after the filter step,</span>
+<span class="sd">        or c) the posterior updated values after the smoother step (smoothed estimates).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>

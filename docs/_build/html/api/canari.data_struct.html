@@ -380,7 +380,7 @@ document.write(`
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>TODO: duplicate attributes.
 Container for saving a rolling history of LSTM output means and variances
-over a fixed look-back window. New predictions shift the window forward,
+over a fixed lookback window. New predictions shift the window forward,
 saving the most recent predictions, and discard the oldest ones.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_history</span> <span class="o">=</span> <span class="n">LstmOutputHistory</span><span class="p">()</span>
@@ -413,7 +413,7 @@ saving the most recent predictions, and discard the oldest ones.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">look_back_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_struct.html#LstmOutputHistory.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.LstmOutputHistory.initialize" title="Link to this definition">#</a></dt>
-<dd><p>Initialize mu and var with a specified look-back length.</p>
+<dd><p>Initialize <a class="reference internal" href="#id0" title="canari.data_struct.LstmOutputHistory.mu"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu</span></code></a> and <a class="reference internal" href="#id1" title="canari.data_struct.LstmOutputHistory.var"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var</span></code></a> with a specified lookback length.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>look_back_len</strong> (<em>int</em>) – Number of time steps to keep in history.</p>
@@ -555,7 +555,9 @@ at two consecutive timesteps <cite>t</cite> and <cite>t+1</cite>.</p>
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory.get_mean">
 <span class="sig-name descname"><span class="pre">get_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_mean" title="Link to this definition">#</a></dt>
 <dd><p>TODO: output type as a list.
-Retrieve the mean values over time for a specified hidden states.</p>
+Retrieve the mean values over time for a specified hidden states and for either
+a) the prior predicted value, b) the posterior updated values after the filter step,
+or c) the posterior updated values after the smoother step (smoothed estimates).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -577,7 +579,9 @@ or “all” for all hidden states. Defaults to “all”.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory.get_std">
 <span class="sig-name descname"><span class="pre">get_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_std"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_std" title="Link to this definition">#</a></dt>
-<dd><p>Retrieve the standard deviation values over time for a specified hidden states.</p>
+<dd><p>Retrieve the standard deviation values over time for a specified hidden states and for either
+a) the prior predicted value, b) the posterior updated values after the filter step,
+or c) the posterior updated values after the smoother step (smoothed estimates).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

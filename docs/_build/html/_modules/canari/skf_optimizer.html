@@ -294,7 +294,7 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.skf_optimizer.html#canari.skf_optimizer.SKFOptimizer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SKFOptimizer</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Optimize hyperparameters for :class:`~canari.skf.SKF` using Ray Tune.</span>
+<span class="sd">    Optimize hyperparameters for :class:`~canari.skf.SKF` using the Ray Tune external library.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        initialize_skf (Callable): Function that returns an SKF instance given a configuration.</span>
@@ -302,12 +302,12 @@ document.write(`
 <span class="sd">                            :meth:`~canari.model.Model.get_dict`.</span>
 <span class="sd">        param_space (dict): Parameter search space: two-value lists [min, max] for optimization.</span>
 <span class="sd">        data (dict): Input data for adding synthetic anomalies.</span>
-<span class="sd">        detection_threshold (float, optional): Threshold for detection rate for anomaly detection.</span>
-<span class="sd">                                                Defauls to 0.5.</span>
-<span class="sd">        false_rate_threshold (float, optional): Threshold for false rate.</span>
-<span class="sd">                                                Defauls to 0.0.</span>
-<span class="sd">        max_timestep_to_detect (int, optional): Max timesteps to allow detection.</span>
-<span class="sd">                                                Defauls to None (to the end of time series).</span>
+<span class="sd">        detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.</span>
+<span class="sd">                                                Defaults to 0.5.</span>
+<span class="sd">        false_rate_threshold (float, optional): Threshold for the maximal false detection rate.</span>
+<span class="sd">                                                Defaults to 0.0.</span>
+<span class="sd">        max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.</span>
+<span class="sd">                                                Defaults to None (to the end of time series).</span>
 <span class="sd">        num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as</span>
 <span class="sd">                            many time series, because one time series contains only one</span>
 <span class="sd">                            anomaly. Defaults to 50.</span>

@@ -382,16 +382,15 @@ document.write(`
                   
   <section id="module-canari.skf">
 <span id="canari-skf"></span><h1>canari.skf<a class="headerlink" href="#module-canari.skf" title="Link to this heading">#</a></h1>
-<p>Switching Kalman Filter (SKF) for detecting regime changes on time series data. It takes as inputs
+<p>Switching Kalman Filter (SKF) for detecting regime changes in time series data. It takes as inputs
 two instances of <a class="reference internal" href="canari.model.html#module-canari.model" title="canari.model"><code class="xref py py-class docutils literal notranslate"><span class="pre">model</span></code></a>, one model is used to model a normal regime, the other is
-used to model an abnormal regime. At each time step, SKF estimates the probability of each model to
-determine the probability of anomalies where regimes switch.</p>
+used to model an abnormal one. At each time step, SKF estimates the probability of each model.</p>
 <p>On time series data, this model can:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>Train its Bayesian LSTM network component from the normal model.</p></li>
-<li><p>Detect regime changes (anomalies) and provide probabilities of these regime changes.</p></li>
-<li><p>Decompose orginal time serires data into unobserved hidden states. Provide mean values and associate uncertainties for these hidden states.</p></li>
+<li><p>Detect regime changes (anomalies) and provide probabilities of regime switch.</p></li>
+<li><p>Decompose orginal time serires data into unobserved hidden states. Provide mean values and the associate uncertainties for these hidden states.</p></li>
 </ul>
 </div></blockquote>
 <dl class="py class">
@@ -481,7 +480,7 @@ transition models including
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.mu_states_init">
 <span class="sig-name descname"><span class="pre">mu_states_init</span></span><a class="headerlink" href="#canari.skf.SKF.mu_states_init" title="Link to this definition">#</a></dt>
-<dd><p>Mean vector for the hidden states <span class="math notranslate nohighlight">\(x_0\)</span> at the time step <cite>t=0</cite>.</p>
+<dd><p>Mean vector for the hidden states <span class="math notranslate nohighlight">\(X_0\)</span> at the time step <cite>t=0</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -492,7 +491,7 @@ transition models including
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.var_states_init">
 <span class="sig-name descname"><span class="pre">var_states_init</span></span><a class="headerlink" href="#canari.skf.SKF.var_states_init" title="Link to this definition">#</a></dt>
-<dd><p>Covariance matrix for the hidden states <span class="math notranslate nohighlight">\(x_0\)</span> at the time step <cite>t=0</cite>.</p>
+<dd><p>Covariance matrix for the hidden states <span class="math notranslate nohighlight">\(X_0\)</span> at the time step <cite>t=0</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -503,7 +502,7 @@ transition models including
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.mu_states_prior">
 <span class="sig-name descname"><span class="pre">mu_states_prior</span></span><a class="headerlink" href="#canari.skf.SKF.mu_states_prior" title="Link to this definition">#</a></dt>
-<dd><p>Prior mean vector for the marginal hidden states <span class="math notranslate nohighlight">\(x_{t+1}\)</span> at the time step <cite>t+1</cite>.</p>
+<dd><p>Prior mean vector for the marginal hidden states <span class="math notranslate nohighlight">\(X_{t+1|t}\)</span> at the time step <cite>t+1</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -514,7 +513,7 @@ transition models including
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.var_states_prior">
 <span class="sig-name descname"><span class="pre">var_states_prior</span></span><a class="headerlink" href="#canari.skf.SKF.var_states_prior" title="Link to this definition">#</a></dt>
-<dd><p>Prior covariance matrix for the marginal hidden states <span class="math notranslate nohighlight">\(x_{t+1}\)</span>
+<dd><p>Prior covariance matrix for the marginal hidden states <span class="math notranslate nohighlight">\(X_{t+1|t}\)</span>
 at the time step <cite>t+1</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -526,7 +525,7 @@ at the time step <cite>t+1</cite>.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.mu_states_posterior">
 <span class="sig-name descname"><span class="pre">mu_states_posterior</span></span><a class="headerlink" href="#canari.skf.SKF.mu_states_posterior" title="Link to this definition">#</a></dt>
-<dd><p>Posteriror mean vector for the marginal hidden states <span class="math notranslate nohighlight">\(x_{t+1}\)</span>
+<dd><p>Posteriror mean vector for the marginal hidden states <span class="math notranslate nohighlight">\(X_{t+1|t+1}\)</span>
 at the time step <cite>t+1</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -538,7 +537,7 @@ at the time step <cite>t+1</cite>.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.var_states_posterior">
 <span class="sig-name descname"><span class="pre">var_states_posterior</span></span><a class="headerlink" href="#canari.skf.SKF.var_states_posterior" title="Link to this definition">#</a></dt>
-<dd><p>Posteriror covariance matrix for the marginal hidden states <span class="math notranslate nohighlight">\(x_{t+1}\)</span> at the time
+<dd><p>Posteriror covariance matrix for the marginal hidden states <span class="math notranslate nohighlight">\(X_{t+1|t+1}\)</span> at the time
 step <cite>t+1</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -597,7 +596,7 @@ and ‘abnormal’ over time.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.smooth_marginal_prob_history">
 <span class="sig-name descname"><span class="pre">smooth_marginal_prob_history</span></span><a class="headerlink" href="#canari.skf.SKF.smooth_marginal_prob_history" title="Link to this definition">#</a></dt>
-<dd><p>Smoother margina probability history for ‘normal’
+<dd><p>Smoother marginal probability history for ‘normal’
 and ‘abnormal’ over time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -620,7 +619,7 @@ and ‘abnormal’ over time.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="canari.skf.SKF.abnorm_to_norm_prob">
 <span class="sig-name descname"><span class="pre">abnorm_to_norm_prob</span></span><a class="headerlink" href="#canari.skf.SKF.abnorm_to_norm_prob" title="Link to this definition">#</a></dt>
-<dd><p>Transition probability  from abnormal to normal.</p>
+<dd><p>Transition probability from abnormal to normal.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>float</p>
@@ -723,7 +722,7 @@ from ‘norm_norm’ of <a class="reference internal" href="#canari.skf.SKF.mode
 <dt class="sig sig-object py" id="canari.skf.SKF.stop_training">
 <span class="sig-name descname"><span class="pre">stop_training</span></span><a class="headerlink" href="#canari.skf.SKF.stop_training" title="Link to this definition">#</a></dt>
 <dd><p>Flag indicating whether training has been stopped due to
-early stopping or reaching maximum number of epoch.</p>
+early stopping or reaching the maximum number of epochs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>
@@ -753,10 +752,10 @@ defined in <a class="reference internal" href="canari.data_process.html#canari.d
 <span class="sig-name descname"><span class="pre">backward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.backward" title="Link to this definition">#</a></dt>
 <dd><p>Update step for Swithching Kalman filter.
 Recall <a class="reference internal" href="canari.common.html#canari.common.backward" title="canari.common.backward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">backward()</span></code></a> for all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
-<p>This function is used at one-time-step level.</p>
+<p>This function is used at the one-time-step level.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>obs</strong> (<em>float</em>) – Observation at current time step.</p>
+<dd class="field-odd"><p><strong>obs</strong> (<em>float</em>) – Observation at the current time step.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Posterior state estimates.</p>
@@ -770,20 +769,20 @@ Recall <a class="reference internal" href="canari.common.html#canari.common.back
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.detect_synthetic_anomaly">
 <span class="sig-name descname"><span class="pre">detect_synthetic_anomaly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_timestep_to_detect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_anomaly</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope_anomaly</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.33</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.66</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.detect_synthetic_anomaly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.detect_synthetic_anomaly" title="Link to this definition">#</a></dt>
-<dd><p>Add synthetic anomalies to an orginal data, use Switching Kalman filter to detect those
-added anomalies, and compute detection/false-alarm rates.</p>
+<dd><p>Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
+synthetic anomalies, and compute the detection/false-alarm rates.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>np.ndarray</em><em>]</em>) – Original time series data.</p></li>
-<li><p><strong>threshold</strong> (<em>float</em>) – Threshold for detection rate for anomaly detection.
+<li><p><strong>threshold</strong> (<em>float</em>) – Threshold for the maximal target anomaly detection rate.
 Defauls to 0.5.</p></li>
-<li><p><strong>max_timestep_to_detect</strong> (<em>int</em>) – Window length for detecting anomalies.
+<li><p><strong>max_timestep_to_detect</strong> (<em>int</em>) – Maximum number of timesteps to allow detection.
 Defauls to None (to the end of time series).</p></li>
 <li><p><strong>num_anomaly</strong> (<em>int</em>) – Number of synthetic anomalies to add. This will create as
 many time series, because one time series contains only one
 anomaly.</p></li>
-<li><p><strong>slope_anomaly</strong> (<em>float</em>) – Magnitude of anomaly slope.</p></li>
+<li><p><strong>slope_anomaly</strong> (<em>float</em>) – Magnitude of the anomaly slope.</p></li>
 <li><p><strong>anomaly_start</strong> (<em>float</em>) – Fractional start position of anomaly.</p></li>
 <li><p><strong>anomaly_end</strong> (<em>float</em>) – Fractional end position of anomaly.</p></li>
 </ul>
@@ -838,8 +837,8 @@ false_alarm_train (str): ‘Yes’ if any alarm during training data.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.filter">
 <span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.filter" title="Link to this definition">#</a></dt>
-<dd><p>Perform Kalman filter over an entire dataset.</p>
-<p>This function is used at entire-dataset-level. Recall repeatedly the function
+<dd><p>Run the Kalman filter over an entire dataset.</p>
+<p>This function is used at the entire-dataset-level. Recall repeatedly the function
 <a class="reference internal" href="#canari.skf.SKF.forward" title="canari.skf.SKF.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> and <a class="reference internal" href="#canari.skf.SKF.backward" title="canari.skf.SKF.backward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">backward()</span></code></a> at
 one-time-step level from <a class="reference internal" href="#canari.skf.SKF" title="canari.skf.SKF"><code class="xref py py-class docutils literal notranslate"><span class="pre">SKF</span></code></a>.</p>
 <dl class="field-list simple">
@@ -875,10 +874,10 @@ one-time-step level from <a class="reference internal" href="#canari.skf.SKF" ti
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.forward">
 <span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.forward" title="Link to this definition">#</a></dt>
-<dd><p>Prediction step in Switching Kalman filter. This makes a one-step-ahead prediction.
-It is a mixtured prediction from all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
+<dd><p>Prediction step in the Switching Kalman filter. This makes a one-step-ahead prediction.
+It is a mixture prediction from all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
 <p>Recall <a class="reference internal" href="canari.common.html#canari.common.forward" title="canari.common.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> for all transition models.</p>
-<p>This function is used at one-time-step level.</p>
+<p>This function is used at the one-time-step level.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1015,9 +1014,9 @@ deviation each epoch. Defaults to 0.9.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.rts_smoother">
 <span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
-<dd><p>Smoother for Switching Kalman filter at a given time step.</p>
+<dd><p>Smoother for the Switching Kalman filter at a given time step.</p>
 <p>Recall <a class="reference internal" href="canari.common.html#canari.common.rts_smoother" title="canari.common.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> for all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
-<p>This function is used at one-time-step level.</p>
+<p>This function is used at the one-time-step level.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>time_step</strong> (<em>int</em>) – Index at which to perform smoothing.</p>
@@ -1067,8 +1066,8 @@ If <cite>time_step=0</cite>, reset <a class="reference internal" href="#canari.s
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.smoother">
 <span class="sig-name descname"><span class="pre">smoother</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.smoother" title="Link to this definition">#</a></dt>
-<dd><p>Perform Kalman smoother over an entire time series data.</p>
-<p>This function is used at entire-dataset-level. Recall repeatedly the function
+<dd><p>Run the Kalman smoother over an entire time series data.</p>
+<p>This function is used at the entire-dataset-level. Recall repeatedly the function
 <a class="reference internal" href="#canari.skf.SKF.rts_smoother" title="canari.skf.SKF.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> at one-time-step level from <a class="reference internal" href="#canari.skf.SKF" title="canari.skf.SKF"><code class="xref py py-class docutils literal notranslate"><span class="pre">SKF</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

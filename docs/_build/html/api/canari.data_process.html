@@ -348,18 +348,18 @@ document.write(`
                   
   <section id="module-canari.data_process">
 <span id="canari-data-process"></span><h1>canari.data_process<a class="headerlink" href="#module-canari.data_process" title="Link to this heading">#</a></h1>
+<p>Data processing for time series.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.data_process.DataProcess">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_process.</span></span><span class="sig-name descname"><span class="pre">DataProcess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Data processing for time series.</p>
 <p>This module provides the <cite>DataProcess</cite> class to facilitate:</p>
 <ul class="simple">
-<li><p>Standardize datasets based on training statistics</p></li>
-<li><p>Split data into training, validation, and test sets</p></li>
-<li><p>Add time covariates (hour, day, month, etc.) to data</p></li>
-<li><p>Generate lagged versions of features</p></li>
-<li><p>Add synthetic anomalies to data</p></li>
+<li><p>Standardization of datasets based on training statistics</p></li>
+<li><p>Splitting data into training, validation, and test sets</p></li>
+<li><p>Adding time covariates (hour, day, month, etc.) to data</p></li>
+<li><p>Generating lagged versions of features</p></li>
+<li><p>Adding synthetic anomalies to data</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -371,9 +371,9 @@ document.write(`
 <li><p><strong>validation_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End index for validation set.</p></li>
 <li><p><strong>test_start</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Start index for test set.</p></li>
 <li><p><strong>test_end</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – End index for test set.</p></li>
-<li><p><strong>train_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion of data for training set.</p></li>
-<li><p><strong>validation_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for validation set.</p></li>
-<li><p><strong>test_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Proportion for test set.</p></li>
+<li><p><strong>train_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Fraction of data for training set.</p></li>
+<li><p><strong>validation_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Fraction for validation set.</p></li>
+<li><p><strong>test_split</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Fraction for test set.</p></li>
 <li><p><strong>time_covariates</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Time covariates added to dataset</p></li>
 <li><p><strong>output_col</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Column’s indice for target variable.</p></li>
 <li><p><strong>normalization</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Whether to apply data standardization
@@ -424,18 +424,19 @@ new columns.</p>
 <dt class="sig sig-object py" id="canari.data_process.DataProcess.add_synthetic_anomaly">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_synthetic_anomaly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.33</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anomaly_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.66</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_process.html#DataProcess.add_synthetic_anomaly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_process.DataProcess.add_synthetic_anomaly" title="Link to this definition">#</a></dt>
 <dd><p># TODO
-Add synthetic anomalies randomly to a train, validation, or test sets.
+Add synthetic randomly generated anomalies to original data.
 From the orginal data, choose a window between <cite>anomaly_start</cite> and <cite>anomaly_end</cite> (ratio: 0-1).
-Following a uniform distribution, randomly choose in this window where the anomaly starts.
-Data after the anomaly start is shifted a by <cite>slope</cite>.</p>
+Following a uniform distribution, it randomly chooses within this window where the anomaly starts.
+After the anomaly start, the data is linearly shifted with a rate of change define by
+<cite>slope</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>dict</em>) – Data dict with “x” and “y”.</p></li>
-<li><p><strong>num_samples</strong> (<em>int</em>) – Number of anomaly to generate.</p></li>
-<li><p><strong>slope</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – Slope for anomaly.</p></li>
-<li><p><strong>anomaly_start</strong> (<em>float</em>) – Start of anomaly window (0–1).</p></li>
-<li><p><strong>anomaly_end</strong> (<em>float</em>) – End of anomaly window (0–1).</p></li>
+<li><p><strong>num_samples</strong> (<em>int</em>) – Number of anomalies to generate.</p></li>
+<li><p><strong>slope</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – Slope for an anomaly.</p></li>
+<li><p><strong>anomaly_start</strong> (<em>float</em><em>, </em><em>optional</em>) – Start of the anomaly window (0-1). Defaults to 0.33.</p></li>
+<li><p><strong>anomaly_end</strong> (<em>float</em><em>, </em><em>optional</em>) – End of the anomaly window (0-1). Defaults to 0.66.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -462,10 +463,10 @@ Data after the anomaly start is shifted a by <cite>slope</cite>.</p>
 <dd><p>Decompose a time series into a linear trend, seasonality, and residual following:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>Use Fourier transform to estimate seasonality.</p></li>
+<li><p>Use a Fourier transform to estimate seasonality.</p></li>
 <li><p><cite>Deseasonalized_data = data - seasonality</cite></p></li>
-<li><p>Estimate a linear trend by fitting <cite>Deseasonalized_data</cite> with a first oder polynomial</p></li>
-<li><p>Estimate residual</p></li>
+<li><p>Estimate a linear trend by fitting <cite>Deseasonalized_data</cite> with a first order polynomial</p></li>
+<li><p>Estimate residual = data - trend - seasonality</p></li>
 </ul>
 </div></blockquote>
 <dl class="field-list simple">
@@ -494,7 +495,7 @@ Data after the anomaly start is shifted a by <cite>slope</cite>.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>split</strong> (<em>str</em>) – One of [‘train’, ‘validation’, ‘test’, ‘all’].</p></li>
-<li><p><strong>normalization</strong> (<em>bool</em>) – Whether to normalize the output.</p></li>
+<li><p><strong>Standardization</strong> (<em>bool</em>) – Whether to standardize the output.</p></li>
 <li><p><strong>column</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Column index.</p></li>
 </ul>
 </dd>
