@@ -2,6 +2,7 @@
 Visualization for Canari's results.
 
 This module provides functions to plot:
+
 - Raw or standardized data
 - Prediction results with uncertainty (mean ± standard deviation)
 - Hidden state estimates
