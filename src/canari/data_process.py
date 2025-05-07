@@ -31,7 +31,7 @@ class DataProcess:
         test_split (Optional[float]): Fraction for test set.
         time_covariates (Optional[List[str]]): Time covariates added to dataset
         output_col (list[int]): Column's indice for target variable.
-        normalization (Optional[bool]): Whether to apply data standardization
+        standardization (Optional[bool]): Whether to apply data standardization
                                         (zero mean, unit standard deviation).
 
     Examples:
@@ -45,7 +45,7 @@ class DataProcess:
                             validation_split=0.2,
                             test_split=0.1,
                             time_covariates = ["hour_of_day"],
-                            normalization=True,)
+                            standardization=True,)
     """
 
     def __init__(
@@ -62,7 +62,7 @@ class DataProcess:
         test_split: Optional[float] = 0.0,
         time_covariates: Optional[List[str]] = None,
         output_col: list[int] = [0],
-        normalization: Optional[bool] = True,
+        standardization: Optional[bool] = True,
     ) -> None:
         self.train_start = train_start
         self.train_end = train_end
@@ -70,7 +70,7 @@ class DataProcess:
         self.validation_end = validation_end
         self.test_start = test_start
         self.test_end = test_end
-        self.normalization = normalization
+        self.standardization = standardization
         self.train_split = train_split
         self.validation_split = validation_split
         self.test_split = test_split
@@ -79,11 +79,11 @@ class DataProcess:
 
         data = data.astype("float32")
         self.data = data.copy()
-        self.norm_const_mean, self.norm_const_std = None, None
+        self.std_const_mean, self.std_const_std = None, None
 
         self._add_time_covariates()
         self._get_split_start_end_indices()
-        self._compute_normalization_constants()
+        self._compute_standardization_constants()
 
         # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
@@ -155,19 +155,19 @@ class DataProcess:
             else:
                 self.test_end = self.data.index.get_loc(self.test_end)
 
-    def _compute_normalization_constants(self):
+    def _compute_standardization_constants(self):
         """
-        Compute normalization statistics (mean, std) based on training data.
+        Compute standardization statistics (mean, std) based on training data.
         """
-        if self.normalization:
-            self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
+        if self.standardization:
+            self.std_const_mean, self.std_const_std = Normalizer.compute_mean_std(
                 self.data.iloc[self.train_start : self.train_end].values
             )
         else:
-            self.norm_const_mean = np.zeros(self.data.shape[1])
-            self.norm_const_std = np.ones(self.data.shape[1])
+            self.std_const_mean = np.zeros(self.data.shape[1])
+            self.std_const_std = np.ones(self.data.shape[1])
 
-    def normalize_data(self) -> np.ndarray:
+    def standardize_data(self) -> np.ndarray:
         """
         TODO: unnomalize data method
         Normalize the data using training statistics.
@@ -178,10 +178,10 @@ class DataProcess:
         return (
             Normalizer.standardize(
                 data=self.data.values,
-                mu=self.norm_const_mean,
-                std=self.norm_const_std,
+                mu=self.std_const_mean,
+                std=self.std_const_std,
             )
-            if self.normalization
+            if self.standardization
             else self.data.values
         )
 
@@ -217,7 +217,7 @@ class DataProcess:
         Examples:
             >>> train_set, val_set, test_set, all_data = dp.get_splits()
         """
-        data = self.normalize_data()
+        data = self.standardize_data()
         return (
             # Train split
             {
@@ -246,7 +246,7 @@ class DataProcess:
     def get_data(
         self,
         split: str,
-        normalization: Optional[bool] = False,
+        standardization: Optional[bool] = False,
         column: Optional[int] = None,
     ) -> np.ndarray:
         """
@@ -261,10 +261,10 @@ class DataProcess:
             np.ndarray: The extracted values.
 
         Examples:
-            >>> values = dp.get_data(split="train", normalization=True, column=[0])
+            >>> values = dp.get_data(split="train", standardization=True, column=[0])
         """
-        if normalization:
-            data = self.normalize_data()
+        if standardization:
+            data = self.standardize_data()
         else:
             data = self.data.values
 
