@@ -30,6 +30,8 @@ import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from pytagi import Normalizer as normalizer
+import scipy
 
 
 class Model:
@@ -790,6 +792,10 @@ class Model:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
+            )
+        if "bounded autoregression" in self.states_name:
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
+                mu_states_prior, var_states_prior, self.observation_matrix
             )
 
         self.mu_states_prior = mu_states_prior
