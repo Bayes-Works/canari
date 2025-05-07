@@ -123,8 +123,8 @@ def main(
         states_type="prior",
         model_prob=marginal_abnorm_prob_plot,
         # states_to_plot=[
-        #     "local level",
-        #     "local trend",
+        #     "level",
+        #     "trend",
         #     "periodic 1",
         #     "autoregression",
         #     "phi",
