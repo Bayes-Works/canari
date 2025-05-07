@@ -1,5 +1,5 @@
 """
-Data processing for time series.
+Data processing tools for time series.
 """
 
 from typing import Optional, Tuple, List, Dict
