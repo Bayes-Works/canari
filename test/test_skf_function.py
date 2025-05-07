@@ -77,7 +77,7 @@ def test_skf_transition_models():
     )
 
     # Test process noise matrices
-    idx_acc = skf.model["norm_norm"].get_states_index(states_name="local acceleration")
+    idx_acc = skf.model["norm_norm"].get_states_index(states_name="acceleration")
     assert (
         skf.model["norm_norm"].process_noise_matrix[idx_acc, idx_acc]
         == skf.model["abnorm_abnorm"].process_noise_matrix[idx_acc, idx_acc]

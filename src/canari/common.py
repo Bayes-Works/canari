@@ -270,7 +270,7 @@ def unstandardize_states(
     for key in mu_norm:
         _mu_norm = mu_norm[key]
         _std_norm = std_norm[key]
-        _norm_const_mean = norm_const_mean if key == "local level" else 0
+        _norm_const_mean = norm_const_mean if key == "level" else 0
         mu_unnorm[key] = Normalizer.unstandardize(
             _mu_norm, _norm_const_mean, norm_const_std
         )

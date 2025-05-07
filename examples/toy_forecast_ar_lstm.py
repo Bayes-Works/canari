@@ -170,8 +170,8 @@ fig, ax = plot_states(
     normalization=True,
     states_type=state_type,
     states_to_plot=[
-        "local level",
-        "local trend",
+        "level",
+        "trend",
         "lstm",
         "autoregression",
         "phi",
@@ -202,8 +202,8 @@ fig, ax = plot_states(
     states_type=state_type,
     normalization=True,
     states_to_plot=[
-        "local level",
-        "local trend",
+        "level",
+        "trend",
         "lstm",
         "autoregression",
     ],
