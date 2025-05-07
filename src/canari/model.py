@@ -593,7 +593,7 @@ class Model:
 
         Examples:
             >>> lstm_index = model.get_states_index("lstm")
-            >>> local_level_index = model.get_states_index("local level")
+            >>> level_index = model.get_states_index("level")
         """
 
         index = (
@@ -605,8 +605,8 @@ class Model:
 
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
-        Automatically assign initial means and variances for baseline hidden states (local level,
-        local trend, and local acceleration) from input data using time series decomposition
+        Automatically assign initial means and variances for baseline hidden states (level,
+        trend, and acceleration) from input data using time series decomposition
         defined in :meth:`~canari.data_process.DataProcess.decompose_data`.
 
         Args:
@@ -620,15 +620,15 @@ class Model:
         trend, slope, _, _ = DataProcess.decompose_data(data.flatten())
 
         for i, _state_name in enumerate(self.states_name):
-            if _state_name == "local level":
+            if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
-            elif _state_name == "local trend":
+            elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-2
-            elif _state_name == "local acceleration":
+            elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
                     self.var_states[i, i] = 1e-5
@@ -662,8 +662,8 @@ class Model:
 
         self.mu_states = self.states.mu_smooth[0].copy()
         self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
-        if "local level" in self.states_name and hasattr(self, "_mu_local_level"):
-            local_level_index = self.get_states_index("local level")
+        if "level" in self.states_name and hasattr(self, "_mu_local_level"):
+            local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
 
     def initialize_states_history(self):
