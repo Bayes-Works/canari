@@ -58,9 +58,9 @@ class Model:
         states_names (list[str]):
             Names of hidden states.
         mu_states (np.ndarray):
-            Mean vector for the hidden states :math:`X_{t|t}` at the time step `t`.
+            Mean vector for the hidden states :math:`X_{.|t}` at the time step `t`.
         var_states (np.ndarray):
-            Covariance matrix for the hidden states :math:`X_{t|t}` at the time step `t`.
+            Covariance matrix for the hidden states :math:`X_{.|t}` at the time step `t`.
         mu_states_prior (np.ndarray):
             Prior mean vector for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         var_states_prior (np.ndarray):
