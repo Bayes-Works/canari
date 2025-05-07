@@ -80,7 +80,8 @@ def forward(
         lstm_indice (Optional[int]): Index to insert LSTM predictions.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Predicted observation mean/var and state prior mean/var.
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            Predicted observation mean/var and state prior mean/var.
     """
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
@@ -196,7 +197,7 @@ def pad_matrix(
     pad_index: int,
     pad_row: Optional[np.ndarray] = None,
     pad_col: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray]:
+) -> np.ndarray:
     """
     Add a row and/or column padding to the matrix.
 
@@ -249,7 +250,9 @@ def gaussian_mixture(
     return np.float32(mu_mixture), np.float32(var_mixture)
 
 
-def unstandardize_states(mu_norm, std_norm, norm_const_mean, norm_const_std):
+def unstandardize_states(
+    mu_norm: dict, std_norm: dict, norm_const_mean: float, norm_const_std: float
+) -> Tuple[dict, dict]:
     """
     Unstandardize standardized mean and standard deviation of states.
 
@@ -303,10 +306,14 @@ class GMA(object):
             self.swap(-1, replace_index)
             self.delete(-1)
 
-    def multiply_and_augment(self, index1, index2):
+    def multiply_and_augment(self, index1: int, index2: int):
         """
         Augment the state vector with mean and covariance from the product of
         the two variables referred by the two input indices.
+
+        Args:
+            index1 (int): Index of the first variable.
+            index2 (int): Index of the second variable.
         """
         GMA_mu = np.vstack((self.mu, 0))
         GMA_var = np.append(self.var, np.zeros((1, self.var.shape[1])), axis=0)
@@ -329,7 +336,7 @@ class GMA(object):
         self.mu = GMA_mu
         self.var = GMA_var
 
-    def swap(self, index1, index2):
+    def swap(self, index1: int, index2: int):
         """
         Swap two variables in the mean and covariance structures.
 
@@ -341,7 +348,7 @@ class GMA(object):
         self.var[[index1, index2]] = self.var[[index2, index1]]
         self.var[:, [index1, index2]] = self.var[:, [index2, index1]]
 
-    def delete(self, index):
+    def delete(self, index: int):
         """
         Remove a variable from the mean and covariance structures.
 
@@ -352,7 +359,7 @@ class GMA(object):
         self.var = np.delete(self.var, index, axis=0)
         self.var = np.delete(self.var, index, axis=1)
 
-    def get_results(self):
+    def get_results(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the current mean and covariance.
 
