@@ -1,8 +1,9 @@
 from typing import Optional
 import numpy as np
+from canari.component.base_component import BaseComponent
 import pytagi
 from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
-from canari.component.base_component import BaseComponent
+import os
 
 
 class LstmNetwork(BaseComponent):
@@ -74,7 +75,10 @@ class LstmNetwork(BaseComponent):
         num_hidden_unit: Optional[int] = 50,
         look_back_len: Optional[int] = 1,
         num_features: Optional[int] = 1,
+        input_features: Optional[str] = None,
         num_output: Optional[int] = 1,
+        mu_states: Optional[np.ndarray] = None,
+        var_states: Optional[np.ndarray] = None,
         device: Optional[str] = "cpu",
         num_thread: Optional[int] = 1,
         manual_seed: Optional[int] = None,
@@ -89,6 +93,7 @@ class LstmNetwork(BaseComponent):
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
         self.num_features = num_features
+        self.input_features = input_features
         self.num_output = num_output
         self.device = device
         self.num_thread = num_thread
@@ -135,20 +140,6 @@ class LstmNetwork(BaseComponent):
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
     def initialize_lstm_network(self) -> Sequential:
-        """
-        Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
-
-        The network consists of:
-
-        - One or multiple LSTM layers, each with specified hidden units.
-        - A final Linear layer mapping the LSTM's output to the desired output size.
-
-        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
-
-        Returns:
-            Sequential: a :class:`pytagi.Sequential` instance representing the LSTM network.
-        """
-
         if self.manual_seed:
             pytagi.manual_seed(self.manual_seed)
 
@@ -185,6 +176,10 @@ class LstmNetwork(BaseComponent):
             lstm_network.to_device("cuda")
 
         if self.load_lstm_net:
-            lstm_network.load(filename=self.load_lstm_net)
+            if os.path.exists(self.load_lstm_net):
+                with open(self.load_lstm_net, 'r') as file:
+                    lstm_network.load(file)
+            else:
+                print(f"Warning: pretrained LSTM network file '{self.load_lstm_net}' not found.")
 
         return lstm_network
