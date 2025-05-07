@@ -19,6 +19,13 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
+# # Add synthetic anomaly to data
+# time_anomaly = 400
+# AR_stationary_var = 5**2 / (1 - 0.9**2)
+# anomaly_magnitude = -(np.sqrt(AR_stationary_var) * 1) / 50
+# for i in range(time_anomaly, len(df_raw)):
+#     df_raw.values[i] += anomaly_magnitude * (i - time_anomaly)
+
 # Data pre-processing
 all_data = {}
 all_data["y"] = df_raw.values
@@ -50,7 +57,7 @@ bar = BoundedAutoregression(
     phi=0.9,
     mu_states=[-0.0621, -0.0621],
     var_states=[6.36e-05, 6.36e-05],
-    gamma=1,
+    gamma=3,
 )
 
 # Normal model
