@@ -169,11 +169,11 @@ class DataProcess:
 
     def standardize_data(self) -> np.ndarray:
         """
-        TODO: unnomalize data method
-        Normalize the data using training statistics.
+        TODO: unstandardize data method
+        Standardize the data using training statistics.
 
         Returns:
-            np.ndarray: Normalized dataset.
+            np.ndarray: Standardized dataset.
         """
         return (
             Normalizer.standardize(
@@ -356,7 +356,7 @@ class DataProcess:
     ) -> List[Dict[str, np.ndarray]]:
         """
         # TODO
-        Add synthetic randomly generated anomalies to original data.
+        Add randomly generated synthetic anomalies to the original data.
         From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
         Following a uniform distribution, it randomly chooses within this window where the anomaly starts.
         After the anomaly start, the data is linearly shifted with a rate of change define by

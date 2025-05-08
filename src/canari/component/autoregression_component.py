@@ -6,8 +6,8 @@ from canari.component.base_component import BaseComponent
 class Autoregression(BaseComponent):
     """
     `Autoregression` class, inheriting from Canari's `BaseComponent`.
-    It models residuals following a univariate AR(1) process with optional learning of
-    the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`).
+    It models residuals following a univariate AR(1) process with optional treatement and estimation of
+    the autoregressive coefficient (`phi`) and process noise standard deviation (`std_error`) as hidden states.
 
     Parameters:
         std_error (Optional[float]): Standard deviation of the process noise. Defaults to `None`.
