@@ -3,7 +3,7 @@ This module manages historical values for LSTM' output, cell and hidden states.
 
 It provides two data classes:
 
-- `LstmOutputHistory`: Maintain a rolling history of LSTM mean and variance outputs.
+- `LstmOutputHistory`: Maintain a rolling history of the LSTM mean and variance outputs.
 - `StatesHistory`: Save prior, posterior, and smoothed estimates of hidden states over time.
 
 """
@@ -78,7 +78,7 @@ class StatesHistory:
         mu_prior (List[np.ndarray]): Mean of the prior hidden states.
         var_prior (List[np.ndarray]): Covariance matrix for the prior hiddens states.
         mu_posterior (List[np.ndarray]): Mean of the posterior hidden states.
-        var_posterior (List[np.ndarray]): Covariance matrix forthe posterior hidden states.
+        var_posterior (List[np.ndarray]): Covariance matrix for the posterior hidden states.
         mu_smooth (List[np.ndarray]): Mean of the smoothed estimates for hidden states.
         var_smooth (List[np.ndarray]): Covariance matrix for the smoothed estimates
                                         for hidden states.
