@@ -22,10 +22,10 @@ class LstmNetwork(BaseComponent):
         num_features (Optional[int]): Number of input features. Defaults to 1.
         num_output (Optional[int]): Number of output features predicted by the network.
                                     Defaults to 1.
-        device (Optional[str]): Device for computation, either "cpu" or "cuda". Defaults to "cpu".
+        device (Optional[str]): Device used for computation, either "cpu" or "cuda". Defaults to "cpu".
         num_thread (Optional[int]): Number of CPU threads for computation. Defaults to 1.
-        manual_seed (Optional[int]): Initial seed for reproducing random number generation
-                                    , i.e. intializing LSTM's weights and biases.
+        manual_seed (Optional[int]): Initial seed for reproducing random number generation,
+                                    i.e. intializing LSTM's weights and biases.
                                     Defaults to None (random initialization).
         gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.
         gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.
