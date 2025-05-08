@@ -524,8 +524,8 @@ def plot_with_uncertainty(
         color (str, optional): Line/fill color.
         linestyle (str, optional): Line style.
         label (List[str], optional): Labels for mean and confidence region.
-        index (int, optional): Index if plotting from multivariate tensor.
-        num_std (int, optional): Number of standard deviations for confidence region.
+        index (int, optional): Index if plotting from a multivariate tensor.
+        num_std (int, optional): Number of standard deviations for confidence regions.
         ax (plt.Axes, optional): Axis to use for plotting.
     """
 
