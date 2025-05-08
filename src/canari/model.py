@@ -67,11 +67,11 @@ class Model:
             Prior covariance matrix for the hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         mu_states_posterior (np.ndarray):
             Posteriror mean vector for the hidden states :math:`X_{t+1|t+1}` at the time step `t+1`.
-            In case of missing data (NaN observation), having the same values
+            In case of missing data (NaN observation), it will have the same values
             as :attr:`mu_states_prior`.
         var_states_posterior (np.ndarray):
             Posteriror covariance matrix for the hidden states :math:`X_{t+1|t+1}` at the time
-            step `t+1`. In case of missing data (NaN observation), having the same values
+            step `t+1`. In case of missing data (NaN observation), it will have the same values
             as :attr:`var_states_prior`.
         states (StatesHistory):
             Container for storing prior, posterior, and smoothed values of hidden states over time.
@@ -98,7 +98,7 @@ class Model:
         # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
 
         early_stop_metric (float):
-            Best value of the metric being monitored.
+            Best value associated with the metric being monitored.
         early_stop_metric_history (List[float]):
             Logged history of metric values across epochs.
         early_stop_lstm_param (Dict):
@@ -108,10 +108,10 @@ class Model:
         early_stop_init_var_states (np.ndarray):
             Copy of `var_states` at time step :math:`t=0` of the optimal epoch .
         optimal_epoch (int):
-            Epoch at which the monitored metric was best.
+            Epoch at which the metric being monitored was best.
         stop_training (bool):
             Flag indicating whether training has been stopped due to
-            early stopping or reaching maximum number of epoch.
+            early stopping or by reaching maximum number of epoch.
     """
 
     def __init__(
@@ -254,7 +254,7 @@ class Model:
 
     def _initialize_lstm_network(self):
         """
-        Initialize and configure LSTM network if there is a LstmNetwork component is used.
+        Initialize and configure an LSTM network if there is a LstmNetwork component is used.
         """
 
         lstm_component = next(
@@ -295,7 +295,7 @@ class Model:
         delta_var_lstm: np.ndarray,
     ):
         """
-        Update LSTM neural network's parameters.
+        Update the LSTM neural network's parameters.
 
         Args:
             delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
@@ -312,7 +312,7 @@ class Model:
         """
         TODO: remove epoch from input
         Apply exponential decay to white noise standard deviation over epochs.
-        This decaying noise structure is meant to improve the training performance
+        This decaying noise structure is intended to improve the training performance
         of TAGI-LSTM.
 
         Args:
@@ -366,7 +366,7 @@ class Model:
         """
         Apply forward path autoregressive (AR) moment transformations.
 
-        Updates prior state means and variances based on autoregressive error modeling,
+        Updates prior state means and variances based on the autoregressive error model,
         propagating uncertainty from W2bar to AR_error. These are used during the forward
         pass when AR components are present.
 
@@ -1023,7 +1023,7 @@ class Model:
 
     def smoother(self) -> StatesHistory:
         """
-        Run the Kalman smoother over an entire time series data, i.e. repeatly apply the
+        Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
         RTS smoothing equation over multiple time steps.
 
         This function is used at the entire-dataset-level. Recall repeatedly the function
@@ -1221,10 +1221,10 @@ class Model:
             num_time_steps (int):
                 Number of timesteps per generated series.
             sample_from_lstm_pred (bool, optional):
-                If False, zeroes out LSTM‐derived variance so that the generation
+                If False, zeroes out LSTM-derived variance so that the generation
                 ignores the LSTM uncertainty. Defaults to True.
             time_covariates (np.ndarray of shape (num_time_steps, cov_dim), optional):
-                Time‐varying covariates to include in generation. If provided,
+                Time-varying covariates to include in generation. If provided,
                 these will be standardized using `time_covariate_info` and
                 passed through the model each step. Defaults to None.
             time_covariate_info (dict, optional):

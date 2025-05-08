@@ -14,10 +14,10 @@ class LocalLevel(BaseComponent):
     `level`.
 
     Args:
-        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.
-        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to zeros 0.
+        mu_states (Optional[list[float]]): Initial mean of the hidden states. Defaults:
             initialized to zeros.
-        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+        var_states (Optional[list[float]]): Initial variance of the hidden states. Defaults:
             initialized to zeros.
 
     Examples:
@@ -96,7 +96,7 @@ class LocalTrend(BaseComponent):
     hidden states `level` and `trend`.
 
     Args:
-        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to 0.
         mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
             initialized to zeros.
         var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
@@ -182,7 +182,7 @@ class LocalAcceleration(BaseComponent):
     It has three hidden states `level`, `trend`, and `acceleration`.
 
     Args:
-        std_error (Optional[float]): Standard deviation of the process noise. Defaults to 0.0.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to 0.
         mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
             initialized to zeros.
         var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:

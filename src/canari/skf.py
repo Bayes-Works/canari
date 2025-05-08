@@ -30,7 +30,7 @@ class SKF:
         abnorm_model (Model): Model representing abnormal behavior.
         std_transition_error (float): Std deviation of transition error.
         norm_to_abnorm_prob (float): Transition probability from normal to abnormal.
-        abnorm_to_norm_prob (float): Transition probability  from abnormal to normal.
+        abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
 

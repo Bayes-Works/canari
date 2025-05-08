@@ -25,7 +25,7 @@ class ModelOptimizer:
         initialize_model (Callable):
             Function that returns a model instance given a model configuration.
         train (Callable):
-            Function that define the training procedure a model, it should return
+            Function that define the training procedure for a model, it should return
             `trained_model.early_stop_metric`.
         param_space (Dict[str, list]):
             Parameter search space: two-value lists [min, max] for defining the
@@ -168,7 +168,7 @@ class ModelOptimizer:
         Retrieve the optimized model instance after running optimization.
 
         Returns:
-            Any: Model instance initialized with the best-found hyperparameters.
+            Any: Model instance initialized with the best hyperparameter values.
 
         """
         return self.model_optim

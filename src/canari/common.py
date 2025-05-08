@@ -283,8 +283,8 @@ class GMA(object):
     Gaussian Multiplicative Approximation (GMA).
 
     Approximate the product of two Gaussian variables by a Gausian distribution
-    with exact moments calculation. The class allow augmenting the size of the
-     state vector in order to include the product term.
+    with exact moments calculation. The class allows augmenting the size of the
+    state vector in order to include the product term.
 
     Attributes:
         mu (np.ndarray): Mean vector.
