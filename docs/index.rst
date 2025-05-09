@@ -1,8 +1,5 @@
 .. _index:
 
-Canari's Documentation
-=================================
-
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials
