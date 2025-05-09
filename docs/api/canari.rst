@@ -1,6 +1,3 @@
-canari
-==============
-
 .. toctree::
    :maxdepth: 1
 
