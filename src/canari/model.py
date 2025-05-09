@@ -793,6 +793,7 @@ class Model:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
+        # # Original formula in BAR paper: TO BE DISUCUSSED with James
         # if "bounded autoregression" in self.states_name:
         #     mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
         #         mu_states_prior, var_states_prior, self.observation_matrix
