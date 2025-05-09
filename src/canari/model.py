@@ -843,11 +843,6 @@ class Model:
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
         mu_states_posterior = self.mu_states_prior + delta_mu_states
         var_states_posterior = self.var_states_prior + delta_var_states
-        # print('prior', self.var_states_prior)
-        # print(self.var_obs_predict)
-        # print(self.observation_matrix @ self.var_states_prior)
-        # print(delta_var_states)
-        # print('posterior', var_states_posterior)
 
         if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
