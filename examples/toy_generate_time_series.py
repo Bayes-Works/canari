@@ -133,6 +133,8 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(states)
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
@@ -142,7 +144,9 @@ model_dict["states_optimal"] = states_optim
 
 # Save model_dict to local
 import pickle
+import os
 
+os.makedirs("saved_params", exist_ok=True)
 with open("saved_params/toy_model_dict.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 

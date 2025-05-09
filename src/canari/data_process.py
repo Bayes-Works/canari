@@ -53,22 +53,27 @@ class DataProcess:
     def add_time_covariates(self):
         """Add time covariates to the data"""
 
-        if self.time_covariates is not None:
-            for time_cov in self.time_covariates:
-                if time_cov == "hour_of_day":
-                    self.data["hour_of_day"] = np.float32(self.data.index.hour)
-                elif time_cov == "day_of_week":
-                    self.data["day_of_week"] = np.float32(self.data.index.dayofweek)
-                elif time_cov == "day_of_year":
-                    self.data["day_of_year"] = np.float32(self.data.index.dayofyear)
-                elif time_cov == "week_of_year":
-                    self.data["week_of_year"] = np.array(
-                        self.data.index.isocalendar().week, dtype=np.float32
-                    )
-                elif time_cov == "month_of_year":
-                    self.data["month"] = np.float32(self.data.index.month)
-                elif time_cov == "quarter_of_year":
-                    self.data["quarter"] = np.float32(self.data.index.quarter)
+        if self.time_covariates is None:
+            return
+
+        if not isinstance(self.data.index, pd.DatetimeIndex):
+            raise TypeError("add_time_covariates requires a pd.DatetimeIndex")
+
+        allowed = {
+            "hour_of_day": lambda idx: idx.hour,
+            "day_of_week": lambda idx: idx.dayofweek,
+            "day_of_year": lambda idx: idx.dayofyear,
+            "week_of_year": lambda idx: idx.isocalendar().week,
+            "month_of_year": lambda idx: idx.month,
+            "quarter_of_year": lambda idx: idx.quarter,
+        }
+        extras = set(self.time_covariates) - set(allowed)
+        if extras:
+            raise ValueError(f"Unknown time covariates: {extras}")
+
+        for cov in dict.fromkeys(self.time_covariates):
+            vals = allowed[cov](self.data.index)
+            self.data[cov] = np.array(vals, dtype=np.float32)
 
     def get_split_start_end_indices(self):
         """Get indices for train, validation, and test sets"""
@@ -138,7 +143,12 @@ class DataProcess:
 
     def get_splits(
         self,
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    ) -> Tuple[
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+        Dict[str, np.ndarray],
+    ]:
         """Return training, validation, and test splits"""
 
         data = self.normalize_data()
@@ -180,7 +190,7 @@ class DataProcess:
         else:
             data = self.data.values
 
-        if column:
+        if column is not None:
             data_column = column
         else:
             data_column = self.output_col

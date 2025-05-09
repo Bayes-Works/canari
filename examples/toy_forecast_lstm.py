@@ -4,9 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-
+from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
+from canari.component import LstmNetwork, WhiteNoise, LocalTrend
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -28,29 +27,33 @@ df = df_raw.resample("H").mean()
 output_col = [0]
 num_epoch = 50
 
+# Build data processor
 data_processor = DataProcess(
     data=df,
+    time_covariates=["hour_of_day"],
     train_split=0.8,
-    validation_split=0.2,
+    validation_split=0.1,
     output_col=output_col,
 )
 
+# split data
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.0032322250444898116
+sigma_v = 0.003
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=19,
-        num_features=1,
+        look_back_len=12,
+        num_features=2,
         num_layer=1,
-        num_hidden_unit=50,
+        num_hidden_unit=40,
         device="cpu",
-        manual_seed=1,
+        manual_seed=235,
     ),
     WhiteNoise(std_error=sigma_v),
 )
+
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
@@ -76,13 +79,15 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, mode="min")
+    model.early_stopping(evaluate_metric=mse, mode="min", patience=10)
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
+        model_optim_dict = model.get_dict()
+        lstm_optim_states = model.lstm_net.get_lstm_states()
     if model.stop_training:
         break
     else:
@@ -91,7 +96,39 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-#  Plot
+# set memory and parameters to optimal epoch
+model.load_dict(model_optim_dict)
+model.lstm_net.set_lstm_states(lstm_optim_states)
+model.set_memory(
+    states=states_optim,
+    time_step=data_processor.test_start,
+)
+
+# forecat on the test set
+mu_test_preds, std_test_preds, test_states = model.forecast(
+    data=test_data,
+)
+
+# Unstandardize the predictions
+mu_test_preds = normalizer.unstandardize(
+    mu_test_preds,
+    data_processor.norm_const_mean[output_col],
+    data_processor.norm_const_std[output_col],
+)
+std_test_preds = normalizer.unstandardize_std(
+    std_test_preds,
+    data_processor.norm_const_std[output_col],
+)
+
+# calculate the test metrics
+test_obs = data_processor.get_data("test").flatten()
+mse = metric.mse(mu_test_preds, test_obs)
+log_lik = metric.log_likelihood(mu_test_preds, test_obs, std_test_preds)
+
+print(f"Test MSE            :{mse: 0.4f}")
+print(f"Test Log-Lik        :{log_lik: 0.2f}")
+
+# plot the test data
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
@@ -101,9 +138,17 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
+    validation_label=[r"$\mu$", r"$\pm\sigma$"],
 )
-plt.legend()
+plot_prediction(
+    data_processor=data_processor,
+    mean_test_pred=mu_test_preds,
+    std_test_pred=std_test_preds,
+    test_label=[r"$\mu^{\prime}$", r"$\pm\sigma^{\prime}$"],
+    color="purple",
+)
+plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
+plt.tight_layout()
 plt.show()
