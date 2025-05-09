@@ -84,6 +84,7 @@ class LstmNetwork(BaseComponent):
         model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
+        smoother: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -100,6 +101,7 @@ class LstmNetwork(BaseComponent):
         self._mu_states = mu_states
         self._var_states = var_states
         self.num_output = 2 * num_output if self.model_noise else num_output
+        self.smoother = smoother
         super().__init__()
 
     def initialize_component_name(self):
@@ -169,28 +171,52 @@ class LstmNetwork(BaseComponent):
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
-        layers.append(
-            LSTM(
-                self.num_features + self.look_back_len - 1,
-                self.num_hidden_unit[0],
-                1,
-                gain_weight=self.gain_weight,
-                gain_bias=self.gain_bias,
+        if self.smoother:
+            layers.append(
+                SLSTM(
+                    self.num_features + self.look_back_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
             )
-        )
-        for i in range(1, self.num_layer):
-            layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
-        # Last layer
-        layers.append(
-            Linear(
-                self.num_hidden_unit[-1],
-                self.num_output,
-                1,
-                gain_weight=self.gain_weight,
-                gain_bias=self.gain_bias,
+            for i in range(1, self.num_layer):
+                layers.append(
+                    SLSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1)
+                )
+            # Last layer
+            layers.append(
+                SLinear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
             )
-        )
-
+        else:
+            layers.append(
+                LSTM(
+                    self.num_features + self.look_back_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+            for i in range(1, self.num_layer):
+                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
+            # Last layer
+            layers.append(
+                Linear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
@@ -199,6 +225,11 @@ class LstmNetwork(BaseComponent):
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
             lstm_network.to_device("cuda")
+
+        if self.smoother:
+            lstm_network.smooth = True
+        else:
+            lstm_network.smooth = False
 
         if self.load_lstm_net:
             lstm_network.load(filename=self.load_lstm_net)
