@@ -4,12 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction
-from canari.component import LstmNetwork, WhiteNoise
+from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
+from canari.component import LstmNetwork, WhiteNoise, LocalTrend
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+linear_space = np.linspace(0, 2, num=len(df_raw))
+df_raw = df_raw.add(linear_space, axis=0)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -29,8 +31,8 @@ num_epoch = 50
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day"],
-    train_split=0.6,
-    validation_split=0.2,
+    train_split=0.8,
+    validation_split=0.1,
     output_col=output_col,
 )
 
@@ -38,8 +40,9 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.001
+sigma_v = 0.003
 model = Model(
+    LocalTrend(),
     LstmNetwork(
         look_back_len=12,
         num_features=2,
@@ -50,6 +53,8 @@ model = Model(
     ),
     WhiteNoise(std_error=sigma_v),
 )
+
+model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 for epoch in range(num_epoch):
@@ -91,10 +96,13 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# set memory to states_optim
+# set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
 model.lstm_net.set_lstm_states(lstm_optim_states)
-model.set_memory(states_optim, time_step=data_processor.test_start)
+model.set_memory(
+    states=states_optim,
+    time_step=data_processor.test_start,
+)
 
 # forecat on the test set
 mu_test_preds, std_test_preds, test_states = model.forecast(

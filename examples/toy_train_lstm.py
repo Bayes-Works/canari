@@ -65,7 +65,7 @@ for epoch in range(num_epoch):
     # set white noise decay
     if white_noise_decay and model.get_states_index("white noise") is not None:
         model._white_noise_decay(
-            model._current_epoch, white_noise_max_std=2, white_noise_decay_factor=0.9
+            model._current_epoch, white_noise_max_std=5, white_noise_decay_factor=0.9
         )
 
     # filter on train data
@@ -73,9 +73,6 @@ for epoch in range(num_epoch):
 
     # smooth on train data
     model.smoother(train_data)
-
-    # set memory for validation
-    model.set_memory(states=model.states, time_step=data_processor.validation_start)
 
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
