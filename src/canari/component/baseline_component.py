@@ -151,7 +151,7 @@ class LocalTrend(BaseComponent):
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = self.std_error**2 * np.array(
-            [[1 / 3, 1 / 2], [1 / 2, 1 / 3]]
+            [[1 / 3, 1 / 2], [1 / 2, 1]]
         )
 
     def initialize_mu_states(self):
