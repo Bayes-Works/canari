@@ -139,11 +139,14 @@ for epoch in pbar:
         # filter on train data
         model.filter(train_data, train_lstm=True)
 
+        # smoother on train data
+        model.smoother(train_data)
+
+        # set memory for forecasting
+        model.set_memory(states=model.states, time_step=data_processor.validation_start)
+
         # forecast on the validation set
         mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
-
-        # reset memory
-        model.set_memory(states=model.states, time_step=0)
 
         # Unstandardize the predictions
         mu_validation_preds = normalizer.unstandardize(
@@ -174,6 +177,9 @@ for epoch in pbar:
         model_optim_dict = model.get_dict()
     if model.stop_training:
         break
+    else:
+        # reset memory
+        model.set_memory(states=model.states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")

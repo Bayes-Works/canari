@@ -176,10 +176,6 @@ class LstmNetwork(BaseComponent):
             lstm_network.to_device("cuda")
 
         if self.load_lstm_net:
-            if os.path.exists(self.load_lstm_net):
-                with open(self.load_lstm_net, 'r') as file:
-                    lstm_network.load(file)
-            else:
-                print(f"Warning: pretrained LSTM network file '{self.load_lstm_net}' not found.")
+            lstm_network.load(filename=self.load_lstm_net)
 
         return lstm_network
