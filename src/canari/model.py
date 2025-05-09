@@ -678,7 +678,7 @@ class Model:
         self.filter(train_data)
         self.smoother(train_data)
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        self.set_memory(states=self.states, time_step=0)
+        # self.set_memory(states=self.states, time_step=0)
 
         return (
             np.array(mu_validation_preds).flatten(),

@@ -110,6 +110,9 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
 
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
+        
 
 # save model
 model_dict = model.get_dict()

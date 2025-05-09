@@ -89,13 +89,18 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(states)
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 
 # Saved the trained lstm network
+import os
+
 params_path = "saved_params/lstm_net_test.pth"
+os.makedirs(os.path.dirname(params_path), exist_ok=True)
 model.lstm_net.load_state_dict(model.early_stop_lstm_param)
 model.lstm_net.save(filename=params_path)
 
