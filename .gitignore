@@ -1,4 +1,4 @@
-*build
+build
 *.DS_Store
 *.vscode
 *.json
@@ -6,14 +6,14 @@ saved_results/
 **/__pycache__/
 *.egg-info/
 *.png
-dist
-docs
+dist/
 data/demo_data
 data/benchmark_data/
 saved_params/
 
-# VSCode
-.vscode
+# Docs
+docs/_build/*
+!docs/_build/html/
 
+# Figures
 !saved_results/time_series_toy.png
-

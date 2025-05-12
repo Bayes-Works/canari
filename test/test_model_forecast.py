@@ -41,9 +41,9 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
     # Initialize model
     model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 2])
-
-    for _ in range(5):
-        (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
+    num_epoch = 30
+    for epoch in range(num_epoch):
+        (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
             white_noise_decay=False,
@@ -52,12 +52,12 @@ def model_test_runner(model: Model, plot: bool) -> float:
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.norm_const_mean[output_col],
-            data_processor.norm_const_std[output_col],
+            data_processor.std_const_mean[output_col],
+            data_processor.std_const_std[output_col],
         )
         std_validation_preds = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.norm_const_std[output_col],
+            data_processor.std_const_std[output_col],
         )
 
         # Calculate the log-likelihood metric
@@ -65,9 +65,13 @@ def model_test_runner(model: Model, plot: bool) -> float:
         mse = metric.mse(mu_validation_preds, validation_obs)
 
         # Early-stopping
-        model.early_stopping(evaluate_metric=mse, mode="min")
+        model.early_stopping(
+            evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
+        )
         if model.stop_training:
             break
+        else:
+            model.set_memory(states=states, time_step=0)
 
     # Validation metric
     validation_obs = data_processor.get_data("validation").flatten()
@@ -76,7 +80,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
     if plot:
         plot_data(
             data_processor=data_processor,
-            normalization=False,
+            standardization=False,
             plot_column=output_col,
         )
         plot_prediction(

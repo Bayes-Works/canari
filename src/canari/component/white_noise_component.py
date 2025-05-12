@@ -1,10 +1,3 @@
-"""
-White Noise Component for Canari
-
-This module defines the `WhiteNoise` component, a special case of a state-space model
-with no dynamics. It captures uncorrelated, zero-mean Gaussian errors as a latent process.
-"""
-
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
@@ -12,24 +5,24 @@ from canari.component.base_component import BaseComponent
 
 class WhiteNoise(BaseComponent):
     """
-    White noise component for modeling i.i.d. Gaussian process errors.
-
-    This component represents a latent variable that has no memory or autoregression.
+    `WhiteNoise` class, inheriting from Canari's `BaseComponent`.
+    It is used to model zero-mean i.i.d. Gaussian errors.
 
     Args:
-        std_error (Optional[float]): Standard deviation of the white noise process. Default is 0.0.
+        std_error (Optional[float]): Standard deviation of the error. Default is 0.05.
 
     Examples:
-        >>> wn = WhiteNoise(std_error=0.5)
-        >>> wn.transition_matrix
+        >>> from canari.component import WhiteNoise
+        >>> white_noise = WhiteNoise(std_error=0.5)
+        >>> white_noise.transition_matrix
         array([[0]])
-        >>> wn.process_noise_matrix
+        >>> white_noise.process_noise_matrix
         array([[0.25]])
     """
 
     def __init__(
         self,
-        std_error: Optional[float] = 0.0,
+        std_error: Optional[float] = 0.05,
     ):
         self.std_error = std_error
         super().__init__()
