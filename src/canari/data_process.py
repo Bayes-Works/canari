@@ -89,7 +89,7 @@ class DataProcess:
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
 
-    def add_time_covariates(self):
+    def _add_time_covariates(self):
         """Add time covariates to the data"""
 
         if self.time_covariates is None:
@@ -200,7 +200,7 @@ class DataProcess:
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """Return training, validation, and test splits"""
 
-        data = self.normalize_data()
+        data = self.standardize_data()
         return (
             # Train split
             {
