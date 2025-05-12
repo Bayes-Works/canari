@@ -38,20 +38,14 @@ Open-source library for probabilistic anomaly detection in time series
     ```sh
     cd pycanari-0.0.2
     ```
-
-6. Run:
-
-    ```sh
-    conda install -c conda-forge libstdcxx-ng
-    ```
     
-7. Install requirements:
+6. Install requirements:
 
     ```sh
     pip install -r requirements.txt
     ```
 
-8. Test **pycanari** package:
+7. Test **pycanari** package:
 
     ```sh
     python -m examples.toy_forecast
@@ -70,7 +64,7 @@ canari
 |    |      (v0) read data
 |    |      (v0) resampling 
 |    |      (v0) split data into train/validation/test sets 
-|    |      (v0) normalization/unnormalization (from pytagi)
+|    |      (v0) standardization/unstandardization (from pytagi)
 |    |      (v1) automated outliers removal 
 |    |      (v1) save data 
 |    |

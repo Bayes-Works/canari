@@ -8,13 +8,13 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    SKF,
     ModelOptimizer,
+    SKF,
     SKFOptimizer,
     plot_data,
     plot_prediction,
-    plot_states,
     plot_skf_states,
+    plot_states,
 )
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
@@ -108,7 +108,7 @@ def main(
     fig, ax = plt.subplots(figsize=(10, 6))
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_test_data=False,
         plot_column=output_col,
         validation_label="y",
@@ -122,8 +122,8 @@ def main(
     plot_states(
         data_processor=data_processor,
         states=states_optim,
-        normalization=True,
-        states_to_plot=["local level"],
+        standardization=True,
+        states_to_plot=["level"],
         sub_plot=ax,
     )
     plt.legend()
@@ -160,7 +160,7 @@ def main(
     )
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
@@ -216,12 +216,12 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
-    # filter_marginal_abnorm_prob, _ = skf_optim.smoother(data=data_processor.all_data)
+    # smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["local level", "local trend", "lstm", "white noise"],
+        states_to_plot=["level", "trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",
@@ -254,7 +254,7 @@ def training(model, data_processor, num_epoch: int = 50):
     # plt.scatter(t_plot, y1, color="k")
     # plt.plot(
     #     data_processor.get_time("train"),
-    #     data_processor.get_data("train", normalization=True),
+    #     data_processor.get_data("train", standardization=True),
     #     color="r",
     # )
     # plt.show()
@@ -272,13 +272,13 @@ def training(model, data_processor, num_epoch: int = 50):
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.norm_const_mean[data_processor.output_col],
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_mean[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
         std_validation_preds_unnorm = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.norm_const_std[data_processor.output_col],
+            data_processor.std_const_std[data_processor.output_col],
         )
 
         validation_obs = data_processor.get_data("validation").flatten()
@@ -288,7 +288,11 @@ def training(model, data_processor, num_epoch: int = 50):
             std=std_validation_preds_unnorm,
         )
 
-        model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        model.early_stopping(
+            evaluate_metric=-validation_log_lik,
+            current_epoch=epoch,
+            max_epoch=num_epoch,
+        )
 
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds.copy()

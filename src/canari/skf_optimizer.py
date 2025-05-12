@@ -1,3 +1,9 @@
+"""
+This module automates the search for optimal hyperparameters of a
+:class:`~canari.skf.SKF` instance by leveraging the Ray Tune
+external library.
+"""
+
 from ray import tune
 from ray.tune import Callback, Stopper
 from typing import Callable, Optional
@@ -12,7 +18,34 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class SKFOptimizer:
     """
-    Parameter optimization for model_param.py
+    Optimize hyperparameters for :class:`~canari.skf.SKF` using the Ray Tune external library.
+
+    Args:
+        initialize_skf (Callable): Function that returns an SKF instance given a configuration.
+        model_param (dict): Serializable dictionary for :class:`~canari.model.Model` obtained from
+                            :meth:`~canari.model.Model.get_dict`.
+        param_space (dict): Parameter search space: two-value lists [min, max] for defining the
+                            bounds of the optimization.
+        data (dict): Input data for adding synthetic anomalies.
+        detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.
+                                                Defaults to 0.5.
+        false_rate_threshold (float, optional): Threshold for the maximal false detection rate.
+                                                Defaults to 0.0.
+        max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.
+                                                Defaults to None (to the end of time series).
+        num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as
+                            many time series, because one time series contains only one
+                            anomaly. Defaults to 50.
+        num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
+        grid_search (bool, optional): If True, perform grid search. Defaults to False.
+        algorithm (str, optional): Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
+        Defaults to 'OptunaSearch'.
+
+    Attributes:
+        skf_optim: Best SKF instance after optimization.
+        param_optim (dict): Best hyperparameter configuration.
+        detection_threshold: Threshold for detection rate for anomaly detection.
+        false_rate_threshold: Threshold for false rate.
     """
 
     def __init__(
@@ -29,23 +62,27 @@ class SKFOptimizer:
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
     ):
-        self.initialize_skf = initialize_skf
-        self.model_param = model_param
-        self.param_space = param_space
-        self.data = data
+        """
+        Initializes the SKFOptimizer.
+        """
+
+        self._initialize_skf = initialize_skf
+        self._model_param = model_param
+        self._param_space = param_space
+        self._data = data
         self.detection_threshold = detection_threshold
         self.false_rate_threshold = false_rate_threshold
-        self.max_timestep_to_detect = max_timestep_to_detect
-        self.num_optimization_trial = num_optimization_trial
-        self.num_synthetic_anomaly = num_synthetic_anomaly
-        self.grid_search = grid_search
-        self.algorithm = algorithm
+        self._max_timestep_to_detect = max_timestep_to_detect
+        self._num_optimization_trial = num_optimization_trial
+        self._num_synthetic_anomaly = num_synthetic_anomaly
+        self._grid_search = grid_search
+        self._algorithm = algorithm
         self.skf_optim = None
         self.param_optim = None
 
     def optimize(self):
         """
-        Optimization
+        Run hyperparameter optimization over the defined search space.
         """
 
         # Function for optimization
@@ -53,15 +90,15 @@ class SKFOptimizer:
             config,
             model_param_param: dict,
         ):
-            skf = self.initialize_skf(config, model_param_param)
+            skf = self._initialize_skf(config, model_param_param)
             slope = config["slope"]
 
             detection_rate, false_rate, false_alarm_train = (
                 skf.detect_synthetic_anomaly(
-                    data=self.data,
-                    num_anomaly=self.num_synthetic_anomaly,
+                    data=self._data,
+                    num_anomaly=self._num_synthetic_anomaly,
                     slope_anomaly=slope,
-                    max_timestep_to_detect=self.max_timestep_to_detect,
+                    max_timestep_to_detect=self._max_timestep_to_detect,
                 )
             )
 
@@ -85,17 +122,17 @@ class SKFOptimizer:
 
         # Parameter space
         search_config = {}
-        if self.grid_search:
+        if self._grid_search:
             total_trials = 1
-            for param_name, values in self.param_space.items():
+            for param_name, values in self._param_space.items():
                 search_config[param_name] = tune.grid_search(values)
                 total_trials *= len(values)
 
-            custom_logger = CustomLogger(total_samples=total_trials)
+            custom_logger = _CustomLogger(total_samples=total_trials)
             optimizer_runner = tune.run(
                 tune.with_parameters(
                     objective,
-                    model_param_param=self.model_param,
+                    model_param_param=self._model_param,
                 ),
                 config=search_config,
                 name="SKF_optimizer",
@@ -105,7 +142,7 @@ class SKFOptimizer:
                 callbacks=[custom_logger],
             )
         else:
-            for param_name, values in self.param_space.items():
+            for param_name, values in self._param_space.items():
                 if isinstance(values, list) and len(values) == 2:
                     low, high = values
                     if isinstance(low, int) and isinstance(high, int):
@@ -125,31 +162,31 @@ class SKFOptimizer:
                     )
 
             # Run optimization
-            custom_logger = CustomLogger(total_samples=self.num_optimization_trial)
-            if self.algorithm == "default":
+            custom_logger = _CustomLogger(total_samples=self._num_optimization_trial)
+            if self._algorithm == "default":
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         objective,
-                        model_param_param=self.model_param,
+                        model_param_param=self._model_param,
                     ),
                     config=search_config,
                     search_alg=OptunaSearch(metric="metric", mode="min"),
                     name="SKF_optimizer",
-                    num_samples=self.num_optimization_trial,
+                    num_samples=self._num_optimization_trial,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
                 )
-            elif self.algorithm == "parallel":
+            elif self._algorithm == "parallel":
                 scheduler = ASHAScheduler(metric="metric", mode="min")
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         objective,
-                        model_param_param=self.model_param,
+                        model_param_param=self._model_param,
                     ),
                     config=search_config,
                     name="SKF_optimizer",
-                    num_samples=self.num_optimization_trial,
+                    num_samples=self._num_optimization_trial,
                     scheduler=scheduler,
                     verbose=0,
                     raise_on_failed_trial=False,
@@ -164,7 +201,7 @@ class SKFOptimizer:
         )
 
         # Get the optimal skf
-        self.skf_optim = self.initialize_skf(self.param_optim, self.model_param)
+        self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
 
         # Print optimal parameters
         print("-----")
@@ -173,18 +210,37 @@ class SKFOptimizer:
 
     def get_best_model(self):
         """
-        Obtain optim model_param
+        Retrieves the SKF instance initialized with the best parameters.
+
+        Returns:
+            Any: SKF instance corresponding to the optimal configuration.
         """
         return self.skf_optim
 
 
-class CustomLogger(Callback):
+class _CustomLogger(Callback):
+    """
+    Ray Tune callback for logging trial progress.
+
+    Logs the sample count and metrics for each trial as they complete.
+    """
+
     def __init__(self, total_samples):
         self.total_samples = total_samples
         self.current_sample = 0
         self.trial_sample_map = {}
 
     def on_trial_result(self, iteration, trial, result, **info):
+        """
+        Called when a trial reports intermediate results.
+
+        Args:
+            iteration (int): Current iteration number.
+            trial (Trial): Trial object.
+            result (dict): Metrics reported by the trial.
+            **info: Additional info.
+        """
+
         self.current_sample += 1
         params = trial.config
         self.trial_sample_map[trial.trial_id] = self.current_sample
