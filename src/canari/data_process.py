@@ -198,16 +198,9 @@ class DataProcess:
     def get_splits(
         self,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """
-        Retrieve the input, output pairs (x, y) for train, validation, and test sets.
+        """Return training, validation, and test splits"""
 
-        Returns:
-            Tuple of dictionaries, each with keys "x" and "y".
-
-        Examples:
-            >>> train_set, val_set, test_set, all_data = dp.get_splits()
-        """
-        data = self.standardize_data()
+        data = self.normalize_data()
         return (
             # Train split
             {
