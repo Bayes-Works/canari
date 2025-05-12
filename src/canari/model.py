@@ -978,6 +978,7 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
+        # TODO: Check why it's needed
         if self.lstm_net.smooth:
             out_updater = OutputUpdater(self.lstm_net.device)
 
@@ -985,6 +986,7 @@ class Model:
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
+            # TODO: does not make sense when forecasting
             if self.lstm_net.smooth:
                 out_updater.update(
                     output_states=self.lstm_net.output_z_buffer,
@@ -1166,8 +1168,8 @@ class Model:
         self.filter(train_data)
         self.smoother() #TODO: why not train_data
 
-        mu_validation_preds = np.zeros(len(validation_data["y"]))
-        std_validation_preds = np.zeros(len(validation_data["y"]))
+        # mu_validation_preds = np.zeros(len(validation_data["y"]))
+        # std_validation_preds = np.zeros(len(validation_data["y"]))
 
         # if self.lstm_net.smooth:
         #     mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
@@ -1190,15 +1192,14 @@ class Model:
 
         if self.lstm_net.smooth:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            zo_smooth_std = np.array(var_zo_smooth) ** 0.5
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
             var_sequence = var_zo_smooth[: self.lstm_net.lstm_look_back_len]
             self.lstm_output_history.mu = mu_sequence
             self.lstm_output_history.var = var_sequence
             self.initialize_states_with_smoother_estimates()
-        # else:
-        #     self.set_memory(states=self.states, time_step=0)
-
+        else:
+            self.set_memory(states=self.states, time_step=0)
+        # TODO: to delete this internal count
         self._current_epoch += 1
 
         return (
