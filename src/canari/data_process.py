@@ -1,3 +1,7 @@
+"""
+Data processing tools for time series.
+"""
+
 from typing import Optional, Tuple, List, Dict
 import numpy as np
 import pandas as pd
@@ -6,7 +10,42 @@ from pytagi import Normalizer
 
 class DataProcess:
     """
-    Data process class
+    This module provides the `DataProcess` class to facilitate:
+
+    - Standardization of datasets based on training statistics
+    - Splitting data into training, validation, and test sets
+    - Adding time covariates (hour, day, month, etc.) to data
+    - Generating lagged versions of features
+    - Adding synthetic anomalies to data
+
+    Args:
+        data (pd.DataFrame): Input DataFrame with a datetime or numeric index.
+        train_start (Optional[str]): Start index for training set.
+        train_end (Optional[str]): End index for training set.
+        validation_start (Optional[str]): Start index for validation set.
+        validation_end (Optional[str]): End index for validation set.
+        test_start (Optional[str]): Start index for test set.
+        test_end (Optional[str]): End index for test set.
+        train_split (Optional[float]): Fraction of data for training set.
+        validation_split (Optional[float]): Fraction for validation set.
+        test_split (Optional[float]): Fraction for test set.
+        time_covariates (Optional[List[str]]): Time covariates added to dataset
+        output_col (list[int]): Column's indice for target variable.
+        standardization (Optional[bool]): Whether to apply data standardization
+                                        (zero mean, unit standard deviation).
+
+    Examples:
+        >>> import pandas as pd
+        >>> from canari import DataProcess
+        >>> dt_index = pd.date_range(start="2025-01-01", periods=11, freq="H")
+        >>> data = pd.DataFrame({'value': np.linspace(0.1, 1.0, 11)},
+                                index=dt_index)
+        >>> dp = DataProcess(data,
+                            train_split=0.7,
+                            validation_split=0.2,
+                            test_split=0.1,
+                            time_covariates = ["hour_of_day"],
+                            standardization=True,)
     """
 
     def __init__(
@@ -23,7 +62,7 @@ class DataProcess:
         test_split: Optional[float] = 0.0,
         time_covariates: Optional[List[str]] = None,
         output_col: list[int] = [0],
-        normalization: Optional[bool] = True,
+        standardization: Optional[bool] = True,
     ) -> None:
         self.train_start = train_start
         self.train_end = train_end
@@ -31,7 +70,7 @@ class DataProcess:
         self.validation_end = validation_end
         self.test_start = test_start
         self.test_end = test_end
-        self.normalization = normalization
+        self.standardization = standardization
         self.train_split = train_split
         self.validation_split = validation_split
         self.test_split = test_split
@@ -40,17 +79,17 @@ class DataProcess:
 
         data = data.astype("float32")
         self.data = data.copy()
-        self.norm_const_mean, self.norm_const_std = None, None
+        self.std_const_mean, self.std_const_std = None, None
 
-        self.add_time_covariates()
-        self.get_split_start_end_indices()
-        self.compute_normalization_constants()
+        self._add_time_covariates()
+        self._get_split_start_end_indices()
+        self._compute_standardization_constants()
 
         # Covariates columns
         self.covariates_col = np.ones(self.data.shape[1], dtype=bool)
         self.covariates_col[self.output_col] = False
 
-    def add_time_covariates(self):
+    def _add_time_covariates(self):
         """Add time covariates to the data"""
 
         if self.time_covariates is None:
@@ -75,9 +114,10 @@ class DataProcess:
             vals = allowed[cov](self.data.index)
             self.data[cov] = np.array(vals, dtype=np.float32)
 
-    def get_split_start_end_indices(self):
-        """Get indices for train, validation, and test sets"""
-
+    def _get_split_start_end_indices(self):
+        """
+        Determine start and end indices for training, validation, and test splits.
+        """
         num_data = len(self.data)
         if self.train_split is not None:
             self.test_split = 1 - self.train_split - self.validation_split
@@ -110,32 +150,46 @@ class DataProcess:
             else:
                 self.test_end = self.data.index.get_loc(self.test_end)
 
-    def compute_normalization_constants(self):
-        """Compute normalization constants"""
-        if self.normalization:
-            self.norm_const_mean, self.norm_const_std = Normalizer.compute_mean_std(
+    def _compute_standardization_constants(self):
+        """
+        Compute standardization statistics (mean, std) based on training data.
+        """
+        if self.standardization:
+            self.std_const_mean, self.std_const_std = Normalizer.compute_mean_std(
                 self.data.iloc[self.train_start : self.train_end].values
             )
         else:
-            self.norm_const_mean = np.zeros(self.data.shape[1])
-            self.norm_const_std = np.ones(self.data.shape[1])
+            self.std_const_mean = np.zeros(self.data.shape[1])
+            self.std_const_std = np.ones(self.data.shape[1])
 
-    def normalize_data(self) -> np.ndarray:
-        """Apply normalization"""
+    def standardize_data(self) -> np.ndarray:
+        """
+        TODO: unstandardize data method
+        Standardize the data using training statistics.
 
+        Returns:
+            np.ndarray: Standardized dataset.
+        """
         return (
             Normalizer.standardize(
                 data=self.data.values,
-                mu=self.norm_const_mean,
-                std=self.norm_const_std,
+                mu=self.std_const_mean,
+                std=self.std_const_std,
             )
-            if self.normalization
+            if self.standardization
             else self.data.values
         )
 
     def get_split_indices(self) -> Tuple[np.array, np.array, np.array]:
-        """Get train, validation, and test indices"""
+        """
+        Get the index ranges for the train, validation, and test splits.
 
+        Returns:
+            Tuple[np.array, np.array, np.array]: Train, validation, and test indices.
+
+        Examples:
+            >>> train_index, val_index, test_index = dp.get_split_indices()
+        """
         train_index = np.arange(self.train_start, self.train_end)
         validation_index = np.arange(self.validation_start, self.validation_end)
         test_index = np.arange(self.test_start, self.test_end)
@@ -143,15 +197,10 @@ class DataProcess:
 
     def get_splits(
         self,
-    ) -> Tuple[
-        Dict[str, np.ndarray],
-        Dict[str, np.ndarray],
-        Dict[str, np.ndarray],
-        Dict[str, np.ndarray],
-    ]:
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """Return training, validation, and test splits"""
 
-        data = self.normalize_data()
+        data = self.standardize_data()
         return (
             # Train split
             {
@@ -180,13 +229,25 @@ class DataProcess:
     def get_data(
         self,
         split: str,
-        normalization: Optional[bool] = False,
+        standardization: Optional[bool] = False,
         column: Optional[int] = None,
     ) -> np.ndarray:
-        """Data getter"""
+        """
+        Return a specific column's values for a given data split.
 
-        if normalization:
-            data = self.normalize_data()
+        Args:
+            split (str): One of ['train', 'validation', 'test', 'all'].
+            Standardization (bool): Whether to standardize the output.
+            column (Optional[int]):  Column index.
+
+        Returns:
+            np.ndarray: The extracted values.
+
+        Examples:
+            >>> values = dp.get_data(split="train", standardization=True, column=[0])
+        """
+        if standardization:
+            data = self.standardize_data()
         else:
             data = self.data.values
 
@@ -210,8 +271,18 @@ class DataProcess:
             )
 
     def get_time(self, split: str) -> np.ndarray:
-        """Time gettter"""
+        """
+        Get datetime indices corresponding to a given split.
 
+        Args:
+            split (str): One of ['train', 'validation', 'test', 'all'].
+
+        Returns:
+            np.ndarray: Array of timestamps.
+
+        Examples:
+            >>> time = dp.get_time(split="train")
+        """
         train_index, val_index, test_index = self.get_split_indices()
         if split == "train":
             return self.data.index[train_index].to_numpy()
@@ -227,32 +298,34 @@ class DataProcess:
             )
 
     @staticmethod
-    def add_lagged_columns(df, lags_per_column):
+    def add_lagged_columns(
+        data: pd.DataFrame, lags_per_column: list[int]
+    ) -> pd.DataFrame:
         """
-        Add lagged columns immediately after each original column while maintaining the datetime index.
+        Add lagged versions of each column in the dataset, then add to the dataset as
+        new columns.
 
-        Parameters:
-        df (pd.DataFrame): The original DataFrame with a datetime index.
-        lags_per_column (list of int): Number of lags for each column, in order.
+        Args:
+            data (pd.DataFrame): Input DataFrame with datetime index.
+            lags_per_column (list[int]): Number of lags per column.
 
         Returns:
-        pd.DataFrame: DataFrame with lagged columns added inline.
+            pd.DataFrame: New DataFrame with lagged columns.
+
+        Examples:
+            >>> data_lag = DataProcess.add_lagged_columns(data, [2])
         """
-        df_new = pd.DataFrame(index=df.index)  # Preserve the datetime index
-
+        df_new = pd.DataFrame(index=data.index)
         for col_idx, num_lags in enumerate(lags_per_column):
-            col = df.iloc[:, col_idx]
-            df_new[col.name] = col  # Add original column
-
-            # Generate lagged columns
+            col = data.iloc[:, col_idx]
+            df_new[col.name] = col
             for lag in range(1, num_lags + 1):
                 df_new[f"{col.name}_lag{lag}"] = col.shift(lag).fillna(0)
 
-        # If there are additional columns without specified lags, add them as is
-        if len(lags_per_column) < df.shape[1]:
-            for col_idx in range(len(lags_per_column), df.shape[1]):
-                col = df.iloc[:, col_idx]
-                df_new[col.name] = col  # Preserve remaining columns
+        if len(lags_per_column) < data.shape[1]:
+            for col_idx in range(len(lags_per_column), data.shape[1]):
+                col = data.iloc[:, col_idx]
+                df_new[col.name] = col
 
         return df_new
 
@@ -260,12 +333,36 @@ class DataProcess:
     def add_synthetic_anomaly(
         data: Dict[str, np.ndarray],
         num_samples: int,
-        slope: list[float],
+        slope: List[float],
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
-    ) -> dict:
-        """Add synthetic anomalies on top of a normal data"""
+    ) -> List[Dict[str, np.ndarray]]:
+        """
+        # TODO
+        Add randomly generated synthetic anomalies to the original data.
+        From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
+        Following a uniform distribution, it randomly chooses within this window where the anomaly starts.
+        After the anomaly start, the data is linearly shifted with a rate of change define by
+        `slope`.
 
+        Args:
+            data (dict): Data dict with "x" and "y".
+            num_samples (int): Number of anomalies to generate.
+            slope (list[float]): Slope for an anomaly.
+            anomaly_start (float, optional): Start of the anomaly window (0-1). Defaults to 0.33.
+            anomaly_end (float, optional): End of the anomaly window (0-1). Defaults to 0.66.
+
+        Returns:
+            list: Data dicts with anomalies injected.
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
+            >>> train_set_with_anomaly = DataProcess.add_synthetic_anomaly(
+                                            train_set,
+                                            num_samples=2,
+                                            slope=[0.01, 0.1],
+                                        )
+        """
         _data_with_anomaly = []
         len_data = len(data["y"])
         window_anomaly_start = int(np.ceil(len_data * anomaly_start))
@@ -275,18 +372,16 @@ class DataProcess:
         )
 
         for j, _slope in enumerate(slope):
-            for i in range(0, num_samples):
+            for i in range(num_samples):
                 trend = np.zeros(len_data)
                 change_point = anomaly_start_history[i + j * num_samples]
                 trend_end_value = _slope * (len_data - change_point - 1)
                 trend[change_point:] = np.linspace(
                     0, trend_end_value, len_data - change_point
                 )
-
-                # Add the trend to the original time series
                 _data_with_anomaly.append(data["y"].flatten() + trend)
 
-        data_with_anomaly = [
+        return [
             {
                 "x": data["x"],
                 "y": ts.reshape(-1, 1),
@@ -294,14 +389,30 @@ class DataProcess:
             }
             for ts, timestep in zip(_data_with_anomaly, anomaly_start_history)
         ]
-        return data_with_anomaly
 
     @staticmethod
-    def decompose_data(data):
-        """Decompose data into a linear trend, seasonality and residual using Fourier Transform"""
+    def decompose_data(data) -> Tuple[np.ndarray, float, np.ndarray, np.ndarray]:
+        """
+        Decompose a time series into a linear trend, seasonality, and residual following:
+
+         - Use a Fourier transform to estimate seasonality.
+         - `Deseasonalized_data = data - seasonality`
+         - Estimate a linear trend by fitting `Deseasonalized_data` with a first order polynomial
+         - Estimate residual = data - trend - seasonality
+
+        Args:
+            data (np.ndarray): 1D array.
+
+        Returns:
+            tuple: (trend, slope_of_trend, seasonality, residual)
+
+
+        Examples:
+            >>> train_set, val_set, test_set, all_data = dp.get_splits()
+            >>> trend, slope_of_trend, seasonality, residual = DataProcess.decompose_data(train_set["y"].flatten())
+        """
 
         def handle_missing_data(data):
-            """Fill missing values using linear interpolation."""
             if np.isnan(data).any():
                 data = (
                     pd.Series(data)
@@ -311,30 +422,24 @@ class DataProcess:
             return data
 
         def estimate_window(data):
-            """Using Fourier Transform to determine dominant frequency."""
             fft_spectrum = np.fft.fft(data - np.mean(data))
             frequencies = np.fft.fftfreq(len(data))
             power = np.abs(fft_spectrum)
-            peak_frequency = frequencies[
-                np.argmax(power[1:]) + 1
-            ]  # Ignore DC component
+            peak_frequency = frequencies[np.argmax(power[1:]) + 1]
             period = int(1 / peak_frequency) if peak_frequency > 0 else len(data) // 10
-            return max(3, period)  # Ensure a minimum window size
+            return max(3, period)
 
         def estimate_seasonality(data, window):
-            """Estimate seasonality with zero mean."""
-            period = window  # Use detected period from Fourier Transform
+            period = window
             seasonality = np.zeros_like(data)
             for i in range(period):
                 seasonality[i::period] = np.mean(data[i::period])
-            return seasonality - np.mean(seasonality)  # Zero mean seasonality
+            return seasonality - np.mean(seasonality)
 
         def estimate_trend(deseasonalized_data):
-            """Estimate linear trend using least squares regression."""
             x = np.arange(len(deseasonalized_data))
             slope, intercept = np.polyfit(x, deseasonalized_data, 1)
-            trend = slope * x + intercept
-            return trend, slope
+            return slope * x + intercept, slope
 
         data = handle_missing_data(np.array(data))
         window = estimate_window(data)
@@ -342,5 +447,4 @@ class DataProcess:
         deseasonalized_data = data - seasonality
         trend, slope = estimate_trend(deseasonalized_data)
         residual = data - trend - seasonality
-
         return trend, slope, seasonality, residual

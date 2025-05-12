@@ -1,3 +1,9 @@
+"""
+This module automates the search for optimal hyperparameters of a
+:class:`~canari.model.Model` instance by leveraging the Ray Tune
+external library.
+"""
+
 import signal
 from typing import Callable, Optional
 from ray import tune
@@ -12,7 +18,33 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class ModelOptimizer:
     """
-    Parameter optimization for model.py
+    Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune
+    external library.
+
+    Args:
+        initialize_model (Callable):
+            Function that returns a model instance given a model configuration.
+        train (Callable):
+            Function that define the training procedure for a model, it should return
+            `trained_model.early_stop_metric`.
+        param_space (Dict[str, list]):
+            Parameter search space: two-value lists [min, max] for defining the
+            bounds of the optimization.
+        data_processor (DataProcess):
+            DataProcess instance for data preparation.
+        num_optimization_trial (int, optional):
+            Number of random search trials (ignored for grid search). Defaults to 50.
+        grid_search (bool, optional):
+            If True, perform grid search. Defaults to False.
+        algorithm (str, optional):
+            Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
+            Defaults to 'OptunaSearch'.
+
+    Attributes:
+        model_optim :
+            The best model instance initialized with optimal parameters after running optimize().
+        param_optim (Dict[str, Any]):
+            The best hyperparameter configuration found during optimization.
     """
 
     def __init__(
@@ -25,41 +57,45 @@ class ModelOptimizer:
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
     ):
-        self.initialize_model = initialize_model
-        self.train = train
-        self.param_space = param_space
-        self.data_processor = data_processor
-        self.num_optimization_trial = num_optimization_trial
-        self.grid_search = grid_search
-        self.algorithm = algorithm
+        """
+        Initialize the ModelOptimizer.
+        """
+
+        self._initialize_model = initialize_model
+        self._train = train
+        self._param_space = param_space
+        self._data_processor = data_processor
+        self._num_optimization_trial = num_optimization_trial
+        self._grid_search = grid_search
+        self._algorithm = algorithm
         self.model_optim = None
         self.param_optim = None
 
     def optimize(self):
         """
-        Optimization
+        Run hyperparameter optimization over the defined search space.
         """
 
         # Function for optimization
         def objective(
             config,
         ):
-            model = self.initialize_model(config)
-            trained_model, *_ = self.train(
+            model = self._initialize_model(config)
+            trained_model, *_ = self._train(
                 model,
-                self.data_processor,
+                self._data_processor,
             )
             tune.report({"metric": trained_model.early_stop_metric})
 
         # Parameter space
         search_config = {}
-        if self.grid_search:
+        if self._grid_search:
             total_trials = 1
-            for param_name, values in self.param_space.items():
+            for param_name, values in self._param_space.items():
                 search_config[param_name] = tune.grid_search(values)
                 total_trials *= len(values)
 
-            custom_logger = CustomLogger(total_samples=total_trials)
+            custom_logger = _CustomLogger(total_samples=total_trials)
             optimizer_runner = tune.run(
                 objective,
                 config=search_config,
@@ -70,7 +106,7 @@ class ModelOptimizer:
                 callbacks=[custom_logger],
             )
         else:
-            for param_name, values in self.param_space.items():
+            for param_name, values in self._param_space.items():
                 if isinstance(values, list) and len(values) == 2:
                     low, high = values
                     if isinstance(low, int) and isinstance(high, int):
@@ -87,25 +123,25 @@ class ModelOptimizer:
                     )
 
             # Run optimization
-            custom_logger = CustomLogger(total_samples=self.num_optimization_trial)
-            if self.algorithm == "default":
+            custom_logger = _CustomLogger(total_samples=self._num_optimization_trial)
+            if self._algorithm == "default":
                 optimizer_runner = tune.run(
                     objective,
                     config=search_config,
                     search_alg=OptunaSearch(metric="metric", mode="min"),
                     name="Model_optimizer",
-                    num_samples=self.num_optimization_trial,
+                    num_samples=self._num_optimization_trial,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
                 )
-            elif self.algorithm == "parallel":
+            elif self._algorithm == "parallel":
                 scheduler = ASHAScheduler(metric="metric", mode="min")
                 optimizer_runner = tune.run(
                     objective,
                     config=search_config,
                     name="Model_optimizer",
-                    num_samples=self.num_optimization_trial,
+                    num_samples=self._num_optimization_trial,
                     scheduler=scheduler,
                     verbose=0,
                     raise_on_failed_trial=False,
@@ -120,7 +156,7 @@ class ModelOptimizer:
         )
 
         # Get the optimal model
-        self.model_optim = self.initialize_model(self.param_optim)
+        self.model_optim = self._initialize_model(self.param_optim)
 
         # Print optimal parameters
         print("-----")
@@ -129,18 +165,53 @@ class ModelOptimizer:
 
     def get_best_model(self):
         """
-        Obtain optim model
+        Retrieve the optimized model instance after running optimization.
+
+        Returns:
+            Any: Model instance initialized with the best hyperparameter values.
+
         """
         return self.model_optim
 
 
-class CustomLogger(Callback):
+class _CustomLogger(Callback):
+    """
+    Ray Tune callback for custom logging of trial progress.
+
+    Attributes:
+        total_samples (int): Total number of expected trials.
+        current_sample (int): Counter of completed samples.
+        trial_sample_map (Dict[str, int]):
+            Maps trial IDs to their corresponding sample index.
+    """
+
     def __init__(self, total_samples):
+        """
+        Initialize the _CustomLogger.
+
+        Args:
+            total_samples (int): Total number of optimization trials.
+        """
+
         self.total_samples = total_samples
         self.current_sample = 0
         self.trial_sample_map = {}
 
     def on_trial_result(self, iteration, trial, result, **info):
+        """
+        Log progress when a trial reports results.
+
+        Increments the sample counter, records a mapping from trial ID to
+        the sample index, and prints a formatted line containing the running
+        sample count, reported metric, and trial parameters.
+
+        Args:
+            iteration (int): Current iteration number of Ray Tune.
+            trial (Trial): The Ray Tune Trial object.
+            result (Dict[str, Any]): Dictionary of trial results; must include key 'metric'.
+            **info: Additional callback info.
+        """
+
         self.current_sample += 1
         params = trial.config
         metric = result["metric"]

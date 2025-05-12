@@ -1,8 +1,5 @@
 """
-Baseline components for Canari
-
-This module defines three state-space components for modeling local level,
-local trend, and local acceleration dynamics. Each class inherits from `BaseComponent`.
+This module defines three components for modelling baselines including `LocalLevel`, `LocalTrend`, and `LocalAcceleration`.
 """
 
 from typing import Optional
@@ -12,29 +9,41 @@ from canari.component.base_component import BaseComponent
 
 class LocalLevel(BaseComponent):
     """
-    Local level component for modeling baselines with a constant level over time.
+    `LocalLevel` class, inheriting from Canari's `BaseComponent`.
+    It models baselines with a locally constant level (zero speed) over time. It has one hidden state
+    `level`.
 
     Args:
-        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
-
-    Raises:
-        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to zeros 0.
+        mu_states (Optional[list[float]]): Initial mean of the hidden states. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden states. Defaults:
+            initialized to zeros.
 
     Examples:
+        >>> from canari.component import LocalLevel
+        >>> # With known mu_states and var_states
+        >>> level = LocalLevel(mu_states=[1], var_states=[1],std_error=0.5)
+        >>> # With default mu_states and var_states
         >>> level = LocalLevel(std_error=0.5)
-        >>> print(level.component_name)
-        local level
+        >>> level.component_name
+        'local level'
+        >>> level.states_name
+        ['level']
         >>> level.transition_matrix
         array([[1]])
+        >>> level.observation_matrix
+        array([[1]])
+        >>> level.process_noise_matrix
+        >>> level.mu_states
+        >>> level.var_states
     """
 
     def __init__(
         self,
         std_error: Optional[float] = 0.0,
-        mu_states: Optional[np.ndarray] = None,
-        var_states: Optional[np.ndarray] = None,
+        mu_states: Optional[list[float]] = None,
+        var_states: Optional[list[float]] = None,
     ):
         self.std_error = std_error
         self._mu_states = mu_states
@@ -48,7 +57,7 @@ class LocalLevel(BaseComponent):
         self._num_states = 1
 
     def initialize_states_name(self):
-        self._states_name = ["local level"]
+        self._states_name = ["level"]
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array([[1]])
@@ -82,21 +91,36 @@ class LocalLevel(BaseComponent):
 
 class LocalTrend(BaseComponent):
     """
-    Local trend component for modeling baselines with a constant speed over time.
-    This component captures a latent linear trend with both intercept and slope terms.
+    `LocalTrend` class, inheriting from Canari's `BaseComponent`.
+    It models baselines with a locally constant speed over time (linear level). It has two
+    hidden states `level` and `trend`.
 
     Args:
-        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
-
-    Raises:
-        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to 0.
+        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+            initialized to zeros.
 
     Examples:
-        >>> trend = LocalTrend(std_error=0.2)
-        >>> trend.states_name
-        ['local level', 'local trend']
+        >>> from canari.component import LocalTrend
+        >>> # With known mu_states and var_states
+        >>> local_trend = LocalAcceleration(mu_states=[1, 2], var_states=[1, 2], std_error=0.3)
+        >>> # With default mu_states and var_states
+        >>> local_trend = LocalTrend(std_error=0.2)
+        >>> level.component_name
+        'local trend'
+        >>> local_trend.states_name
+        ['level', 'trend']
+        >>> local_trend.transition_matrix
+        array([[1, 1],
+               [0, 1]])
+        >>> local_trend.observation_matrix
+        array([[1, 0]])
+        >>> local_trend.process_noise_matrix
+        >>> local_trend.mu_states
+        >>> local_trend.var_states
+
     """
 
     def __init__(
@@ -117,7 +141,7 @@ class LocalTrend(BaseComponent):
         self._num_states = 2
 
     def initialize_states_name(self):
-        self._states_name = ["local level", "local trend"]
+        self._states_name = ["level", "trend"]
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array([[1, 1], [0, 1]])
@@ -127,7 +151,7 @@ class LocalTrend(BaseComponent):
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = self.std_error**2 * np.array(
-            [[1 / 3, 1 / 2], [1 / 2, 1 / 3]]
+            [[1 / 3, 1 / 2], [1 / 2, 1]]
         )
 
     def initialize_mu_states(self):
@@ -153,23 +177,32 @@ class LocalTrend(BaseComponent):
 
 class LocalAcceleration(BaseComponent):
     """
-    Local acceleration component for modeling baselines with a constant acceleration over time.
-    This component models three hidden states: level, slope, and acceleration in order to capture a curvature baseline.
+    `LocalAcceleration` class, inheriting from Canari's `BaseComponent`.
+    It models baselines with a locally constant acceleration (linear speed and curvature level) over time.
+    It has three hidden states `level`, `trend`, and `acceleration`.
 
     Args:
-        std_error (Optional[float]): Process noise standard deviation. Default is 0.0.
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
-
-    Raises:
-        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.
+        std_error (Optional[float]): Standard deviation of the process noise. Defaults: initialized to 0.
+        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+            initialized to zeros.
 
     Examples:
-        >>> acc = LocalAcceleration(std_error=0.3)
-        >>> acc.transition_matrix
+        >>> from canari.component import LocalAcceleration
+        >>> # With known mu_states and var_states
+        >>> local_acc = LocalAcceleration(mu_states = [1, 2, 3], var_states = [1, 2, 3], std_error=0.3)
+        >>> # With default mu_states and var_states
+        >>> local_acc = LocalAcceleration(std_error=0.3)
+        >>> local_acc.transition_matrix
         array([[1. , 1. , 0.5],
                [0. , 1. , 1. ],
                [0. , 0. , 1. ]])
+        >>> local_acc.observation_matrix
+        array([[1, 0, 0]])
+        >>> local_acc.process_noise_matrix
+        >>> local_acc.mu_states
+        >>> local_acc.var_states
     """
 
     def __init__(
@@ -190,7 +223,7 @@ class LocalAcceleration(BaseComponent):
         self._num_states = 3
 
     def initialize_states_name(self):
-        self._states_name = ["local level", "local trend", "local acceleration"]
+        self._states_name = ["level", "trend", "acceleration"]
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array([[1, 1, 0.5], [0, 1, 1], [0, 0, 1]])
