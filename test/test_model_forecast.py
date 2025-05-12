@@ -43,7 +43,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
     model.auto_initialize_baseline_states(train_data["y"][0 : 24 * 2])
     num_epoch = 30
     for epoch in range(num_epoch):
-        (mu_validation_preds, std_validation_preds, _) = model.lstm_train(
+        (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
             white_noise_decay=False,
@@ -70,6 +70,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
         )
         if model.stop_training:
             break
+        else:
+            model.set_memory(states=states, time_step=0)
 
     # Validation metric
     validation_obs = data_processor.get_data("validation").flatten()
