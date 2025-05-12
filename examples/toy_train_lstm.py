@@ -56,23 +56,17 @@ model = Model(
 
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
-# set white noise decay to True
-white_noise_decay = True
-
 # Training
 for epoch in range(num_epoch):
 
     # set white noise decay
-    if white_noise_decay and model.get_states_index("white noise") is not None:
-        model._white_noise_decay(
-            model._current_epoch, white_noise_max_std=5, white_noise_decay_factor=0.9
-        )
+    model._white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
 
     # filter on train data
     model.filter(train_data, train_lstm=True)
 
     # smooth on train data
-    model.smoother(train_data)
+    model.smoother()
 
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
@@ -80,12 +74,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     # Calculate the log-likelihood metric
@@ -93,7 +87,7 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, mode="min", patience=10)
+    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -127,12 +121,12 @@ mu_test_preds, std_test_preds, test_states = model.forecast(
 # Unstandardize the predictions
 mu_test_preds = normalizer.unstandardize(
     mu_test_preds,
-    data_processor.norm_const_mean[output_col],
-    data_processor.norm_const_std[output_col],
+    data_processor.std_const_mean[output_col],
+    data_processor.std_const_std[output_col],
 )
 std_test_preds = normalizer.unstandardize_std(
     std_test_preds,
-    data_processor.norm_const_std[output_col],
+    data_processor.std_const_std[output_col],
 )
 
 # calculate the test metrics
@@ -147,7 +141,7 @@ print(f"Test Log-Lik        :{log_lik: 0.2f}")
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
-    normalization=False,
+    standardization=False,
     plot_column=output_col,
     validation_label="y",
 )
