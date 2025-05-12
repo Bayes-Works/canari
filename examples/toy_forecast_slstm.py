@@ -11,8 +11,8 @@ from canari.component import LstmNetwork, WhiteNoise, LocalTrend
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
-df_raw = df_raw.add(linear_space, axis=0)
+# linear_space = np.linspace(0, 2, num=len(df_raw))
+# df_raw = df_raw.add(linear_space, axis=0)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -40,7 +40,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 # Model
 sigma_v = 0.0032322250444898116
 model = Model(
-    LocalTrend(),
+    # LocalTrend(),
     LstmNetwork(
         look_back_len=19,
         num_features=1,
@@ -99,6 +99,8 @@ for epoch in range(num_epoch):
         )  # If we want to plot the states, plot those from optimal epoch
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
