@@ -58,6 +58,7 @@ bar = BoundedAutoregression(
     mu_states=[-0.0621, -0.0621],
     var_states=[6.36e-05, 6.36e-05],
     gamma=2,
+    # formular="BAR_paper",
 )
 
 # Normal model
@@ -69,15 +70,27 @@ model = Model(
 )
 
 # # #
-model.filter(data=train_data)
+mu_obs_preds,std_obs_preds,_ = model.filter(data=train_data)
 model.smoother(data=train_data)
 
 # #  Plot
-plot_states(
+fig, axes=plot_states(
     data_processor=data_processor,
     states=model.states,
     states_type="prior",
 )
+# from canari.data_visualization import determine_time
+# time = determine_time(data_processor, len(all_data["y"]))
+# axes[0].plot(time[:len(train_data["y"])], train_data["y"], label="observed", color="black")
+# axes[0].plot(time[:len(train_data["y"])], mu_obs_preds, label="predicted", color="red")
+# axes[0].fill_between(
+#     time[:len(train_data["y"])],
+#     mu_obs_preds - std_obs_preds,
+#     mu_obs_preds + std_obs_preds,
+#     color="red",
+#     alpha=0.2,
+# )
+# axes[-2].set_ylim(-20, 20)
 plot_states(
     data_processor=data_processor,
     states=model.states,
