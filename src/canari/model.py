@@ -369,11 +369,12 @@ class Model:
             mu_states_prior, var_states_prior = self.online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
-        # # Original formula in BAR paper: TO BE DISUCUSSED with James
-        # if "bounded autoregression" in self.states_name:
-        #     mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
-        #         mu_states_prior, var_states_prior, self.observation_matrix
-        #     )
+
+        if "bounded autoregression" in self.states_name:
+            if self.components["bounded autoregression"].formular == "BAR_paper":
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_foward_modification(
+                    mu_states_prior, var_states_prior, self.observation_matrix
+                )
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -411,9 +412,10 @@ class Model:
             )
 
         if "bounded autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
-                mu_states_posterior, var_states_posterior
-            )
+            if self.components["bounded autoregression"].formular == "onlineAR_similar":
+                mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
+                    mu_states_posterior, var_states_posterior
+                )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
@@ -785,6 +787,46 @@ class Model:
             var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
             var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
         return mu_states_prior, var_states_prior
+    
+    def BAR_foward_modification(self, mu_states_prior, var_states_prior, observation_matrix):
+        """
+        BAR backward modification
+        """
+
+        ar_index = self.get_states_index("autoregression")
+        bar_index = self.get_states_index("bounded autoregression")
+
+        mu_AR = mu_states_prior[ar_index]
+        var_AR = var_states_prior[ar_index, ar_index]
+        cov_AR = var_states_prior[ar_index, :]
+
+        bound = (self.components["bounded autoregression"].gamma * 
+                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
+                    (1 - self.components["bounded autoregression"].phi**2)))
+        
+        l_bar = mu_AR + bound
+
+        mu_L = l_bar * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - bound
+        var_L = (l_bar**2 + var_AR) * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+
+        u_bar = -mu_AR + bound
+        mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) + bound
+        var_U = (u_bar**2 + var_AR) * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+
+        mu_states_prior[bar_index] = mu_L + mu_U - mu_AR
+        cov_bar = cov_AR * (scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - 1)
+        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_prior[bar_index] - mu_AR)**2 - var_AR)
+        var_states_prior[bar_index, :] = cov_bar
+        var_states_prior[:, bar_index] = cov_bar
+        var_states_prior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
+
+        # Update the predicted observation
+        from canari.common import calc_observation
+        mu_obs_predict, var_obs_predict = calc_observation(
+            mu_states_prior, var_states_prior, observation_matrix
+        )
+        
+        return np.float32(mu_obs_predict), np.float32(var_obs_predict), np.float32(mu_states_prior), np.float32(var_states_prior)
     
     def BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
         """
