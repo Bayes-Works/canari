@@ -793,11 +793,12 @@ class Model:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
-        # # Original formula in BAR paper: TO BE DISUCUSSED with James
-        # if "bounded autoregression" in self.states_name:
-        #     mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_forward_modification(
-        #         mu_states_prior, var_states_prior, self.observation_matrix
-        #     )
+
+        if "bounded autoregression" in self.states_name:
+            if self.components["bounded autoregression"].formular == "BAR_paper":
+                mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.BAR_foward_modification(
+                    mu_states_prior, var_states_prior, self.observation_matrix
+                )
 
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
@@ -854,9 +855,10 @@ class Model:
             )
 
         if "bounded autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
-                mu_states_posterior, var_states_posterior
-            )
+            if self.components["bounded autoregression"].formular == "onlineAR_similar":
+                mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
+                    mu_states_posterior, var_states_posterior
+                )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
