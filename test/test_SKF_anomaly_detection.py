@@ -97,10 +97,10 @@ def SKF_anomaly_detection_runner(
             current_epoch=epoch,
             max_epoch=num_epoch,
         )
+
+        skf.model["norm_norm"].set_memory(states=states, time_step=0)
         if skf.stop_training:
             break
-        else:
-            skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
     # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)

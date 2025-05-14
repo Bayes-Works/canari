@@ -68,10 +68,10 @@ def model_test_runner(model: Model, plot: bool) -> float:
         model.early_stopping(
             evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
         )
+
+        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
-        else:
-            model.set_memory(states=states, time_step=0)
 
     # Validation metric
     validation_obs = data_processor.get_data("validation").flatten()

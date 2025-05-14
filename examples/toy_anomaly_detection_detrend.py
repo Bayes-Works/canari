@@ -152,10 +152,10 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+
+    model_lstm.set_memory(states=states, time_step=0)
     if model_lstm.stop_training:
         break
-    else:
-        model_lstm.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model_lstm.optimal_epoch}")
 print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
