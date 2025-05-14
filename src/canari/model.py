@@ -753,14 +753,14 @@ class Model:
             self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                lstm_states = self.lstm_net.get_lstm_states()
-                for key in lstm_states:
-                    old_tuple = lstm_states[key]
-                    new_tuple = tuple(
-                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                    )
-                    lstm_states[key] = new_tuple
-                self.lstm_net.set_lstm_states(lstm_states)
+                # lstm_states = self.lstm_net.get_lstm_states()
+                # for key in lstm_states:
+                #     old_tuple = lstm_states[key]
+                #     new_tuple = tuple(
+                #         np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                #     )
+                #     lstm_states[key] = new_tuple
+                # self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -979,23 +979,23 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         # TODO: Check why it's needed
-        if self.lstm_net.smooth:
-            out_updater = OutputUpdater(self.lstm_net.device)
+        # if self.lstm_net.smooth:
+        #     out_updater = OutputUpdater(self.lstm_net.device)
 
         for x in data["x"]:
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
             # TODO: does not make sense when forecasting
-            if self.lstm_net.smooth:
-                out_updater.update(
-                    output_states=self.lstm_net.output_z_buffer,
-                    mu_obs=np.array([np.nan], dtype=np.float32),
-                    var_obs=np.array([0], dtype=np.float32),
-                    delta_states=self.lstm_net.input_delta_z_buffer,
-                )
-                self.lstm_net.backward()
-                self.lstm_net.step()
+            # if self.lstm_net.smooth:
+            #     out_updater.update(
+            #         output_states=self.lstm_net.output_z_buffer,
+            #         mu_obs=np.array([np.nan], dtype=np.float32),
+            #         var_obs=np.array([0], dtype=np.float32),
+            #         delta_states=self.lstm_net.input_delta_z_buffer,
+            #     )
+            #     self.lstm_net.backward()
+            #     self.lstm_net.step()
 
             if self.lstm_net:
                 lstm_index = self.get_states_index("lstm")
@@ -1166,27 +1166,7 @@ class Model:
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
         self.filter(train_data)
-        self.smoother() #TODO: why not train_data
-
-        # mu_validation_preds = np.zeros(len(validation_data["y"]))
-        # std_validation_preds = np.zeros(len(validation_data["y"]))
-
-        # if self.lstm_net.smooth:
-        #     mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-        #     zo_smooth_std = np.array(var_zo_smooth) ** 0.5
-        #     mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
-        #     var_sequence = var_zo_smooth[: self.lstm_net.lstm_look_back_len]
-        #     self.lstm_output_history.mu = mu_sequence
-        #     self.lstm_output_history.var = var_sequence
-        #     self.initialize_states_with_smoother_estimates()
-        # else:
-        #     self.set_memory(states=self.states, time_step=0)
-
-        # return (
-        #     np.array(mu_validation_preds).flatten(),
-        #     np.array(std_validation_preds).flatten(),
-        #     self.states,
-        # )
+        self.smoother()
 
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
 
