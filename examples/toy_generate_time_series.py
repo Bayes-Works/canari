@@ -134,10 +134,10 @@ for epoch in range(num_epoch):
         mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
         std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
+
+    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
-    else:
-        model.set_memory(states=states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
