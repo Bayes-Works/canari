@@ -54,7 +54,7 @@ def main(
     # Define model
     def initialize_model(param):
         return Model(
-            LocalTrend(),
+            LocalTrend(std_error=0),
             LstmNetwork(
                 look_back_len=param["look_back_len"],
                 num_features=17,
@@ -106,30 +106,30 @@ def main(
     model_optim_dict = model_optim.get_dict()
 
     # Plot
-    fig, ax = plt.subplots(figsize=(10, 6))
-    plot_data(
-        data_processor=data_processor,
-        standardization=True,
-        plot_test_data=False,
-        plot_column=output_col,
-        validation_label="y",
-    )
-    plot_prediction(
-        data_processor=data_processor,
-        mean_validation_pred=mu_validation_preds,
-        std_validation_pred=std_validation_preds,
-        validation_label=[r"$\mu$", f"$\pm\sigma$"],
-    )
-    plot_states(
-        data_processor=data_processor,
-        states=states_optim,
-        standardization=True,
-        states_to_plot=["level"],
-        sub_plot=ax,
-    )
-    plt.legend()
-    plt.title("Validation predictions")
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    # )
+    # plot_prediction(
+    #     data_processor=data_processor,
+    #     mean_validation_pred=mu_validation_preds,
+    #     std_validation_pred=std_validation_preds,
+    #     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+    # )
+    # plot_states(
+    #     data_processor=data_processor,
+    #     states=states_optim,
+    #     standardization=True,
+    #     states_to_plot=["level"],
+    #     sub_plot=ax,
+    # )
+    # plt.legend()
+    # plt.title("Validation predictions")
+    # plt.show()
 
     # Define SKF model
     def initialize_skf(skf_param, model_param: dict):
@@ -159,26 +159,26 @@ def main(
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
-    plot_data(
-        data_processor=data_processor,
-        standardization=True,
-        plot_validation_data=False,
-        plot_test_data=False,
-        plot_column=output_col,
-        train_label="data without anomaly",
-    )
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     plot_validation_data=False,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    #     train_label="data without anomaly",
+    # )
 
-    train_time = data_processor.get_time("train")
-    for ts in synthetic_anomaly_data:
-        plt.plot(train_time, ts["y"])
-    plt.legend(
-        [
-            "data without anomaly",
-            "",
-            "smallest anomaly tested",
-            "largest anomaly tested",
-        ]
-    )
+    # train_time = data_processor.get_time("train")
+    # for ts in synthetic_anomaly_data:
+    #     plt.plot(train_time, ts["y"])
+    # plt.legend(
+    #     [
+    #         "data without anomaly",
+    #         "",
+    #         "smallest anomaly tested",
+    #         "largest anomaly tested",
+    #     ]
+    # )
 
     if param_tune:
         if grid_search:
@@ -215,11 +215,13 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    _, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["level", "trend", "lstm", "white noise"],
+        states_to_plot=["level", "trend", "acceleration"],
+        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",
@@ -295,6 +297,8 @@ def training(model, data_processor, num_epoch: int = 50):
             mu_validation_preds_optim = mu_validation_preds.copy()
             std_validation_preds_optim = std_validation_preds.copy()
             states_optim = copy.copy(states)
+
+        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
