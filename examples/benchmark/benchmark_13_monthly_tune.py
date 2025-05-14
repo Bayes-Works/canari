@@ -216,11 +216,13 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["level", "trend", "lstm", "white noise"],
+        # states_to_plot=["level", "trend", "lstm", "white noise"],
+        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         standardization=False,
         color="b",
@@ -298,6 +300,8 @@ def training(model, data_processor, num_epoch: int = 100):
             mu_validation_preds_optim = mu_validation_preds.copy()
             std_validation_preds_optim = std_validation_preds.copy()
             states_optim = copy.copy(states)
+
+        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
