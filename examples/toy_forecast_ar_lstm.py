@@ -110,11 +110,9 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
+    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
-    else:
-        model.set_memory(states=states, time_step=0)
-        
 
 # save model
 model_dict = model.get_dict()

@@ -27,7 +27,7 @@ SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = True,
+    param_tune: bool = False,
     grid_search: bool = False,
 ):
     # Read data
@@ -303,10 +303,10 @@ def training(model, data_processor, num_epoch: int = 50):
             mu_validation_preds_optim = mu_validation_preds.copy()
             std_validation_preds_optim = std_validation_preds.copy()
             states_optim = copy.copy(states)
+
+        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
-        else:
-            model.set_memory(states=states, time_step=0)
 
     return (
         model,
