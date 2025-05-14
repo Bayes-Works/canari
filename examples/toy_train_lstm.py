@@ -96,11 +96,10 @@ for epoch in range(num_epoch):
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
         lstm_optim_states = model.lstm_net.get_lstm_states()
+
+    model.set_memory(states=model.states, time_step=0)
     if model.stop_training:
         break
-    else:
-        # reset memory
-        model.set_memory(states=model.states, time_step=0)
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
