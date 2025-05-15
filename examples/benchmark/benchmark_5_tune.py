@@ -20,10 +20,15 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters grid search
-sigma_v_fix = 0.048157582719331495
-look_back_len_fix = 19
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-4
+# sigma_v_fix = 0.048157582719331495
+# look_back_len_fix = 19
+# SKF_std_transition_error_fix = 1e-4
+# SKF_norm_to_abnorm_prob_fix = 1e-4
+
+sigma_v_fix = 0.015312176779632326
+look_back_len_fix = 36
+SKF_std_transition_error_fix = 0.000463372457993857
+SKF_norm_to_abnorm_prob_fix = 0.0002525928026096593
 
 
 def main(
@@ -189,8 +194,8 @@ def main(
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-4],
-                "norm_to_abnorm_prob": [1e-6, 1e-4],
+                "std_transition_error": [1e-7, 1e-2],
+                "norm_to_abnorm_prob": [1e-7, 1e-2],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
@@ -215,12 +220,12 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
-    _, states = skf_optim.smoother()
+    filter_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["level", "trend", "acceleration"],
+        # states_to_plot=["level", "trend", "acceleration"],
         states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",

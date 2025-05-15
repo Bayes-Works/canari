@@ -20,10 +20,15 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters
-sigma_v_fix = 0.03918523206042433
+# sigma_v_fix = 0.03918523206042433
+# look_back_len_fix = 14
+# SKF_std_transition_error_fix = 2.9067369991746027e-05
+# SKF_norm_to_abnorm_prob_fix = 2.3997814485293067e-05
+
+sigma_v_fix = 0.05660625992341299
 look_back_len_fix = 14
-SKF_std_transition_error_fix = 2.9067369991746027e-05
-SKF_norm_to_abnorm_prob_fix = 2.3997814485293067e-05
+SKF_std_transition_error_fix = 0.0008346338860725006
+SKF_norm_to_abnorm_prob_fix = 2.469713570883847e-07
 
 
 def main(
@@ -188,8 +193,8 @@ def main(
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-4],
-                "norm_to_abnorm_prob": [1e-6, 1e-4],
+                "std_transition_error": [1e-7, 1e-2],
+                "norm_to_abnorm_prob": [1e-7, 1e-2],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer
@@ -214,11 +219,13 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    _, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         states_to_plot=["level", "trend", "lstm", "white noise"],
+        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)

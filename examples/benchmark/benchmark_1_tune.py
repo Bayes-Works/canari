@@ -28,7 +28,7 @@ SKF_norm_to_abnorm_prob_fix = 1e-3
 
 def main(
     num_trial_optimization: int = 100,
-    param_tune: bool = False,
+    param_tune: bool = True,
     grid_search: bool = False,
 ):
     # Read data
@@ -190,8 +190,8 @@ def main(
             }
         else:
             skf_param = {
-                "std_transition_error": [1e-6, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "std_transition_error": [1e-7, 1e-2],
+                "norm_to_abnorm_prob": [1e-7, 1e-2],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         # Define optimizer

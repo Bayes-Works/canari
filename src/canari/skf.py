@@ -330,8 +330,13 @@ class SKF:
 
         # Add transition noise to norm_abnorm.process_noise_matrix
         index_states_diff = norm_norm.get_states_index(states_diff[-1])
-        norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
-            self.std_transition_error**2
+        # norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
+        #     self.std_transition_error**2
+        # )
+
+        # norm_abnorm.process_noise_matrix[0, 0] = self.std_transition_error**2
+        norm_abnorm.process_noise_matrix[0:2, 0:2] = (
+            self.std_transition_error**2 * np.array([[1 / 4, 1 / 2], [1 / 2, 1]])
         )
 
         # Store transitional models in a dictionary
