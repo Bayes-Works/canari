@@ -74,6 +74,16 @@ mu_obs_preds,std_obs_preds,_ = model.filter(data=train_data)
 model.smoother(data=train_data)
 
 # #  Plot
+plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type="smooth",
+)
+plot_states(
+    data_processor=data_processor,
+    states=model.states,
+    states_type="posterior",
+)
 fig, axes=plot_states(
     data_processor=data_processor,
     states=model.states,
@@ -91,14 +101,4 @@ fig, axes=plot_states(
 #     alpha=0.2,
 # )
 # axes[-2].set_ylim(-20, 20)
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type="posterior",
-)
-plot_states(
-    data_processor=data_processor,
-    states=model.states,
-    states_type="smooth",
-)
 plt.show()
