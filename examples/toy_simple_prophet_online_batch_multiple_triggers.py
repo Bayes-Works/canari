@@ -53,7 +53,7 @@ LL_baseline_true = LL_baseline_true.flatten()
 LT_baseline_true = LT_baseline_true.flatten()
 
 # Genetrate percentages_check from 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, ... , 1
-percentages_check = [i / 100 for i in range(10, 101, 1)]
+percentages_check = [i / 100 for i in range(70, 101, 1)]
 # begin_idx = int(len(df_raw) * 0.1)
 
 # changepoint_prior_scale = 0.01
