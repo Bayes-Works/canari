@@ -22,7 +22,7 @@ df_raw.head()
 # LT anomaly
 # anm_mag = 0.010416667/10
 anm_start_index = 52*10
-anm_mag = 0.3/52
+anm_mag = 0.01/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -55,7 +55,7 @@ LT_baseline_true = LT_baseline_true.flatten()
 
 # Genetrate percentages_check from 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, ... , 1
 # percentages_check = [i / 100 for i in range(10, 101, 1)]
-begin_idx = int(len(df_raw) * 0.9)
+begin_idx = int(len(df_raw) * 0.33)
 
 # changepoint_prior_scale = 0.01
 threshold = 0.5
@@ -64,8 +64,8 @@ anm_detect_points = []
 change_points_predicted = []
 latest_changepoint = None
 
-online_LL = np.full((begin_idx,), np.nan)
-online_LT = np.full((begin_idx,), np.nan)
+online_LL = np.full((begin_idx,), np.nan).tolist()
+online_LT = np.full((begin_idx,), np.nan).tolist()
 
 for i in range(len(df_raw)-begin_idx):
     current_idx = begin_idx + i
@@ -75,48 +75,26 @@ for i in range(len(df_raw)-begin_idx):
     m.fit(df)
     changepoint_grid_width = m.changepoints.index[1]- m.changepoints.index[0]
 
-    # future = m.make_future_dataframe(periods=365)
-    # print(future.tail())
-
-    # forecast = m.predict(future)
     forecast = m.predict(df)
-    # print(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
 
-    # print(forecast)
-    fig1 = m.plot(forecast)
-    a = add_changepoints_to_plot(fig1.gca(), m, forecast, threshold=threshold)
-    fig1.gca().set_ylim(-1.508410797906945, 2.650273557375443)
-    fig1.gca().set_xlim(10684.35, 16682.65)
-
-    # Plot the anomalies in figure 1
-    # for i in range(len(forecast)):
-    #     if forecast['anomaly'][i] == 1:
-    #         plt.plot(forecast['ds'][i], df['y'][i], 'r.')
-
-    # fig2 = m.plot_components(forecast)
-    # Show the figure automatically, and close for the next loop
-    # plt.show()
-
-    # # Plot the trend rate of change
-    # # Trend change point threshold: m.params['delta'][0] > 0.01
-    # plt.figure()
-    # plt.plot(m.params['delta'][0])
-    # plt.axhline(0, color='black', linestyle='--')
-    # plt.title('Trend Rate of Change')
-    # plt.xlabel('Date')
-    # plt.ylabel('Rate of Trend Change')
+    # # Plot results at each timestep
+    # fig1 = m.plot(forecast)
+    # a = add_changepoints_to_plot(fig1.gca(), m, forecast, threshold=threshold)
+    # fig1.gca().set_ylim(-1.508410797906945, 2.650273557375443)
+    # fig1.gca().set_xlim(10684.35, 16682.65)
     
-    if i != len(df_raw) - begin_idx - 1:
-        plt.pause(0.5)
-        plt.close(fig1)
-    elif i == len(df_raw) - begin_idx - 1:
-        fig2 = m.plot_components(forecast)
-        print("--------finished--------")
-        plt.show()
-        # # Get the ylimit of the first figure
-        print(fig1.gca().get_ylim())
-        print(fig1.gca().get_xlim())
+    # if i != len(df_raw) - begin_idx - 1:
+    #     plt.pause(0.5)
+    #     plt.close(fig1)
+    # elif i == len(df_raw) - begin_idx - 1:
+    #     fig2 = m.plot_components(forecast)
+    #     print("--------finished--------")
+    #     plt.show()
+    #     # # Get the ylimit of the first figure
+    #     print(fig1.gca().get_ylim())
+    #     print(fig1.gca().get_xlim())
 
+    # Get online changepoint detection
     signif_changepoints = m.changepoints[
         np.abs(np.nanmean(m.params['delta'], axis=0)) >= threshold
     ] if len(m.changepoints) > 0 else []
@@ -137,8 +115,16 @@ for i in range(len(df_raw)-begin_idx):
             if changepoint_increase:
                 anm_detect_points.append(current_idx)
 
+    # Get online LL and LT
+    LL_baseline_temp = forecast["trend"]
+    LT_baseline_temp = LL_baseline_temp.diff()
+    LT_pred = LT_baseline_temp.iloc[-1]
+    LL_pred = LL_baseline_temp.iloc[-1] + LT_pred
+    online_LL.append(LL_pred)
+    online_LT.append(LT_pred)
+
 # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
-m = Prophet(changepoint_range=1, changepoints=change_points_predicted)
+m = Prophet(changepoint_range=1)
 m.fit(df_raw)
 forecast = m.predict(df_raw)
 
@@ -150,15 +136,19 @@ LT_baseline_estimate = LT_baseline_estimate.to_numpy().flatten()
 
 # Plot all the baselines, true and estimated
 plt.figure()
-plt.plot(m.history['ds'], LL_baseline_true, label="LL Baseline True", color='blue')
-plt.plot(m.history['ds'], LL_baseline_estimate, label="LL Baseline Estimate", color='green')
+plt.plot(m.history['ds'], LL_baseline_true, label="True", color='blue')
+plt.plot(m.history['ds'], LL_baseline_estimate, label="Offline", color='green')
+plt.plot(m.history['ds'], online_LL, label="Online", color='red')
 plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+plt.legend()
 plt.ylabel('LL')
 
 plt.figure()
-plt.plot(m.history['ds'], LT_baseline_true, label="LT Baseline True", color='blue')
-plt.plot(m.history['ds'], LT_baseline_estimate, label="LT Baseline Estimate", color='green')
+plt.plot(m.history['ds'], LT_baseline_true, label="True", color='blue')
+plt.plot(m.history['ds'], LT_baseline_estimate, label="Offline", color='green')
+plt.plot(m.history['ds'], online_LT, label="Online", color='red')
 plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+plt.legend()
 plt.ylabel('LT')
 
 mse_LL = metric.mse(
