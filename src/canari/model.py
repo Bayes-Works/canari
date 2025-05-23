@@ -193,6 +193,9 @@ class Model:
         self._current_epoch = 0
         self.stop_training = False
 
+        # Metric for optimization
+        self.metric_optim = None
+
     def _initialize_model(self):
         """
         Set up the model by assembling matrices, initializing states,

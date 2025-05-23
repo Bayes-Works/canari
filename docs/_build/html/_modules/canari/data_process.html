@@ -371,34 +371,29 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">covariates_col</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_col</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_time_covariates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add time covariates to the dataset.</span>
-<span class="sd">        Supported covariates include:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add time covariates to the data&quot;&quot;&quot;</span>
 
-<span class="sd">        - hour_of_day</span>
-<span class="sd">        - day_of_week</span>
-<span class="sd">        - day_of_year</span>
-<span class="sd">        - week_of_year</span>
-<span class="sd">        - month_of_year</span>
-<span class="sd">        - quarter_of_year</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">time_cov</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;hour_of_day&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;hour_of_day&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">hour</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;day_of_week&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;day_of_week&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">dayofweek</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;day_of_year&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;day_of_year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">dayofyear</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;week_of_year&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;week_of_year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isocalendar</span><span class="p">()</span><span class="o">.</span><span class="n">week</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
-                    <span class="p">)</span>
-                <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;month_of_year&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;month&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">time_cov</span> <span class="o">==</span> <span class="s2">&quot;quarter_of_year&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;quarter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">quarter</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;add_time_covariates requires a pd.DatetimeIndex&quot;</span><span class="p">)</span>
+
+        <span class="n">allowed</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;hour_of_day&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">hour</span><span class="p">,</span>
+            <span class="s2">&quot;day_of_week&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">dayofweek</span><span class="p">,</span>
+            <span class="s2">&quot;day_of_year&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">dayofyear</span><span class="p">,</span>
+            <span class="s2">&quot;week_of_year&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">isocalendar</span><span class="p">()</span><span class="o">.</span><span class="n">week</span><span class="p">,</span>
+            <span class="s2">&quot;month_of_year&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">month</span><span class="p">,</span>
+            <span class="s2">&quot;quarter_of_year&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">idx</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">extras</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">allowed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">extras</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown time covariates: </span><span class="si">{</span><span class="n">extras</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_covariates</span><span class="p">):</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">allowed</span><span class="p">[</span><span class="n">cov</span><span class="p">](</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">cov</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_split_start_end_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -491,21 +486,9 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess.get_splits">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_splits</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
-        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-        <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-    <span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Retrieve the input, output pairs (x, y) for train, validation, test sets, and all data.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return training, validation, and test splits&quot;&quot;&quot;</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            Tuple of dictionaries, each with keys &quot;x&quot; and &quot;y&quot;.</span>
-
-<span class="sd">        Examples:</span>
-<span class="sd">            &gt;&gt;&gt; train_set, val_set, test_set, all_data = dp.get_splits()</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardize_data</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="c1"># Train split</span>
@@ -560,7 +543,7 @@ document.write(`
         <span class="k">else</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>
 
-        <span class="k">if</span> <span class="n">column</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">data_column</span> <span class="o">=</span> <span class="n">column</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">data_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_col</span>

@@ -10,7 +10,6 @@ from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
-from canari.data_process import DataProcess
 
 # Ignore segmentation fault signals
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
@@ -43,31 +42,33 @@ class ModelOptimizer:
     Attributes:
         model_optim :
             The best model instance initialized with optimal parameters after running optimize().
-        param_optim (Dict[str, Any]):
+        param_optim (Dict):
             The best hyperparameter configuration found during optimization.
     """
 
     def __init__(
         self,
-        initialize_model: Callable,
-        train: Callable,
+        model: Callable,
         param_space: dict,
-        data_processor: DataProcess,
+        train_data: Optional[dict] = None,
+        validation_data: Optional[dict] = None,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
+        mode: Optional[str] = "min",
     ):
         """
         Initialize the ModelOptimizer.
         """
 
-        self._initialize_model = initialize_model
-        self._train = train
+        self.model_objective = model
         self._param_space = param_space
-        self._data_processor = data_processor
+        self._train_data = train_data
+        self._validation_data = validation_data
         self._num_optimization_trial = num_optimization_trial
         self._grid_search = grid_search
         self._algorithm = algorithm
+        self._mode = mode
         self.model_optim = None
         self.param_optim = None
 
@@ -80,12 +81,10 @@ class ModelOptimizer:
         def objective(
             config,
         ):
-            model = self._initialize_model(config)
-            trained_model, *_ = self._train(
-                model,
-                self._data_processor,
+            trained_model, *_ = self.model_objective(
+                config, self._train_data, self._validation_data
             )
-            tune.report({"metric": trained_model.early_stop_metric})
+            tune.report({"metric": trained_model.metric_optim})
 
         # Parameter space
         search_config = {}
@@ -128,7 +127,7 @@ class ModelOptimizer:
                 optimizer_runner = tune.run(
                     objective,
                     config=search_config,
-                    search_alg=OptunaSearch(metric="metric", mode="min"),
+                    search_alg=OptunaSearch(metric="metric", mode=self._mode),
                     name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,
@@ -136,7 +135,7 @@ class ModelOptimizer:
                     callbacks=[custom_logger],
                 )
             elif self._algorithm == "parallel":
-                scheduler = ASHAScheduler(metric="metric", mode="min")
+                scheduler = ASHAScheduler(metric="metric", mode=self._mode)
                 optimizer_runner = tune.run(
                     objective,
                     config=search_config,
@@ -149,14 +148,18 @@ class ModelOptimizer:
                 )
 
         # Get the optimal parameters
-        self.param_optim = optimizer_runner.get_best_config(metric="metric", mode="min")
-        best_trial = optimizer_runner.get_best_trial(metric="metric", mode="min")
+        self.param_optim = optimizer_runner.get_best_config(
+            metric="metric", mode=self._mode
+        )
+        best_trial = optimizer_runner.get_best_trial(metric="metric", mode=self._mode)
         best_sample_number = custom_logger.trial_sample_map.get(
             best_trial.trial_id, "Unknown"
         )
 
         # Get the optimal model
-        self.model_optim = self._initialize_model(self.param_optim)
+        self.model_optim = self.model_objective(
+            self.param_optim, self._train_data, self._validation_data
+        )
 
         # Print optimal parameters
         print("-----")
@@ -168,10 +171,21 @@ class ModelOptimizer:
         Retrieve the optimized model instance after running optimization.
 
         Returns:
-            Any: Model instance initialized with the best hyperparameter values.
+            :class:`~canari.model.Model`:: Model instance initialized with the best
+                                            hyperparameter values.
 
         """
         return self.model_optim
+
+    def get_best_param(self):
+        """
+        Retrieve the optimized parameters after running optimization.
+
+        Returns:
+            dict: Best hyperparameter values.
+
+        """
+        return self.param_optim
 
 
 class _CustomLogger(Callback):

@@ -371,9 +371,9 @@ document.write(`
         <span class="c1"># Function for optimization</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span>
             <span class="n">config</span><span class="p">,</span>
-            <span class="n">model_param_param</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+            <span class="n">model_param</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
         <span class="p">):</span>
-            <span class="n">skf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_skf</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model_param_param</span><span class="p">)</span>
+            <span class="n">skf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_skf</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model_param</span><span class="p">)</span>
             <span class="n">slope</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">]</span>
 
             <span class="n">detection_rate</span><span class="p">,</span> <span class="n">false_rate</span><span class="p">,</span> <span class="n">false_alarm_train</span> <span class="o">=</span> <span class="p">(</span>
@@ -415,7 +415,7 @@ document.write(`
             <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                 <span class="n">tune</span><span class="o">.</span><span class="n">with_parameters</span><span class="p">(</span>
                     <span class="n">objective</span><span class="p">,</span>
-                    <span class="n">model_param_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
+                    <span class="n">model_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
                 <span class="p">),</span>
                 <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SKF_optimizer&quot;</span><span class="p">,</span>
@@ -450,7 +450,7 @@ document.write(`
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">tune</span><span class="o">.</span><span class="n">with_parameters</span><span class="p">(</span>
                         <span class="n">objective</span><span class="p">,</span>
-                        <span class="n">model_param_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
+                        <span class="n">model_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
                     <span class="p">),</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
                     <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">),</span>
@@ -465,7 +465,7 @@ document.write(`
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">tune</span><span class="o">.</span><span class="n">with_parameters</span><span class="p">(</span>
                         <span class="n">objective</span><span class="p">,</span>
-                        <span class="n">model_param_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
+                        <span class="n">model_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_param</span><span class="p">,</span>
                     <span class="p">),</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
                     <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SKF_optimizer&quot;</span><span class="p">,</span>

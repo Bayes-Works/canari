@@ -289,7 +289,6 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callback</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune.search.optuna</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptunaSearch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune.schedulers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ASHAScheduler</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
 
 <span class="c1"># Ignore segmentation fault signals</span>
 <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGSEGV</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
@@ -330,25 +329,27 @@ document.write(`
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">initialize_model</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
-        <span class="n">train</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
         <span class="n">param_space</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+        <span class="n">train_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">validation_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">num_optimization_trial</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
         <span class="n">grid_search</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;min&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the ModelOptimizer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span> <span class="o">=</span> <span class="n">initialize_model</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_train</span> <span class="o">=</span> <span class="n">train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_param_space</span> <span class="o">=</span> <span class="n">param_space</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data_processor</span> <span class="o">=</span> <span class="n">data_processor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span> <span class="o">=</span> <span class="n">train_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span> <span class="o">=</span> <span class="n">validation_data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span> <span class="o">=</span> <span class="n">num_optimization_trial</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_grid_search</span> <span class="o">=</span> <span class="n">grid_search</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">mode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -363,12 +364,10 @@ document.write(`
         <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span>
             <span class="n">config</span><span class="p">,</span>
         <span class="p">):</span>
-            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-            <span class="n">trained_model</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train</span><span class="p">(</span>
-                <span class="n">model</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_processor</span><span class="p">,</span>
+            <span class="n">trained_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
+                <span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span>
             <span class="p">)</span>
-            <span class="n">tune</span><span class="o">.</span><span class="n">report</span><span class="p">({</span><span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="p">})</span>
+            <span class="n">tune</span><span class="o">.</span><span class="n">report</span><span class="p">({</span><span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">metric_optim</span><span class="p">})</span>
 
         <span class="c1"># Parameter space</span>
         <span class="n">search_config</span> <span class="o">=</span> <span class="p">{}</span>
@@ -411,7 +410,7 @@ document.write(`
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
-                    <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">),</span>
+                    <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">),</span>
                     <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Model_optimizer&quot;</span><span class="p">,</span>
                     <span class="n">num_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span><span class="p">,</span>
                     <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -419,7 +418,7 @@ document.write(`
                     <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">custom_logger</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">&quot;parallel&quot;</span><span class="p">:</span>
-                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
@@ -432,14 +431,18 @@ document.write(`
                 <span class="p">)</span>
 
         <span class="c1"># Get the optimal parameters</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_config</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
-        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_config</span><span class="p">(</span>
+            <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+        <span class="p">)</span>
+        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
         <span class="n">best_sample_number</span> <span class="o">=</span> <span class="n">custom_logger</span><span class="o">.</span><span class="n">trial_sample_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">best_trial</span><span class="o">.</span><span class="n">trial_id</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span>
         <span class="p">)</span>
 
         <span class="c1"># Get the optimal model</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span>
+        <span class="p">)</span>
 
         <span class="c1"># Print optimal parameters</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----&quot;</span><span class="p">)</span>
@@ -454,10 +457,23 @@ document.write(`
 <span class="sd">        Retrieve the optimized model instance after running optimization.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Any: Model instance initialized with the best hyperparameter values.</span>
+<span class="sd">            :class:`~canari.model.Model`:: Model instance initialized with the best hyperparameter values.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span></div>
+
+
+<div class="viewcode-block" id="ModelOptimizer.get_best_param">
+<a class="viewcode-back" href="../../api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer.get_best_param">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_best_param</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve the optimized parameters after running optimization.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Best hyperparameter values.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span></div>
 </div>
 
 

@@ -474,6 +474,9 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stop_training</span> <span class="o">=</span> <span class="kc">False</span>
 
+        <span class="c1"># Metric for optimization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_optim</span> <span class="o">=</span> <span class="kc">None</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set up the model by assembling matrices, initializing states,</span>
@@ -1423,7 +1426,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
         <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span><span class="n">validation_data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># self.set_memory(states=self.states, time_step=0)</span>
 
         <span class="c1"># TODO: to delete this internal count</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">+=</span> <span class="mi">1</span>
