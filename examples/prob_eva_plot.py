@@ -14,7 +14,7 @@ plt.rcParams.update(params)
 
 df_il = pd.read_csv("saved_results/prob_eva/toy_simple_results_il.csv")
 df_skf = pd.read_csv("saved_results/prob_eva/toy_simple_results_skf.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/toy_simple_results_prophet_point.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/toy_simple_results_prophet_online_baseline.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = df_il["anomaly_magnitude"] * 52

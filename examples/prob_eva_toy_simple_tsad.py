@@ -243,6 +243,24 @@ for k in tqdm(range(len(restored_data))):
     mape_LL = None
     mape_LT = None
 
+    # # Plot all the baselines, true and estimated
+    # from src.data_visualization import determine_time
+    # time = determine_time(data_processor, len(normalized_data["y"]))
+    # plt.figure()
+    # plt.plot(time, LL_baseline_true, label="True", color='blue')
+    # plt.plot(time, mu_LL_states, label="Online", color='red')
+    # plt.axvline(x=time[anm_start_index], color='k', linestyle='--')
+    # plt.legend()
+    # plt.ylabel('LL')
+
+    # plt.figure()
+    # plt.plot(time, LT_baseline_true, label="True", color='blue')
+    # plt.plot(time, mu_LT_states, label="Online", color='red')
+    # plt.axvline(x=time[anm_start_index], color='k', linestyle='--')
+    # plt.legend()
+    # plt.ylabel('LT')
+    # plt.show()
+
     detection_time = anm_detected_index - anm_start_index_global
 
     results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, mape_LL, mape_LT, detection_time])

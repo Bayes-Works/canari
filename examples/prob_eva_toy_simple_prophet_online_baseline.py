@@ -60,7 +60,6 @@ threshold = 0.5
 results_all = []
 
 for ts_index in tqdm(range(len(restored_data))):
-
     # Insert the restored data into the original DataFrame
     test_len = len(df_raw) - test_start
     df_raw = df_raw[:-test_len]
@@ -88,20 +87,12 @@ for ts_index in tqdm(range(len(restored_data))):
     LL_baseline_true = LL_baseline_true.flatten()
     LT_baseline_true = LT_baseline_true.flatten()
 
-    # # Plot data with validation and test starts marked
-    # plt.figure()
-    # plt.plot(df_raw['ds'], df_raw['y'], label="Data", color='blue')
-    # plt.axvline(x=df_raw['ds'][validation_start], color='r', linestyle='--', label="Validation Start")
-    # plt.axvline(x=df_raw['ds'][test_start], color='g', linestyle='--', label="Test Start")
-    # plt.plot(df_raw['ds'], LL_baseline_true, label="LL Baseline True", color='orange')
-    # plt.xlabel('Date')
-    # plt.ylabel('Value')
-    # plt.title('Data with Validation and Test Starts')
-    # plt.show()
-
     anm_detect_points = []
     change_points_predicted = []
     latest_changepoint = None
+
+    online_LL = np.full((begin_idx,), np.nan).tolist()
+    online_LT = np.full((begin_idx,), np.nan).tolist()
 
     for i in range(len(df_raw)-begin_idx):
         current_idx = begin_idx + i
@@ -114,20 +105,7 @@ for ts_index in tqdm(range(len(restored_data))):
 
         forecast = m.predict(df)
 
-        # fig1 = m.plot(forecast)
-        # a = add_changepoints_to_plot(fig1.gca(), m, forecast, threshold=threshold)
-        
-        # if i != len(df_raw) - begin_idx - 1:
-        #     plt.pause(0.5)
-        #     plt.close(fig1)
-        # elif i == len(df_raw) - begin_idx - 1:
-        #     print("--------finished--------")
-        #     fig2 = m.plot_components(forecast)
-        #     plt.show()
-        #     # # Get the ylimit of the first figure
-        #     # print(fig1.gca().get_ylim())
-        #     # print(fig1.gca().get_xlim())
-
+        # Get online changepoint detection
         signif_changepoints = m.changepoints[
             np.abs(np.nanmean(m.params['delta'], axis=0)) >= threshold
         ] if len(m.changepoints) > 0 else []
@@ -147,6 +125,14 @@ for ts_index in tqdm(range(len(restored_data))):
                 if changepoint_increase:
                     anm_detect_points.append(current_idx)
 
+        # Get online LL and LT
+        LL_baseline_temp = forecast["trend"]
+        LT_baseline_temp = LL_baseline_temp.diff()
+        LT_pred = LT_baseline_temp.iloc[-1]
+        LL_pred = LL_baseline_temp.iloc[-1] + LT_pred
+        online_LL.append(LL_pred)
+        online_LT.append(LT_pred)
+
     # m = Prophet(changepoint_range=1, n_changepoints=int(len(df)/52*12), changepoint_prior_scale=changepoint_prior_scale, growth='linear')
     m = Prophet(changepoint_range=1, changepoints=change_points_predicted)
     m.fit(df_raw)
@@ -158,38 +144,42 @@ for ts_index in tqdm(range(len(restored_data))):
     LL_baseline_estimate = LL_baseline_estimate.to_numpy().flatten()
     LT_baseline_estimate = LT_baseline_estimate.to_numpy().flatten()
 
-    # # Plot all the baselines, true and estimated
-    # plt.figure()
-    # plt.plot(m.history['ds'], LL_baseline_true, label="LL Baseline True", color='blue')
-    # plt.plot(m.history['ds'], LL_baseline_estimate, label="LL Baseline Estimate", color='green')
-    # plt.axvline(x=m.history['ds'][anm_start_index_global], color='k', linestyle='--')
-    # plt.ylabel('LL')
-
-    # plt.figure()
-    # plt.plot(m.history['ds'], LT_baseline_true, label="LT Baseline True", color='blue')
-    # plt.plot(m.history['ds'], LT_baseline_estimate, label="LT Baseline Estimate", color='green')
-    # plt.axvline(x=m.history['ds'][anm_start_index_global], color='k', linestyle='--')
-    # plt.ylabel('LT')
+    online_LL = np.array(online_LL).flatten()
+    online_LT = np.array(online_LT).flatten()
 
     mse_LL = metric.mse(
-        LL_baseline_estimate[anm_start_index_global+1:],
+        # LL_baseline_estimate[anm_start_index_global+1:],
+        online_LL[anm_start_index_global+1:],
         LL_baseline_true[anm_start_index_global+1:],
     )
     mse_LT = metric.mse(
-        LT_baseline_estimate[anm_start_index_global+1:],
+        # LT_baseline_estimate[anm_start_index_global+1:],
+        online_LT[anm_start_index_global+1:],
         LT_baseline_true[anm_start_index_global+1:],
     )
+    print(type(online_LL[anm_start_index_global+1:]))
+    print(type(LL_baseline_true[anm_start_index_global+1:]))
+    print(len(online_LL[anm_start_index_global+1:]))
+    print(len(LL_baseline_true[anm_start_index_global+1:]))
     print("MSE LL: ", mse_LL)
     print("MSE LT: ", mse_LT)
 
-    # fig1 = m.plot(forecast)
-    # plt.axvline(x=m.history['ds'][anm_start_index_global], color='k', linestyle='--')
-    # if len(anm_detect_points)>0:
-    #     for anm_detect_point in anm_detect_points:
-    #         plt.axvline(x=m.history['ds'][anm_detect_point], color='r', linestyle='--')
-    #     for cp in change_points_predicted:
-    #         plt.axvline(x=cp, color='g', linestyle='--')
-    # fig2 = m.plot_components(forecast)
+    # # Plot all the baselines, true and estimated
+    # plt.figure()
+    # plt.plot(m.history['ds'], LL_baseline_true, label="True", color='blue')
+    # # plt.plot(m.history['ds'], LL_baseline_estimate, label="Offline", color='green')
+    # plt.plot(m.history['ds'][anm_start_index_global+1:], online_LL[anm_start_index_global+1:], label="Online", color='red')
+    # plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+    # plt.legend()
+    # plt.ylabel('LL')
+
+    # plt.figure()
+    # plt.plot(m.history['ds'], LT_baseline_true, label="True", color='blue')
+    # # plt.plot(m.history['ds'], LT_baseline_estimate, label="Offline", color='green')
+    # plt.plot(m.history['ds'][anm_start_index_global+1:], online_LT[anm_start_index_global+1:], label="Online", color='red')
+    # plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
+    # plt.legend()
+    # plt.ylabel('LT')
     # plt.show()
 
     # Check if anm_detect_points is empty
@@ -204,4 +194,4 @@ for ts_index in tqdm(range(len(restored_data))):
 
 # # Save the results to a CSV file
 # results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/toy_simple_results_prophet_point.csv", index=False)
+# results_df.to_csv("saved_results/prob_eva/toy_simple_results_prophet_online_baseline.csv", index=False)
