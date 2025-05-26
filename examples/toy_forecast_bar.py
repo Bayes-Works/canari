@@ -9,7 +9,7 @@ from canari import (
 )
 from canari.component import LocalTrend, Periodic, WhiteNoise, Autoregression, BoundedAutoregression
 
-# # Read data
+# Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
@@ -18,13 +18,6 @@ time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
-
-# # Add synthetic anomaly to data
-# time_anomaly = 400
-# AR_stationary_var = 5**2 / (1 - 0.9**2)
-# anomaly_magnitude = -(np.sqrt(AR_stationary_var) * 1) / 50
-# for i in range(time_anomaly, len(df_raw)):
-#     df_raw.values[i] += anomaly_magnitude * (i - time_anomaly)
 
 # Data pre-processing
 all_data = {}
@@ -37,7 +30,7 @@ data_processor = DataProcess(
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 train_data, validation_data, _, _ = data_processor.get_splits()
 
@@ -45,13 +38,7 @@ train_data, validation_data, _, _ = data_processor.get_splits()
 sigma_v = np.sqrt(1e-6)
 local_trend = LocalTrend(mu_states=[5, 0.0], var_states=[1e-1, 1e-6], std_error=0)
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
-
-# Different cases for ar components
-# Case 1: regular ar, with process error and phi provided
-ar = Autoregression(
-    std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05]
-)
-
+# Gamma can be changed to see how it constrains the autoregression differently
 bar = BoundedAutoregression(
     std_error=5, 
     phi=0.9,
@@ -64,15 +51,13 @@ bar = BoundedAutoregression(
 model = Model(
     local_trend,
     periodic,
-    # ar,
     bar
 )
 
-# # #
 mu_obs_preds,std_obs_preds,_ = model.filter(data=train_data)
-model.smoother(data=train_data)
+model.smoother()
 
-# #  Plot
+#  Plot
 fig, axes=plot_states(
     data_processor=data_processor,
     states=model.states,

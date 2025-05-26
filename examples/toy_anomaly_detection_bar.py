@@ -40,7 +40,7 @@ data_processor = DataProcess(
     data=df_raw,
     train_split=1,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 _, _, _, all_data = data_processor.get_splits()
 
@@ -51,11 +51,7 @@ local_acceleration = LocalAcceleration(
     mu_states=[5, 0.0, 0.0], var_states=[1e-1, 1e-6, 1e-3]
 )
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
-
-ar = Autoregression(
-    std_error=5, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05]
-)
-
+# Gamma can be changed to see how it affects the anomaly detection
 bar = BoundedAutoregression(
     std_error=5, 
     phi=0.9,
@@ -68,7 +64,6 @@ bar = BoundedAutoregression(
 model = Model(
     local_trend,
     periodic,
-    # ar,
     bar,
 )
 
@@ -76,7 +71,6 @@ model = Model(
 ab_model = Model(
     local_acceleration,
     periodic,
-    # ar,
     bar,
 )
 
@@ -90,9 +84,9 @@ skf = SKF(
     norm_model_prior_prob=0.99,
 )
 
-# # # Anomaly Detection
+# Anomaly Detection
 filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 #  Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
@@ -104,8 +98,8 @@ fig, ax = plot_skf_states(
     color="b",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
-from canari.data_visualization import determine_time
-time = determine_time(data_processor, len(all_data["y"]))
+from canari.data_visualization import _determine_time
+time = _determine_time(data_processor, len(all_data["y"]))
 ax[0].axvline(x=time[time_anomaly], color='r', linestyle='--')
 ax[-1].axvline(x=time[time_anomaly], color='r', linestyle='--')
 plt.show()
