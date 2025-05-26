@@ -46,14 +46,12 @@ class BoundedAutoregression(BaseComponent):
         gamma: Optional[float] = None,
         mu_states: Optional[np.ndarray] = None,
         var_states: Optional[np.ndarray] = None,
-        formular: Optional[str] = 'onlineAR_similar',
     ):
         self.std_error = std_error
         self.phi = phi
         self.gamma = gamma
         self._mu_states = mu_states
         self._var_states = var_states
-        self.formular = formular
         super().__init__()
 
     def initialize_component_name(self):
@@ -71,15 +69,11 @@ class BoundedAutoregression(BaseComponent):
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array([[0, self.phi], [0, 0]])
-        if self.formular == "BAR_paper":
-            self._transition_matrix = np.array([[self.phi, 0], [0, 0]])
         if self.gamma is None:
             self._transition_matrix = np.array([[self.phi]])
 
     def initialize_observation_matrix(self):
         self._observation_matrix = np.array([[1, 0]])
-        if self.formular == "BAR_paper":
-            self._observation_matrix = np.array([[0, 1]])
         if self.gamma is None:
             self._observation_matrix = np.array([[1]])
 
