@@ -12,7 +12,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari.component import LocalTrend, LstmNetwork, Autoregression, BoundedAutoregression
 
 
 ###########################
@@ -144,11 +144,12 @@ pretrained_model = Model(
         mu_states=[level_norm, trend_norm], var_states=[1e-12, 1e-12], std_error=0
     ),
     lstm,
-    Autoregression(
+    BoundedAutoregression(
         std_error=np.sqrt(mu_W2bar_learn),
         phi=phi_AR_learn,
-        mu_states=[mu_AR],
-        var_states=[var_AR],
+        mu_states=[mu_AR, mu_AR],
+        var_states=[var_AR, var_AR],
+        gamma=2,
     ),
 )
 
@@ -194,6 +195,20 @@ fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
 plt.show()
 
 # # Plotting results from pre-trained model
+fig, axes=plot_states(
+    data_processor=data_processor,
+    states=pretrained_model.states,
+    states_type="smooth",
+    standardization=True,
+)
+fig.suptitle("Smoother States")
+fig, axes=plot_states(
+    data_processor=data_processor,
+    states=pretrained_model.states,
+    states_type="posterior",
+    standardization=True,
+)
+fig.suptitle("Posterior States")
 fig, ax = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
@@ -204,6 +219,7 @@ fig, ax = plot_states(
         "trend",
         "lstm",
         "autoregression",
+        "bounded autoregression",
     ],
 )
 plot_data(
@@ -212,13 +228,7 @@ plot_data(
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
-    plot_test_data=False,
+    plot_test_data=True,
 )
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=optimal_mu_val_preds,
-    std_validation_pred=optimal_std_val_preds,
-    sub_plot=ax[0],
-)
-fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
+fig.suptitle("Prior hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()
