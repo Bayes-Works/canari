@@ -24,6 +24,26 @@ class Model:
         self._initialize_model()
         self.states = StatesHistory()
 
+    def __deepcopy__(self, memo):
+        """
+        Create a deep copy of the model while excluding the LSTM network.
+
+        Args:
+            memo (dict): Python deepcopy memoization dictionary.
+
+        Returns:
+            Model: Deep-copied instance without LSTM network state.
+        """
+
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k in ["lstm_net"]:
+                v = None
+            setattr(obj, k, copy.deepcopy(v, memo))
+        return obj
+
     def _initialize_attributes(self):
         """Initialize model attributes"""
 
@@ -181,17 +201,189 @@ class Model:
         self.states.mu_smooth.append(self.mu_states_posterior)
         self.states.var_smooth.append(self.var_states_posterior)
 
-    def __deepcopy__(self, memo):
-        """Copy a model object, but do not copy "lstm_net" attribute"""
+    def _set_posterior_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
+    ):
+        """Set the posterirors for the states"""
 
-        cls = self.__class__
-        obj = cls.__new__(cls)
-        memo[id(self)] = obj
-        for k, v in self.__dict__.items():
-            if k in ["lstm_net"]:
-                v = None
-            setattr(obj, k, copy.deepcopy(v, memo))
-        return obj
+        self.mu_states_posterior = new_mu_states.copy()
+        self.var_states_posterior = new_var_states.copy()
+
+    def set_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
+    ):
+        """Set new states"""
+
+        self.mu_states = new_mu_states.copy()
+        self.var_states = new_var_states.copy()
+
+    def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
+        if "AR_error" in self.states_name:
+            ar_index = self.get_states_index("autoregression")
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
+
+            # Forward path to compute the moments of W
+            # # W2bar
+            mu_states_prior[W2bar_index] = self.mu_W2bar
+            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+
+            # # From W2bar to W2
+            self.mu_W2_prior = self.mu_W2bar
+            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
+            mu_states_prior[W2_index] = self.mu_W2_prior
+            var_states_prior[W2_index, W2_index] = self.var_W2_prior
+
+            # # From W2 to W
+            mu_states_prior[ar_error_index] = 0
+            var_states_prior[ar_error_index, :] = np.zeros_like(
+                var_states_prior[ar_error_index, :]
+            )
+            var_states_prior[:, ar_error_index] = np.zeros_like(
+                var_states_prior[:, ar_error_index]
+            )
+            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+        return mu_states_prior, var_states_prior
+    
+    def _online_AR_backward_modification(
+        self,
+        mu_states_posterior,
+        var_states_posterior,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Online AR backwar modification
+        """
+
+        if "phi" in self.states_name:
+            # GMA operations
+            mu_states_posterior, var_states_posterior = GMA(
+                mu_states_posterior,
+                var_states_posterior,
+                index1=self.get_states_index("phi"),
+                index2=self.get_states_index("autoregression"),
+                replace_index=self.get_states_index("phi_autoregression"),
+            ).get_results()
+
+        if "AR_error" in self.states_name:
+            ar_index = self.get_states_index("autoregression")
+            ar_error_index = self.get_states_index("AR_error")
+            W2_index = self.get_states_index("W2")
+            W2bar_index = self.get_states_index("W2bar")
+
+            # Backward path to update W2 and W2bar
+            # # From W to W2
+            mu_W2_posterior = (
+                mu_states_posterior[ar_error_index] ** 2
+                + var_states_posterior[ar_error_index, ar_error_index]
+            )
+            var_W2_posterior = (
+                2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
+                + 4
+                * var_states_posterior[ar_error_index, ar_error_index]
+                * mu_states_posterior[ar_error_index] ** 2
+            )
+            mu_states_posterior[W2_index] = mu_W2_posterior
+            var_states_posterior[W2_index, :] = np.zeros_like(
+                var_states_posterior[W2_index, :]
+            )
+            var_states_posterior[:, W2_index] = np.zeros_like(
+                var_states_posterior[:, W2_index]
+            )
+            var_states_posterior[W2_index, W2_index] = var_W2_posterior
+
+            # # From W2 to W2bar
+            K = self.var_W2bar / self.var_W2_prior
+            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
+            self.var_W2bar = self.var_W2bar + K**2 * (
+                var_W2_posterior - self.var_W2_prior
+            )
+            mu_states_posterior[W2bar_index] = self.mu_W2bar
+            var_states_posterior[W2bar_index, :] = np.zeros_like(
+                var_states_posterior[W2bar_index, :]
+            )
+            var_states_posterior[:, W2bar_index] = np.zeros_like(
+                var_states_posterior[:, W2bar_index]
+            )
+            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+
+            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+
+        return mu_states_posterior, var_states_posterior
+    
+    def _BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
+        """
+        BAR backward modification
+        """
+
+        ar_index = self.get_states_index("autoregression")
+        bar_index = self.get_states_index("bounded autoregression")
+
+        mu_AR = mu_states_posterior[ar_index]
+        var_AR = var_states_posterior[ar_index, ar_index]
+        cov_AR = var_states_posterior[ar_index, :]
+
+        bound = (self.components["bounded autoregression"].gamma * 
+                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
+                    (1 - self.components["bounded autoregression"].phi**2)))
+        
+        l_bar = mu_AR + bound
+
+        mu_L = l_bar * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - bound
+        var_L = (l_bar**2 + var_AR) * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+
+        u_bar = -mu_AR + bound
+        mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) + bound
+        var_U = (u_bar**2 + var_AR) * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+
+        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
+        cov_bar = cov_AR * (scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - 1)
+        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        var_states_posterior[bar_index, :] = cov_bar
+        var_states_posterior[:, bar_index] = cov_bar
+        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
+        
+        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
+    
+    def _prepare_covariates_generation(
+        self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
+    ):
+        """
+        Prepare covariates for synthetic data generation
+        """
+        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
+        for time_cov in time_covariates:
+            if time_cov == "hour_of_day":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 24 + 1
+            elif time_cov == "day_of_week":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 7 + 1
+            elif time_cov == "day_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 365 + 1
+            elif time_cov == "week_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 52 + 1
+            elif time_cov == "month_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 12 + 1
+            elif time_cov == "quarter_of_year":
+                covariates_generation = (
+                    initial_covariate + covariates_generation
+                ) % 4 + 1
+        return covariates_generation
 
     def get_dict(self) -> dict:
         """
@@ -257,26 +449,6 @@ class Model:
                     self.var_states[i, i] = 1e-5
 
         self._mu_local_level = trend[0]
-
-    def set_posterior_states(
-        self,
-        new_mu_states: np.ndarray,
-        new_var_states: np.ndarray,
-    ):
-        """Set the posterirors for the states"""
-
-        self.mu_states_posterior = new_mu_states.copy()
-        self.var_states_posterior = new_var_states.copy()
-
-    def set_states(
-        self,
-        new_mu_states: np.ndarray,
-        new_var_states: np.ndarray,
-    ):
-        """Set new states"""
-
-        self.mu_states = new_mu_states.copy()
-        self.var_states = new_var_states.copy()
 
     def initialize_states_with_smoother_estimates(self):
         """Set the model initial hidden states = the smoothed estimates"""
@@ -366,7 +538,7 @@ class Model:
 
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
-            mu_states_prior, var_states_prior = self.online_AR_forward_modification(
+            mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
 
@@ -399,14 +571,14 @@ class Model:
 
         if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
-                self.online_AR_backward_modification(
+                self._online_AR_backward_modification(
                     mu_states_posterior,
                     var_states_posterior,
                 )
             )
 
         if "bounded autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
+            mu_states_posterior, var_states_posterior = self._BAR_backward_modification(
                 mu_states_posterior, var_states_posterior
             )
 
@@ -464,7 +636,7 @@ class Model:
                     var_states_prior[lstm_index, lstm_index],
                 )
 
-            self.set_posterior_states(mu_states_prior, var_states_prior)
+            self._set_posterior_states(mu_states_prior, var_states_prior)
             self._save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
@@ -499,7 +671,7 @@ class Model:
         # Prepare time covariates
         if time_covariates is not None:
             initial_time_covariate = time_covariate_info["initial_time_covariate"]
-            input_covariates = self.prepare_covariates_generation(
+            input_covariates = self._prepare_covariates_generation(
                 initial_time_covariate, num_time_steps, time_covariates
             )
             input_covariates = normalizer.standardize(
@@ -749,167 +921,3 @@ class Model:
             self.early_stop_metric,
             self.early_stop_metric_history,
         )
-
-    def online_AR_forward_modification(self, mu_states_prior, var_states_prior):
-        if "AR_error" in self.states_name:
-            ar_index = self.get_states_index("autoregression")
-            ar_error_index = self.get_states_index("AR_error")
-            W2_index = self.get_states_index("W2")
-            W2bar_index = self.get_states_index("W2bar")
-
-            # Forward path to compute the moments of W
-            # # W2bar
-            mu_states_prior[W2bar_index] = self.mu_W2bar
-            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
-
-            # # From W2bar to W2
-            self.mu_W2_prior = self.mu_W2bar
-            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-            mu_states_prior[W2_index] = self.mu_W2_prior
-            var_states_prior[W2_index, W2_index] = self.var_W2_prior
-
-            # # From W2 to W
-            mu_states_prior[ar_error_index] = 0
-            var_states_prior[ar_error_index, :] = np.zeros_like(
-                var_states_prior[ar_error_index, :]
-            )
-            var_states_prior[:, ar_error_index] = np.zeros_like(
-                var_states_prior[:, ar_error_index]
-            )
-            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
-            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
-            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
-        return mu_states_prior, var_states_prior
-    
-    def BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
-        """
-        BAR backward modification
-        """
-
-        ar_index = self.get_states_index("autoregression")
-        bar_index = self.get_states_index("bounded autoregression")
-
-        mu_AR = mu_states_posterior[ar_index]
-        var_AR = var_states_posterior[ar_index, ar_index]
-        cov_AR = var_states_posterior[ar_index, :]
-
-        bound = (self.components["bounded autoregression"].gamma * 
-                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
-                    (1 - self.components["bounded autoregression"].phi**2)))
-        
-        l_bar = mu_AR + bound
-
-        mu_L = l_bar * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
-
-        u_bar = -mu_AR + bound
-        mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
-
-        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
-        var_states_posterior[bar_index, :] = cov_bar
-        var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
-        
-        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
-
-    def online_AR_backward_modification(
-        self,
-        mu_states_posterior,
-        var_states_posterior,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Online AR backwar modification
-        """
-
-        if "phi" in self.states_name:
-            # GMA operations
-            mu_states_posterior, var_states_posterior = GMA(
-                mu_states_posterior,
-                var_states_posterior,
-                index1=self.get_states_index("phi"),
-                index2=self.get_states_index("autoregression"),
-                replace_index=self.get_states_index("phi_autoregression"),
-            ).get_results()
-
-        if "AR_error" in self.states_name:
-            ar_index = self.get_states_index("autoregression")
-            ar_error_index = self.get_states_index("AR_error")
-            W2_index = self.get_states_index("W2")
-            W2bar_index = self.get_states_index("W2bar")
-
-            # Backward path to update W2 and W2bar
-            # # From W to W2
-            mu_W2_posterior = (
-                mu_states_posterior[ar_error_index] ** 2
-                + var_states_posterior[ar_error_index, ar_error_index]
-            )
-            var_W2_posterior = (
-                2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
-                + 4
-                * var_states_posterior[ar_error_index, ar_error_index]
-                * mu_states_posterior[ar_error_index] ** 2
-            )
-            mu_states_posterior[W2_index] = mu_W2_posterior
-            var_states_posterior[W2_index, :] = np.zeros_like(
-                var_states_posterior[W2_index, :]
-            )
-            var_states_posterior[:, W2_index] = np.zeros_like(
-                var_states_posterior[:, W2_index]
-            )
-            var_states_posterior[W2_index, W2_index] = var_W2_posterior
-
-            # # From W2 to W2bar
-            K = self.var_W2bar / self.var_W2_prior
-            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
-            self.var_W2bar = self.var_W2bar + K**2 * (
-                var_W2_posterior - self.var_W2_prior
-            )
-            mu_states_posterior[W2bar_index] = self.mu_W2bar
-            var_states_posterior[W2bar_index, :] = np.zeros_like(
-                var_states_posterior[W2bar_index, :]
-            )
-            var_states_posterior[:, W2bar_index] = np.zeros_like(
-                var_states_posterior[:, W2bar_index]
-            )
-            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
-
-            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
-
-        return mu_states_posterior, var_states_posterior
-
-    def prepare_covariates_generation(
-        self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
-    ):
-        """
-        Prepare covariates for synthetic data generation
-        """
-        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
-        for time_cov in time_covariates:
-            if time_cov == "hour_of_day":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 24 + 1
-            elif time_cov == "day_of_week":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 7 + 1
-            elif time_cov == "day_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 365 + 1
-            elif time_cov == "week_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 52 + 1
-            elif time_cov == "month_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 12 + 1
-            elif time_cov == "quarter_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 4 + 1
-        return covariates_generation
