@@ -797,16 +797,16 @@ class Model:
 
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
-            if self.lstm_net:
+            if self.lstm_net and not self.lstm_net.smooth:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                # lstm_states = self.lstm_net.get_lstm_states()
-                # for key in lstm_states:
-                #     old_tuple = lstm_states[key]
-                #     new_tuple = tuple(
-                #         np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                #     )
-                #     lstm_states[key] = new_tuple
-                # self.lstm_net.set_lstm_states(lstm_states)
+                lstm_states = self.lstm_net.get_lstm_states()
+                for key in lstm_states:
+                    old_tuple = lstm_states[key]
+                    new_tuple = tuple(
+                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                    )
+                    lstm_states[key] = new_tuple
+                self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -1026,24 +1026,11 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
-        # TODO: Check why it's needed
-        # if self.lstm_net.smooth:
-        #     out_updater = OutputUpdater(self.lstm_net.device)
 
         for x in data["x"]:
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
-            # TODO: does not make sense when forecasting
-            # if self.lstm_net.smooth:
-            #     out_updater.update(
-            #         output_states=self.lstm_net.output_z_buffer,
-            #         mu_obs=np.array([np.nan], dtype=np.float32),
-            #         var_obs=np.array([0], dtype=np.float32),
-            #         delta_states=self.lstm_net.input_delta_z_buffer,
-            #     )
-            #     self.lstm_net.backward()
-            #     self.lstm_net.step()
 
             if self.lstm_net:
                 lstm_index = self.get_states_index("lstm")
