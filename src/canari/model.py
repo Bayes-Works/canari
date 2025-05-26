@@ -32,7 +32,6 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi import Normalizer as normalizer
 import scipy
-import scipy
 
 
 class Model:
