@@ -103,7 +103,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
 
     # Early-stopping
     model.early_stopping(
-        evaluate_metric=-val_log_lik, current_epoch=epoch, max_epoch=num_epoch
+        evaluate_metric=-val_log_lik, current_epoch=epoch, max_epoch=num_epochs
     )
     if epoch == model.optimal_epoch:
         optimal_mu_val_preds = mu_validation_preds.copy()
