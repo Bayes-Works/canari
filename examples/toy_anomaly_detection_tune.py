@@ -209,8 +209,6 @@ def main(
             abnorm_model=abnorm_model,
             std_transition_error=skf_param_space["std_transition_error"],
             norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
-            abnorm_to_norm_prob=1e-1,
-            norm_model_prior_prob=0.99,
         )
         return skf
 
