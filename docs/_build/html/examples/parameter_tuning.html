@@ -1,0 +1,1076 @@
+
+<!DOCTYPE html>
+
+
+<html lang="EN" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Parameter tuning &#8212; canari v.0.0.2 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/parameter_tuning';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Read .DAT file" href="read_DAT_file.html" />
+    <link rel="prev" title="Anomaly detection" href="anomaly_detection.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="EN"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Forecasting without LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="anomaly_detection.html">Anomaly detection</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Parameter tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .DAT file</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul></details></li></ul>
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/examples/parameter_tuning.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Parameter tuning</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.-Optimize-model's-parameters">A. Optimize model’s parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.1.-Parameter-space">A.1. Parameter space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.2.-Model-as-a-function-of-parameters">A.2. Model as a function of parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.3.-Define-optimizer">A.3. Define optimizer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.4-Get-optimal-model">A.4 Get optimal model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.5-Hidden-states-and-predictions">A.5 Hidden states and predictions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.-Optimize-Switching-Kalman-Filter's-(SKF)-parameters">B. Optimize Switching Kalman Filter’s (SKF) parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.1.-Parameter-space">B.1. Parameter space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.2.-SKF-model-as-a-function-of-parameters">B.2. SKF model as a function of parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.3.-Optimizer">B.3. Optimizer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.4.-Get-optimal-SKF">B.4. Get optimal SKF</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.5.-Anomaly-detection">B.5. Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.6.-Hidden-states-and-proability-of-anomalies">B.6. Hidden states and proability of anomalies</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Parameter-tuning">
+<h1>Parameter tuning<a class="headerlink" href="#Parameter-tuning" title="Link to this heading">#</a></h1>
+<section id="Import-libraries">
+<h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ray</span>
+<span class="n">ray</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+<span class="n">ray</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">runtime_env</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;working_dir&quot;</span><span class="p">:</span> <span class="n">project_root</span><span class="p">})</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytagi.metric</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">metric</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+2025-05-26 15:10:16,818 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+2025-05-26 15:10:17,301 INFO worker.py:1852 -- Started a local Ray instance.
+2025-05-26 15:10:17,944 INFO packaging.py:575 -- Creating a file package for local module &#39;/Users/vuongdai/GitHub/canari&#39;.
+2025-05-26 15:10:17,964 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/92/45ee127ddd1bf42655a9cbd1f0de336db6289d is very large (10.22MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/92/45ee127ddd1bf42655a9cbd1f0de336db6289d&#39;]})`
+2025-05-26 15:10:17,985 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/57/117f0488cb76d05e1639784f731008c7d9828d is very large (12.33MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/57/117f0488cb76d05e1639784f731008c7d9828d&#39;]})`
+2025-05-26 15:10:18,009 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/6a/0aee702bf6411c51b2c1646959988e653f4c3e is very large (11.79MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/6a/0aee702bf6411c51b2c1646959988e653f4c3e&#39;]})`
+2025-05-26 15:10:18,033 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/58/9ea42a1ba1558ed7eba43aa1b221a5432e3cbe is very large (11.05MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/58/9ea42a1ba1558ed7eba43aa1b221a5432e3cbe&#39;]})`
+2025-05-26 15:10:18,043 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/67/45e8f20bfa4502ebcee59d71c5a9a1be3f3abc is very large (11.89MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/67/45e8f20bfa4502ebcee59d71c5a9a1be3f3abc&#39;]})`
+2025-05-26 15:10:18,070 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/60/329c2d48dad64209c7ae0559a3db59f55dab18 is very large (10.25MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/60/329c2d48dad64209c7ae0559a3db59f55dab18&#39;]})`
+2025-05-26 15:10:18,084 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/5a/301dad23e78155f9a5fa8d30b1d5a03af7861f is very large (12.90MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/5a/301dad23e78155f9a5fa8d30b1d5a03af7861f&#39;]})`
+2025-05-26 15:10:18,103 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/02/e0b2497ac0f6a7d282b1c4eebf53d9791d503b is very large (10.81MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/02/e0b2497ac0f6a7d282b1c4eebf53d9791d503b&#39;]})`
+2025-05-26 15:10:18,125 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/ac/7a8e1f4066f74284e3dc0748cb28130d1866ef is very large (10.48MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/ac/7a8e1f4066f74284e3dc0748cb28130d1866ef&#39;]})`
+2025-05-26 15:10:18,165 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/d8/d4cde8932f82bb19d7a26ddd42964be4946218 is very large (12.38MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/d8/d4cde8932f82bb19d7a26ddd42964be4946218&#39;]})`
+2025-05-26 15:10:18,186 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/f4/89c93dea943f30c0b74e1bc17412cbe484bc38 is very large (12.90MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/f4/89c93dea943f30c0b74e1bc17412cbe484bc38&#39;]})`
+2025-05-26 15:10:18,225 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/e3/2de000954f3f42319122281434566e48524315 is very large (11.48MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/e3/2de000954f3f42319122281434566e48524315&#39;]})`
+2025-05-26 15:10:18,262 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/4e/a71fa3c62c351e958f4d71c2a66d8902e79491 is very large (10.38MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/4e/a71fa3c62c351e958f4d71c2a66d8902e79491&#39;]})`
+2025-05-26 15:10:18,285 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/29/36511ee5e5a469c4b99e20c93f556978fffffe is very large (12.95MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/29/36511ee5e5a469c4b99e20c93f556978fffffe&#39;]})`
+2025-05-26 15:10:18,305 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/42/096dabdc121aa6b6177e438f659860bb7f3c6f is very large (11.98MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/42/096dabdc121aa6b6177e438f659860bb7f3c6f&#39;]})`
+2025-05-26 15:10:18,319 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/89/7e957a76315590f580ecefed4de723238093de is very large (11.83MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/89/7e957a76315590f580ecefed4de723238093de&#39;]})`
+2025-05-26 15:10:18,335 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/87/33a2a52683fbf1eb64035deda152a2e35ec923 is very large (10.28MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/87/33a2a52683fbf1eb64035deda152a2e35ec923&#39;]})`
+2025-05-26 15:10:18,398 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/38/5590fa197011659ef914e373c2a4bbc4ddac00 is very large (13.02MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/38/5590fa197011659ef914e373c2a4bbc4ddac00&#39;]})`
+2025-05-26 15:10:18,479 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/64/9fb39db2d3fd1118ae326597fe572e452fa661 is very large (12.97MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/64/9fb39db2d3fd1118ae326597fe572e452fa661&#39;]})`
+2025-05-26 15:10:18,543 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/a1/7779e0d6f289c092833923257f63637da1c650 is very large (12.88MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/a1/7779e0d6f289c092833923257f63637da1c650&#39;]})`
+2025-05-26 15:10:18,600 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/c2/21ecf490734609b9265262d5732ced3f85eda4 is very large (13.01MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/c2/21ecf490734609b9265262d5732ced3f85eda4&#39;]})`
+2025-05-26 15:10:18,673 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/85/80dbd7db58aff4ac81a1c69b139c39badf0b28 is very large (12.92MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/85/80dbd7db58aff4ac81a1c69b139c39badf0b28&#39;]})`
+2025-05-26 15:10:18,693 WARNING packaging.py:417 -- File /Users/vuongdai/GitHub/canari/.git/objects/1c/3a1a02cee7ef1f8509faddb4ff82179df4c3df is very large (11.96MiB). Consider adding this file to the &#39;excludes&#39; list to skip uploading it: `ray.init(..., runtime_env={&#39;excludes&#39;: [&#39;/Users/vuongdai/GitHub/canari/.git/objects/1c/3a1a02cee7ef1f8509faddb4ff82179df4c3df&#39;]})`
+2025-05-26 15:10:18,898 INFO packaging.py:367 -- Pushing file package &#39;gcs://_ray_pkg_7f93bbe65cc041f4.zip&#39; (410.55MiB) to Ray cluster...
+2025-05-26 15:10:19,913 INFO packaging.py:380 -- Successfully pushed file package &#39;gcs://_ray_pkg_7f93bbe65cc041f4.zip&#39;.
+</pre></div></div>
+</div>
+</section>
+<section id="Import-from-Canari">
+<h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">Model</span><span class="p">,</span>
+    <span class="n">SKF</span><span class="p">,</span>
+    <span class="n">ModelOptimizer</span><span class="p">,</span>
+    <span class="n">SKFOptimizer</span><span class="p">,</span>
+    <span class="n">plot_data</span><span class="p">,</span>
+    <span class="n">plot_prediction</span><span class="p">,</span>
+    <span class="n">plot_states</span><span class="p">,</span>
+    <span class="n">plot_skf_states</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LocalAcceleration</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-26 15:10:21,589 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+</pre></div></div>
+</div>
+</section>
+<section id="Read-data">
+<h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">data_file</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine.csv&quot;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="c1"># Add synthetic anomaly to data</span>
+<span class="n">trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
+<span class="n">time_anomaly</span> <span class="o">=</span> <span class="mi">120</span>
+<span class="n">new_trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">time_anomaly</span><span class="p">)</span>
+<span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">=</span> <span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">+</span> <span class="n">new_trend</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1">#</span>
+<span class="n">data_file_time</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine_datetime.csv&quot;</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file_time</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">time_index</span>
+<span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Data-preprocess">
+<h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_col</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">data_processor</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+    <span class="n">time_covariates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hour_of_day&quot;</span><span class="p">],</span>
+    <span class="n">train_split</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+    <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">output_col</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">,</span> <span class="n">test_data</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
+<span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>values</th>
+      <th>hour_of_day</th>
+    </tr>
+    <tr>
+      <th>time</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2000-01-03 00:00:00</th>
+      <td>0.00</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 01:00:00</th>
+      <td>-0.26</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 02:00:00</th>
+      <td>-0.50</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 03:00:00</th>
+      <td>-0.71</td>
+      <td>3.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 04:00:00</th>
+      <td>-0.87</td>
+      <td>4.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="A.-Optimize-model's-parameters">
+<h2>A. Optimize model’s parameters<a class="headerlink" href="#A.-Optimize-model's-parameters" title="Link to this heading">#</a></h2>
+</section>
+<section id="A.1.-Parameter-space">
+<h2>A.1. Parameter space<a class="headerlink" href="#A.1.-Parameter-space" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_space</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;look_back_len&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span>
+    <span class="s2">&quot;sigma_v&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">2e-1</span><span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="A.2.-Model-as-a-function-of-parameters">
+<h2>A.2. Model as a function of parameters<a class="headerlink" href="#A.2.-Model-as-a-function-of-parameters" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">initialize_model</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+        <span class="n">LocalTrend</span><span class="p">(),</span>
+        <span class="n">LstmNetwork</span><span class="p">(</span>
+            <span class="n">look_back_len</span><span class="o">=</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;look_back_len&quot;</span><span class="p">],</span>
+            <span class="n">num_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">num_layer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+            <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;sigma_v&quot;</span><span class="p">]),</span>
+    <span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="mi">24</span><span class="p">])</span>
+
+    <span class="c1"># Training</span>
+    <span class="n">num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epoch</span><span class="p">):</span>
+        <span class="p">(</span><span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">states</span><span class="p">)</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_train</span><span class="p">(</span>
+            <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+            <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Unstandardize the predictions</span>
+        <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
+            <span class="n">mu_validation_preds</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
+            <span class="n">std_validation_preds</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">validation_obs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">validation_log_lik</span> <span class="o">=</span> <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
+            <span class="n">prediction</span><span class="o">=</span><span class="n">mu_validation_preds_unnorm</span><span class="p">,</span>
+            <span class="n">observation</span><span class="o">=</span><span class="n">validation_obs</span><span class="p">,</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_validation_preds_unnorm</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">(</span>
+            <span class="n">evaluate_metric</span><span class="o">=-</span><span class="n">validation_log_lik</span><span class="p">,</span>
+            <span class="n">current_epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
+            <span class="n">max_epoch</span><span class="o">=</span><span class="n">num_epoch</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">metric_optim</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">early_stop_metric</span>
+
+        <span class="k">if</span> <span class="n">epoch</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">:</span>
+            <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="n">mu_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
+            <span class="k">break</span>
+
+
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">states_optim</span><span class="p">,</span> <span class="n">mu_validation_preds_optim</span><span class="p">,</span> <span class="n">std_validation_preds_optim</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="A.3.-Define-optimizer">
+<h2>A.3. Define optimizer<a class="headerlink" href="#A.3.-Define-optimizer" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model_optimizer</span> <span class="o">=</span> <span class="n">ModelOptimizer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">initialize_model</span><span class="p">,</span>
+    <span class="n">param_space</span><span class="o">=</span><span class="n">param_space</span><span class="p">,</span>
+    <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+    <span class="n">validation_data</span> <span class="o">=</span> <span class="n">validation_data</span><span class="p">,</span>
+    <span class="n">num_optimization_trial</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model_optimizer</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+#  1/20 - Metric: -1.438 - Parameter: {&#39;look_back_len&#39;: 13, &#39;sigma_v&#39;: 0.05764302800736558}
+#  2/20 - Metric: -1.201 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.06640304546555219}
+#  3/20 - Metric: -0.833 - Parameter: {&#39;look_back_len&#39;: 21, &#39;sigma_v&#39;: 0.15202902549685612}
+#  4/20 - Metric: -1.105 - Parameter: {&#39;look_back_len&#39;: 18, &#39;sigma_v&#39;: 0.10095289042645582}
+#  5/20 - Metric: -0.920 - Parameter: {&#39;look_back_len&#39;: 26, &#39;sigma_v&#39;: 0.09496199409391315}
+#  6/20 - Metric: -0.775 - Parameter: {&#39;look_back_len&#39;: 16, &#39;sigma_v&#39;: 0.17781523120365042}
+#  7/20 - Metric: -1.050 - Parameter: {&#39;look_back_len&#39;: 24, &#39;sigma_v&#39;: 0.010278831475681417}
+#  8/20 - Metric: -1.696 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.003142796982299852}
+#  9/20 - Metric: -1.050 - Parameter: {&#39;look_back_len&#39;: 18, &#39;sigma_v&#39;: 0.11507554172817432}
+# 10/20 - Metric: -0.703 - Parameter: {&#39;look_back_len&#39;: 20, &#39;sigma_v&#39;: 0.19694609958492723}
+# 11/20 - Metric: -1.027 - Parameter: {&#39;look_back_len&#39;: 24, &#39;sigma_v&#39;: 0.034635799942486035}
+# 12/20 - Metric: -1.694 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.006329555889167103}
+# 13/20 - Metric: -1.697 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.0027068097572160053}
+# 14/20 - Metric: -1.695 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.005243746244646488}
+# 15/20 - Metric: -1.512 - Parameter: {&#39;look_back_len&#39;: 11, &#39;sigma_v&#39;: 0.03317238890302288}
+# 16/20 - Metric: -1.370 - Parameter: {&#39;look_back_len&#39;: 14, &#39;sigma_v&#39;: 0.04237645030588081}
+# 17/20 - Metric: -1.333 - Parameter: {&#39;look_back_len&#39;: 14, &#39;sigma_v&#39;: 0.05404928400729406}
+# 18/20 - Metric: -0.940 - Parameter: {&#39;look_back_len&#39;: 29, &#39;sigma_v&#39;: 0.07328821693923207}
+# 19/20 - Metric: -1.026 - Parameter: {&#39;look_back_len&#39;: 29, &#39;sigma_v&#39;: 0.023879141853482708}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-26 15:10:39,354 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/Model_optimizer&#39; in 0.0088s.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+# 20/20 - Metric: -1.560 - Parameter: {&#39;look_back_len&#39;: 13, &#39;sigma_v&#39;: 0.025250126126804488}
+-----
+Optimal parameters at trial #13: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.0027068097572160053}
+-----
+</pre></div></div>
+</div>
+</section>
+<section id="A.4-Get-optimal-model">
+<h2>A.4 Get optimal model<a class="headerlink" href="#A.4-Get-optimal-model" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">model_optimizer</span><span class="o">.</span><span class="n">get_best_param</span><span class="p">()</span>
+<span class="n">model_optim</span><span class="p">,</span> <span class="n">states_optim</span><span class="p">,</span> <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span> <span class="o">=</span> <span class="n">initialize_model</span><span class="p">(</span><span class="n">param_optim</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">)</span>
+<span class="n">model_optim_dict</span> <span class="o">=</span> <span class="n">model_optim</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="A.5-Hidden-states-and-predictions">
+<h2>A.5 Hidden states and predictions<a class="headerlink" href="#A.5-Hidden-states-and-predictions" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plot_data</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">plot_test_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">plot_column</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
+    <span class="n">test_label</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_prediction</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">mean_validation_pred</span><span class="o">=</span><span class="n">mu_validation_preds</span><span class="p">,</span>
+    <span class="n">std_validation_pred</span><span class="o">=</span><span class="n">std_validation_preds</span><span class="p">,</span>
+    <span class="n">validation_label</span><span class="o">=</span><span class="p">[</span><span class="sa">r</span><span class="s2">&quot;$\mu$&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;$\pm\sigma$&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">plot_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">states</span><span class="o">=</span><span class="n">states_optim</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">],</span>
+    <span class="n">sub_plot</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Validation predictions&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_parameter_tuning_19_0.png" src="../_images/examples_parameter_tuning_19_0.png" />
+</div>
+</div>
+</section>
+<section id="B.-Optimize-Switching-Kalman-Filter's-(SKF)-parameters">
+<h2>B. Optimize Switching Kalman Filter’s (SKF) parameters<a class="headerlink" href="#B.-Optimize-Switching-Kalman-Filter's-(SKF)-parameters" title="Link to this heading">#</a></h2>
+</section>
+<section id="B.1.-Parameter-space">
+<h2>B.1. Parameter space<a class="headerlink" href="#B.1.-Parameter-space" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">slope_upper_bound</span> <span class="o">=</span> <span class="mf">5e-2</span>
+<span class="n">slope_lower_bound</span> <span class="o">=</span> <span class="mf">1e-3</span>
+<span class="n">skf_param</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;std_transition_error&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">],</span>
+    <span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">],</span>
+    <span class="s2">&quot;slope&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">slope_lower_bound</span><span class="p">,</span> <span class="n">slope_upper_bound</span><span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.2.-SKF-model-as-a-function-of-parameters">
+<h2>B.2. SKF model as a function of parameters<a class="headerlink" href="#B.2.-SKF-model-as-a-function-of-parameters" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">initialize_skf</span><span class="p">(</span><span class="n">skf_param</span><span class="p">,</span> <span class="n">model_param</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">norm_model</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">load_dict</span><span class="p">(</span><span class="n">model_param</span><span class="p">)</span>
+    <span class="n">abnorm_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+        <span class="n">LocalAcceleration</span><span class="p">(),</span>
+        <span class="n">LstmNetwork</span><span class="p">(),</span>
+        <span class="n">WhiteNoise</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">skf</span> <span class="o">=</span> <span class="n">SKF</span><span class="p">(</span>
+        <span class="n">norm_model</span><span class="o">=</span><span class="n">norm_model</span><span class="p">,</span>
+        <span class="n">abnorm_model</span><span class="o">=</span><span class="n">abnorm_model</span><span class="p">,</span>
+        <span class="n">std_transition_error</span><span class="o">=</span><span class="n">skf_param</span><span class="p">[</span><span class="s2">&quot;std_transition_error&quot;</span><span class="p">],</span>
+        <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="n">skf_param</span><span class="p">[</span><span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">skf</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.3.-Optimizer">
+<h2>B.3. Optimizer<a class="headerlink" href="#B.3.-Optimizer" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">skf_optimizer</span> <span class="o">=</span> <span class="n">SKFOptimizer</span><span class="p">(</span>
+    <span class="n">initialize_skf</span><span class="o">=</span><span class="n">initialize_skf</span><span class="p">,</span>
+    <span class="n">param_space</span><span class="o">=</span><span class="n">skf_param</span><span class="p">,</span>
+    <span class="n">model_param</span><span class="o">=</span><span class="n">model_optim_dict</span><span class="p">,</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+    <span class="n">num_synthetic_anomaly</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_optimization_trial</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">skf_optimizer</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+#  1/40 - Metric: 2.042 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.408091768777799e-06, &#39;norm_to_abnorm_prob&#39;: 0.00033059219041223735, &#39;slope&#39;: 0.008402290360458708}
+#  2/40 - Metric: 1.108 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00014753130092851492, &#39;norm_to_abnorm_prob&#39;: 0.00028983954221501894, &#39;slope&#39;: 0.021512593139449344}
+#  3/40 - Metric: 2.006 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0003426353053685276, &#39;norm_to_abnorm_prob&#39;: 0.00010830778297133414, &#39;slope&#39;: 0.0011979902708257415}
+#  4/40 - Metric: 2.009 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.711958898505293e-06, &#39;norm_to_abnorm_prob&#39;: 0.00019949200304126497, &#39;slope&#39;: 0.0017034524794309637}
+#  5/40 - Metric: 2.012 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.2990379954516811e-05, &#39;norm_to_abnorm_prob&#39;: 2.794992153875508e-06, &#39;slope&#39;: 0.0023444744595316333}
+#  6/40 - Metric: 2.012 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.7257783588431026e-05, &#39;norm_to_abnorm_prob&#39;: 0.0002936374020258385, &#39;slope&#39;: 0.002409607238922069}
+#  7/40 - Metric: 1.142 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00037831742269388204, &#39;norm_to_abnorm_prob&#39;: 2.9623174890967903e-05, &#39;slope&#39;: 0.02844317914248998}
+#  8/40 - Metric: 1.195 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.190743267172612e-05, &#39;norm_to_abnorm_prob&#39;: 1.077042949688755e-05, &#39;slope&#39;: 0.038905486038535136}
+#  9/40 - Metric: 2.015 - Detection rate: 0.04 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0004904414638018703, &#39;norm_to_abnorm_prob&#39;: 1.3522149801543981e-05, &#39;slope&#39;: 0.003080087110555598}
+# 10/40 - Metric: 2.026 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0003803010696218067, &#39;norm_to_abnorm_prob&#39;: 0.0006067351054085067, &#39;slope&#39;: 0.005145242437687149}
+# 11/40 - Metric: 2.006 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00010076570926636027, &#39;norm_to_abnorm_prob&#39;: 0.0004596262535226294, &#39;slope&#39;: 0.0012414480866502614}
+# 12/40 - Metric: 2.009 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.21928443287233e-06, &#39;norm_to_abnorm_prob&#39;: 6.8210958326086354e-06, &#39;slope&#39;: 0.0018802527817030493}
+# 13/40 - Metric: 1.082 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 8.332492157853103e-05, &#39;norm_to_abnorm_prob&#39;: 6.692964115412949e-05, &#39;slope&#39;: 0.016388032118698142}
+# 14/40 - Metric: 1.143 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00011962002610971, &#39;norm_to_abnorm_prob&#39;: 5.901012003959234e-05, &#39;slope&#39;: 0.028695984194538865}
+# 15/40 - Metric: 1.137 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00011699734803488377, &#39;norm_to_abnorm_prob&#39;: 5.14607696593981e-05, &#39;slope&#39;: 0.02732036761748279}
+# 16/40 - Metric: 1.088 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00010014805464395656, &#39;norm_to_abnorm_prob&#39;: 7.105910819811702e-05, &#39;slope&#39;: 0.017616513472796552}
+# 17/40 - Metric: 1.068 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0001005001905488477, &#39;norm_to_abnorm_prob&#39;: 8.628961207928659e-05, &#39;slope&#39;: 0.013576690419033512}
+# 18/40 - Metric: 1.066 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.6968019370005696e-05, &#39;norm_to_abnorm_prob&#39;: 0.0009054405280877412, &#39;slope&#39;: 0.013254133733744669}
+# 19/40 - Metric: 1.067 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.344263255573831e-05, &#39;norm_to_abnorm_prob&#39;: 2.5826583604392222e-05, &#39;slope&#39;: 0.01347569848844658}
+# 20/40 - Metric: 1.065 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.494493913006697e-05, &#39;norm_to_abnorm_prob&#39;: 0.0009345054789903185, &#39;slope&#39;: 0.012924735409318329}
+# 21/40 - Metric: 2.034 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00091863083429639, &#39;norm_to_abnorm_prob&#39;: 0.0007605907713677758, &#39;slope&#39;: 0.0067312214553108185}
+# 22/40 - Metric: 0.771 - Detection rate: 0.72 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.001576049532547e-05, &#39;norm_to_abnorm_prob&#39;: 1.2418685627567467e-06, &#39;slope&#39;: 0.010294357179382606}
+# 23/40 - Metric: 2.036 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.1940775705186173e-05, &#39;norm_to_abnorm_prob&#39;: 0.0007783456104086452, &#39;slope&#39;: 0.007229808252192879}
+# 24/40 - Metric: 0.995 - Detection rate: 0.94 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.238761328180287e-05, &#39;norm_to_abnorm_prob&#39;: 2.7027719055073537e-05, &#39;slope&#39;: 0.010940105665376038}
+# 25/40 - Metric: 2.049 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 9.691446970572532e-06, &#39;norm_to_abnorm_prob&#39;: 1.3264888878228937e-06, &#39;slope&#39;: 0.009829752557278854}
+# 26/40 - Metric: 2.052 - Detection rate: 0.12 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.5659727444483184e-05, &#39;norm_to_abnorm_prob&#39;: 1.1037696166615046e-06, &#39;slope&#39;: 0.010420140396359481}
+# 27/40 - Metric: 2.047 - Detection rate: 0.16 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.4804575806526934e-05, &#39;norm_to_abnorm_prob&#39;: 2.321092992282382e-06, &#39;slope&#39;: 0.009307813907876645}
+# 28/40 - Metric: 2.019 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.9044050399690304e-05, &#39;norm_to_abnorm_prob&#39;: 3.2893079880123266e-06, &#39;slope&#39;: 0.003723706243914807}
+# 29/40 - Metric: 2.024 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.241205142980483e-06, &#39;norm_to_abnorm_prob&#39;: 3.9261961869358995e-06, &#39;slope&#39;: 0.00489331333803851}
+# 30/40 - Metric: 2.024 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 6.576910672233349e-06, &#39;norm_to_abnorm_prob&#39;: 4.693100096260617e-06, &#39;slope&#39;: 0.004865030590467893}
+# 31/40 - Metric: 2.023 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 7.364823618818569e-06, &#39;norm_to_abnorm_prob&#39;: 5.826994369291945e-06, &#39;slope&#39;: 0.004673121655736246}
+# 32/40 - Metric: 0.669 - Detection rate: 0.64 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.34770447345606e-05, &#39;norm_to_abnorm_prob&#39;: 0.00015715410785774786, &#39;slope&#39;: 0.005713101783637166}
+# 33/40 - Metric: 1.226 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.251348842302226e-05, &#39;norm_to_abnorm_prob&#39;: 0.00015307415424362946, &#39;slope&#39;: 0.04511681680548714}
+# 34/40 - Metric: 1.062 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.238713379510494e-05, &#39;norm_to_abnorm_prob&#39;: 0.0009545733589840744, &#39;slope&#39;: 0.012343818140714878}
+# 35/40 - Metric: 0.875 - Detection rate: 0.84 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.7224785427083885e-05, &#39;norm_to_abnorm_prob&#39;: 0.00018721076126829901, &#39;slope&#39;: 0.00700283627593411}
+# 36/40 - Metric: 0.976 - Detection rate: 0.94 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0002069154472790351, &#39;norm_to_abnorm_prob&#39;: 0.00019155619751352022, &#39;slope&#39;: 0.007114139675956731}
+# 37/40 - Metric: 0.911 - Detection rate: 0.88 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00022043457662016607, &#39;norm_to_abnorm_prob&#39;: 0.00019306761109595853, &#39;slope&#39;: 0.006140104275454159}
+# 38/40 - Metric: 0.615 - Detection rate: 0.58 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.333323218088839e-05, &#39;norm_to_abnorm_prob&#39;: 0.00014477787352995747, &#39;slope&#39;: 0.007022024949069811}
+# 39/40 - Metric: 0.935 - Detection rate: 0.90 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00017942180142382344, &#39;norm_to_abnorm_prob&#39;: 0.0001886984408464097, &#39;slope&#39;: 0.006903978190411199}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-26 15:11:16,005 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/SKF_optimizer&#39; in 0.0114s.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+# 40/40 - Metric: 0.950 - Detection rate: 0.92 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00021143898730368083, &#39;norm_to_abnorm_prob&#39;: 0.00011122789596118995, &#39;slope&#39;: 0.006091122382854389}
+-----
+Optimal parameters at trial #38: {&#39;std_transition_error&#39;: 2.333323218088839e-05, &#39;norm_to_abnorm_prob&#39;: 0.00014477787352995747, &#39;slope&#39;: 0.007022024949069811}
+-----
+</pre></div></div>
+</div>
+</section>
+<section id="B.4.-Get-optimal-SKF">
+<h2>B.4. Get optimal SKF<a class="headerlink" href="#B.4.-Get-optimal-SKF" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get optimal model</span>
+<span class="n">skf_param</span> <span class="o">=</span> <span class="n">skf_optimizer</span><span class="o">.</span><span class="n">get_best_param</span><span class="p">()</span>
+<span class="n">skf_optim</span> <span class="o">=</span> <span class="n">initialize_skf</span><span class="p">(</span><span class="n">skf_param</span><span class="p">,</span> <span class="n">model_optim_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.5.-Anomaly-detection">
+<h2>B.5. Anomaly detection<a class="headerlink" href="#B.5.-Anomaly-detection" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf_optim</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
+<span class="n">smooth_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf_optim</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.6.-Hidden-states-and-proability-of-anomalies">
+<h2>B.6. Hidden states and proability of anomalies<a class="headerlink" href="#B.6.-Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
+    <span class="c1"># states_type=&quot;smooth&quot;,</span>
+    <span class="n">model_prob</span><span class="o">=</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">],</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;SKF hidden states&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;MM-DD&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_parameter_tuning_32_0.png" src="../_images/examples_parameter_tuning_32_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="anomaly_detection.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Anomaly detection</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="read_DAT_file.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Read .DAT file</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.-Optimize-model's-parameters">A. Optimize model’s parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.1.-Parameter-space">A.1. Parameter space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.2.-Model-as-a-function-of-parameters">A.2. Model as a function of parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.3.-Define-optimizer">A.3. Define optimizer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.4-Get-optimal-model">A.4 Get optimal model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.5-Hidden-states-and-predictions">A.5 Hidden states and predictions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.-Optimize-Switching-Kalman-Filter's-(SKF)-parameters">B. Optimize Switching Kalman Filter’s (SKF) parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.1.-Parameter-space">B.1. Parameter space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.2.-SKF-model-as-a-function-of-parameters">B.2. SKF model as a function of parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.3.-Optimizer">B.3. Optimizer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.4.-Get-optimal-SKF">B.4. Get optimal SKF</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.5.-Anomaly-detection">B.5. Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.6.-Hidden-states-and-proability-of-anomalies">B.6. Hidden states and proability of anomalies</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -155,8 +155,11 @@
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting.html">Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/parameter_tuning.html">Parameter tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT file</a></li>
 </ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -323,7 +326,7 @@ document.write(`
 <span class="sd">    Attributes:</span>
 <span class="sd">        model_optim :</span>
 <span class="sd">            The best model instance initialized with optimal parameters after running optimize().</span>
-<span class="sd">        param_optim (Dict[str, Any]):</span>
+<span class="sd">        param_optim (Dict):</span>
 <span class="sd">            The best hyperparameter configuration found during optimization.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -364,7 +367,7 @@ document.write(`
         <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span>
             <span class="n">config</span><span class="p">,</span>
         <span class="p">):</span>
-            <span class="n">trained_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
+            <span class="n">trained_model</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
                 <span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span>
             <span class="p">)</span>
             <span class="n">tune</span><span class="o">.</span><span class="n">report</span><span class="p">({</span><span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">metric_optim</span><span class="p">})</span>
@@ -457,7 +460,8 @@ document.write(`
 <span class="sd">        Retrieve the optimized model instance after running optimization.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            :class:`~canari.model.Model`:: Model instance initialized with the best hyperparameter values.</span>
+<span class="sd">            :class:`~canari.model.Model`:: Model instance initialized with the best</span>
+<span class="sd">                                            hyperparameter values.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span></div>
