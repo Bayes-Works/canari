@@ -32,6 +32,7 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi import Normalizer as normalizer
 import scipy
+import scipy
 
 
 class Model:
@@ -791,6 +792,7 @@ class Model:
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
+            mu_states_prior, var_states_prior = self._online_AR_forward_modification(
                 mu_states_prior, var_states_prior
             )
 
@@ -849,7 +851,7 @@ class Model:
             )
 
         if "bounded autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = self.BAR_backward_modification(
+            mu_states_posterior, var_states_posterior = self._BAR_backward_modification(
                 mu_states_posterior, var_states_posterior
             )
 
