@@ -19,17 +19,22 @@ from canari import (
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Fix parameters grid search
-sigma_v_fix = 0.0019179647619756545
-look_back_len_fix = 10
-# SKF_std_transition_error_fix = 0.0020670653848689604
-# SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-4
+# sigma_v_fix = 0.0019179647619756545
+# look_back_len_fix = 10
+# # SKF_std_transition_error_fix = 0.0020670653848689604
+# # SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
+# SKF_std_transition_error_fix = 1e-4
+# SKF_norm_to_abnorm_prob_fix = 1e-4
+
+sigma_v_fix = 0.015519087402266298
+look_back_len_fix = 11
+SKF_std_transition_error_fix = 0.0006733112773884772
+SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 
 def main(
     num_trial_optimization: int = 20,
-    param_tune: bool = False,
+    param_optimization: bool = False,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -59,8 +64,8 @@ def main(
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-    ####################
-    ####################
+    ########################################
+    ########################################
 
     # Parameter optimization for model
     num_epoch = 50
@@ -132,31 +137,31 @@ def main(
         )
 
     # Define parameter search space
-    if param_tune:
-        param = {
+    if param_optimization:
+        param_space = {
             "look_back_len": [10, 30],
             "sigma_v": [1e-3, 2e-1],
         }
         # Define optimizer
         model_optimizer = ModelOptimizer(
             model=initialize_model,
-            param_space=param,
+            param_space=param_space,
             train_data=train_data,
             validation_data=validation_data,
             num_optimization_trial=num_trial_optimization,
         )
         model_optimizer.optimize()
         # Get best model
-        param_used = model_optimizer.get_best_param()
+        param = model_optimizer.get_best_param()
     else:
-        param_used = {
+        param = {
             "look_back_len": look_back_len_fix,
             "sigma_v": sigma_v_fix,
         }
 
     # Train best model
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
-        initialize_model(param_used, train_data, validation_data)
+        initialize_model(param, train_data, validation_data)
     )
 
     # Save best model for SKF analysis later
@@ -188,11 +193,11 @@ def main(
     plt.title("Validation predictions")
     plt.show()
 
-    ####################
-    ####################
+    ########################################
+    ########################################
 
     # Parameter optimization for SKF
-    def initialize_skf(skf_param, model_param: dict):
+    def initialize_skf(skf_param_space, model_param: dict):
         norm_model = Model.load_dict(model_param)
         abnorm_model = Model(
             LocalAcceleration(),
@@ -202,8 +207,8 @@ def main(
         skf = SKF(
             norm_model=norm_model,
             abnorm_model=abnorm_model,
-            std_transition_error=skf_param["std_transition_error"],
-            norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
+            std_transition_error=skf_param_space["std_transition_error"],
+            norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
             abnorm_to_norm_prob=1e-1,
             norm_model_prior_prob=0.99,
         )
@@ -240,8 +245,8 @@ def main(
     plt.title("Train data with added synthetic anomalies")
     plt.show()
 
-    if param_tune:
-        skf_param = {
+    if param_optimization:
+        skf_param_space = {
             "std_transition_error": [1e-6, 1e-2],
             "norm_to_abnorm_prob": [1e-6, 1e-2],
             "slope": [slope_lower_bound, slope_upper_bound],
@@ -250,20 +255,22 @@ def main(
         skf_optimizer = SKFOptimizer(
             initialize_skf=initialize_skf,
             model_param=model_optim_dict,
-            param_space=skf_param,
+            param_space=skf_param_space,
             data=train_data,
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
         )
         skf_optimizer.optimize()
-        # Get best model
-        skf_optim = skf_optimizer.get_best_model()
+
+        # Get parameters
+        skf_param = skf_optimizer.get_best_param()
     else:
         skf_param = {
             "std_transition_error": SKF_std_transition_error_fix,
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
-        skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
+
+    skf_optim = initialize_skf(skf_param, model_optim_dict)
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
@@ -286,11 +293,11 @@ def main(
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
 
-    if param_tune:
+    if param_optimization:
         print("Model parameters used:", model_optimizer.param_optim)
         print("SKF model parameters used:", skf_optimizer.param_optim)
     else:
-        print("Model parameters used:", param_used)
+        print("Model parameters used:", param)
         print("SKF model parameters used:", skf_param)
     print("-----")
 

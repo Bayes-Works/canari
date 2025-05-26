@@ -217,6 +217,16 @@ class SKFOptimizer:
         """
         return self.skf_optim
 
+    def get_best_param(self):
+        """
+        Retrieve the optimized parameters after running optimization.
+
+        Returns:
+            dict: Best hyperparameter values.
+
+        """
+        return self.param_optim
+
 
 class _CustomLogger(Callback):
     """
