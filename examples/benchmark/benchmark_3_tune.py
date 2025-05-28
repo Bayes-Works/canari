@@ -20,10 +20,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters
-sigma_v_fix = 0.015884834544644552
-look_back_len_fix = 16
-SKF_std_transition_error_fix = 5.4761951556349584e-06
-SKF_norm_to_abnorm_prob_fix = 3.209151542975383e-05
+sigma_v_fix = 0.1635316747368441
+look_back_len_fix = 59
+SKF_std_transition_error_fix = 6.701314226202389e-05
+SKF_norm_to_abnorm_prob_fix = 8.263780389564766e-05
 
 
 def main(
@@ -137,7 +137,7 @@ def main(
     # Define parameter search space
     if param_optimization or param_grid_search:
         if param_optimization:
-            param = {
+            param_space = {
                 "look_back_len": [12, 76],
                 "sigma_v": [1e-3, 2e-1],
             }

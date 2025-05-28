@@ -26,8 +26,6 @@ skf = SKF(
     abnorm_model=Model(local_acceleration, lstm_network, noise),
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
-    abnorm_to_norm_prob=1e-1,
-    norm_model_prior_prob=0.99,
 )
 
 

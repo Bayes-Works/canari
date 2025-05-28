@@ -164,7 +164,6 @@ class DataProcess:
 
     def standardize_data(self) -> np.ndarray:
         """
-        TODO: unstandardize data method
         Standardize the data using training statistics.
 
         Returns:
@@ -338,7 +337,6 @@ class DataProcess:
         anomaly_end: Optional[float] = 0.66,
     ) -> List[Dict[str, np.ndarray]]:
         """
-        # TODO
         Add randomly generated synthetic anomalies to the original data.
         From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).
         Following a uniform distribution, it randomly chooses within this window where the anomaly starts.
