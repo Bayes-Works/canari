@@ -160,6 +160,7 @@ def main(
         }
 
     # Train best model
+    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -268,6 +269,7 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
+    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_optim_dict)
 
     # Detect anomaly
@@ -290,14 +292,6 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
-
-    if param_optimization:
-        print("Model parameters used:", model_optimizer.param_optim)
-        print("SKF model parameters used:", skf_optimizer.param_optim)
-    else:
-        print("Model parameters used:", param)
-        print("SKF model parameters used:", skf_param)
-    print("-----")
 
 
 if __name__ == "__main__":
