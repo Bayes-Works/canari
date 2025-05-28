@@ -20,10 +20,15 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters grid search
-sigma_v_fix = 0.048157582719331495
-look_back_len_fix = 19
-SKF_std_transition_error_fix = 1e-4
-SKF_norm_to_abnorm_prob_fix = 1e-4
+# sigma_v_fix = 0.048157582719331495
+# look_back_len_fix = 19
+# SKF_std_transition_error_fix = 1e-4
+# SKF_norm_to_abnorm_prob_fix = 1e-4
+
+sigma_v_fix = 0.028761848586134717
+look_back_len_fix = 17
+SKF_std_transition_error_fix = 8.342724615139627e-06
+SKF_norm_to_abnorm_prob_fix = 3.502930299229484e-05
 
 
 def main(
@@ -290,8 +295,8 @@ def main(
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_to_plot=["level", "trend", "acceleration"],
-        states_type="smooth",
+        # states_to_plot=["level", "trend", "acceleration"],
+        # states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",

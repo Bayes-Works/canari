@@ -216,6 +216,7 @@ def main(
             std_transition_error=skf_param["std_transition_error"],
             norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
         )
+        skf.save_initial_states()
         return skf
 
     # Define parameter search space
@@ -257,8 +258,8 @@ def main(
             }
         elif param_optimization:
             skf_param_space = {
-                "std_transition_error": [1e-6, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "std_transition_error": [1e-6, 1e-4],
+                "norm_to_abnorm_prob": [1e-6, 1e-4],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         skf_optimizer = SKFOptimizer(
@@ -290,7 +291,7 @@ def main(
         data_processor=data_processor,
         states=states,
         # states_to_plot=["level", "trend", "lstm", "white noise"],
-        states_type="smooth",
+        # states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",
