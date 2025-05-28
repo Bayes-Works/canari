@@ -18,19 +18,18 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 class ModelOptimizer:
     """
     Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune
-    external library.
+    external library using the metric :attr:`~canari.model.Model.metric_optim`.
 
     Args:
-        initialize_model (Callable):
+        model (Callable):
             Function that returns a model instance given a model configuration.
-        train (Callable):
-            Function that define the training procedure for a model, it should return
-            `trained_model.early_stop_metric`.
         param_space (Dict[str, list]):
             Parameter search space: two-value lists [min, max] for defining the
             bounds of the optimization.
-        data_processor (DataProcess):
-            DataProcess instance for data preparation.
+        train_data (Dict[str, np.ndarray], optional):
+            Training data.
+        validation_data (Dict[str, np.ndarray], optional):
+            Validation data.
         num_optimization_trial (int, optional):
             Number of random search trials (ignored for grid search). Defaults to 50.
         grid_search (bool, optional):
@@ -38,6 +37,7 @@ class ModelOptimizer:
         algorithm (str, optional):
             Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
             Defaults to 'OptunaSearch'.
+        mode (str, optional): Direction for optimization stopping: 'min' (default).
 
     Attributes:
         model_optim :
