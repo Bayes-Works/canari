@@ -54,7 +54,7 @@ def main(
     ########################################
 
     # Define model
-    def initialize_model(param):
+    def initialize_model(param, train_data, validation_data):
         model = Model(
             LocalTrend(),
             LstmNetwork(
@@ -166,6 +166,7 @@ def main(
         }
 
     # Train best model
+    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -215,8 +216,6 @@ def main(
             abnorm_model=abnorm_model,
             std_transition_error=skf_param["std_transition_error"],
             norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
-            abnorm_to_norm_prob=1e-1,
-            norm_model_prior_prob=0.99,
         )
         return skf
 
@@ -283,10 +282,11 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
+    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_optim_dict)
 
     # Detect anomaly
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
@@ -300,15 +300,6 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
-
-    if param_optimization or param_grid_search:
-        print("Model parameters used:", model_optimizer.param_optim)
-        print("SKF model parameters used:", skf_optimizer.param_optim)
-        print("-----")
-    else:
-        print("Model parameters used:", param)
-        print("SKF model parameters used:", skf_param)
-        print("-----")
 
 
 if __name__ == "__main__":

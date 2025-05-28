@@ -108,8 +108,6 @@ skf = SKF(
     abnorm_model=ab_model,
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
-    abnorm_to_norm_prob=1e-1,
-    norm_model_prior_prob=0.99,
 )
 skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
 

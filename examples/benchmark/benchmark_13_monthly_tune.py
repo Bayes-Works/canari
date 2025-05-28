@@ -160,6 +160,7 @@ def main(
         }
 
     # Train best model
+    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -207,9 +208,6 @@ def main(
             abnorm_model=abnorm_model,
             std_transition_error=skf_param["std_transition_error"],
             norm_to_abnorm_prob=skf_param["norm_to_abnorm_prob"],
-            abnorm_to_norm_prob=1e-1,
-            norm_model_prior_prob=0.99,
-            conditional_likelihood=False,
         )
         skf.save_initial_states()
         return skf
@@ -220,7 +218,7 @@ def main(
 
     # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-        data_processor.train_data,
+        train_data,
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
@@ -279,10 +277,11 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
+    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_optim_dict)
 
     # Detect anomaly
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
+    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
