@@ -1,15 +1,5 @@
-from typing import Tuple
-import numpy as np
-import numpy.testing as npt
-import fire
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    SKF,
-)
+from canari import Model, SKF
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 from test.test_save_load_model import compare_model_dict
 
 

@@ -1,22 +1,10 @@
-import os
 import pandas as pd
 import numpy as np
-import pytest
 import matplotlib.pyplot as plt
 from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
-
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Model,
-    SKF,
-    plot_skf_states,
-)
-from examples import DataProcess
+from canari import Model, SKF, DataProcess, plot_skf_states
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Components
 sigma_v = 5e-2
@@ -82,18 +70,18 @@ def SKF_anomaly_detection_runner(
     num_epoch = 30
     test_model.auto_initialize_baseline_states(train_data["y"][0:23])
     for epoch in range(num_epoch):
-        (mu_validation_preds, std_validation_preds, _) = test_model.lstm_train(
+        (mu_validation_preds, std_validation_preds, states) = test_model.lstm_train(
             train_data=train_data, validation_data=validation_data
         )
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.norm_const_mean[output_col],
-            data_processor.norm_const_std[output_col],
+            data_processor.std_const_mean[output_col],
+            data_processor.std_const_std[output_col],
         )
         std_validation_preds = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.norm_const_std[output_col],
+            data_processor.std_const_std[output_col],
         )
 
         validation_obs = data_processor.get_data("validation").flatten()
@@ -104,13 +92,19 @@ def SKF_anomaly_detection_runner(
         )
 
         # Early-stopping
-        skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+        skf.early_stopping(
+            evaluate_metric=-validation_log_lik,
+            current_epoch=epoch,
+            max_epoch=num_epoch,
+        )
+
+        skf.model["norm_norm"].set_memory(states=states, time_step=0)
         if skf.stop_training:
             break
 
     # Anomaly detection
     filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+    smooth_marginal_abnorm_prob, states = skf.smoother()
 
     # Check anomalies
     condition1 = np.any(

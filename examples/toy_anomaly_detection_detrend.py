@@ -1,26 +1,20 @@
 import copy
 import pandas as pd
 from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from examples import DataProcess
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
+import pytagi.metric as metric
+from statsmodels.tsa.seasonal import seasonal_decompose
+from canari import (
+    DataProcess,
     Model,
     SKF,
     plot_data,
     plot_prediction,
     plot_skf_states,
-    plot_states,
 )
-import pytagi.metric as metric
-from statsmodels.tsa.seasonal import seasonal_decompose
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 
 # # Read data
@@ -73,8 +67,8 @@ data_values = np.concatenate(
 )
 all_data_norm = normalizer.standardize(
     data=data_values,
-    mu=data_processor.norm_const_mean,
-    std=data_processor.norm_const_std,
+    mu=data_processor.std_const_mean,
+    std=data_processor.std_const_std,
 )
 all_data = {}
 all_data["x"] = all_data_norm[:, data_processor.covariates_col]
@@ -134,13 +128,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
@@ -151,11 +145,15 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    model_lstm.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    model_lstm.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == model_lstm.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+
+    model_lstm.set_memory(states=states, time_step=0)
     if model_lstm.stop_training:
         break
 
@@ -166,7 +164,7 @@ print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
 skf.model["norm_norm"].lstm_net = model_lstm.lstm_net
 skf.lstm_net = model_lstm.lstm_net
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
@@ -174,7 +172,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
-    normalization=True,
+    standardization=True,
     plot_test_data=False,
     validation_label="y",
 )
@@ -195,7 +193,7 @@ time = data_processor.get_time("all")
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     plot_observation=False,
-    normalization=True,
+    standardization=True,
     states=states,
     model_prob=marginal_abnorm_prob_plot,
     color="b",

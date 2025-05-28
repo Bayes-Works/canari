@@ -1,26 +1,18 @@
-import fire
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from matplotlib import gridspec
+from canari import (
+    DataProcess,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
+from canari.component import LocalTrend, LstmNetwork, Autoregression
 
 
 # # Read data
@@ -55,26 +47,26 @@ data_processor = DataProcess(
     validation_split=train_val_split[1],
     output_col=output_col,
 )
-obs_norm_const_mean = data_processor.norm_const_mean[output_col].item()
-obs_norm_const_std = data_processor.norm_const_std[output_col].item()
-time_covariate_norm_const_mean = data_processor.norm_const_mean[
+obs_std_const_mean = data_processor.std_const_mean[output_col].item()
+obs_std_const_std = data_processor.std_const_std[output_col].item()
+time_covariate_std_const_mean = data_processor.std_const_mean[
     data_processor.covariates_col
 ].item()
-time_covariate_norm_const_std = data_processor.norm_const_std[
+time_covariate_std_const_std = data_processor.std_const_std[
     data_processor.covariates_col
 ].item()
 
-trend_true_norm = trend_true / (obs_norm_const_std + 1e-10)
-level_true_norm = (5.0 - obs_norm_const_mean) / (obs_norm_const_std + 1e-10)
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+trend_true_norm = trend_true / (obs_std_const_std + 1e-10)
+level_true_norm = (5.0 - obs_std_const_mean) / (obs_std_const_std + 1e-10)
+train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 train_index, val_index, test_index = data_processor.get_split_indices()
 time_covariate_info = {
     "initial_time_covariate": data_processor.data.values[
         val_index[-1], data_processor.covariates_col
     ].item(),
-    "mu": time_covariate_norm_const_mean,
-    "std": time_covariate_norm_const_std,
+    "mu": time_covariate_std_const_mean,
+    "std": time_covariate_std_const_std,
 }
 
 LSTM = LstmNetwork(
@@ -115,12 +107,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        obs_norm_const_mean,
-        obs_norm_const_std,
+        obs_std_const_mean,
+        obs_std_const_std,
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        obs_norm_const_std,
+        obs_std_const_std,
     )
 
     # Calculate the evaluation metric
@@ -134,12 +126,16 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    model.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
 
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
         std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
+
+    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
@@ -151,7 +147,9 @@ model_dict["states_optimal"] = states_optim
 
 # Save model_dict to local
 import pickle
+import os
 
+os.makedirs("saved_params", exist_ok=True)
 with open("saved_params/toy_model_dict.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
@@ -230,11 +228,11 @@ fig, ax = plot_states(
     data_processor=data_processor,
     states=model.states,
     states_type=state_type,
-    states_to_plot=["local level", "local trend", "lstm", "autoregression"],
+    states_to_plot=["level", "trend", "lstm", "autoregression"],
 )
 plot_data(
     data_processor=data_processor,
-    normalization=False,
+    standardization=False,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],

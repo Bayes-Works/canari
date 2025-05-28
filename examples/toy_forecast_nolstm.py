@@ -2,19 +2,12 @@ import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari import (
+    DataProcess,
     Model,
-    plot_data,
-    plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-
+from canari.component import LocalTrend, Periodic, WhiteNoise, Autoregression
 
 # # Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
@@ -37,7 +30,7 @@ data_processor = DataProcess(
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 train_data, validation_data, _, _ = data_processor.get_splits()
 
@@ -97,7 +90,7 @@ def main(
 
     # # #
     model.filter(data=train_data)
-    model.smoother(data=train_data)
+    model.smoother()
 
     # #  Plot
     plot_states(

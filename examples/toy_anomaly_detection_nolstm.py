@@ -2,18 +2,19 @@ import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari import (
+    DataProcess,
     Model,
     SKF,
-    plot_prediction,
     plot_skf_states,
 )
-from examples import DataProcess
+from canari.component import (
+    LocalTrend,
+    LocalAcceleration,
+    WhiteNoise,
+    Periodic,
+    Autoregression,
+)
 
 # Read data
 data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
@@ -38,7 +39,7 @@ data_processor = DataProcess(
     data=df_raw,
     train_split=1,
     output_col=output_col,
-    normalization=False,
+    standardization=False,
 )
 _, _, _, all_data = data_processor.get_splits()
 
@@ -112,7 +113,7 @@ def main(
 
     # # # Anomaly Detection
     filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+    smooth_marginal_abnorm_prob, states = skf.smoother()
 
     #  Plot
     marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
@@ -122,8 +123,8 @@ def main(
         states_type="prior",
         model_prob=marginal_abnorm_prob_plot,
         # states_to_plot=[
-        #     "local level",
-        #     "local trend",
+        #     "level",
+        #     "trend",
         #     "periodic 1",
         #     "autoregression",
         #     "phi",

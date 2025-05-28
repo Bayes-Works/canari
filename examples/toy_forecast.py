@@ -1,23 +1,11 @@
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
-    Model,
-    plot_data,
-    plot_prediction,
-)
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-import copy
-
+from canari import DataProcess, Model, plot_data, plot_prediction
+from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -46,7 +34,7 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
 sigma_v = 0.0032322250444898116
@@ -74,12 +62,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     # Calculate the log-likelihood metric
@@ -87,13 +75,15 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, mode="min")
+    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
+
+    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
@@ -104,7 +94,7 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
-    normalization=False,
+    standardization=False,
     plot_column=output_col,
     validation_label="y",
 )

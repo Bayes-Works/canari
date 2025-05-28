@@ -1,17 +1,12 @@
-# canari
+# pycanari
 Open-source library for probabilistic anomaly detection in time series 
 
 ## Installation
-#### Clone this repository or create canari folder 
-```sh
-git clone https://github.com/CivML-PolyMtl/canari.git
-cd canari
-```
 
 #### Create Miniconda Environment
 
 1. Install Miniconda by following these [instructions](https://docs.conda.io/en/latest/miniconda.html)
-2. Create a conda environment:
+2. Create a conda environment named `canari`:
 
     ```sh
     conda create --name canari python=3.10
@@ -23,20 +18,40 @@ cd canari
     conda activate canari
     ```
 
-#### Canari Installation
+#### Install pycanari
+1. Install pycanari
 
-1. Install requirements:
+    ```sh
+    pip install pycanari
+    ```
+
+2. [Search pycanari and download pycanari-0.0.2.tar.gz file from the lastest version](https://pypi.org)
+
+3. Copy the downloaded pycanari-0.0.2.tar file to the your working folder
+
+4. Extract the pycanari-0.0.2.tar file using:
+
+    ```sh
+    tar -xvf pycanari-0.0.2.tar
+    ```
+5. Set directory
+    ```sh
+    cd pycanari-0.0.2
+    ```
+    
+6. Install requirements:
 
     ```sh
     pip install -r requirements.txt
     ```
 
-
-2. Test **canari** package:
+7. Test **pycanari** package:
 
     ```sh
     python -m examples.toy_forecast
     ```
+
+NOTE: Replace the name `pycanari-0.0.2` with the corresponding version, e.g. pycanari-0.0.3
 
 
 ## Code organization
@@ -49,7 +64,7 @@ canari
 |    |      (v0) read data
 |    |      (v0) resampling 
 |    |      (v0) split data into train/validation/test sets 
-|    |      (v0) normalization/unnormalization (from pytagi)
+|    |      (v0) standardization/unstandardization (from pytagi)
 |    |      (v1) automated outliers removal 
 |    |      (v1) save data 
 |    |

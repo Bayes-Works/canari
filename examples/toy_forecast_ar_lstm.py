@@ -1,21 +1,18 @@
+import copy
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalTrend,
-    LstmNetwork,
-    Autoregression,
+import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
+from canari import (
+    DataProcess,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
+from canari.component import LocalTrend, LstmNetwork, Autoregression
 
 
 ###########################
@@ -45,15 +42,15 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
-train_data, val_data, test_data, normalized_data = data_processor.get_splits()
+train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 
-# Normalization constants
-norm_const_mean = data_processor.norm_const_mean[output_col].item()
-norm_const_std = data_processor.norm_const_std[output_col].item()
+# Standardization constants
+std_const_mean = data_processor.std_const_mean[output_col].item()
+std_const_std = data_processor.std_const_std[output_col].item()
 
 # Define model components
-trend_norm = trend_true / (norm_const_std + 1e-10)
-level_norm = (5.0 - norm_const_mean) / (norm_const_std + 1e-10)
+trend_norm = trend_true / (std_const_std + 1e-10)
+level_norm = (5.0 - std_const_mean) / (std_const_std + 1e-10)
 mu_W2bar_prior = 1e4
 var_AR_prior = 1e4
 var_W2bar_prior = 1e4
@@ -95,9 +92,9 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
 
     # Unstandardize the predictions
     mu_pred_unnorm = normalizer.unstandardize(
-        mu_validation_preds, norm_const_mean, norm_const_std
+        mu_validation_preds, std_const_mean, std_const_std
     )
-    std_pred_unnorm = normalizer.unstandardize_std(std_validation_preds, norm_const_std)
+    std_pred_unnorm = normalizer.unstandardize_std(std_validation_preds, std_const_std)
 
     # Calculate the evaluation metric
     obs_validation = data_processor.get_data("validation").flatten()
@@ -105,12 +102,15 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     val_log_lik = metric.log_likelihood(mu_pred_unnorm, obs_validation, std_pred_unnorm)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-val_log_lik, mode="min")
+    model.early_stopping(
+        evaluate_metric=-val_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == model.optimal_epoch:
         optimal_mu_val_preds = mu_validation_preds.copy()
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
+    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
@@ -156,8 +156,8 @@ pretrained_model = Model(
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 
 # filter and smoother
-pretrained_model.filter(normalized_data, train_lstm=False)
-pretrained_model.smoother(normalized_data)
+pretrained_model.filter(standardized_data, train_lstm=False)
+pretrained_model.smoother()
 
 
 # # Plotting results at the optimal epoch when training model
@@ -165,11 +165,11 @@ state_type = "prior"
 fig, ax = plot_states(
     data_processor=data_processor,
     states=states_optim,
-    normalization=True,
+    standardization=True,
     states_type=state_type,
     states_to_plot=[
-        "local level",
-        "local trend",
+        "level",
+        "trend",
         "lstm",
         "autoregression",
         "phi",
@@ -178,7 +178,7 @@ fig, ax = plot_states(
 )
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
@@ -198,21 +198,27 @@ fig, ax = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type=state_type,
-    normalization=True,
+    standardization=True,
     states_to_plot=[
-        "local level",
-        "local trend",
+        "level",
+        "trend",
         "lstm",
         "autoregression",
     ],
 )
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
-    plot_test_data=True,
+    plot_test_data=False,
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=optimal_mu_val_preds,
+    std_validation_pred=optimal_std_val_preds,
+    sub_plot=ax[0],
 )
 fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()

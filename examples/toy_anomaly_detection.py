@@ -1,25 +1,19 @@
 import copy
 import pandas as pd
 from pytagi import Normalizer as normalizer
-from pytagi import exponential_scheduler
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from examples import DataProcess
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
+import pytagi.metric as metric
+from canari import (
+    DataProcess,
     Model,
     SKF,
     plot_data,
     plot_prediction,
     plot_skf_states,
 )
-import pytagi.metric as metric
-from src import common
-
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -103,13 +97,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[data_processor.output_col],
-        data_processor.norm_const_std[data_processor.output_col],
+        data_processor.std_const_mean[data_processor.output_col],
+        data_processor.std_const_std[data_processor.output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[data_processor.output_col],
+        data_processor.std_const_std[data_processor.output_col],
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
@@ -120,11 +114,15 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    skf.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    skf.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
     if epoch == skf.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+
+    skf.model["norm_norm"].set_memory(states=states, time_step=0)
     if skf.stop_training:
         break
 
@@ -133,7 +131,7 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(data=all_data)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = smooth_marginal_abnorm_prob
@@ -141,7 +139,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
-    normalization=True,
+    standardization=True,
     plot_test_data=False,
     sub_plot=ax,
     validation_label="y",
@@ -163,9 +161,9 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    states_to_plot=["local level", "local trend", "lstm", "white noise"],
+    states_to_plot=["level", "trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
-    # normalization=True,
+    # standardization=True,
     color="b",
     legend_location="upper left",
 )
