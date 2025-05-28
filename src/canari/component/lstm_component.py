@@ -29,8 +29,8 @@ class LstmNetwork(BaseComponent):
                                     Defaults to None (random initialization).
         gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.
         gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.
-        load_lstm_net (Optional[str]): TODO (provide variables): Path to a saved LSTM network
-                            file containing pretrained LSTM's weights and biases. Defaults to None.
+        load_lstm_net (Optional[str]): Path to a saved LSTM network file containing pretrained
+                                        LSTM's weights and biases. Defaults to None.
         mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
             initialized to zeros.
         var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:

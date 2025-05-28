@@ -154,9 +154,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -450,7 +453,6 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess.standardize_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">standardize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        TODO: unstandardize data method</span>
 <span class="sd">        Standardize the data using training statistics.</span>
 
 <span class="sd">        Returns:</span>
@@ -642,7 +644,6 @@ document.write(`
         <span class="n">anomaly_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.66</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        # TODO</span>
 <span class="sd">        Add randomly generated synthetic anomalies to the original data.</span>
 <span class="sd">        From the orginal data, choose a window between `anomaly_start` and `anomaly_end` (ratio: 0-1).</span>
 <span class="sd">        Following a uniform distribution, it randomly chooses within this window where the anomaly starts.</span>

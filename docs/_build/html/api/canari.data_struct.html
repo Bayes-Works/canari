@@ -155,9 +155,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -380,8 +383,7 @@ document.write(`
 <dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_struct.</span></span><span class="sig-name descname"><span class="pre">LstmOutputHistory</span></span><a class="reference internal" href="../_modules/canari/data_struct.html#LstmOutputHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.LstmOutputHistory" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>TODO: duplicate attributes.
-Container for saving a rolling history of LSTM output means and variances
+<p>Container for saving a rolling history of LSTM output means and variances
 over a fixed lookback window. New predictions shift the window forward,
 saving the most recent predictions, and discard the oldest ones.</p>
 <p class="rubric">Examples</p>
@@ -454,8 +456,7 @@ saving the most recent predictions, and discard the oldest ones.</p>
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_struct.</span></span><span class="sig-name descname"><span class="pre">StatesHistory</span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>TODO: duplicates attibutes.
-Save estimates of hidden states over time.</p>
+<p>Save estimates of hidden states over time.</p>
 <p>Stores the evolution of prior, posterior, and smoothed values for hidden states over time,
 along with cross-covariances between hidden states at two consecutive timesteps <cite>t</cite> and <cite>t+1</cite>.</p>
 <dl class="py attribute">
@@ -555,53 +556,54 @@ at two consecutive timesteps <cite>t</cite> and <cite>t+1</cite>.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory.get_mean">
-<span class="sig-name descname"><span class="pre">get_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_mean" title="Link to this definition">#</a></dt>
-<dd><p>TODO: output type as a list.
-Retrieve the mean values over time for a specified hidden states and for either
+<span class="sig-name descname"><span class="pre">get_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_const_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_const_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_mean" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the mean values over time for a specified hidden states and for either
 a) the prior predicted value, b) the posterior updated values after the filter step,
 or c) the posterior updated values after the smoother step (smoothed estimates).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>states_name</strong> (<em>str</em>) – Name of hidden state to extract.</p></li>
 <li><p><strong>states_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of states to return (‘prior’, ‘posterior’, ‘smooth’).
 Defaults to “posterior”.</p></li>
-<li><p><strong>states_name</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>str</em><em>, </em><em>optional</em>) – Subset of state names to extract,
-or “all” for all hidden states. Defaults to “all”.</p></li>
+<li><p><strong>standardization</strong> (<em>bool</em><em>, </em><em>optional</em>) – Get the standardized values for hidden states.
+Defaults to True.</p></li>
+<li><p><strong>std_const_mean</strong> (<em>float</em><em>, </em><em>optional</em>) – Mean used for unstandardization.</p></li>
+<li><p><strong>std_const_std</strong> (<em>float</em><em>, </em><em>optional</em>) – Standard deviation used for unstandardization.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dictionary mapping state names to 1D arrays of means over time.</p>
+<dd class="field-even"><p>1D arrays of means over time.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict[str, np.ndarray]</p>
+<dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory.get_std">
-<span class="sig-name descname"><span class="pre">get_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_std"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_std" title="Link to this definition">#</a></dt>
-<dd><p>Retrieve the standard deviation values over time for a specified hidden states and for either
-a) the prior predicted value, b) the posterior updated values after the filter step,
-or c) the posterior updated values after the smoother step (smoothed estimates).</p>
+<span class="sig-name descname"><span class="pre">get_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_const_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_std"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_std" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the standard deviation values over time for a specified hidden states and
+for either a) the prior predicted value, b) the posterior updated values after the
+filter step, or c) the posterior updated values after the smoother step
+(smoothed estimates).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>states_name</strong> (<em>str</em>) – Name of hidden state to extract.</p></li>
 <li><p><strong>states_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of states to return (‘prior’, ‘posterior’, ‘smooth’).
 Defaults to “posterior”.</p></li>
-<li><p><strong>states_name</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>str</em><em>, </em><em>optional</em>) – Subset of state names to extract,
-or “all” for all hidden states. Defaults to “all”.</p></li>
+<li><p><strong>standardization</strong> (<em>bool</em><em>, </em><em>optional</em>) – Get the standardized values for hidden states.
+Defaults to True.</p></li>
+<li><p><strong>std_const_std</strong> (<em>float</em><em>, </em><em>optional</em>) – Standard deviation used for unstandardization.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Dictionary mapping state names to 1D arrays of standard</dt><dd><p>deviations over time.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>1D arrays of standard deviations over time.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict[str, np.ndarray]</p>
+<dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>

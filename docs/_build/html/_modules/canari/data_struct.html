@@ -154,9 +154,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -293,10 +296,7 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
 
 
 <div class="viewcode-block" id="LstmOutputHistory">
@@ -304,7 +304,6 @@ document.write(`
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">LstmOutputHistory</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    TODO: duplicate attributes.</span>
 <span class="sd">    Container for saving a rolling history of LSTM output means and variances</span>
 <span class="sd">    over a fixed lookback window. New predictions shift the window forward,</span>
 <span class="sd">    saving the most recent predictions, and discard the oldest ones.</span>
@@ -361,7 +360,6 @@ document.write(`
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">StatesHistory</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    TODO: duplicates attibutes.</span>
 <span class="sd">    Save estimates of hidden states over time.</span>
 
 <span class="sd">    Stores the evolution of prior, posterior, and smoothed values for hidden states over time,</span>
@@ -413,28 +411,29 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.StatesHistory.get_mean">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_mean</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
+        <span class="n">states_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
-        <span class="n">states_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">std_const_mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">std_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        TODO: output type as a list.</span>
 <span class="sd">        Retrieve the mean values over time for a specified hidden states and for either</span>
 <span class="sd">        a) the prior predicted value, b) the posterior updated values after the filter step,</span>
 <span class="sd">        or c) the posterior updated values after the smoother step (smoothed estimates).</span>
 
 <span class="sd">        Args:</span>
+<span class="sd">            states_name (str): Name of hidden state to extract.</span>
 <span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>
 <span class="sd">                Defaults to &quot;posterior&quot;.</span>
-<span class="sd">            states_name (list[str] or str, optional): Subset of state names to extract,</span>
-<span class="sd">                or &quot;all&quot; for all hidden states. Defaults to &quot;all&quot;.</span>
+<span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
+<span class="sd">                                                Defaults to True.</span>
+<span class="sd">            std_const_mean (float, optional): Mean used for unstandardization.</span>
+<span class="sd">            std_const_std (float, optional): Standard deviation used for unstandardization.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of means over time.</span>
+<span class="sd">            np.ndarray: 1D arrays of means over time.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">mean</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
-            <span class="n">states_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span>
 
         <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;prior&quot;</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
@@ -447,9 +446,12 @@ document.write(`
                 <span class="sa">f</span><span class="s2">&quot;Incorrect states_type: choose from &#39;prior&#39;, &#39;posterior&#39;, or &#39;smooth&#39;.&quot;</span>
             <span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">states_name</span><span class="p">:</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-            <span class="n">mean</span><span class="p">[</span><span class="n">state</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">states_name</span><span class="p">)</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
+            <span class="n">std_const_mean</span> <span class="o">=</span> <span class="n">std_const_mean</span> <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">std_const_mean</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">mean</span></div>
 
@@ -458,28 +460,28 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.StatesHistory.get_std">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_std</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
+        <span class="n">states_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
-        <span class="n">states_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">std_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Retrieve the standard deviation values over time for a specified hidden states and for either</span>
-<span class="sd">        a) the prior predicted value, b) the posterior updated values after the filter step,</span>
-<span class="sd">        or c) the posterior updated values after the smoother step (smoothed estimates).</span>
+<span class="sd">        Retrieve the standard deviation values over time for a specified hidden states and</span>
+<span class="sd">        for either a) the prior predicted value, b) the posterior updated values after the</span>
+<span class="sd">        filter step, or c) the posterior updated values after the smoother step</span>
+<span class="sd">        (smoothed estimates).</span>
 
 <span class="sd">        Args:</span>
+<span class="sd">            states_name (str): Name of hidden state to extract.</span>
 <span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>
 <span class="sd">                Defaults to &quot;posterior&quot;.</span>
-<span class="sd">            states_name (list[str] or str, optional): Subset of state names to extract,</span>
-<span class="sd">                or &quot;all&quot; for all hidden states. Defaults to &quot;all&quot;.</span>
+<span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
+<span class="sd">                                    Defaults to True.</span>
+<span class="sd">            std_const_std (float, optional): Standard deviation used for unstandardization.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of standard</span>
-<span class="sd">                                    deviations over time.</span>
+<span class="sd">            np.ndarray: 1D arrays of standard deviations over time.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">standard_deviation</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
-            <span class="n">states_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span>
 
         <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;prior&quot;</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_prior</span><span class="p">)</span>
@@ -492,9 +494,13 @@ document.write(`
                 <span class="sa">f</span><span class="s2">&quot;Incorrect states_type: choose from &#39;prior&#39;, &#39;posterior&#39;, or &#39;smooth&#39;.&quot;</span>
             <span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">states_name</span><span class="p">:</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-            <span class="n">standard_deviation</span><span class="p">[</span><span class="n">state</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">states_name</span><span class="p">)</span>
+        <span class="n">standard_deviation</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
+            <span class="n">standard_deviation</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
+                <span class="n">standard_deviation</span><span class="p">,</span> <span class="n">std_const_std</span>
+            <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">standard_deviation</span></div>
 </div>

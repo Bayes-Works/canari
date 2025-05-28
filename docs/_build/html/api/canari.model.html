@@ -157,9 +157,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -353,6 +356,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">Model.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.backward"><code class="docutils literal notranslate"><span class="pre">Model.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stopping"><code class="docutils literal notranslate"><span class="pre">Model.early_stopping()</span></code></a></li>
@@ -370,6 +374,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -704,6 +709,22 @@ early stopping or by reaching maximum number of epoch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">#</span> <span class="pre">Optimization</span> <span class="pre">attribute</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.model.Model.metric_optim">
+<span class="sig-name descname"><span class="pre">metric_optim</span></span><a class="headerlink" href="#canari.model.Model.metric_optim" title="Link to this definition">#</a></dt>
+<dd><p>metric used for optimization in <a class="reference internal" href="canari.model_optimizer.html#module-canari.model_optimizer" title="canari.model_optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">model_optimizer</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1226,6 +1247,24 @@ RTS smoothing equation over multiple time steps.</p>
 </div>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.white_noise_decay">
+<span class="sig-name descname"><span class="pre">white_noise_decay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_max_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_decay_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.white_noise_decay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.white_noise_decay" title="Link to this definition">#</a></dt>
+<dd><p>Apply exponential decay to white noise standard deviation over epochs, and modify
+the variance for the white noise component in <a class="reference internal" href="#canari.model.Model.process_noise_matrix" title="canari.model.Model.process_noise_matrix"><code class="xref py py-attr docutils literal notranslate"><span class="pre">process_noise_matrix</span></code></a>.
+This decaying noise structure is intended to improve the training performance
+of TAGI-LSTM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epoch</strong> (<em>int</em>) – Current training epoch.</p></li>
+<li><p><strong>white_noise_max_std</strong> (<em>float</em>) – Maximum allowed noise std.</p></li>
+<li><p><strong>white_noise_decay_factor</strong> (<em>float</em>) – Factor controlling decay rate.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -1300,6 +1339,7 @@ RTS smoothing equation over multiple time steps.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">Model.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.backward"><code class="docutils literal notranslate"><span class="pre">Model.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stopping"><code class="docutils literal notranslate"><span class="pre">Model.early_stopping()</span></code></a></li>
@@ -1317,6 +1357,7 @@ RTS smoothing equation over multiple time steps.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>
 </ul>

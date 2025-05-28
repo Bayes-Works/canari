@@ -154,9 +154,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -313,8 +316,8 @@ document.write(`
 <span class="sd">                                    Defaults to None (random initialization).</span>
 <span class="sd">        gain_weight (Optional[int]): Scaling factor for weight initialization. Defaults to 1.</span>
 <span class="sd">        gain_bias (Optional[int]): Scaling factor for bias initialization. Defaults to 1.</span>
-<span class="sd">        load_lstm_net (Optional[str]): TODO (provide variables): Path to a saved LSTM network</span>
-<span class="sd">                            file containing pretrained LSTM&#39;s weights and biases. Defaults to None.</span>
+<span class="sd">        load_lstm_net (Optional[str]): Path to a saved LSTM network file containing pretrained</span>
+<span class="sd">                                        LSTM&#39;s weights and biases. Defaults to None.</span>
 <span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
 <span class="sd">            initialized to zeros.</span>
 <span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>

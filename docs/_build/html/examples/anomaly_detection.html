@@ -48,7 +48,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Parameter tuning" href="parameter_tuning.html" />
-    <link rel="prev" title="Forecasting with LSTM" href="forecasting_with_lstm.html" />
+    <link rel="prev" title="Forecasting with LSTM multivariate" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -158,9 +158,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .DAT file</a></li>
@@ -330,15 +333,13 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">Train model – Objective: train LSTM neural network – skf.lstm_train()</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model,-i.e.-LSTM-neural-network">Train model, i.e. LSTM neural network</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
@@ -401,8 +402,9 @@ document.write(`
 2025-05-26 14:09:56,972 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
 </pre></div></div>
 </div>
+</section>
 <section id="Read-data">
-<h3>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h3>
+<h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -428,7 +430,7 @@ document.write(`
 </div>
 </section>
 <section id="Data-preprocess">
-<h3>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h3>
+<h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
@@ -510,7 +512,7 @@ document.write(`
 </div>
 </section>
 <section id="Define-components">
-<h3>Define components<a class="headerlink" href="#Define-components" title="Link to this heading">#</a></h3>
+<h2>Define components<a class="headerlink" href="#Define-components" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -531,7 +533,7 @@ document.write(`
 </div>
 </section>
 <section id="Define-normal-and-abnormal-models">
-<h3>Define normal and abnormal models<a class="headerlink" href="#Define-normal-and-abnormal-models" title="Link to this heading">#</a></h3>
+<h2>Define normal and abnormal models<a class="headerlink" href="#Define-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
@@ -546,7 +548,7 @@ document.write(`
 </div>
 </section>
 <section id="Define-Switching-Kalman-Filter-(SKF)-model">
-<h3>Define Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h3>
+<h2>Define Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -562,8 +564,8 @@ document.write(`
 </div>
 </div>
 </section>
-<section id="Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">
-<h3>Train model – Objective: train LSTM neural network – skf.lstm_train()<a class="headerlink" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()" title="Link to this heading">#</a></h3>
+<section id="Train-model,-i.e.-LSTM-neural-network">
+<h2>Train model, i.e. LSTM neural network<a class="headerlink" href="#Train-model,-i.e.-LSTM-neural-network" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
@@ -624,7 +626,6 @@ Validation Log-likelihood   :-1.4718
 </pre></div></div>
 </div>
 </section>
-</section>
 <section id="id1">
 <h2>Anomaly detection<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
@@ -640,7 +641,7 @@ Validation Log-likelihood   :-1.4718
 <section id="Hidden-states-and-proability-of-anomalies">
 <h2>Hidden states and proability of anomalies<a class="headerlink" href="#Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
@@ -682,12 +683,12 @@ Validation Log-likelihood   :-1.4718
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="forecasting_with_lstm.html"
+       href="forecasting_with_lstm_multivariate.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Forecasting with LSTM</p>
+        <p class="prev-next-title">Forecasting with LSTM multivariate</p>
       </div>
     </a>
     <a class="right-next"
@@ -716,15 +717,13 @@ Validation Log-likelihood   :-1.4718
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">Train model – Objective: train LSTM neural network – skf.lstm_train()</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model,-i.e.-LSTM-neural-network">Train model, i.e. LSTM neural network</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>

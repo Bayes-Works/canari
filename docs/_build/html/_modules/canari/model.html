@@ -154,9 +154,12 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm.html">Forecasting with LSTM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT file</a></li>
@@ -396,6 +399,10 @@ document.write(`
 <span class="sd">        stop_training (bool):</span>
 <span class="sd">            Flag indicating whether training has been stopped due to</span>
 <span class="sd">            early stopping or by reaching maximum number of epoch.</span>
+
+<span class="sd">        # Optimization attribute</span>
+<span class="sd">        metric_optim (float): metric used for optimization in :class:`~canari.model_optimizer`</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -460,7 +467,6 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span> <span class="o">=</span> <span class="n">LstmOutputHistory</span><span class="p">()</span>
 
-        <span class="c1"># TODO: use internal variables</span>
         <span class="c1"># Autoregression-related attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span> <span class="o">=</span> <span class="kc">None</span>
@@ -593,12 +599,14 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_white_noise_decay</span><span class="p">(</span>
+<div class="viewcode-block" id="Model.white_noise_decay">
+<a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.white_noise_decay">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">white_noise_decay</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">white_noise_max_std</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="nb">float</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        TODO: remove epoch from input</span>
-<span class="sd">        Apply exponential decay to white noise standard deviation over epochs.</span>
+<span class="sd">        Apply exponential decay to white noise standard deviation over epochs, and modify</span>
+<span class="sd">        the variance for the white noise component in :attr:`~canari.model.Model.process_noise_matrix`.</span>
 <span class="sd">        This decaying noise structure is intended to improve the training performance</span>
 <span class="sd">        of TAGI-LSTM.</span>
 
@@ -614,7 +622,8 @@ document.write(`
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">scheduled_sigma_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span><span class="p">:</span>
             <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">noise_index</span><span class="p">,</span> <span class="n">noise_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduled_sigma_v</span><span class="o">**</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">noise_index</span><span class="p">,</span> <span class="n">noise_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduled_sigma_v</span><span class="o">**</span><span class="mi">2</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_states_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -834,15 +843,9 @@ document.write(`
         <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span>
         <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;mu_states&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span>
         <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;var_states&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_states</span>
+        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;states_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
             <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_network_params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
-        <span class="c1"># TODO: do save_dict[&quot;states_name&quot;], remove saving indexes</span>
-        <span class="k">if</span> <span class="s2">&quot;phi&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
-            <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;phi_index&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
-            <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;autoregression_index&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;autoregression&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;W2bar&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
-            <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;W2bar_index&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;W2bar&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">save_dict</span></div>
 
@@ -1025,15 +1028,15 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span><span class="n">mu_states_to_set</span><span class="p">,</span> <span class="n">var_states_to_set</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
                 <span class="n">mu_lstm_to_set</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span>
-                    <span class="n">states_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lstm&quot;</span><span class="p">],</span> <span class="n">states_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span>
+                    <span class="n">states_name</span><span class="o">=</span><span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="n">states_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span>
                 <span class="p">)</span>
-                <span class="n">mu_lstm_to_set</span> <span class="o">=</span> <span class="n">mu_lstm_to_set</span><span class="p">[</span><span class="s2">&quot;lstm&quot;</span><span class="p">][</span>
+                <span class="n">mu_lstm_to_set</span> <span class="o">=</span> <span class="n">mu_lstm_to_set</span><span class="p">[</span>
                     <span class="n">time_step</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span> <span class="p">:</span> <span class="n">time_step</span>
                 <span class="p">]</span>
                 <span class="n">std_lstm_to_set</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
-                    <span class="n">states_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lstm&quot;</span><span class="p">],</span> <span class="n">states_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span>
+                    <span class="n">states_name</span><span class="o">=</span><span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="n">states_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span>
                 <span class="p">)</span>
-                <span class="n">std_lstm_to_set</span> <span class="o">=</span> <span class="n">std_lstm_to_set</span><span class="p">[</span><span class="s2">&quot;lstm&quot;</span><span class="p">][</span>
+                <span class="n">std_lstm_to_set</span> <span class="o">=</span> <span class="n">std_lstm_to_set</span><span class="p">[</span>
                     <span class="n">time_step</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span> <span class="p">:</span> <span class="n">time_step</span>
                 <span class="p">]</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu_lstm_to_set</span>
@@ -1423,7 +1426,7 @@ document.write(`
 
         <span class="c1"># Decaying observation&#39;s variance</span>
         <span class="k">if</span> <span class="n">white_noise_decay</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_white_noise_decay</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">white_noise_decay</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span><span class="p">,</span> <span class="n">white_noise_max_std</span><span class="p">,</span> <span class="n">white_noise_decay_factor</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
@@ -1431,8 +1434,8 @@ document.write(`
         <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span><span class="n">validation_data</span><span class="p">)</span>
         <span class="c1"># self.set_memory(states=self.states, time_step=0)</span>
 
-        <span class="c1"># TODO: to delete this internal count</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">+=</span> <span class="mi">1</span>
+
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mu_validation_preds</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
             <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">std_validation_preds</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
