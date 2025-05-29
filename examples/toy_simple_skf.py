@@ -1,30 +1,18 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     SKF,
     plot_data,
-    plot_prediction,
     plot_states,
 )
-from src.hsl_detection import hsl_detection
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-import src.common as common
 
 
 # # Read data
@@ -35,7 +23,8 @@ anm_start_index = 52*10
 
 # LT anomaly
 # anm_mag = 0.010416667/10
-anm_mag = 0.3/52
+anm_mag = 0.5/52
+# anm_mag = 0
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -81,7 +70,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/toy_simple_model.pkl", "rb") as f:
+with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -142,12 +131,12 @@ skf = SKF(
 # filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 # smooth_marginal_abnorm_prob, states = skf.smoother(data=normalized_data)
 
-skf.filter_marginal_prob_history = skf.prob_history()
-skf.set_same_states_transition_models()
+skf.filter_marginal_prob_history = skf._prob_history()
+skf._set_same_states_transition_models()
 skf.initialize_states_history()
 
 # Get true baseline
-norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+norm_const_std = data_processor.std_const_std[data_processor.output_col]
 anm_mag_normed = anm_mag / norm_const_std
 LL_baseline_true = np.zeros_like(df_raw)
 LT_baseline_true = np.zeros_like(df_raw)
@@ -160,18 +149,15 @@ LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
 LL_baseline_true = LL_baseline_true.flatten()
 LT_baseline_true = LT_baseline_true.flatten()
 
-filter_marginal_abnorm_prob, states = skf.filter(data=train_data)
-filter_marginal_abnorm_prob, states = skf.filter(data=validation_data)
-filter_marginal_abnorm_prob, states = skf.filter(data=test_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 
-from src.data_visualization import determine_time
-time = determine_time(data_processor, len(normalized_data["y"]))
+time = data_processor.get_time(split="all")
 
 p_anm_all = filter_marginal_abnorm_prob
 
 # Compute MSE for SKF baselines
-mu_LL_states = states.get_mean(states_type='prior', states_name=["local level"])["local level"]
-mu_LT_states = states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+mu_LL_states = states.get_mean(states_type='prior', states_name=["level"])["level"]
+mu_LT_states = states.get_mean(states_type='prior', states_name=["trend"])["trend"]
 mse_LL = metric.mse(
     mu_LL_states[anm_start_index:],
     LL_baseline_true[anm_start_index:],
@@ -195,18 +181,18 @@ ax4 = plt.subplot(gs[4])
 
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax0,
 )
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     # states=pretrained_model.states,
     states=states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax0,
 )
 ax0.axvline(x=time[anm_start_index], color='r', linestyle='--')
@@ -216,17 +202,17 @@ ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
 ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax1,
 )
 ax1.set_xticklabels([])
 
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -235,7 +221,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=states,
     states_type=state_type,
     states_to_plot=['autoregression'],
