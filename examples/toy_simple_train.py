@@ -1,23 +1,15 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
@@ -83,12 +75,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_mean[output_col],
+        data_processor.std_const_std[output_col],
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.std_const_std[output_col],
     )
 
     # Calculate the evaluation metric
@@ -103,10 +95,9 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
-    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
-    # model.early_stopping(evaluate_metric=mse, mode="min")
-
+    model.early_stopping(evaluate_metric=-validation_log_lik, 
+                        #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 50)
+                         current_epoch=epoch, max_epoch=num_epoch)
 
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
@@ -126,7 +117,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # # Save model_dict to local
 # import pickle
-# with open("saved_params/toy_simple_model.pkl", "wb") as f:
+# with open("saved_params/toy_simple_model_rebased.pkl", "wb") as f:
 #     pickle.dump(model_dict, f)
 
 state_type = "prior"
@@ -141,7 +132,7 @@ ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
 plot_data(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   plot_column=output_col,
   validation_label="y",
   sub_plot=ax0,
@@ -157,7 +148,7 @@ plot_states(
   data_processor=data_processor,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['local level'],
+  states_to_plot=['level'],
   sub_plot=ax0,
 )
 ax0.set_xticklabels([])
@@ -166,7 +157,7 @@ plot_states(
   data_processor=data_processor,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['local trend'],
+  states_to_plot=['trend'],
   sub_plot=ax1,
 )
 ax1.set_xticklabels([])
