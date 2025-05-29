@@ -6,6 +6,7 @@ from typing import Tuple, Optional
 import numpy as np
 from pytagi import Normalizer
 from canari.data_struct import LstmOutputHistory
+from math import erf
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -367,3 +368,23 @@ class GMA(object):
             Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
         """
         return self.mu, self.var
+    
+def norm_cdf(x) -> np.ndarray:
+    """
+    Cumulative distribution function (CDF) of the standard normal distribution.
+    Args:
+        x (float or np.ndarray): Value(s) for which to compute the CDF.
+    Returns:
+        float or np.ndarray: CDF value(s) for the input.
+    """
+    return 0.5 * (1 + erf(x / np.sqrt(2)))
+
+def norm_pdf(x) -> np.ndarray:
+    """
+    Probability density function (PDF) of the standard normal distribution.
+    Args:
+        x (float or np.ndarray): Value(s) for which to compute the PDF.
+    Returns:
+        float or np.ndarray: PDF value(s) for the input.
+    """
+    return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x**2)

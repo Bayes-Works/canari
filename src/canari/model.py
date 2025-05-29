@@ -31,7 +31,6 @@ from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi import Normalizer as normalizer
-import scipy
 
 
 class Model:
@@ -486,7 +485,11 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
     
-    def _BAR_backward_modification(self, mu_states_posterior, var_states_posterior):
+    def _BAR_backward_modification(
+            self, 
+            mu_states_posterior, 
+            var_states_posterior
+        ) -> Tuple[np.ndarray, np.ndarray]:
         """
         BAR backward modification
         """
@@ -516,15 +519,15 @@ class Model:
         
         l_bar = mu_AR + bound
 
-        mu_L = l_bar * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
+        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
 
         u_bar = -mu_AR + bound
-        mu_U = -u_bar * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * scipy.stats.norm.pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
+        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
 
         mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (scipy.stats.norm.cdf(l_bar/np.sqrt(var_AR)) + scipy.stats.norm.cdf(u_bar/np.sqrt(var_AR)) - 1)
+        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
         var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
