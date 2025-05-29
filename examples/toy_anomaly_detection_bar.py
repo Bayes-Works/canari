@@ -98,8 +98,7 @@ fig, ax = plot_skf_states(
     color="b",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
-from canari.data_visualization import _determine_time
-time = _determine_time(data_processor, len(all_data["y"]))
+time = data_processor.get_time(split="all")
 ax[0].axvline(x=time[time_anomaly], color='r', linestyle='--')
 ax[-1].axvline(x=time[time_anomaly], color='r', linestyle='--')
 plt.show()
