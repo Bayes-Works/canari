@@ -1,0 +1,8 @@
+Sphinx>=6.1
+sphinx-book-theme>=0.3.4
+nbsphinx>=0.8.8
+sphinx-autodoc>=0.0.0 
+sphinx-napoleon>=0.7
+sphinx-viewcode>=0.3
+sphinx-autosummary>=0.1
+sphinx-mathjax>=0.1
