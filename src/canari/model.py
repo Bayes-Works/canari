@@ -1221,7 +1221,7 @@ class Model:
 
         # Check for improvement
         improved = False
-        improved = current_epoch > skip_epoch and (
+        improved = current_epoch >= skip_epoch and (
             (mode == "max" and evaluate_metric > self.early_stop_metric)
             or (mode == "min" and evaluate_metric < self.early_stop_metric)
         )
