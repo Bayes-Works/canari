@@ -853,6 +853,7 @@ class Model:
     def backward(
         self,
         obs: float,
+        obs_var: Optional[float] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Update step in the Kalman filter for one time step.
@@ -877,13 +878,23 @@ class Model:
                     The posterior variance of the hidden states.
         """
 
-        delta_mu_states, delta_var_states = common.backward(
-            obs,
-            self.mu_obs_predict,
-            self.var_obs_predict,
-            self.var_states_prior,
-            self.observation_matrix,
-        )
+        if obs_var is None:
+            delta_mu_states, delta_var_states = common.backward(
+                obs,
+                self.mu_obs_predict,
+                self.var_obs_predict,
+                self.var_states_prior,
+                self.observation_matrix,
+            )
+        else:
+            delta_mu_states, delta_var_states = common.distribution_update(
+                obs,
+                obs_var,
+                self.mu_obs_predict,
+                self.var_obs_predict,
+                self.var_states_prior,
+                self.observation_matrix,
+            )
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
         mu_states_posterior = self.mu_states_prior + delta_mu_states
