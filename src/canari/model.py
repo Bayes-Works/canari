@@ -752,15 +752,16 @@ class Model:
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
             if self.lstm_net and not self.lstm_net.smooth:
-                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                lstm_states = self.lstm_net.get_lstm_states()
-                for key in lstm_states:
-                    old_tuple = lstm_states[key]
-                    new_tuple = tuple(
-                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                    )
-                    lstm_states[key] = new_tuple
-                self.lstm_net.set_lstm_states(lstm_states)
+                pass
+                # self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+                # lstm_states = self.lstm_net.get_lstm_states()
+                # for key in lstm_states:
+                #     old_tuple = lstm_states[key]
+                #     new_tuple = tuple(
+                #         np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                #     )
+                #     lstm_states[key] = new_tuple
+                # self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
