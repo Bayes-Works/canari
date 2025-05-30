@@ -64,10 +64,20 @@ if model.lstm_net.smooth:
 
 # Training
 for epoch in range(num_epoch):
-    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
-        train_data=train_data,
-        validation_data=validation_data,
-    )
+    model.lstm_net.train()
+
+    # set white noise decay
+    model._white_noise_decay(epoch, white_noise_max_std=3, white_noise_decay_factor=0.9)
+
+    # filter on train data
+    mu_preds_train, std_preds_train, states = model.filter(train_data, train_lstm=True)
+
+    # smooth on train data
+    model.smoother()
+
+    model.lstm_net.eval()
+    # forecast on the validation set
+    mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -83,6 +93,39 @@ for epoch in range(num_epoch):
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
+
+    # lstm_optim_states = model.lstm_net.get_lstm_states()
+    # # smooth lstm states
+    # if model.lstm_net.smooth:
+    #     mu_zo_smooth, var_zo_smooth = model.lstm_net.smoother()
+    #     zo_smooth_std = np.array(var_zo_smooth) ** 0.5
+    #     mu_sequence = mu_zo_smooth[: model.lstm_net.lstm_look_back_len]
+    #     var_sequence = var_zo_smooth[: model.lstm_net.lstm_look_back_len]
+    #     model.lstm_output_history.mu = mu_sequence
+    #     model.lstm_output_history.var = var_sequence
+
+    #     import matplotlib.cm as cm
+
+    #     if "lstm_smooth_fig" not in globals():
+    #         global lstm_smooth_fig, lstm_smooth_ax, lstm_smooth_colors
+    #         lstm_smooth_fig, lstm_smooth_ax = plt.subplots(figsize=(10, 5))
+    #         lstm_smooth_colors = cm.get_cmap("viridis", num_epoch)
+
+    #     color = lstm_smooth_colors(epoch)
+    #     lstm_smooth_ax.plot(
+    #         mu_sequence, label=f"LSTM smoothed mu (epoch {epoch})", color=color
+    #     )
+    #     lstm_smooth_ax.fill_between(
+    #         range(len(mu_sequence)),
+    #         mu_sequence - var_sequence,
+    #         mu_sequence + var_sequence,
+    #         alpha=0.3,
+    #         color=color,
+    #         label=f"LSTM smoothed std (epoch {epoch})",
+    #     )
+    #     lstm_smooth_ax.set_title("LSTM smoothed states")
+    #     lstm_smooth_fig.canvas.draw()
+    #     plt.pause(0.01)
 
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
@@ -112,7 +155,6 @@ for epoch in range(num_epoch):
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
-# model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
