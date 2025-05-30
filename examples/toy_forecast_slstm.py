@@ -28,27 +28,27 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 10
+num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
-    time_covariates=["hour_of_day"],
-    train_split=0.7,
-    validation_split=0.1,
+    # time_covariates=["hour_of_day"],
+    train_split=0.5,
+    validation_split=0.2,
     output_col=output_col,
 )
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.001
+sigma_v = 0.1
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=19,
-        num_features=2,
+        look_back_len=24,
+        num_features=1,
         num_layer=1,
-        num_hidden_unit=40,
+        num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
         smoother=True,
@@ -69,12 +69,12 @@ for epoch in range(num_epoch):
     model.lstm_net.train()
 
     # set white noise decay
-    model._white_noise_decay(epoch, white_noise_max_std=3, white_noise_decay_factor=0.9)
+    model._white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
 
     if model.lstm_net.smooth:
         out_updater = OutputUpdater(model.lstm_net.device)
         for _ in range(0, model.lstm_net.lstm_look_back_len):
-            input_covariates = [0.0]  # dummy input covariates
+            input_covariates = []  # dummy input covariates
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 model.lstm_output_history, input_covariates
             )
@@ -144,8 +144,8 @@ for epoch in range(num_epoch):
         )
         lstm_smooth_ax.fill_between(
             range(len(mu_sequence)),
-            mu_sequence - 2 * var_sequence,
-            mu_sequence + 2 * var_sequence,
+            mu_sequence - var_sequence,
+            mu_sequence + var_sequence,
             alpha=0.3,
             color=color,
             label=f"LSTM smoothed std (epoch {epoch})",
@@ -165,6 +165,7 @@ for epoch in range(num_epoch):
         model_optim_dict = model.get_dict()
 
     if model.stop_training:
+        print(epoch)
         break
     else:
         # reset memory
@@ -173,7 +174,7 @@ for epoch in range(num_epoch):
     fig, ax = plot_states(
         data_processor=data_processor,
         states=model.states,
-        states_type="smooth",
+        states_type="prior",
     )
     filename = f"saved_results/smoother#{epoch}.png"
     plt.savefig(filename)
