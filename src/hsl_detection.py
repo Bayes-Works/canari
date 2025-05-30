@@ -125,8 +125,8 @@ class hsl_detection:
         covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.norm_const_mean[covariate_col], 
-                                'std': self.data_processor.norm_const_std[covariate_col]}
+                                'mu': self.data_processor.std_const_mean[covariate_col], 
+                                'std': self.data_processor.std_const_std[covariate_col]}
         generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=1, num_time_steps=52*10, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
@@ -252,8 +252,8 @@ class hsl_detection:
         covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.norm_const_mean[covariate_col], 
-                                'std': self.data_processor.norm_const_std[covariate_col]}
+                                'mu': self.data_processor.std_const_mean[covariate_col], 
+                                'std': self.data_processor.std_const_std[covariate_col]}
         generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
@@ -404,7 +404,7 @@ class hsl_detection:
         
         self.LTd_std = self.LTd_std/decay_factor # Revert the LTd_std to the last one before false alarm is raised
         self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
-        print(f'LTd_std is tuned to coefficient of {std_LTd_coeff/decay_factor}; LTd_std is tuned to {self.LTd_std} ...')
+        print(f'LTd_std is tuned to coefficient of {std_LTd_coeff/decay_factor}; LTd_std is tuned to {self.LTd_std}.')
 
     def detect(
             self, 
@@ -613,8 +613,7 @@ class hsl_detection:
         ts_len = 52*6
         stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
         # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        # anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        anm_mag_range = [0, 0]       # LT anm mag
+        anm_mag_range = [-1/52, 1/52]       # LT anm mag
         # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
         anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
@@ -622,8 +621,8 @@ class hsl_detection:
         covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.norm_const_mean[covariate_col], 
-                                'std': self.data_processor.norm_const_std[covariate_col]}
+                                'mu': self.data_processor.std_const_mean[covariate_col], 
+                                'std': self.data_processor.std_const_std[covariate_col]}
         generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
@@ -633,7 +632,7 @@ class hsl_detection:
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
         ax0 = plt.subplot(gs[0])
-        norm_data = self.data_processor.normalize_data()
+        norm_data = self.data_processor.standardize_data()
         for j in range(len(generated_ts)):
             ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
                                         norm_data[val_index, self.data_processor.output_col].reshape(-1), 
@@ -751,78 +750,78 @@ class hsl_detection:
             states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
             states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
 
-            fig = plt.figure(figsize=(10, 9))
-            gs = gridspec.GridSpec(10, 1)
-            ax0 = plt.subplot(gs[0])
-            ax1 = plt.subplot(gs[1])
-            ax2 = plt.subplot(gs[2])
-            ax3 = plt.subplot(gs[3])
-            ax4 = plt.subplot(gs[4])
-            ax5 = plt.subplot(gs[5])
-            ax6 = plt.subplot(gs[6])
-            ax7 = plt.subplot(gs[7])
-            ax8 = plt.subplot(gs[8])
-            ax9 = plt.subplot(gs[9])
-            # print(base_model_copy.states.mu_prior)
-            ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
-            ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
-                            states_mu_prior[:, 0].flatten() - states_var_prior[:, 0, 0]**0.5,
-                            states_mu_prior[:, 0].flatten() + states_var_prior[:, 0, 0]**0.5,
-                            alpha=0.5)
-            ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            ax0.plot(generated_ts[k])
+            # fig = plt.figure(figsize=(10, 9))
+            # gs = gridspec.GridSpec(10, 1)
+            # ax0 = plt.subplot(gs[0])
+            # ax1 = plt.subplot(gs[1])
+            # ax2 = plt.subplot(gs[2])
+            # ax3 = plt.subplot(gs[3])
+            # ax4 = plt.subplot(gs[4])
+            # ax5 = plt.subplot(gs[5])
+            # ax6 = plt.subplot(gs[6])
+            # ax7 = plt.subplot(gs[7])
+            # ax8 = plt.subplot(gs[8])
+            # ax9 = plt.subplot(gs[9])
+            # # print(base_model_copy.states.mu_prior)
+            # ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
+            # ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
+            #                 states_mu_prior[:, 0].flatten() - states_var_prior[:, 0, 0]**0.5,
+            #                 states_mu_prior[:, 0].flatten() + states_var_prior[:, 0, 0]**0.5,
+            #                 alpha=0.5)
+            # ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            # ax0.plot(generated_ts[k])
 
-            ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
-            ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),
-                            states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
-                            states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
-                            alpha=0.5)
+            # ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
+            # ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),
+            #                 states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
+            #                 states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
+            #                 alpha=0.5)
             
-            ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
-            ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
-                            states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
-                            states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
-                            alpha=0.5)
+            # ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
+            # ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
+            #                 states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
+            #                 states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
+            #                 alpha=0.5)
             
-            ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
-            ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
-                            states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
-                            states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
-                            alpha=0.5)
-            ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
-            ax4.fill_between(np.arange(len(mu_ar_preds)),
-                            np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
-                            np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
-                            alpha=0.5)
-            ax4.plot(states_drift_mu_prior[:, 0].flatten())
-            ax4.fill_between(np.arange(len(states_drift_mu_prior[:, 0])),
-                            states_drift_mu_prior[:, 0].flatten() - states_drift_var_prior[:, 0, 0]**0.5,
-                            states_drift_mu_prior[:, 0].flatten() + states_drift_var_prior[:, 0, 0]**0.5,
-                            alpha=0.5)
-            ax4.set_ylabel('LLd')
-            ax5.plot(states_drift_mu_prior[:, 1].flatten())
-            ax5.fill_between(np.arange(len(states_drift_mu_prior[:, 1])),
-                            states_drift_mu_prior[:, 1].flatten() - states_drift_var_prior[:, 1, 1]**0.5,
-                            states_drift_mu_prior[:, 1].flatten() + states_drift_var_prior[:, 1, 1]**0.5,
-                            alpha=0.5)
-            ax5.set_ylabel('LTd')
-            ax6.plot(states_drift_mu_prior[:, 2].flatten())
-            ax6.fill_between(np.arange(len(states_drift_mu_prior[:, 2])),
-                            states_drift_mu_prior[:, 2].flatten() - states_drift_var_prior[:, 2, 2]**0.5,
-                            states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
-                            alpha=0.5)
-            ax6.set_ylabel('ARd')
-            ax7.plot(p_anm_one_syn_ts)
-            ax7.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            ax7.set_ylim(-0.05, 1.05)
-            ax7.set_ylabel('p_anm')
-            ax8.plot(y_likelihood_a_one_ts, label='itv')
-            ax8.plot(y_likelihood_na_one_ts, label='no itv')
-            ax8.set_ylabel('y_likelihood')
-            ax9.plot(x_likelihood_a_one_ts, label='itv')
-            ax9.plot(x_likelihood_na_one_ts, label='no itv')
-            ax9.set_ylabel('x_likelihood')
-            plt.show()
+            # ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
+            # ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
+            #                 states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
+            #                 states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
+            #                 alpha=0.5)
+            # ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
+            # ax4.fill_between(np.arange(len(mu_ar_preds)),
+            #                 np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
+            #                 np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
+            #                 alpha=0.5)
+            # ax4.plot(states_drift_mu_prior[:, 0].flatten())
+            # ax4.fill_between(np.arange(len(states_drift_mu_prior[:, 0])),
+            #                 states_drift_mu_prior[:, 0].flatten() - states_drift_var_prior[:, 0, 0]**0.5,
+            #                 states_drift_mu_prior[:, 0].flatten() + states_drift_var_prior[:, 0, 0]**0.5,
+            #                 alpha=0.5)
+            # ax4.set_ylabel('LLd')
+            # ax5.plot(states_drift_mu_prior[:, 1].flatten())
+            # ax5.fill_between(np.arange(len(states_drift_mu_prior[:, 1])),
+            #                 states_drift_mu_prior[:, 1].flatten() - states_drift_var_prior[:, 1, 1]**0.5,
+            #                 states_drift_mu_prior[:, 1].flatten() + states_drift_var_prior[:, 1, 1]**0.5,
+            #                 alpha=0.5)
+            # ax5.set_ylabel('LTd')
+            # ax6.plot(states_drift_mu_prior[:, 2].flatten())
+            # ax6.fill_between(np.arange(len(states_drift_mu_prior[:, 2])),
+            #                 states_drift_mu_prior[:, 2].flatten() - states_drift_var_prior[:, 2, 2]**0.5,
+            #                 states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
+            #                 alpha=0.5)
+            # ax6.set_ylabel('ARd')
+            # ax7.plot(p_anm_one_syn_ts)
+            # ax7.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            # ax7.set_ylim(-0.05, 1.05)
+            # ax7.set_ylabel('p_anm')
+            # ax8.plot(y_likelihood_a_one_ts, label='itv')
+            # ax8.plot(y_likelihood_na_one_ts, label='no itv')
+            # ax8.set_ylabel('y_likelihood')
+            # ax9.plot(x_likelihood_a_one_ts, label='itv')
+            # ax9.plot(x_likelihood_na_one_ts, label='no itv')
+            # ax9.set_ylabel('x_likelihood')
+            # plt.show()
         
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)
@@ -878,7 +877,6 @@ class hsl_detection:
         train_y = samples_target[:n_train]
         # Get the moments of training set, and use them to normalize the validation set and test set
         if self.mean_train is None or self.std_train is None or self.mean_target is None or self.std_target is None:
-            print('skip')
             self.mean_train = train_X.mean()
             self.std_train = train_X.std()
             self.mean_target = train_y.mean(axis=0)
