@@ -1,23 +1,17 @@
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, Autoregression
+from canari import (
+    DataProcess,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
+    common,
 )
-from examples import DataProcess
 from pytagi import Normalizer as normalizer
 from typing import Tuple, Dict, Optional, Callable
-import src.common as common
 import numpy as np
 import copy
-from src.common import likelihood
+from canari.common import likelihood
 import pandas as pd
 from tqdm import tqdm
 from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp
@@ -491,8 +485,8 @@ class hsl_detection:
                         self.current_time_step = self.current_time_step - step_back
 
                         # Apply intervention on base_model hidden states
-                        LL_index = self.base_model.states_name.index("local level")
-                        LT_index = self.base_model.states_name.index("local trend")
+                        LL_index = self.base_model.states_name.index("level")
+                        LT_index = self.base_model.states_name.index("trend")
                         AR_index = self.base_model.states_name.index("autoregression")
                         self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
                         self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
@@ -598,8 +592,8 @@ class hsl_detection:
             'var': copy.deepcopy(drift_model.var_states)
         }
 
-        LL_index = base_model.states_name.index("local level")
-        LT_index = base_model.states_name.index("local trend")
+        LL_index = base_model.states_name.index("level")
+        LT_index = base_model.states_name.index("trend")
         AR_index = base_model.states_name.index("autoregression")
         base_model_prior['mu'][LL_index] += drift_model_prior['mu'][0]
         base_model_prior['mu'][LT_index] += drift_model_prior['mu'][1]

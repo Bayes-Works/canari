@@ -2,29 +2,18 @@ import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     plot_data,
-    plot_prediction,
     plot_states,
+    common,
 )
 from src.hsl_detection import hsl_detection
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-import src.common as common
-from src.data_visualization import add_dynamic_grids
 
 
 # # Read data
@@ -77,11 +66,11 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Load model_dict from local
-with open("saved_params/toy_simple_model.pkl", "rb") as f:
+with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 # Get true baseline
-norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+norm_const_std = data_processor.std_const_std[data_processor.output_col]
 anm_mag_normed = anm_mag / norm_const_std
 LL_baseline_true = np.zeros_like(df_raw)
 LT_baseline_true = np.zeros_like(df_raw)
@@ -153,8 +142,8 @@ else:
     anm_detected_index = len(hsl_tsad_agent.p_anm_all)
 
 # Compute MSE for SKF baselines
-mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local level"])["local level"]
-mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["level"])["level"]
+mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["trend"])["trend"]
 mse_LL = metric.mse(
     mu_LL_states[anm_start_index:],
     LL_baseline_true[anm_start_index:],
@@ -181,22 +170,21 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
-from src.data_visualization import determine_time
-time = determine_time(data_processor, len(normalized_data["y"]))
+time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax0,
 )
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     # states=pretrained_model.states,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax0,
 )
 ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
@@ -205,10 +193,10 @@ ax0.set_xticklabels([])
 ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}")
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax1,
 )
 # ax0.plot(time[anm_start_index:], mu_LL_states[anm_start_index:], color='r')
@@ -217,7 +205,7 @@ ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -226,7 +214,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -243,26 +231,26 @@ ax3.set_xticklabels([])
 
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax4,
 )
 
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax5,
 )
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
