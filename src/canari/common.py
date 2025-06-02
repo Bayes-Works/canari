@@ -251,7 +251,7 @@ def gaussian_mixture(
 
 
 def unstandardize_states(
-    mu_norm: dict, std_norm: dict, std_const_mean: float, std_const_std: float
+    mu_norm: dict, std_norm: dict, scale_const_mean: float, scale_const_std: float
 ) -> Tuple[dict, dict]:
     """
     Unstandardize standardized mean and standard deviation of states.
@@ -259,8 +259,8 @@ def unstandardize_states(
     Args:
         mu_norm (dict): Standardized means by key.
         std_norm (dict): Standardized stds by key.
-        std_const_mean (float): Mean standardization constant.
-        std_const_std (float): Standard deviation standardization constant.
+        scale_const_mean (float): Mean standardization constant.
+        scale_const_std (float): Standard deviation standardization constant.
 
     Returns:
         Tuple[dict, dict]: Unstandardized means and stds.
@@ -270,11 +270,11 @@ def unstandardize_states(
     for key in mu_norm:
         _mu_norm = mu_norm[key]
         _std_norm = std_norm[key]
-        _std_const_mean = std_const_mean if key == "level" else 0
+        _scale_const_mean = scale_const_mean if key == "level" else 0
         mu_unnorm[key] = Normalizer.unstandardize(
-            _mu_norm, _std_const_mean, std_const_std
+            _mu_norm, _scale_const_mean, scale_const_std
         )
-        std_unnorm[key] = Normalizer.unstandardize_std(_std_norm, std_const_std)
+        std_unnorm[key] = Normalizer.unstandardize_std(_std_norm, scale_const_std)
     return mu_unnorm, std_unnorm
 
 

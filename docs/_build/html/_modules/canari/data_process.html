@@ -321,6 +321,23 @@ document.write(`
 <span class="sd">        standardization (Optional[bool]): Whether to apply data standardization</span>
 <span class="sd">                                        (zero mean, unit standard deviation).</span>
 
+<span class="sd">    Attributes:</span>
+<span class="sd">        data (pd.DataFrame): The full dataset, including any added time covariates.</span>
+<span class="sd">        train_start (Optional[str]): Start index for training set.</span>
+<span class="sd">        train_end (Optional[str]): End index for training set.</span>
+<span class="sd">        validation_start (Optional[str]): Start index for validation set.</span>
+<span class="sd">        validation_end (Optional[str]): End index for validation set.</span>
+<span class="sd">        test_start (Optional[str]): Start index for test set.</span>
+<span class="sd">        test_end (Optional[str]): End index for test set.</span>
+<span class="sd">        standardization (Optional[bool]): Whether standardization is applied.</span>
+<span class="sd">        train_split (Optional[float]): Fraction of data used for training.</span>
+<span class="sd">        validation_split (Optional[float]): Fraction of data used for validation.</span>
+<span class="sd">        test_split (Optional[float]): Fraction of data used for testing.</span>
+<span class="sd">        time_covariates (Optional[List[str]]): Time covariates to add (e.g., &quot;hour_of_day&quot;).</span>
+<span class="sd">        output_col (list[int]): Indices of columns used as output/target variables.</span>
+<span class="sd">        scale_const_mean (Optional[list]): Mean values used for standardization.</span>
+<span class="sd">        scale_const_std (Optional[list]): Std dev values used for standardization.</span>
+
 <span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
 <span class="sd">        &gt;&gt;&gt; from canari import DataProcess</span>
@@ -366,7 +383,7 @@ document.write(`
 
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_std</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_time_covariates</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_split_start_end_indices</span><span class="p">()</span>
@@ -442,12 +459,12 @@ document.write(`
 <span class="sd">        Compute standardization statistics (mean, std) based on training data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardization</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">compute_mean_std</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_std</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">compute_mean_std</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">train_start</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_end</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_const_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
 <div class="viewcode-block" id="DataProcess.standardize_data">
 <a class="viewcode-back" href="../../api/canari.data_process.html#canari.data_process.DataProcess.standardize_data">[docs]</a>
@@ -461,8 +478,8 @@ document.write(`
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">Normalizer</span><span class="o">.</span><span class="n">standardize</span><span class="p">(</span>
                 <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
-                <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">,</span>
-                <span class="n">std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">,</span>
+                <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">standardization</span>
             <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span>

@@ -330,6 +330,21 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess"><code class="docutils literal notranslate"><span class="pre">DataProcess</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.data"><code class="docutils literal notranslate"><span class="pre">DataProcess.data</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.standardization"><code class="docutils literal notranslate"><span class="pre">DataProcess.standardization</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.time_covariates"><code class="docutils literal notranslate"><span class="pre">DataProcess.time_covariates</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.output_col"><code class="docutils literal notranslate"><span class="pre">DataProcess.output_col</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.scale_const_mean"><code class="docutils literal notranslate"><span class="pre">DataProcess.scale_const_mean</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.scale_const_std"><code class="docutils literal notranslate"><span class="pre">DataProcess.scale_const_std</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.add_lagged_columns"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_lagged_columns()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.add_synthetic_anomaly"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_synthetic_anomaly()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.decompose_data"><code class="docutils literal notranslate"><span class="pre">DataProcess.decompose_data()</span></code></a></li>
@@ -386,6 +401,171 @@ document.write(`
 </ul>
 </dd>
 </dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#canari.data_process.DataProcess.data" title="Link to this definition">#</a></dt>
+<dd><p>The full dataset, including any added time covariates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.train_start">
+<span class="sig-name descname"><span class="pre">train_start</span></span><a class="headerlink" href="#canari.data_process.DataProcess.train_start" title="Link to this definition">#</a></dt>
+<dd><p>Start index for training set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.train_end">
+<span class="sig-name descname"><span class="pre">train_end</span></span><a class="headerlink" href="#canari.data_process.DataProcess.train_end" title="Link to this definition">#</a></dt>
+<dd><p>End index for training set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.validation_start">
+<span class="sig-name descname"><span class="pre">validation_start</span></span><a class="headerlink" href="#canari.data_process.DataProcess.validation_start" title="Link to this definition">#</a></dt>
+<dd><p>Start index for validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.validation_end">
+<span class="sig-name descname"><span class="pre">validation_end</span></span><a class="headerlink" href="#canari.data_process.DataProcess.validation_end" title="Link to this definition">#</a></dt>
+<dd><p>End index for validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.test_start">
+<span class="sig-name descname"><span class="pre">test_start</span></span><a class="headerlink" href="#canari.data_process.DataProcess.test_start" title="Link to this definition">#</a></dt>
+<dd><p>Start index for test set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.test_end">
+<span class="sig-name descname"><span class="pre">test_end</span></span><a class="headerlink" href="#canari.data_process.DataProcess.test_end" title="Link to this definition">#</a></dt>
+<dd><p>End index for test set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.standardization">
+<span class="sig-name descname"><span class="pre">standardization</span></span><a class="headerlink" href="#canari.data_process.DataProcess.standardization" title="Link to this definition">#</a></dt>
+<dd><p>Whether standardization is applied.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[bool]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.train_split">
+<span class="sig-name descname"><span class="pre">train_split</span></span><a class="headerlink" href="#canari.data_process.DataProcess.train_split" title="Link to this definition">#</a></dt>
+<dd><p>Fraction of data used for training.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.validation_split">
+<span class="sig-name descname"><span class="pre">validation_split</span></span><a class="headerlink" href="#canari.data_process.DataProcess.validation_split" title="Link to this definition">#</a></dt>
+<dd><p>Fraction of data used for validation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.test_split">
+<span class="sig-name descname"><span class="pre">test_split</span></span><a class="headerlink" href="#canari.data_process.DataProcess.test_split" title="Link to this definition">#</a></dt>
+<dd><p>Fraction of data used for testing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.time_covariates">
+<span class="sig-name descname"><span class="pre">time_covariates</span></span><a class="headerlink" href="#canari.data_process.DataProcess.time_covariates" title="Link to this definition">#</a></dt>
+<dd><p>Time covariates to add (e.g., “hour_of_day”).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[List[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.output_col">
+<span class="sig-name descname"><span class="pre">output_col</span></span><a class="headerlink" href="#canari.data_process.DataProcess.output_col" title="Link to this definition">#</a></dt>
+<dd><p>Indices of columns used as output/target variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.scale_const_mean">
+<span class="sig-name descname"><span class="pre">scale_const_mean</span></span><a class="headerlink" href="#canari.data_process.DataProcess.scale_const_mean" title="Link to this definition">#</a></dt>
+<dd><p>Mean values used for standardization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[list]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.data_process.DataProcess.scale_const_std">
+<span class="sig-name descname"><span class="pre">scale_const_std</span></span><a class="headerlink" href="#canari.data_process.DataProcess.scale_const_std" title="Link to this definition">#</a></dt>
+<dd><p>Std dev values used for standardization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[list]</p>
+</dd>
+</dl>
+</dd></dl>
+
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
@@ -625,6 +805,21 @@ After the anomaly start, the data is linearly shifted with a rate of change defi
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess"><code class="docutils literal notranslate"><span class="pre">DataProcess</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.data"><code class="docutils literal notranslate"><span class="pre">DataProcess.data</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_start"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_start</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_end"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_end</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.standardization"><code class="docutils literal notranslate"><span class="pre">DataProcess.standardization</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.train_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.train_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.validation_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.validation_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.test_split"><code class="docutils literal notranslate"><span class="pre">DataProcess.test_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.time_covariates"><code class="docutils literal notranslate"><span class="pre">DataProcess.time_covariates</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.output_col"><code class="docutils literal notranslate"><span class="pre">DataProcess.output_col</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.scale_const_mean"><code class="docutils literal notranslate"><span class="pre">DataProcess.scale_const_mean</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.scale_const_std"><code class="docutils literal notranslate"><span class="pre">DataProcess.scale_const_std</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.add_lagged_columns"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_lagged_columns()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.add_synthetic_anomaly"><code class="docutils literal notranslate"><span class="pre">DataProcess.add_synthetic_anomaly()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_process.DataProcess.decompose_data"><code class="docutils literal notranslate"><span class="pre">DataProcess.decompose_data()</span></code></a></li>

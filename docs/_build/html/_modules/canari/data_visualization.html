@@ -645,14 +645,20 @@ document.write(`
                 <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
                 <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
                 <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">std_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-                <span class="n">std_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+                <span class="n">scale_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
             <span class="p">)</span>
             <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
                 <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
                 <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
                 <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">std_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
             <span class="p">)</span>
 
         <span class="c1"># Plot with uncertainty</span>
@@ -764,14 +770,20 @@ document.write(`
                 <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
                 <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
                 <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">std_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-                <span class="n">std_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+                <span class="n">scale_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
             <span class="p">)</span>
             <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
                 <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
                 <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
                 <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">std_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
             <span class="p">)</span>
 
         <span class="c1"># Plot with uncertainty</span>

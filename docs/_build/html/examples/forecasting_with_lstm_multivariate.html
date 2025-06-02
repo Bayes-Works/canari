@@ -630,12 +630,12 @@ document.write(`
     <span class="c1"># Unstandardize the predictions</span>
     <span class="n">mu_validation_preds</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
         <span class="n">mu_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
     <span class="n">std_validation_preds</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
         <span class="n">std_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
 
     <span class="c1"># Calculate the log-likelihood metric</span>
@@ -688,12 +688,12 @@ document.write(`
 <span class="c1"># Unstandardize the predictions</span>
 <span class="n">mu_test_preds</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
     <span class="n">mu_test_preds</span><span class="p">,</span>
-    <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
-    <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+    <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+    <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
 <span class="p">)</span>
 <span class="n">std_test_preds</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
     <span class="n">std_test_preds</span><span class="p">,</span>
-    <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
+    <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">output_col</span><span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
 </div>

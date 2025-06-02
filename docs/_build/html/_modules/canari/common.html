@@ -562,7 +562,7 @@ document.write(`
 <div class="viewcode-block" id="unstandardize_states">
 <a class="viewcode-back" href="../../api/canari.common.html#canari.common.unstandardize_states">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">unstandardize_states</span><span class="p">(</span>
-    <span class="n">mu_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_const_mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">mu_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale_const_mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Unstandardize standardized mean and standard deviation of states.</span>
@@ -570,8 +570,8 @@ document.write(`
 <span class="sd">    Args:</span>
 <span class="sd">        mu_norm (dict): Standardized means by key.</span>
 <span class="sd">        std_norm (dict): Standardized stds by key.</span>
-<span class="sd">        std_const_mean (float): Mean standardization constant.</span>
-<span class="sd">        std_const_std (float): Standard deviation standardization constant.</span>
+<span class="sd">        scale_const_mean (float): Mean standardization constant.</span>
+<span class="sd">        scale_const_std (float): Standard deviation standardization constant.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple[dict, dict]: Unstandardized means and stds.</span>
@@ -581,11 +581,11 @@ document.write(`
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mu_norm</span><span class="p">:</span>
         <span class="n">_mu_norm</span> <span class="o">=</span> <span class="n">mu_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="n">_std_norm</span> <span class="o">=</span> <span class="n">std_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">_std_const_mean</span> <span class="o">=</span> <span class="n">std_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">_scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="n">mu_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
-            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_std_const_mean</span><span class="p">,</span> <span class="n">std_const_std</span>
+            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_scale_const_mean</span><span class="p">,</span> <span class="n">scale_const_std</span>
         <span class="p">)</span>
-        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">)</span>
+        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">mu_unnorm</span><span class="p">,</span> <span class="n">std_unnorm</span></div>
 
 

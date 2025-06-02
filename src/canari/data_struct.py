@@ -113,8 +113,8 @@ class StatesHistory:
         states_name: str,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
-        std_const_mean: Optional[float] = 0,
-        std_const_std: Optional[float] = 1,
+        scale_const_mean: Optional[float] = 0,
+        scale_const_std: Optional[float] = 1,
     ) -> dict[str, np.ndarray]:
         """
         Retrieve the mean values over time for a specified hidden states and for either
@@ -127,8 +127,8 @@ class StatesHistory:
                 Defaults to "posterior".
             standardization (bool, optional): Get the standardized values for hidden states.
                                                 Defaults to True.
-            std_const_mean (float, optional): Mean used for unstandardization.
-            std_const_std (float, optional): Standard deviation used for unstandardization.
+            scale_const_mean (float, optional): Mean used for unstandardization.
+            scale_const_std (float, optional): Standard deviation used for unstandardization.
 
         Returns:
             np.ndarray: 1D arrays of means over time.
@@ -149,8 +149,8 @@ class StatesHistory:
         mean = values[:, idx].flatten()
 
         if not standardization:
-            std_const_mean = std_const_mean if states_name == "level" else 0
-            mean = Normalizer.unstandardize(mean, std_const_mean, std_const_std)
+            scale_const_mean = scale_const_mean if states_name == "level" else 0
+            mean = Normalizer.unstandardize(mean, scale_const_mean, scale_const_std)
 
         return mean
 
@@ -159,7 +159,7 @@ class StatesHistory:
         states_name: str,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
-        std_const_std: Optional[float] = 1,
+        scale_const_std: Optional[float] = 1,
     ) -> dict[str, np.ndarray]:
         """
         Retrieve the standard deviation values over time for a specified hidden states and
@@ -173,7 +173,7 @@ class StatesHistory:
                 Defaults to "posterior".
             standardization (bool, optional): Get the standardized values for hidden states.
                                     Defaults to True.
-            std_const_std (float, optional): Standard deviation used for unstandardization.
+            scale_const_std (float, optional): Standard deviation used for unstandardization.
 
         Returns:
             np.ndarray: 1D arrays of standard deviations over time.
@@ -195,7 +195,7 @@ class StatesHistory:
 
         if not standardization:
             standard_deviation = Normalizer.unstandardize_std(
-                standard_deviation, std_const_std
+                standard_deviation, scale_const_std
             )
 
         return standard_deviation

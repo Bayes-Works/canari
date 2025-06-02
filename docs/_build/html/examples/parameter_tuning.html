@@ -607,13 +607,13 @@ document.write(`
         <span class="c1"># Unstandardize the predictions</span>
         <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
             <span class="n">mu_validation_preds</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
         <span class="p">)</span>
 
         <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
             <span class="n">std_validation_preds</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
         <span class="p">)</span>
 
         <span class="n">validation_obs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>

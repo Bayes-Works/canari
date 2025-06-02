@@ -414,8 +414,8 @@ document.write(`
         <span class="n">states_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
         <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">std_const_mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="n">std_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">scale_const_mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">scale_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Retrieve the mean values over time for a specified hidden states and for either</span>
@@ -428,8 +428,8 @@ document.write(`
 <span class="sd">                Defaults to &quot;posterior&quot;.</span>
 <span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
 <span class="sd">                                                Defaults to True.</span>
-<span class="sd">            std_const_mean (float, optional): Mean used for unstandardization.</span>
-<span class="sd">            std_const_std (float, optional): Standard deviation used for unstandardization.</span>
+<span class="sd">            scale_const_mean (float, optional): Mean used for unstandardization.</span>
+<span class="sd">            scale_const_std (float, optional): Standard deviation used for unstandardization.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: 1D arrays of means over time.</span>
@@ -450,8 +450,8 @@ document.write(`
         <span class="n">mean</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
-            <span class="n">std_const_mean</span> <span class="o">=</span> <span class="n">std_const_mean</span> <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
-            <span class="n">mean</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">std_const_mean</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">)</span>
+            <span class="n">scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">scale_const_mean</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">mean</span></div>
 
@@ -463,7 +463,7 @@ document.write(`
         <span class="n">states_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
         <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">std_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">scale_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Retrieve the standard deviation values over time for a specified hidden states and</span>
@@ -477,7 +477,7 @@ document.write(`
 <span class="sd">                Defaults to &quot;posterior&quot;.</span>
 <span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
 <span class="sd">                                    Defaults to True.</span>
-<span class="sd">            std_const_std (float, optional): Standard deviation used for unstandardization.</span>
+<span class="sd">            scale_const_std (float, optional): Standard deviation used for unstandardization.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: 1D arrays of standard deviations over time.</span>
@@ -499,7 +499,7 @@ document.write(`
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
             <span class="n">standard_deviation</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
-                <span class="n">standard_deviation</span><span class="p">,</span> <span class="n">std_const_std</span>
+                <span class="n">standard_deviation</span><span class="p">,</span> <span class="n">scale_const_std</span>
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">standard_deviation</span></div>
