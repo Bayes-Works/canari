@@ -1,8 +1,12 @@
 name: Build & Deploy Docs (via gh-pages)
 
-on:
-  workflow_dispatch:
+# on:
+#   workflow_dispatch:
 
+on:
+  pull_request:
+    branches:
+      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
