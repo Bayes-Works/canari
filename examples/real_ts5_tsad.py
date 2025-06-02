@@ -1,29 +1,18 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     plot_data,
-    plot_prediction,
     plot_states,
+    common,
 )
 from src.hsl_detection import hsl_detection
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-import src.common as common
 
 
 # # Read data
@@ -55,7 +44,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts5_model.pkl", "rb") as f:
+with open("saved_params/real_ts5_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -95,14 +84,18 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -1.4878068653184598e-06
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 2.0731023118640735e-05)
+hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.mu_LTd = -1.4878068653184598e-06
+# hsl_tsad_agent.LTd_std = 3.676127606711578e-05
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts5.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts5.pkl', max_training_epoch=50)
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.6750658e-05, 0.0007661439, np.array([4.8646217e-04,5.3189050e-02,1.0734344e+02]), np.array([1.1217532e-02, 1.3954039e+00, 6.2539051e+01])
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv', 
+                                  save_model_path='saved_params/NN_detection_model_real_ts5_rebased.pkl', max_training_epoch=50)
+hsl_tsad_agent.tune(decay_factor=0.95)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 # #  Plot
@@ -121,38 +114,37 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
-from src.data_visualization import determine_time
-time = determine_time(data_processor, len(normalized_data["y"]))
+time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax0,
 )
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     # states=pretrained_model.states,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
 ax0.set_title("HSL Detection & Intervention agent")
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax1,
 )
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -161,7 +153,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -170,25 +162,25 @@ plot_states(
 ax3.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax4,
 )
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax5,
 )
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
