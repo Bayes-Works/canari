@@ -1,18 +1,14 @@
 import fire
 import copy
-from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pytagi import exponential_scheduler
 from pytagi import metric
 from pytagi import Normalizer as normalizer
-from src import (
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    WhiteNoise,
-    Autoregression,
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     ModelOptimizer,
     SKF,
@@ -22,7 +18,6 @@ from src import (
     plot_skf_states,
     plot_states,
 )
-from examples import DataProcess
 import pickle
 
 
@@ -88,11 +83,11 @@ def main(
     ) = data_processor.get_splits()
 
     # Load model_dict from local
-    with open("saved_params/toy_simple_model.pkl", "rb") as f:
+    with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     # Get true baseline
-    norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+    norm_const_std = data_processor.std_const_std[data_processor.output_col]
     anm_mag_normed = anm_mag / norm_const_std
     LL_baseline_true = np.zeros_like(df_raw)
     LT_baseline_true = np.zeros_like(df_raw)
@@ -166,7 +161,7 @@ def main(
     fig, ax = plt.subplots(figsize=(10, 6))
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_test_data=False,
         plot_column=output_col,
         test_label="y",
@@ -180,8 +175,8 @@ def main(
     plot_states(
         data_processor=data_processor,
         states=states_optim,
-        normalization=True,
-        states_to_plot=["local level"],
+        standardization=True,
+        states_to_plot=["level"],
         sub_plot=ax,
     )
     plt.legend()
@@ -223,7 +218,7 @@ def main(
     )
     plot_data(
         data_processor=data_processor,
-        normalization=True,
+        standardization=True,
         plot_validation_data=False,
         plot_test_data=False,
         plot_column=output_col,
@@ -279,8 +274,8 @@ def main(
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=data_processor.all_data)
 
     # Compute MSE for SKF baselines
-    mu_LL_states = states.get_mean(states_type='prior', states_name=["local level"])["local level"]
-    mu_LT_states = states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+    mu_LL_states = states.get_mean(states_type='prior', states_name=["level"])["level"]
+    mu_LT_states = states.get_mean(states_type='prior', states_name=["trend"])["trend"]
     mse_LL = metric.mse(
         mu_LL_states[anm_start_index:],
         LL_baseline_true[anm_start_index:],
@@ -291,16 +286,15 @@ def main(
     )
     mse = mse_LL + mse_LT
 
-    from src.data_visualization import determine_time
-    time = determine_time(data_processor, len(data_processor.all_data["y"]))
+    time = data_processor.get_time(split="all")
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         states_type = 'prior',
-        states_to_plot=["local level", "local trend", "lstm", "autoregression"],
+        states_to_plot=["level", "trend", "lstm", "autoregression"],
         model_prob=filter_marginal_abnorm_prob,
-        normalization=True,
+        standardization=True,
         color="b",
         legend_location="upper left",
     )
