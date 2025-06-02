@@ -50,12 +50,12 @@ def model_test_runner(model: Model, plot: bool) -> float:
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.std_const_mean[output_col],
-            data_processor.std_const_std[output_col],
+            data_processor.scale_const_mean[output_col],
+            data_processor.scale_const_std[output_col],
         )
         std_validation_preds = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.std_const_std[output_col],
+            data_processor.scale_const_std[output_col],
         )
 
         # Calculate the log-likelihood metric

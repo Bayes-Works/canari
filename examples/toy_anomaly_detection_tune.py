@@ -97,13 +97,13 @@ def main(
             # Unstandardize the predictions
             mu_validation_preds_unnorm = Normalizer.unstandardize(
                 mu_validation_preds,
-                data_processor.std_const_mean[data_processor.output_col],
-                data_processor.std_const_std[data_processor.output_col],
+                data_processor.scale_const_mean[data_processor.output_col],
+                data_processor.scale_const_std[data_processor.output_col],
             )
 
             std_validation_preds_unnorm = Normalizer.unstandardize_std(
                 std_validation_preds,
-                data_processor.std_const_std[data_processor.output_col],
+                data_processor.scale_const_std[data_processor.output_col],
             )
 
             validation_obs = data_processor.get_data("validation").flatten()
