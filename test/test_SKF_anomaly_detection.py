@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,6 +6,8 @@ from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 from canari import Model, SKF, DataProcess, plot_skf_states
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+
+BASE_DIR = os.path.dirname(__file__)
 
 # Components
 sigma_v = 5e-2
@@ -41,9 +44,9 @@ def SKF_anomaly_detection_runner(
     output_col = [0]
 
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
