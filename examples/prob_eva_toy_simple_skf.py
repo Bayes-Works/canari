@@ -1,30 +1,19 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, Autoregression
 import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari import (
+    DataProcess,
     Model,
     SKF,
     plot_data,
-    plot_prediction,
     plot_states,
 )
-from src.hsl_detection import hsl_detection
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-import src.common as common
 
 import ast
 from tqdm import tqdm
@@ -85,7 +74,7 @@ test_start = df_raw.index[data_processor.test_start]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/toy_simple_model.pkl", "rb") as f:
+with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -146,19 +135,18 @@ skf = SKF(
 # filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 # smooth_marginal_abnorm_prob, states = skf.smoother(data=normalized_data)
 
-skf.filter_marginal_prob_history = skf.prob_history()
-skf.set_same_states_transition_models()
+skf.filter_marginal_prob_history = skf._prob_history()
+skf._set_same_states_transition_models()
 skf.initialize_states_history()
 
-filter_marginal_abnorm_prob, states = skf.filter(data=train_data)
-filter_marginal_abnorm_prob, states = skf.filter(data=validation_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 
 states_temp = copy.deepcopy(states)
 abnorm_prob_temp = copy.deepcopy(skf.filter_marginal_prob_history)
-marginal_prob_current_temp = copy.deepcopy(skf.marginal_prob_current)
+marginal_prob_current_temp = copy.deepcopy(skf.marginal_prob)
 lstm_net_temp = copy.deepcopy(skf.model["norm_norm"].lstm_net.get_lstm_states())
 
-norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+norm_const_std = data_processor.std_const_std[data_processor.output_col]
 
 # Load the CSV
 df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen.csv")
@@ -208,7 +196,7 @@ for k in tqdm(range(len(restored_data))):
 
     skf.states = copy.deepcopy(states_temp)
     skf.filter_marginal_prob_history = copy.deepcopy(abnorm_prob_temp)
-    skf.marginal_prob_current = copy.deepcopy(marginal_prob_current_temp)
+    skf.marginal_prob = copy.deepcopy(marginal_prob_current_temp)
     current_time_step = len(train_data["y"]) + len(validation_data["y"])
     skf.model["norm_norm"].set_memory(states=skf.model["norm_norm"].states, time_step=current_time_step)
     skf.model["abnorm_abnorm"].set_memory(states=skf.model["abnorm_abnorm"].states, time_step=current_time_step)
@@ -216,10 +204,9 @@ for k in tqdm(range(len(restored_data))):
     skf.model["norm_abnorm"].set_memory(states=skf.model["norm_abnorm"].states, time_step=current_time_step)
     skf.model["norm_norm"].lstm_net.set_lstm_states(lstm_net_temp)
 
-    filter_marginal_abnorm_prob, states = skf.filter(data=test_data)
+    filter_marginal_abnorm_prob, states = skf.filter(data=normalized_data)
 
-    from src.data_visualization import determine_time
-    time = determine_time(data_processor, len(normalized_data["y"]))
+    time = data_processor.get_time(split="all")
 
     p_anm_all = filter_marginal_abnorm_prob
 
@@ -244,8 +231,8 @@ for k in tqdm(range(len(restored_data))):
     LT_baseline_true = LT_baseline_true.flatten()
 
     # Compute MSE for SKF baselines
-    mu_LL_states = states.get_mean(states_type='prior', states_name=["local level"])["local level"]
-    mu_LT_states = states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+    mu_LL_states = states.get_mean(states_type='prior', states_name=["level"])["level"]
+    mu_LT_states = states.get_mean(states_type='prior', states_name=["trend"])["trend"]
     mse_LL = metric.mse(
         mu_LL_states[anm_start_index_global+1:],
         LL_baseline_true[anm_start_index_global+1:],
@@ -283,18 +270,18 @@ for k in tqdm(range(len(restored_data))):
 
     # plot_data(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     plot_column=output_col,
     #     validation_label="y",
     #     sub_plot=ax0,
     # )
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     # states=pretrained_model.states,
     #     states=states,
     #     states_type=state_type,
-    #     states_to_plot=['local level'],
+    #     states_to_plot=['level'],
     #     sub_plot=ax0,
     # )
     # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
@@ -304,17 +291,17 @@ for k in tqdm(range(len(restored_data))):
     # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=states,
     #     states_type=state_type,
-    #     states_to_plot=['local trend'],
+    #     states_to_plot=['trend'],
     #     sub_plot=ax1,
     # )
     # ax1.set_xticklabels([])
 
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=states,
     #     states_type=state_type,
     #     states_to_plot=['lstm'],
@@ -323,7 +310,7 @@ for k in tqdm(range(len(restored_data))):
     # ax2.set_xticklabels([])
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=states,
     #     states_type=state_type,
     #     states_to_plot=['autoregression'],
@@ -343,6 +330,6 @@ for k in tqdm(range(len(restored_data))):
 
     # plt.show()
 
-# # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/toy_simple_results_skf.csv", index=False)
+# Save the results to a CSV file
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
+results_df.to_csv("saved_results/prob_eva/toy_simple_results_skf_rebased.csv", index=False)

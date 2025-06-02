@@ -245,7 +245,7 @@ class hsl_detection:
         self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
         print('mean and std after roll out synthetic data',self.mu_LTd, self.LTd_std)
 
-    def tune(self, decay_factor: Optional[float] = 0.9):
+    def tune(self, decay_factor: Optional[float] = 0.9, begin_std_LTd: Optional[float] = 1):
         '''
         Tune the std_LTd using synthetic time series
         '''
@@ -261,7 +261,7 @@ class hsl_detection:
                                                                 # add_anomaly=True, anomaly_mag_range=[-1/52, 1/52], 
                                                                 # anomaly_begin_range=[int(52*10/4), int(52*10*3/8)], sample_from_lstm_pred=False)
 
-        std_LTd_coeff = 1 / decay_factor
+        std_LTd_coeff = begin_std_LTd / decay_factor
         LTd_std_original = copy.deepcopy(self.LTd_std)
         false_alarm = False
 
