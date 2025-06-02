@@ -352,14 +352,20 @@ def plot_states(
                 states_type=states_type,
                 states_name=plot_state,
                 standardization=False,
-                std_const_mean=data_processor.std_const_mean[data_processor.output_col],
-                std_const_std=data_processor.std_const_std[data_processor.output_col],
+                scale_const_mean=data_processor.scale_const_mean[
+                    data_processor.output_col
+                ],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
             )
             std_states = states.get_std(
                 states_type=states_type,
                 states_name=plot_state,
                 standardization=False,
-                std_const_std=data_processor.std_const_std[data_processor.output_col],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
             )
 
         # Plot with uncertainty
@@ -468,14 +474,20 @@ def plot_skf_states(
                 states_type=states_type,
                 states_name=plot_state,
                 standardization=False,
-                std_const_mean=data_processor.std_const_mean[data_processor.output_col],
-                std_const_std=data_processor.std_const_std[data_processor.output_col],
+                scale_const_mean=data_processor.scale_const_mean[
+                    data_processor.output_col
+                ],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
             )
             std_states = states.get_std(
                 states_type=states_type,
                 states_name=plot_state,
                 standardization=False,
-                std_const_std=data_processor.std_const_std[data_processor.output_col],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
             )
 
         # Plot with uncertainty

@@ -34,6 +34,23 @@ class DataProcess:
         standardization (Optional[bool]): Whether to apply data standardization
                                         (zero mean, unit standard deviation).
 
+    Attributes:
+        data (pd.DataFrame): The full dataset, including any added time covariates.
+        train_start (Optional[str]): Start index for training set.
+        train_end (Optional[str]): End index for training set.
+        validation_start (Optional[str]): Start index for validation set.
+        validation_end (Optional[str]): End index for validation set.
+        test_start (Optional[str]): Start index for test set.
+        test_end (Optional[str]): End index for test set.
+        standardization (Optional[bool]): Whether standardization is applied. Defaults to True.
+        train_split (Optional[float]): Fraction of data used for training.
+        validation_split (Optional[float]): Fraction of data used for validation.
+        test_split (Optional[float]): Fraction of data used for testing.
+        time_covariates (Optional[List[str]]): Time covariates to add (e.g., "hour_of_day").
+        output_col (list[int]): Indices of columns used as output/target variables.
+        scale_const_mean (Optional[list]): Mean values used for standardization.
+        scale_const_std (Optional[list]): Std dev values used for standardization.
+
     Examples:
         >>> import pandas as pd
         >>> from canari import DataProcess
@@ -79,7 +96,7 @@ class DataProcess:
 
         data = data.astype("float32")
         self.data = data.copy()
-        self.std_const_mean, self.std_const_std = None, None
+        self.scale_const_mean, self.scale_const_std = None, None
 
         self._add_time_covariates()
         self._get_split_start_end_indices()
@@ -155,12 +172,12 @@ class DataProcess:
         Compute standardization statistics (mean, std) based on training data.
         """
         if self.standardization:
-            self.std_const_mean, self.std_const_std = Normalizer.compute_mean_std(
+            self.scale_const_mean, self.scale_const_std = Normalizer.compute_mean_std(
                 self.data.iloc[self.train_start : self.train_end].values
             )
         else:
-            self.std_const_mean = np.zeros(self.data.shape[1])
-            self.std_const_std = np.ones(self.data.shape[1])
+            self.scale_const_mean = np.zeros(self.data.shape[1])
+            self.scale_const_std = np.ones(self.data.shape[1])
 
     def standardize_data(self) -> np.ndarray:
         """
@@ -172,8 +189,8 @@ class DataProcess:
         return (
             Normalizer.standardize(
                 data=self.data.values,
-                mu=self.std_const_mean,
-                std=self.std_const_std,
+                mu=self.scale_const_mean,
+                std=self.scale_const_std,
             )
             if self.standardization
             else self.data.values
