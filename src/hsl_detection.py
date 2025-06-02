@@ -673,7 +673,7 @@ class hsl_detection:
                                                                             obs=y, input_covariates=x, state_dist=self.LTd_pdf,
                                                                             base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
                                                                             )
-                p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
+                p_yt_I_Yt1 = np.maximum(y_likelihood_na * x_likelihood_na * self.prior_na, 1e-12) + y_likelihood_a * x_likelihood_a * self.prior_a
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
                 p_anm_one_syn_ts.append(p_a_I_Yt)
                 y_likelihood_a_one_ts.append(y_likelihood_a)
