@@ -132,9 +132,9 @@ hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target,
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple_rebased.csv', 
                                   load_model_path='saved_params/NN_detection_model_toy_simple_rebased.pkl', max_training_epoch=50)
                                 #   load_model_path='saved_params/NN_detection_model_toy_simple_V2.pkl', max_training_epoch=50)
-# hsl_tsad_agent.tune(decay_factor=0.95)
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
+# hsl_tsad_agent.tune(decay_factor=0.95, begin_std_LTd=1.4701837812499996)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.3966745921874995)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 if (np.array(hsl_tsad_agent.p_anm_all) > 0.5).any():

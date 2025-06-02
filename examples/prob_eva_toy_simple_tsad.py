@@ -1,33 +1,23 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LstmNetwork, Periodic, Autoregression
+from canari import (
+    DataProcess,
     Model,
+    common,
     plot_data,
     plot_prediction,
     plot_states,
 )
 from src.hsl_detection import hsl_detection
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
 import pickle
-import src.common as common
-from src.data_visualization import add_dynamic_grids
-
 import ast
 from tqdm import tqdm
+from matplotlib import gridspec
+from canari.data_visualization import _add_dynamic_grids
 
 # # Read data
 data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
@@ -74,7 +64,7 @@ test_start = df_raw.index[data_processor.test_start]
 
 
 # Load model_dict from local
-with open("saved_params/toy_simple_model.pkl", "rb") as f:
+with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 ####################################################################
@@ -121,19 +111,18 @@ gen_model.filter(train_data)
 gen_model.filter(validation_data)
 
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -1.035922643305238e-05
-hsl_tsad_agent.LTd_std = 7.166353631122538e-05
+hsl_tsad_agent.mu_LTd = -6.51818370462253e-06
+hsl_tsad_agent.LTd_std = 3.676127606711578e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=100, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 6.164014e-05, 0.00072832895, np.array([6.5932894e-04, 6.9455087e-02, 1.0722370e+02]), np.array([1.0831345e-02, 1.3456550e+00, 6.2564503e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.6750658e-05, 0.0007661439, np.array([4.8646217e-04,5.3189050e-02,1.0734344e+02]), np.array([1.1217532e-02, 1.3954039e+00, 6.2539051e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_toy_simple.csv', 
                                 load_model_path='saved_params/NN_detection_model_toy_simple.pkl', max_training_epoch=50)
-LTd_std_coefficients = [0.6634204312890623, 0.5688000922764596, 0.5987369392383786, 0.5987369392383786, 0.6634204312890623, 
-                        0.5987369392383786, 0.6634204312890623, 0.5688000922764596, 0.6302494097246091, 0.6302494097246091]
-# hsl_tsad_agent.tune(decay_factor=0.95)
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6634204312890623)
+LTd_std_coefficients = [1.1376001845529191, 1.1974738784767571, 1.3966745921874995, 1.2604988194492182, 1.1974738784767571, 
+                        1.3966745921874995, 1.2604988194492182, 1.3268408625781245, 1.4701837812499996, 1.3966745921874995]
+# LTd_std_coefficients = [1]
 
 gen_mode_copy = copy.deepcopy(gen_model)
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
@@ -206,7 +195,7 @@ for k in tqdm(range(len(restored_data))):
         anm_detected_index = len(hsl_tsad_agent.p_anm_all)
 
     # Get true baseline
-    norm_const_std = data_processor.norm_const_std[data_processor.output_col]
+    norm_const_std = data_processor.std_const_std[data_processor.output_col]
     anm_mag_normed = anm_mag / norm_const_std
     LL_baseline_true = np.zeros_like(df_raw)
     LT_baseline_true = np.zeros_like(df_raw)
@@ -220,8 +209,8 @@ for k in tqdm(range(len(restored_data))):
     LT_baseline_true = LT_baseline_true.flatten()
 
     # Compute MSE for SKF baselines
-    mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local level"])["local level"]
-    mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["local trend"])["local trend"]
+    mu_LL_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["level"])["level"]
+    mu_LT_states = hsl_tsad_agent.base_model.states.get_mean(states_type='prior', states_name=["trend"])["trend"]
     mse_LL = metric.mse(
         mu_LL_states[anm_start_index_global+1:],
         LL_baseline_true[anm_start_index_global+1:],
@@ -275,22 +264,21 @@ for k in tqdm(range(len(restored_data))):
     # ax2 = plt.subplot(gs[2])
     # ax3 = plt.subplot(gs[3])
     # ax4 = plt.subplot(gs[4])
-    # from src.data_visualization import determine_time
-    # time = determine_time(data_processor, len(normalized_data["y"]))
+    # time = data_processor.get_time(split="all")
     # plot_data(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     plot_column=output_col,
     #     validation_label="y",
     #     sub_plot=ax0,
     # )
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     # states=pretrained_model.states,
     #     states=hsl_tsad_agent.base_model.states,
     #     states_type=state_type,
-    #     states_to_plot=['local level'],
+    #     states_to_plot=['level'],
     #     sub_plot=ax0,
     # )
     # ax0.set_xticklabels([])
@@ -299,17 +287,17 @@ for k in tqdm(range(len(restored_data))):
     # ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=hsl_tsad_agent.base_model.states,
     #     states_type=state_type,
-    #     states_to_plot=['local trend'],
+    #     states_to_plot=['trend'],
     #     sub_plot=ax1,
     # )
     # ax1.set_xticklabels([])
     # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=hsl_tsad_agent.base_model.states,
     #     states_type=state_type,
     #     states_to_plot=['lstm'],
@@ -318,7 +306,7 @@ for k in tqdm(range(len(restored_data))):
     # ax2.set_xticklabels([])
     # plot_states(
     #     data_processor=data_processor,
-    #     normalization=True,
+    #     standardization=True,
     #     states=hsl_tsad_agent.base_model.states,
     #     states_type=state_type,
     #     states_to_plot=['autoregression'],
@@ -330,7 +318,7 @@ for k in tqdm(range(len(restored_data))):
     # ax4.set_ylabel("p_anm")
     # ax4.set_xlim(ax0.get_xlim())
     # ax4.set_ylim(-0.05, 1.05)
-    # add_dynamic_grids(ax4, time)
+    # _add_dynamic_grids(ax4, time)
     # plt.show()
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
@@ -345,6 +333,6 @@ for k in tqdm(range(len(restored_data))):
     hsl_tsad_agent.current_time_step = copy.deepcopy(current_time_step_temp)
     hsl_tsad_agent.p_anm_all = copy.deepcopy(p_anm_all_temp)
 
-# # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/toy_simple_results_il_stationary.csv", index=False)
+# Save the results to a CSV file
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
+results_df.to_csv("saved_results/prob_eva/toy_simple_results_il_rebased.csv", index=False)
