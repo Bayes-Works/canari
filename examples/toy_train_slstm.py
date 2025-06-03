@@ -94,39 +94,6 @@ for epoch in range(num_epoch):
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
 
-    # lstm_optim_states = model.lstm_net.get_lstm_states()
-    # # smooth lstm states
-    # if model.lstm_net.smooth:
-    #     mu_zo_smooth, var_zo_smooth = model.lstm_net.smoother()
-    #     zo_smooth_std = np.array(var_zo_smooth) ** 0.5
-    #     mu_sequence = mu_zo_smooth[: model.lstm_net.lstm_look_back_len]
-    #     var_sequence = var_zo_smooth[: model.lstm_net.lstm_look_back_len]
-    #     model.lstm_output_history.mu = mu_sequence
-    #     model.lstm_output_history.var = var_sequence
-
-    #     import matplotlib.cm as cm
-
-    #     if "lstm_smooth_fig" not in globals():
-    #         global lstm_smooth_fig, lstm_smooth_ax, lstm_smooth_colors
-    #         lstm_smooth_fig, lstm_smooth_ax = plt.subplots(figsize=(10, 5))
-    #         lstm_smooth_colors = cm.get_cmap("viridis", num_epoch)
-
-    #     color = lstm_smooth_colors(epoch)
-    #     lstm_smooth_ax.plot(
-    #         mu_sequence, label=f"LSTM smoothed mu (epoch {epoch})", color=color
-    #     )
-    #     lstm_smooth_ax.fill_between(
-    #         range(len(mu_sequence)),
-    #         mu_sequence - var_sequence,
-    #         mu_sequence + var_sequence,
-    #         alpha=0.3,
-    #         color=color,
-    #         label=f"LSTM smoothed std (epoch {epoch})",
-    #     )
-    #     lstm_smooth_ax.set_title("LSTM smoothed states")
-    #     lstm_smooth_fig.canvas.draw()
-    #     plt.pause(0.01)
-
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
     if epoch == model.optimal_epoch:
@@ -138,7 +105,6 @@ for epoch in range(num_epoch):
         model_optim_dict = model.get_dict()
 
     if model.stop_training:
-        print(epoch)
         break
     else:
         # reset memory
