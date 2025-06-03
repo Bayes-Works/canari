@@ -89,8 +89,6 @@ Related References
 - `Analytically tractable heteroscedastic uncertainty quantification in Bayesian neural networks for regression tasks <http://profs.polymtl.ca/jagoulet/Site/Papers/Deka_TAGIV_2024_preprint.pdf>`_ (Bhargob Deka, Luong-Ha Nguyen and James-A. Goulet. *Neurocomputing*, 2024)
 - `Approximate Gaussian Variance Inference for State-Space Models <https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf>`_ (Bhargob Deka and James-A. Goulet, 2023)
 - `The Gaussian multiplicative approximation for state-space models <https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Ha_Amiri_Goulet_GMA_2022_preprint.pdf>`_ (Bhargob Deka, Luong Ha Nguyen, Saeed Amiri, and James-A. Goulet, 2021)
-- `Analytically tractable inference in deep neural networks <https://arxiv.org/pdf/2103.05461.pdf>`_ (Luong-Ha Nguyen and James-A. Goulet, 2021)
-- `Analytically tractable Bayesian deep Q-Learning <https://arxiv.org/pdf/2106.11086.pdf>`_ (Luong-Ha Nguyen and James-A. Goulet, 2021)
 - `Anomaly Detection with the Switching Kalman Filter for Structural Health Monitoring <https://profs.polymtl.ca/jagoulet/Site/Papers/2017_Nguyen_and_Goulet_AD-SKF.pdf>`_ (Luong Ha Nguyen and James-A. Goulet, 2018)
 - `Bayesian dynamic linear models for structural health monitoring <https://profs.polymtl.ca/jagoulet/Site/Papers/Goulet_BDLM_SHM_2017_preprint.pdf>`_ (James-A. Goulet, 2017)
 
