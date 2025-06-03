@@ -24,7 +24,7 @@ class BoundedAutoregression(BaseComponent):
 
     References:
         Xin, Z.  and Goulet, J.-A. (2024). `Enhancing structural anomaly detection using a bounded autoregressive component
-        <https://www.sciencedirect.com/science/article/abs/pii/S0925231223013061>`_.
+        <https://www.sciencedirect.com/science/article/pii/S0888327024001778>`_.
         Mechanical Systems and Signal Processing. Volume 212, pp.111279.
 
     Examples:
