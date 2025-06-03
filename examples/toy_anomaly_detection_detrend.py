@@ -67,8 +67,8 @@ data_values = np.concatenate(
 )
 all_data_norm = normalizer.standardize(
     data=data_values,
-    mu=data_processor.std_const_mean,
-    std=data_processor.std_const_std,
+    mu=data_processor.scale_const_mean,
+    std=data_processor.scale_const_std,
 )
 all_data = {}
 all_data["x"] = all_data_norm[:, data_processor.covariates_col]
@@ -108,8 +108,6 @@ skf = SKF(
     abnorm_model=ab_model,
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
-    abnorm_to_norm_prob=1e-1,
-    norm_model_prior_prob=0.99,
 )
 skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
 
@@ -128,13 +126,13 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.std_const_mean[output_col],
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
