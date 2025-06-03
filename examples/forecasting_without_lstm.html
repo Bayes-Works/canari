@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Forecasting without LSTM &#8212; canari v.0.0.2 documentation</title>
+    <title>Univariate time series forecasting without LSTM &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -161,7 +161,7 @@
         <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
 </ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Forecasting without LSTM</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l1"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
@@ -322,7 +322,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Forecasting without LSTM</h1>
+    <h1>Univariate time series forecasting without LSTM</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -351,10 +351,13 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Forecasting-without-LSTM">
-<h1>Forecasting without LSTM<a class="headerlink" href="#Forecasting-without-LSTM" title="Link to this heading">#</a></h1>
+  <section id="Univariate-time-series-forecasting-without-LSTM">
+<h1>Univariate time series forecasting without LSTM<a class="headerlink" href="#Univariate-time-series-forecasting-without-LSTM" title="Link to this heading">#</a></h1>
+<p>This tutorial example presents how to perform forecasts for an univariate time series while using a simple fourrier-form periodic component rather than a LSTM neural network.</p>
+<p>In this example, we use a simple sine-like signal onto which we added a synthetic linear trend.</p>
 <section id="Import-libraries">
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -369,6 +372,7 @@ from pathlib import Path
 </section>
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we use the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">Periodic</span></code> component, and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -398,6 +402,7 @@ from canari.component import LocalTrend, Periodic, WhiteNoise
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Panda external library.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -421,6 +426,7 @@ df.columns = [&quot;values&quot;]
 </section>
 <section id="Data-preprocess">
 <h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<p>In terms of pre-processsing, we define here our choice of using the first 80% of the raw time series for trainig and the following 20% for the validaiton set.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
@@ -441,6 +447,8 @@ data_processor.data.head()
 </section>
 <section id="Define-model-from-components">
 <h2>Define model from components<a class="headerlink" href="#Define-model-from-components" title="Link to this heading">#</a></h2>
+<p>We instantiatiate each component brom their base class. The <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> baseline component relies on the default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use Fourrier-form <code class="docutils literal notranslate"><span class="pre">Periodic</span></code> component. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with a mean 0 and a user-defined standard deviation of 0.1.</p>
+<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialized the baseline hidden states based on the first two years of data.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -457,6 +465,7 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 </section>
 <section id="Filter-on-train-data">
 <h2>Filter on train data<a class="headerlink" href="#Filter-on-train-data" title="Link to this heading">#</a></h2>
+<p>We perform recursive SSM 1-step ahead prediction- and update-steps using the Kalman filter over the entire training set.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
@@ -468,6 +477,7 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 </section>
 <section id="Forecast-on-validation-data">
 <h2>Forecast on validation data<a class="headerlink" href="#Forecast-on-validation-data" title="Link to this heading">#</a></h2>
+<p>We perform recursive 1-step ahead forecasts on the validatiobn set.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -479,6 +489,7 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 </section>
 <section id="Predictions-and-hidden-states">
 <h2>Predictions and hidden states<a class="headerlink" href="#Predictions-and-hidden-states" title="Link to this heading">#</a></h2>
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. The forecast period correspond to the last two years within the validation set depicted by the green-shaded region.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
