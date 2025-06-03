@@ -11,8 +11,8 @@ from canari.component import LstmNetwork, WhiteNoise, LocalTrend
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
-df_raw = df_raw.add(linear_space, axis=0)
+# linear_space = np.linspace(0, 2, num=len(df_raw))
+# df_raw = df_raw.add(linear_space, axis=0)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -39,28 +39,21 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.01
+sigma_v = 0.001
 model = Model(
-    LocalTrend(),
+    # LocalTrend(),
     LstmNetwork(
         look_back_len=24,
         num_features=2,
         num_layer=1,
-        num_hidden_unit=50,
+        num_hidden_unit=40,
         device="cpu",
         manual_seed=1,
         smoother=True,
     ),
     WhiteNoise(std_error=sigma_v),
 )
-model.auto_initialize_baseline_states(train_data["y"][0:24])
-
-if model.lstm_net.smooth:
-    model.lstm_net.num_samples = (
-        model.lstm_net.lstm_look_back_len
-        + len(train_data["y"])
-        # + len(validation_data["y"])
-    )
+# model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 for epoch in range(num_epoch):
@@ -95,7 +88,6 @@ for epoch in range(num_epoch):
         model_optim_dict = model.get_dict()
 
     if model.stop_training:
-        print(epoch)
         break
     else:
         # reset memory
