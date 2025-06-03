@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Forecasting with LSTM multivariate &#8212; canari v.0.0.2 documentation</title>
+    <title>Forecasting with LSTM and explanatory time series &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -163,7 +163,7 @@
 </ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Forecasting without LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Forecasting with LSTM multivariate</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l1"><a class="reference internal" href="anomaly_detection.html">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .DAT file</a></li>
@@ -322,7 +322,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Forecasting with LSTM multivariate</h1>
+    <h1>Forecasting with LSTM and explanatory time series</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -353,8 +353,9 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Forecasting-with-LSTM-multivariate">
-<h1>Forecasting with LSTM multivariate<a class="headerlink" href="#Forecasting-with-LSTM-multivariate" title="Link to this heading">#</a></h1>
+  <section id="Forecasting-with-LSTM-and-explanatory-time-series">
+<h1>Forecasting with LSTM and explanatory time series<a class="headerlink" href="#Forecasting-with-LSTM-and-explanatory-time-series" title="Link to this heading">#</a></h1>
+<p>This tutorial example presents how to handle non-linear dependencies between a target and an explanatory time series using a LSTM neural network.</p>
 <section id="Import-libraries">
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
@@ -483,7 +484,7 @@ df.head()
 <section id="Add-dependent-variables">
 <h2>Add dependent variables<a class="headerlink" href="#Add-dependent-variables" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Add columns with lagged values
@@ -497,8 +498,7 @@ df.head()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
 <div>
@@ -617,7 +617,7 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 <section id="Training-model,-i.e.-LSTM-neural-network">
 <h2>Training model, i.e. LSTM neural network<a class="headerlink" href="#Training-model,-i.e.-LSTM-neural-network" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>num_epoch = 50
@@ -702,7 +702,7 @@ std_test_preds = normalizer.unstandardize_std(
 <section id="Predictions-and-hidden-states">
 <h2>Predictions and hidden states<a class="headerlink" href="#Predictions-and-hidden-states" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plot_states(

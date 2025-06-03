@@ -48,7 +48,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Parameter tuning" href="parameter_tuning.html" />
-    <link rel="prev" title="Forecasting with LSTM multivariate" href="forecasting_with_lstm_multivariate.html" />
+    <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -163,7 +163,7 @@
 </ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Forecasting without LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
-<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM multivariate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .DAT file</a></li>
@@ -337,9 +337,9 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model,-i.e.-LSTM-neural-network">Train model, i.e. LSTM neural network</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
@@ -355,8 +355,12 @@ document.write(`
                   
   <section id="Anomaly-detection">
 <h1>Anomaly detection<a class="headerlink" href="#Anomaly-detection" title="Link to this heading">#</a></h1>
+<p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimate the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
+<p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
+<p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
 <section id="Import-libraries">
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -374,6 +378,7 @@ import pytagi.metric as metric
 </section>
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing model using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -405,6 +410,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Panda external library.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -431,6 +437,7 @@ df.columns = [&quot;values&quot;]
 </section>
 <section id="Data-preprocess">
 <h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<p>In terms of pre-processsing, we want to add the <em>hour-of-the-day</em> as time-covariate for the LSTM network. Moreover we define here our choice of using the first 40% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 50% are the implicitely defined as the test set.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
@@ -513,6 +520,8 @@ data_processor.data.head()
 </section>
 <section id="Define-components">
 <h2>Define components<a class="headerlink" href="#Define-components" title="Link to this heading">#</a></h2>
+<p>We instantiatiate each component brom their base class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with
+a mean 0 and a user-defined standard deviation of 0.05.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -532,10 +541,11 @@ residual = WhiteNoise(std_error=5e-2)
 </div>
 </div>
 </section>
-<section id="Define-normal-and-abnormal-models">
-<h2>Define normal and abnormal models<a class="headerlink" href="#Define-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
+<section id="Define-the-normal-and-abnormal-models">
+<h2>Define the normal and abnormal models<a class="headerlink" href="#Define-the-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
+<p>The SKF requires defining a normal and an abnormal model. Here, the normal one correspond to a local trend component with no acceleration, and the abnormal one correspond to a local acceleration component. The former represent a trend-stationnary regime and the later represent a transitory changepoint with non-zero acceleration. Note that both the normal and abnormal models share the same <code class="docutils literal notranslate"><span class="pre">pattern</span></code> and <code class="docutils literal notranslate"><span class="pre">residual</span></code> components.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Normal model
@@ -547,8 +557,10 @@ ab_model = Model(local_acceleration, pattern, residual)
 </div>
 </div>
 </section>
-<section id="Define-Switching-Kalman-Filter-(SKF)-model">
-<h2>Define Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
+<section id="Define-the-Switching-Kalman-Filter-(SKF)-model">
+<h2>Define the Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-the-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
+<p>We instantiate and initialize the SKF model by providing 1) the standard deviation of the process error that is added when transiting from the normal to the abnormal model, and 2) the prior probability of having a regime switch fron normal to abnormal, here set to 0.0001.</p>
+<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialized the baseline hidden states based on the first three years of data.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -564,10 +576,12 @@ skf.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 52 * 3])
 </div>
 </div>
 </section>
-<section id="Train-model,-i.e.-LSTM-neural-network">
-<h2>Train model, i.e. LSTM neural network<a class="headerlink" href="#Train-model,-i.e.-LSTM-neural-network" title="Link to this heading">#</a></h2>
+<section id="Train-the-LSTM-neural-network-model">
+<h2>Train the LSTM neural network model<a class="headerlink" href="#Train-the-LSTM-neural-network-model" title="Link to this heading">#</a></h2>
+<p>The first step is to train the LSTM neural network model associated with the <em>normal</em> model using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the potimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or
+trend-stationnary.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span>num_epoch = 50
@@ -611,7 +625,7 @@ for epoch in range(num_epoch):
     if skf.stop_training:
         break
 
-print(f&quot;Optinal epoch               : {skf.optimal_epoch}&quot;)
+print(f&quot;Optimal epoch               : {skf.optimal_epoch}&quot;)
 print(f&quot;Validation Log-likelihood   :{skf.early_stop_metric: 0.4f}&quot;)
 </pre></div>
 </div>
@@ -628,6 +642,7 @@ Validation Log-likelihood   :-1.4718
 </section>
 <section id="id1">
 <h2>Anomaly detection<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p>Once the training is complete, we perform the changepoint detection by using the SKF <code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">smoother</span></code>. The <code class="docutils literal notranslate"><span class="pre">filter</span></code> represents the results obtained during online data processing and the <code class="docutils literal notranslate"><span class="pre">smoother</span></code> those obtained during offline processing.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -640,8 +655,10 @@ smooth_marginal_abnorm_prob, states = skf.smoother()
 </section>
 <section id="Hidden-states-and-proability-of-anomalies">
 <h2>Hidden states and proability of anomalies<a class="headerlink" href="#Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
+<p>We represent the time-series decomposition visually where the rad data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
+a stationnary regime to a trend-stationnary one.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plot_skf_states(
@@ -688,7 +705,7 @@ plt.show()
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Forecasting with LSTM multivariate</p>
+        <p class="prev-next-title">Forecasting with LSTM and explanatory time series</p>
       </div>
     </a>
     <a class="right-next"
@@ -721,9 +738,9 @@ plt.show()
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model,-i.e.-LSTM-neural-network">Train model, i.e. LSTM neural network</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
