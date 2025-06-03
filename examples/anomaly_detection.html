@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Anomaly detection &#8212; canari v.0.0.2 documentation</title>
+    <title>Anomaly detection using the swithing Kalman filter &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -164,7 +164,7 @@
 <li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Forecasting without LSTM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Forecasting with LSTM univariate</a></li>
 <li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameter_tuning.html">Parameter tuning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .DAT file</a></li>
 </ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
@@ -322,7 +322,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Anomaly detection</h1>
+    <h1>Anomaly detection using the swithing Kalman filter</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -340,7 +340,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Anomaly-detection">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
             </nav>
@@ -353,8 +353,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Anomaly-detection">
-<h1>Anomaly detection<a class="headerlink" href="#Anomaly-detection" title="Link to this heading">#</a></h1>
+  <section id="Anomaly-detection-using-the-swithing-Kalman-filter">
+<h1>Anomaly detection using the swithing Kalman filter<a class="headerlink" href="#Anomaly-detection-using-the-swithing-Kalman-filter" title="Link to this heading">#</a></h1>
 <p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimate the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
 <p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
 <p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
@@ -640,8 +640,8 @@ Validation Log-likelihood   :-1.4718
 </pre></div></div>
 </div>
 </section>
-<section id="id1">
-<h2>Anomaly detection<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<section id="Anomaly-detection">
+<h2>Anomaly detection<a class="headerlink" href="#Anomaly-detection" title="Link to this heading">#</a></h2>
 <p>Once the training is complete, we perform the changepoint detection by using the SKF <code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">smoother</span></code>. The <code class="docutils literal notranslate"><span class="pre">filter</span></code> represents the results obtained during online data processing and the <code class="docutils literal notranslate"><span class="pre">smoother</span></code> those obtained during offline processing.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
@@ -741,7 +741,7 @@ plt.show()
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Anomaly-detection">Anomaly detection</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
   </nav></div>
