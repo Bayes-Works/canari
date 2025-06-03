@@ -1167,7 +1167,7 @@ class SKF:
                 self.marginal_prob["abnorm"]
             )
 
-        # self.set_memory(states=self.model["norm_norm"].states, time_step=0)
+        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
