@@ -578,7 +578,7 @@ skf.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 52 * 3])
 </section>
 <section id="Train-the-LSTM-neural-network-model">
 <h2>Train the LSTM neural network model<a class="headerlink" href="#Train-the-LSTM-neural-network-model" title="Link to this heading">#</a></h2>
-<p>The first step is to train the LSTM neural network model associated with the <em>normal</em> model using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the potimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or
+<p>The first step is to train the LSTM neural network model associated with the <em>normal</em> model using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or
 trend-stationnary.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
@@ -655,7 +655,7 @@ smooth_marginal_abnorm_prob, states = skf.smoother()
 </section>
 <section id="Hidden-states-and-proability-of-anomalies">
 <h2>Hidden states and proability of anomalies<a class="headerlink" href="#Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
-<p>We represent the time-series decomposition visually where the rad data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
 a stationnary regime to a trend-stationnary one.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:

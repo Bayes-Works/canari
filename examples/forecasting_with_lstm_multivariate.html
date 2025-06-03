@@ -338,7 +338,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Add-dependent-variables">Add dependent variables</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-model-from-components">Define model from components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-model,-i.e.-LSTM-neural-network">Training model, i.e. LSTM neural network</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-the-LSTM-neural-network">Training the LSTM neural network</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Set-relevant-variables-for-predicting-in-the-test-set">Set relevant variables for predicting in the test set</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Forecast-on-the-test-set">Forecast on the test set</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions-and-hidden-states">Predictions and hidden states</a></li>
@@ -356,8 +356,11 @@ document.write(`
   <section id="Forecasting-with-LSTM-and-explanatory-time-series">
 <h1>Forecasting with LSTM and explanatory time series<a class="headerlink" href="#Forecasting-with-LSTM-and-explanatory-time-series" title="Link to this heading">#</a></h1>
 <p>This tutorial example presents how to handle non-linear dependencies between a target and an explanatory time series using a LSTM neural network.</p>
+<p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be trend-stationnary.</p>
+<p>In this example, we use a simple sine-like signal onto which we added a synthetic linear trend.</p>
 <section id="Import-libraries">
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -375,6 +378,7 @@ import pytagi.metric as metric
 </section>
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we use the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -404,6 +408,7 @@ from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Panda external library.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -483,6 +488,7 @@ df.head()
 </section>
 <section id="Add-dependent-variables">
 <h2>Add dependent variables<a class="headerlink" href="#Add-dependent-variables" title="Link to this heading">#</a></h2>
+<p>We define the dependent explanatory variables as the moving average with window-lenght equal to 3 and a lag of two time steps.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
@@ -575,6 +581,7 @@ df.head()
 </section>
 <section id="Data-preprocess">
 <h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<p>In terms of pre-processsing, we define here our choice of using the first 80% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 10% are the implicitely defined as the test set.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -593,6 +600,9 @@ train_data, validation_data, test_data, standardized_data = data_processor.get_s
 </section>
 <section id="Define-model-from-components">
 <h2>Define model from components<a class="headerlink" href="#Define-model-from-components" title="Link to this heading">#</a></h2>
+<p>We instantiatiate each component brom their base class. The <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> baseline component relies on the default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 19 time steps. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. In addition there are 4 features that are used as explanatory variables. The
+<code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
+<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialized the baseline hidden states based on the first two years of data.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
@@ -614,8 +624,9 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 </div>
 </div>
 </section>
-<section id="Training-model,-i.e.-LSTM-neural-network">
-<h2>Training model, i.e. LSTM neural network<a class="headerlink" href="#Training-model,-i.e.-LSTM-neural-network" title="Link to this heading">#</a></h2>
+<section id="Training-the-LSTM-neural-network">
+<h2>Training the LSTM neural network<a class="headerlink" href="#Training-the-LSTM-neural-network" title="Link to this heading">#</a></h2>
+<p>The training of the LSTM neural network model is done using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or trend-stationnary.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
@@ -661,6 +672,7 @@ for epoch in range(num_epoch):
 </section>
 <section id="Set-relevant-variables-for-predicting-in-the-test-set">
 <h2>Set relevant variables for predicting in the test set<a class="headerlink" href="#Set-relevant-variables-for-predicting-in-the-test-set" title="Link to this heading">#</a></h2>
+<p>In order to forecast on the test set, we need to set the LSTM and SSM states to the values corresponding to the last time step of the validation set. Note that the values corresponds to those associated with the optimal training epoch as identified using the validation set.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
@@ -677,6 +689,7 @@ model.set_memory(
 </section>
 <section id="Forecast-on-the-test-set">
 <h2>Forecast on the test set<a class="headerlink" href="#Forecast-on-the-test-set" title="Link to this heading">#</a></h2>
+<p>We perform recursive 1-step ahead forecasts on the test set and then proceed with un-standardization of the data in order to retreive the original scale of the raw data.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -701,6 +714,7 @@ std_test_preds = normalizer.unstandardize_std(
 </section>
 <section id="Predictions-and-hidden-states">
 <h2>Predictions and hidden states<a class="headerlink" href="#Predictions-and-hidden-states" title="Link to this heading">#</a></h2>
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. The forecast period correspond to the last year after the validation set depicted by the green-shaded region.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
@@ -796,7 +810,7 @@ plt.show()
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Add-dependent-variables">Add dependent variables</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-model-from-components">Define model from components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-model,-i.e.-LSTM-neural-network">Training model, i.e. LSTM neural network</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-the-LSTM-neural-network">Training the LSTM neural network</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Set-relevant-variables-for-predicting-in-the-test-set">Set relevant variables for predicting in the test set</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Forecast-on-the-test-set">Forecast on the test set</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions-and-hidden-states">Predictions and hidden states</a></li>
