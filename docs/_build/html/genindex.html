@@ -173,6 +173,7 @@
 <li class="toctree-l3"><a class="reference internal" href="api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
 </ul>
 </details></li>
@@ -226,6 +227,21 @@
         <div class="header-article-item">
 
 <div class="article-header-buttons">
+
+
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
 
 
 
@@ -349,6 +365,8 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent">BaseComponent (class in canari.component.base_component)</a>
 </li>
+      <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression">BoundedAutoregression (class in canari.component.bounded_autoregression_component)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -383,6 +401,13 @@ document.write(`
 
       <ul>
         <li><a href="api/canari.component.baseline_component.html#module-canari.component.baseline_component">module</a>
+</li>
+      </ul></li>
+      <li>
+    canari.component.bounded_autoregression_component
+
+      <ul>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#module-canari.component.bounded_autoregression_component">module</a>
 </li>
       </ul></li>
       <li>
@@ -618,6 +643,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_component_name">(canari.component.baseline_component.LocalTrend method)</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_component_name">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_component_name">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_component_name">(canari.component.periodic_component.Periodic method)</a>
@@ -638,6 +665,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_mu_states">(canari.component.baseline_component.LocalTrend method)</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_mu_states">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_mu_states">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_mu_states">(canari.component.periodic_component.Periodic method)</a>
@@ -656,6 +685,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_num_states">(canari.component.baseline_component.LocalTrend method)</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_num_states">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_num_states">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_num_states">(canari.component.periodic_component.Periodic method)</a>
@@ -673,6 +704,8 @@ document.write(`
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalLevel.initialize_observation_matrix">(canari.component.baseline_component.LocalLevel method)</a>
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_observation_matrix">(canari.component.baseline_component.LocalTrend method)</a>
+</li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_observation_matrix">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
 </li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_observation_matrix">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
@@ -693,6 +726,8 @@ document.write(`
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalLevel.initialize_process_noise_matrix">(canari.component.baseline_component.LocalLevel method)</a>
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_process_noise_matrix">(canari.component.baseline_component.LocalTrend method)</a>
+</li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_process_noise_matrix">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
 </li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_process_noise_matrix">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
@@ -718,6 +753,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_states_name">(canari.component.baseline_component.LocalTrend method)</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_states_name">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_states_name">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_states_name">(canari.component.periodic_component.Periodic method)</a>
@@ -738,6 +775,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_transition_matrix">(canari.component.baseline_component.LocalTrend method)</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_transition_matrix">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_transition_matrix">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_transition_matrix">(canari.component.periodic_component.Periodic method)</a>
@@ -755,6 +794,8 @@ document.write(`
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalLevel.initialize_var_states">(canari.component.baseline_component.LocalLevel method)</a>
 </li>
         <li><a href="api/canari.component.baseline_component.html#canari.component.baseline_component.LocalTrend.initialize_var_states">(canari.component.baseline_component.LocalTrend method)</a>
+</li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_var_states">(canari.component.bounded_autoregression_component.BoundedAutoregression method)</a>
 </li>
         <li><a href="api/canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork.initialize_var_states">(canari.component.lstm_component.LstmNetwork method)</a>
 </li>
@@ -837,6 +878,8 @@ document.write(`
 </li>
         <li><a href="api/canari.component.baseline_component.html#module-canari.component.baseline_component">canari.component.baseline_component</a>
 </li>
+        <li><a href="api/canari.component.bounded_autoregression_component.html#module-canari.component.bounded_autoregression_component">canari.component.bounded_autoregression_component</a>
+</li>
         <li><a href="api/canari.component.lstm_component.html#module-canari.component.lstm_component">canari.component.lstm_component</a>
 </li>
         <li><a href="api/canari.component.periodic_component.html#module-canari.component.periodic_component">canari.component.periodic_component</a>
@@ -902,12 +945,16 @@ document.write(`
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/canari.common.html#canari.common.norm_cdf">norm_cdf() (in module canari.common)</a>
+</li>
       <li><a href="api/canari.skf.html#canari.skf.SKF.norm_model_prior_prob">norm_model_prior_prob (canari.skf.SKF attribute)</a>
 </li>
-      <li><a href="api/canari.skf.html#canari.skf.SKF.norm_to_abnorm_prob">norm_to_abnorm_prob (canari.skf.SKF attribute)</a>
+      <li><a href="api/canari.common.html#canari.common.norm_pdf">norm_pdf() (in module canari.common)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/canari.skf.html#canari.skf.SKF.norm_to_abnorm_prob">norm_to_abnorm_prob (canari.skf.SKF attribute)</a>
+</li>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.num_states">num_states (canari.component.base_component.BaseComponent property)</a>
 
       <ul>

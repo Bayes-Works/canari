@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.component.white_noise_component &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.component.bounded_autoregression_component &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -40,7 +40,7 @@
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/canari/component/white_noise_component';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/canari/component/bounded_autoregression_component';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -303,84 +303,126 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <h1>Source code for canari.component.white_noise_component</h1><div class="highlight"><pre>
+  <h1>Source code for canari.component.bounded_autoregression_component</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component.base_component</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseComponent</span>
 
 
-<div class="viewcode-block" id="WhiteNoise">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">WhiteNoise</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+<div class="viewcode-block" id="BoundedAutoregression">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BoundedAutoregression</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    `WhiteNoise` class, inheriting from Canari&#39;s `BaseComponent`.</span>
-<span class="sd">    It is used to model zero-mean i.i.d. Gaussian errors.</span>
+<span class="sd">    `BoundedAutoregression` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="sd">    It models residuals following a univariate AR(1) process with optional constrains defined by</span>
+<span class="sd">    a coefficient (gamma), which scales the standard deviation of the stationary AR.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        std_error (Optional[float]): Standard deviation of the error. Default is 0.05.</span>
+<span class="sd">    Parameters:</span>
+<span class="sd">        std_error ([float]): Known standard deviation of the process noise.</span>
+<span class="sd">        phi ([float]): Known autoregressive coefficient.</span>
+<span class="sd">        gamma (Optional[float]): Coefficient to scale the standard deviation of the stationary AR.</span>
+<span class="sd">                                    If none, no constraint is applied.</span>
+<span class="sd">        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+<span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
+<span class="sd">            initialized to zeros.</span>
+
+<span class="sd">    Behavior:</span>
+<span class="sd">        - Adds 1 extra state, i.e. `X^{BAR}`, if gamma is provided. Otherwise no constraint is applied.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; from canari.component import WhiteNoise</span>
-<span class="sd">        &gt;&gt;&gt; white_noise = WhiteNoise(std_error=0.5)</span>
-<span class="sd">        &gt;&gt;&gt; white_noise.transition_matrix</span>
-<span class="sd">        array([[0]])</span>
-<span class="sd">        &gt;&gt;&gt; white_noise.process_noise_matrix</span>
-<span class="sd">        array([[0.25]])</span>
+<span class="sd">        &gt;&gt;&gt; from canari.component import BoundedAutoregression</span>
+<span class="sd">        &gt;&gt;&gt; # with gamma</span>
+<span class="sd">        &gt;&gt;&gt; bar = BoundedAutoregression(std_error=1, phi=0.75, gamma=0.5)</span>
+<span class="sd">        &gt;&gt;&gt; # without gamma</span>
+<span class="sd">        &gt;&gt;&gt; bar_1 = BoundedAutoregression(std_error=1, phi=0.75)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">std_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">std_error</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">phi</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">gamma</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">mu_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">var_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">std_error</span> <span class="o">=</span> <span class="n">std_error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">mu_states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="o">=</span> <span class="n">var_states</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
-<div class="viewcode-block" id="WhiteNoise.initialize_component_name">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_component_name">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_component_name">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_component_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_component_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">&quot;white noise&quot;</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">&quot;bounded autoregression&quot;</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_num_states">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_num_states">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_num_states">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_num_states">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_num_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span> <span class="o">=</span> <span class="mi">1</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span> <span class="o">=</span> <span class="mi">1</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_states_name">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_states_name">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_states_name">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_states_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;autoregression&quot;</span><span class="p">,</span> <span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;autoregression&quot;</span><span class="p">]</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_transition_matrix">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_transition_matrix">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_transition_matrix">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_transition_matrix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">]])</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phi</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="bp">self</span><span class="o">.</span><span class="n">phi</span><span class="p">]])</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_observation_matrix">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_observation_matrix">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_observation_matrix">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_observation_matrix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_observation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_observation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">]])</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_observation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">]])</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_process_noise_matrix">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_process_noise_matrix">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_process_noise_matrix">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_process_noise_matrix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_process_noise_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_process_noise_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="bp">self</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span><span class="p">]])</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_process_noise_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="bp">self</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_process_noise_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="bp">self</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span><span class="p">]])</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_mu_states">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_mu_states">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_mu_states">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_mu_states">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_mu_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Incorrect mu_states dimension for the autoregression component.&quot;</span>
+            <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="WhiteNoise.initialize_var_states">
-<a class="viewcode-back" href="../../../api/canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_var_states">[docs]</a>
+<div class="viewcode-block" id="BoundedAutoregression.initialize_var_states">
+<a class="viewcode-back" href="../../../api/canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_var_states">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_var_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_states</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Incorrect var_states dimension for the autoregression component.&quot;</span>
+            <span class="p">)</span></div>
 </div>
 
 </pre></div>

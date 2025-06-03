@@ -81,8 +81,8 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
-        mu_states: Optional[np.ndarray] = None,
-        var_states: Optional[np.ndarray] = None,
+        mu_states: Optional[list[float]] = None,
+        var_states: Optional[list[float]] = None,
     ):
         self.std_error = std_error
         self.num_layer = num_layer

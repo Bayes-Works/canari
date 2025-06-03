@@ -176,6 +176,7 @@
 <li class="toctree-l3"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
 <li class="toctree-l3"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
 </ul>
 </details></li>
@@ -231,51 +232,18 @@
 <div class="article-header-buttons">
 
 
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="../_sources/api/modules.rst" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
 <span class="btn__icon-container">
-  <i class="fas fa-file"></i>
+  <i class="fab fa-github"></i>
   </span>
-<span class="btn__text-container">.rst</span>
+
 </a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
 
 
 
@@ -473,6 +441,20 @@ document.write(`
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_component_name"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_component_name()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_mu_states"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_mu_states()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_num_states"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_num_states()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_observation_matrix"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_observation_matrix()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_process_noise_matrix"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_process_noise_matrix()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_states_name"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_states_name()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_transition_matrix"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_transition_matrix()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="canari.component.bounded_autoregression_component.html#canari.component.bounded_autoregression_component.BoundedAutoregression.initialize_var_states"><code class="docutils literal notranslate"><span class="pre">BoundedAutoregression.initialize_var_states()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise"><code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="canari.component.white_noise_component.html#canari.component.white_noise_component.WhiteNoise.initialize_component_name"><code class="docutils literal notranslate"><span class="pre">WhiteNoise.initialize_component_name()</span></code></a></li>
@@ -538,6 +520,8 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.create_block_diag"><code class="docutils literal notranslate"><span class="pre">create_block_diag()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.forward"><code class="docutils literal notranslate"><span class="pre">forward()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.gaussian_mixture"><code class="docutils literal notranslate"><span class="pre">gaussian_mixture()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.norm_cdf"><code class="docutils literal notranslate"><span class="pre">norm_cdf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.norm_pdf"><code class="docutils literal notranslate"><span class="pre">norm_pdf()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.pad_matrix"><code class="docutils literal notranslate"><span class="pre">pad_matrix()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.prepare_lstm_input"><code class="docutils literal notranslate"><span class="pre">prepare_lstm_input()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html#canari.common.rts_smoother"><code class="docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a></li>

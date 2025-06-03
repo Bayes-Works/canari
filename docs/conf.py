@@ -37,6 +37,9 @@ html_theme_options = {
     "show_toc_level": 2,
     "includehidden": True,
     "titles_only": False,
+    "repository_url": "https://github.com/Bayes-Works/canari.git",
+    "use_repository_button": True,
+    "use_download_button": False,
 }
 html_logo = "_static/canari_logo.png"
 html_static_path = ["_static"]

@@ -1,11 +1,3 @@
-"""
-Bounded Autoregression Component for Canari
-
-This module defines a `BoundedAutoregression` class, inheriting from Canari's `BaseComponent`.
-It represents residuals following a univariate AR(1) process with optional constains defined by 
-a coefficient (gamma), which scales the standard deviation of the stationary AR.
-"""
-
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
@@ -13,30 +5,29 @@ from canari.component.base_component import BaseComponent
 
 class BoundedAutoregression(BaseComponent):
     """
-    Bounded autoregression component for modeling residual following a univariate AR(1) process.
+    `BoundedAutoregression` class, inheriting from Canari's `BaseComponent`.
+    It models residuals following a univariate AR(1) process with optional constrains defined by
+    a coefficient (gamma), which scales the standard deviation of the stationary AR.
 
     Parameters:
         std_error ([float]): Known standard deviation of the process noise.
         phi ([float]): Known autoregressive coefficient.
-        gamma (Optional[float]): Coefficient to scale the standard deviation of the stationary AR. If none, no constraint is applied.
-        mu_states (Optional[np.ndarray]): Initial mean values.
-        var_states (Optional[np.ndarray]): Initial covariance matrix.
+        gamma (Optional[float]): Coefficient to scale the standard deviation of the stationary AR.
+                                    If none, no constraint is applied.
+        mu_states (Optional[list[float]]): Initial mean of the hidden state. Defaults:
+            initialized to zeros.
+        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
+            initialized to zeros.
 
     Behavior:
-        - Adds 1 extra states, X^{BAR} if gamma is provided. Otherwise no constraint is applied.
-        - Initializes transition, observation, and noise matrices accordingly.
-
-    Raises:
-        ValueError: If dimensions of `mu_states` or `var_states` do not match expected number of states.
+        - Adds 1 extra state, i.e. `X^{BAR}`, if gamma is provided. Otherwise no constraint is applied.
 
     Examples:
-        >>> from my_module.autoregression import Autoregression
+        >>> from canari.component import BoundedAutoregression
+        >>> # with gamma
         >>> bar = BoundedAutoregression(std_error=1, phi=0.75, gamma=0.5)
-        >>> print(ar.mu_states)
-        >>> print(ar.var_states)
-        >>> print(ar.states_name)
-        ['autoregression', 'bounded_autoregression']
-        >>> bar = BoundedAutoregression(std_error=1, phi=0.75)
+        >>> # without gamma
+        >>> bar_1 = BoundedAutoregression(std_error=1, phi=0.75)
     """
 
     def __init__(
@@ -44,8 +35,8 @@ class BoundedAutoregression(BaseComponent):
         std_error: float,
         phi: float,
         gamma: Optional[float] = None,
-        mu_states: Optional[np.ndarray] = None,
-        var_states: Optional[np.ndarray] = None,
+        mu_states: Optional[list[float]] = None,
+        var_states: Optional[list[float]] = None,
     ):
         self.std_error = std_error
         self.phi = phi
