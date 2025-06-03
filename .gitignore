@@ -17,4 +17,4 @@ docs/_build/*
 
 # Figures
 !saved_results/time_series_toy.png
-!docs/_static/canari_logo.png
+!docs/_static/**
