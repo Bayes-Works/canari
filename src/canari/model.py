@@ -278,6 +278,9 @@ class Model:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_net.update_param = self._update_lstm_param
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            self.lstm_net.num_samples = (
+                1  # dummy intialization until otherwise specified
+            )
 
     def _initialize_autoregression(self):
         """
@@ -634,32 +637,44 @@ class Model:
                 ) % 4 + 1
         return covariates_generation
 
-    def _store_first_lookback(self, input_covariate):
-        out_updater = OutputUpdater(self.lstm_net.device)
-        for _ in range(0, self.lstm_net.lstm_look_back_len):
-            input_covariates = [np.nan] * (
-                len(input_covariate)
-            )  # dummy input covariates
+    def _store_initial_lookback(self):
+        """
+        Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
+        `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
+        Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
+        """
+        look_back_len = self.lstm_net.lstm_look_back_len
+        device = self.lstm_net.device
+
+        dummy_mu_obs = np.array([np.nan], dtype=np.float32)
+        dummy_var_obs = np.array([0.0], dtype=np.float32)
+
+        num_covariates = self.lstm_net.num_covariates
+
+        out_updater = OutputUpdater(device)
+
+        for _ in range(look_back_len):
+            dummy_covariates = [np.nan] * num_covariates
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
+                self.lstm_output_history, dummy_covariates
             )
+
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+                mu_x=mu_lstm_input.astype(np.float32),
+                var_x=var_lstm_input.astype(np.float32),
             )
+
             out_updater.update(
                 output_states=self.lstm_net.output_z_buffer,
-                mu_obs=np.array([np.nan], dtype=np.float32),
-                var_obs=np.array([0.0], dtype=np.float32),
+                mu_obs=dummy_mu_obs,
+                var_obs=dummy_var_obs,
                 delta_states=self.lstm_net.input_delta_z_buffer,
             )
-            # Feed backward
+
             self.lstm_net.backward()
             self.lstm_net.step()
 
-            self.lstm_output_history.update(
-                mu_lstm_pred,
-                var_lstm_pred,
-            )
+            self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
 
     def get_dict(self) -> dict:
         """
@@ -1121,9 +1136,6 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        if self.lstm_net.smooth:
-            self._store_first_lookback(data["x"][0])
-
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
@@ -1240,12 +1252,21 @@ class Model:
             >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
 
+        if self.lstm_net.smooth and self._current_epoch == 0:
+            self.lstm_net.num_samples = self.lstm_net.lstm_look_back_len + len(
+                train_data["y"]
+            )
+
         # Decaying observation's variance
         self.lstm_net.train()
         if white_noise_decay and self.get_states_index("white noise") is not None:
             self.white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
+
+        if self.lstm_net.smooth:
+            self._store_initial_lookback()
+
         self.filter(train_data)
         self.smoother()
 
