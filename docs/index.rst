@@ -1,4 +1,4 @@
-Canari Documentation
+Canari's documentation
 ====================
 
 What is Canari?
@@ -79,7 +79,7 @@ Canari is released under the MIT license.
 
 **THIS IS AN OPEN SOURCE SOFTWARE FOR RESEARCH PURPOSES ONLY. THIS IS NOT A PRODUCT. NO WARRANTY EXPRESSED OR IMPLIED.**
 
-Related References
+Related references
 ------------------
 
 **Papers**
