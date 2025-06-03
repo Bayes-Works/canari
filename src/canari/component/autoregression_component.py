@@ -57,8 +57,8 @@ class Autoregression(BaseComponent):
         self,
         std_error: Optional[float] = None,
         phi: Optional[float] = None,
-        mu_states: Optional[np.ndarray] = None,
-        var_states: Optional[np.ndarray] = None,
+        mu_states: Optional[list[float]] = None,
+        var_states: Optional[list[float]] = None,
     ):
         self.std_error = (
             std_error  # When std_error is None, use AGVI to learn the process error
