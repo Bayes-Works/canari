@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,6 +6,8 @@ from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 from canari import Model, SKF, DataProcess, plot_skf_states
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+
+BASE_DIR = os.path.dirname(__file__)
 
 # Components
 sigma_v = 5e-2
@@ -26,8 +29,6 @@ skf = SKF(
     abnorm_model=Model(local_acceleration, lstm_network, noise),
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
-    abnorm_to_norm_prob=1e-1,
-    norm_model_prior_prob=0.99,
 )
 
 
@@ -43,9 +44,9 @@ def SKF_anomaly_detection_runner(
     output_col = [0]
 
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
@@ -76,12 +77,12 @@ def SKF_anomaly_detection_runner(
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
             mu_validation_preds,
-            data_processor.std_const_mean[output_col],
-            data_processor.std_const_std[output_col],
+            data_processor.scale_const_mean[output_col],
+            data_processor.scale_const_std[output_col],
         )
         std_validation_preds = normalizer.unstandardize_std(
             std_validation_preds,
-            data_processor.std_const_std[output_col],
+            data_processor.scale_const_std[output_col],
         )
 
         validation_obs = data_processor.get_data("validation").flatten()

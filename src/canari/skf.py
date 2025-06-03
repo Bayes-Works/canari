@@ -112,7 +112,7 @@ class SKF:
             Container for saving a rolling history of LSTM output over a fixed look-back window. Linked
             from 'norm_norm' of :attr:`~canari.skf.SKF.model`, if LSTM component presents.
 
-        # Early stopping attributes: TODO: duplicates with model, only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
+        # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
 
         early_stop_metric (float):
             Best value of the metric being monitored.
@@ -787,8 +787,6 @@ class SKF:
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
-        TODO: keep or not, duplicate with model.lstm_train().
-
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component
         on the provided training set, then evaluate on the validation set.
 
@@ -842,8 +840,6 @@ class SKF:
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
         """
-        TODO: keep or not, duplicate with model.lstm_train().
-
         Apply early stopping based on a monitored metric when training a LSTM neural network.
 
         Recalling :meth:`~canari.model.Model.early_stopping` for 'norm_norm' in :attr:`.model`.

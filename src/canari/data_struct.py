@@ -11,16 +11,12 @@ It provides two data classes:
 from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
-
-from dataclasses import dataclass, field
-from typing import List, Optional
-import numpy as np
+from pytagi import Normalizer
 
 
 @dataclass
 class LstmOutputHistory:
     """
-    TODO: duplicate attributes.
     Container for saving a rolling history of LSTM output means and variances
     over a fixed lookback window. New predictions shift the window forward,
     saving the most recent predictions, and discard the oldest ones.
@@ -68,7 +64,6 @@ class LstmOutputHistory:
 @dataclass
 class StatesHistory:
     """
-    TODO: duplicates attibutes.
     Save estimates of hidden states over time.
 
     Stores the evolution of prior, posterior, and smoothed values for hidden states over time,
@@ -115,28 +110,29 @@ class StatesHistory:
 
     def get_mean(
         self,
+        states_name: str,
         states_type: Optional[str] = "posterior",
-        states_name: Optional[list[str]] = "all",
+        standardization: Optional[bool] = True,
+        scale_const_mean: Optional[float] = 0,
+        scale_const_std: Optional[float] = 1,
     ) -> dict[str, np.ndarray]:
         """
-        TODO: output type as a list.
         Retrieve the mean values over time for a specified hidden states and for either
         a) the prior predicted value, b) the posterior updated values after the filter step,
         or c) the posterior updated values after the smoother step (smoothed estimates).
 
         Args:
+            states_name (str): Name of hidden state to extract.
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
-            states_name (list[str] or str, optional): Subset of state names to extract,
-                or "all" for all hidden states. Defaults to "all".
+            standardization (bool, optional): Get the standardized values for hidden states.
+                                                Defaults to True.
+            scale_const_mean (float, optional): Mean used for unstandardization.
+            scale_const_std (float, optional): Standard deviation used for unstandardization.
 
         Returns:
-            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of means over time.
+            np.ndarray: 1D arrays of means over time.
         """
-        mean = {}
-
-        if states_name == "all":
-            states_name = self.states_name
 
         if states_type == "prior":
             values = np.array(self.mu_prior)
@@ -149,36 +145,39 @@ class StatesHistory:
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
 
-        for state in states_name:
-            idx = self.states_name.index(state)
-            mean[state] = values[:, idx].flatten()
+        idx = self.states_name.index(states_name)
+        mean = values[:, idx].flatten()
+
+        if not standardization:
+            scale_const_mean = scale_const_mean if states_name == "level" else 0
+            mean = Normalizer.unstandardize(mean, scale_const_mean, scale_const_std)
 
         return mean
 
     def get_std(
         self,
+        states_name: str,
         states_type: Optional[str] = "posterior",
-        states_name: Optional[list[str]] = "all",
+        standardization: Optional[bool] = True,
+        scale_const_std: Optional[float] = 1,
     ) -> dict[str, np.ndarray]:
         """
-        Retrieve the standard deviation values over time for a specified hidden states and for either
-        a) the prior predicted value, b) the posterior updated values after the filter step,
-        or c) the posterior updated values after the smoother step (smoothed estimates).
+        Retrieve the standard deviation values over time for a specified hidden states and
+        for either a) the prior predicted value, b) the posterior updated values after the
+        filter step, or c) the posterior updated values after the smoother step
+        (smoothed estimates).
 
         Args:
+            states_name (str): Name of hidden state to extract.
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
-            states_name (list[str] or str, optional): Subset of state names to extract,
-                or "all" for all hidden states. Defaults to "all".
+            standardization (bool, optional): Get the standardized values for hidden states.
+                                    Defaults to True.
+            scale_const_std (float, optional): Standard deviation used for unstandardization.
 
         Returns:
-            dict[str, np.ndarray]: Dictionary mapping state names to 1D arrays of standard
-                                    deviations over time.
+            np.ndarray: 1D arrays of standard deviations over time.
         """
-        standard_deviation = {}
-
-        if states_name == "all":
-            states_name = self.states_name
 
         if states_type == "prior":
             values = np.array(self.var_prior)
@@ -191,8 +190,12 @@ class StatesHistory:
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
 
-        for state in states_name:
-            idx = self.states_name.index(state)
-            standard_deviation[state] = values[:, idx, idx] ** 0.5
+        idx = self.states_name.index(states_name)
+        standard_deviation = values[:, idx, idx] ** 0.5
+
+        if not standardization:
+            standard_deviation = Normalizer.unstandardize_std(
+                standard_deviation, scale_const_std
+            )
 
         return standard_deviation
