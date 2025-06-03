@@ -155,28 +155,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.model.html">canari.model</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.model.html">canari.model</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -218,51 +230,18 @@
 <div class="article-header-buttons">
 
 
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="../_sources/api/canari.model_optimizer.rst" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
 <span class="btn__icon-container">
-  <i class="fas fa-file"></i>
+  <i class="fab fa-github"></i>
   </span>
-<span class="btn__text-container">.rst</span>
+
 </a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
 
 
 
@@ -327,6 +306,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.model_optim"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.model_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.param_optim"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.param_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.get_best_model"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.get_best_model()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.get_best_param"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.get_best_param()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.optimize"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.optimize()</span></code></a></li>
 </ul>
 </li>
@@ -348,23 +328,23 @@ document.write(`
 external library.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.model_optimizer.ModelOptimizer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.model_optimizer.</span></span><span class="sig-name descname"><span class="pre">ModelOptimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initialize_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="canari.data_process.html#canari.data_process.DataProcess" title="canari.data_process.DataProcess"><span class="pre">DataProcess</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_optimization_trial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_search</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model_optimizer.html#ModelOptimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model_optimizer.ModelOptimizer" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.model_optimizer.</span></span><span class="sig-name descname"><span class="pre">ModelOptimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_optimization_trial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_search</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'min'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model_optimizer.html#ModelOptimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model_optimizer.ModelOptimizer" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Optimize hyperparameters for <a class="reference internal" href="canari.model.html#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a> using the Ray Tune
-external library.</p>
+external library using the metric <a class="reference internal" href="canari.model.html#canari.model.Model.metric_optim" title="canari.model.Model.metric_optim"><code class="xref py py-attr docutils literal notranslate"><span class="pre">metric_optim</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>initialize_model</strong> (<em>Callable</em>) – Function that returns a model instance given a model configuration.</p></li>
-<li><p><strong>train</strong> (<em>Callable</em>) – Function that define the training procedure for a model, it should return
-<cite>trained_model.early_stop_metric</cite>.</p></li>
+<li><p><strong>model</strong> (<em>Callable</em>) – Function that returns a model instance given a model configuration.</p></li>
 <li><p><strong>param_space</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>]</em>) – Parameter search space: two-value lists [min, max] for defining the
 bounds of the optimization.</p></li>
-<li><p><strong>data_processor</strong> (<a class="reference internal" href="canari.data_process.html#canari.data_process.DataProcess" title="canari.data_process.DataProcess"><em>DataProcess</em></a>) – DataProcess instance for data preparation.</p></li>
+<li><p><strong>train_data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Training data.</p></li>
+<li><p><strong>validation_data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Validation data.</p></li>
 <li><p><strong>num_optimization_trial</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of random search trials (ignored for grid search). Defaults to 50.</p></li>
 <li><p><strong>grid_search</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, perform grid search. Defaults to False.</p></li>
 <li><p><strong>algorithm</strong> (<em>str</em><em>, </em><em>optional</em>) – Search algorithm: ‘default’ (OptunaSearch) or ‘parallel’ (ASHAScheduler).
 Defaults to ‘OptunaSearch’.</p></li>
+<li><p><strong>mode</strong> (<em>str</em><em>, </em><em>optional</em>) – Direction for optimization stopping: ‘min’ (default).</p></li>
 </ul>
 </dd>
 </dl>
@@ -380,7 +360,7 @@ Defaults to ‘OptunaSearch’.</p></li>
 <dd><p>The best hyperparameter configuration found during optimization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Any]</p>
+<dd class="field-odd"><p>Dict</p>
 </dd>
 </dl>
 </dd></dl>
@@ -391,10 +371,25 @@ Defaults to ‘OptunaSearch’.</p></li>
 <dd><p>Retrieve the optimized model instance after running optimization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Model instance initialized with the best hyperparameter values.</p>
+<dd class="field-odd"><p><dl class="simple">
+<dt><a class="reference internal" href="canari.model.html#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a>:: Model instance initialized with the best</dt><dd><p>hyperparameter values.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model_optimizer.ModelOptimizer.get_best_param">
+<span class="sig-name descname"><span class="pre">get_best_param</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model_optimizer.html#ModelOptimizer.get_best_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model_optimizer.ModelOptimizer.get_best_param" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the optimized parameters after running optimization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Best hyperparameter values.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Any</p>
+<dd class="field-even"><p>dict</p>
 </dd>
 </dl>
 </dd></dl>
@@ -458,6 +453,7 @@ Defaults to ‘OptunaSearch’.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.model_optim"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.model_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.param_optim"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.param_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.get_best_model"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.get_best_model()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.get_best_param"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.get_best_param()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model_optimizer.ModelOptimizer.optimize"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer.optimize()</span></code></a></li>
 </ul>
 </li>

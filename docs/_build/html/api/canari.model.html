@@ -157,28 +157,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.common.html">canari.common</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -220,51 +232,18 @@
 <div class="article-header-buttons">
 
 
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="../_sources/api/canari.model.rst" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
 <span class="btn__icon-container">
-  <i class="fas fa-file"></i>
+  <i class="fab fa-github"></i>
   </span>
-<span class="btn__text-container">.rst</span>
+
 </a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
 
 
 
@@ -350,6 +329,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">Model.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.backward"><code class="docutils literal notranslate"><span class="pre">Model.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stopping"><code class="docutils literal notranslate"><span class="pre">Model.early_stopping()</span></code></a></li>
@@ -367,6 +347,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -701,6 +682,22 @@ early stopping or by reaching maximum number of epoch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">#</span> <span class="pre">Optimization</span> <span class="pre">attribute</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.model.Model.metric_optim">
+<span class="sig-name descname"><span class="pre">metric_optim</span></span><a class="headerlink" href="#canari.model.Model.metric_optim" title="Link to this definition">#</a></dt>
+<dd><p>metric used for optimization in <a class="reference internal" href="canari.model_optimizer.html#module-canari.model_optimizer" title="canari.model_optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">model_optimizer</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1223,6 +1220,24 @@ RTS smoothing equation over multiple time steps.</p>
 </div>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.white_noise_decay">
+<span class="sig-name descname"><span class="pre">white_noise_decay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_max_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_decay_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.white_noise_decay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.white_noise_decay" title="Link to this definition">#</a></dt>
+<dd><p>Apply exponential decay to white noise standard deviation over epochs, and modify
+the variance for the white noise component in <a class="reference internal" href="#canari.model.Model.process_noise_matrix" title="canari.model.Model.process_noise_matrix"><code class="xref py py-attr docutils literal notranslate"><span class="pre">process_noise_matrix</span></code></a>.
+This decaying noise structure is intended to improve the training performance
+of TAGI-LSTM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epoch</strong> (<em>int</em>) – Current training epoch.</p></li>
+<li><p><strong>white_noise_max_std</strong> (<em>float</em>) – Maximum allowed noise std.</p></li>
+<li><p><strong>white_noise_decay_factor</strong> (<em>float</em>) – Factor controlling decay rate.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -1297,6 +1312,7 @@ RTS smoothing equation over multiple time steps.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">Model.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.backward"><code class="docutils literal notranslate"><span class="pre">Model.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stopping"><code class="docutils literal notranslate"><span class="pre">Model.early_stopping()</span></code></a></li>
@@ -1314,6 +1330,7 @@ RTS smoothing equation over multiple time steps.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>
 </ul>

@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Anomaly detection &#8212; canari v.0.0.2 documentation</title>
+    <title>Anomaly detection using the swithing Kalman filter &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -47,8 +47,8 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'examples/anomaly_detection';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="../api/canari.html" />
-    <link rel="prev" title="Forecasting" href="forecasting.html" />
+    <link rel="next" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
+    <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -158,28 +158,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="forecasting.html">Forecasting</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -221,51 +233,18 @@
 <div class="article-header-buttons">
 
 
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="../_sources/examples/anomaly_detection.ipynb" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
 <span class="btn__icon-container">
-  <i class="fas fa-file"></i>
+  <i class="fab fa-github"></i>
   </span>
-<span class="btn__text-container">.ipynb</span>
+
 </a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
 
 
 
@@ -316,7 +295,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Anomaly detection</h1>
+    <h1>Anomaly detection using the swithing Kalman filter</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -327,20 +306,15 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-components">Import components</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">Train model – Objective: train LSTM neural network – skf.lstm_train()</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Plot-predictions">Plot predictions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Detect-anomaly-using-SKF-model">Detect anomaly using SKF model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Plot-results">Plot results</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Filter-results">Filter results</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Smoother-results">Smoother results</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Anomaly-detection">Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
             </nav>
         </div>
@@ -352,28 +326,34 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Anomaly-detection">
-<h1>Anomaly detection<a class="headerlink" href="#Anomaly-detection" title="Link to this heading">#</a></h1>
+  <section id="Anomaly-detection-using-the-swithing-Kalman-filter">
+<h1>Anomaly detection using the swithing Kalman filter<a class="headerlink" href="#Anomaly-detection-using-the-swithing-Kalman-filter" title="Link to this heading">#</a></h1>
+<p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimate the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
+<p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
+<p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
 <section id="Import-libraries">
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pytagi.metric</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">metric</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</pre></div>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span> <span class="k">as</span> <span class="n">normalizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytagi.metric</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">metric</span>
+<br/></pre></div>
 </div>
 </div>
 </section>
-<section id="Import-components">
-<h2>Import components<a class="headerlink" href="#Import-components" title="Link to this heading">#</a></h2>
+<section id="Import-from-Canari">
+<h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing model using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -385,41 +365,51 @@ document.write(`
     <span class="n">plot_states</span><span class="p">,</span>
     <span class="n">plot_skf_states</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LocalAcceleration</span> <span class="p">,</span><span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LocalAcceleration</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
 </pre></div>
 </div>
 </div>
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Pandas external library.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="n">data_file</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span> <span class="o">/</span> <span class="s2">&quot;benchmark_data&quot;</span> <span class="o">/</span> <span class="s2">&quot;test_4_data.csv&quot;</span><span class="p">)</span>
+<span class="n">data_file</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine.csv&quot;</span><span class="p">)</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
-<span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">time</span>
+<span class="c1"># Add synthetic anomaly to data</span>
+<span class="n">trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
+<span class="n">time_anomaly</span> <span class="o">=</span> <span class="mi">120</span>
+<span class="n">new_trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">time_anomaly</span><span class="p">)</span>
+<span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">=</span> <span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">+</span> <span class="n">new_trend</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1">#</span>
+<span class="n">data_file_time</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine_datetime.csv&quot;</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file_time</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">time_index</span>
 <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
-<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;crack opening&quot;</span><span class="p">,</span> <span class="s2">&quot;water_level&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_min&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_max&quot;</span><span class="p">]</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
 </section>
 <section id="Data-preprocess">
 <h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<p>In terms of pre-processsing, we want to add the <em>hour-of-the-day</em> as time-covariate for the LSTM network. Moreover we define here our choice of using the first 40% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 50% are the implicitely defined as the test set.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_col</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">data_processor</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="p">(</span>
     <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">time_covariates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;week_of_year&quot;</span><span class="p">],</span>
-    <span class="n">train_split</span><span class="o">=</span><span class="mf">0.23</span><span class="p">,</span>
-    <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.07</span><span class="p">,</span>
+    <span class="n">time_covariates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hour_of_day&quot;</span><span class="p">],</span>
+    <span class="n">train_split</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+    <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
     <span class="n">output_col</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">,</span> <span class="n">test_data</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
@@ -428,7 +418,7 @@ document.write(`
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -450,61 +440,40 @@ document.write(`
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>crack opening</th>
-      <th>water_level</th>
-      <th>temp_min</th>
-      <th>temp_max</th>
-      <th>week_of_year</th>
+      <th>values</th>
+      <th>hour_of_day</th>
     </tr>
     <tr>
       <th>time</th>
-      <th></th>
-      <th></th>
-      <th></th>
       <th></th>
       <th></th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>2010-11-07</th>
-      <td>6.595455</td>
-      <td>31.053637</td>
-      <td>-2.2</td>
-      <td>3.5</td>
-      <td>44.0</td>
+      <th>2000-01-03 00:00:00</th>
+      <td>0.00</td>
+      <td>0.0</td>
     </tr>
     <tr>
-      <th>2010-11-14</th>
-      <td>6.523334</td>
-      <td>30.986666</td>
-      <td>-1.7</td>
-      <td>9.9</td>
-      <td>45.0</td>
+      <th>2000-01-03 01:00:00</th>
+      <td>-0.26</td>
+      <td>1.0</td>
     </tr>
     <tr>
-      <th>2010-11-21</th>
-      <td>6.430000</td>
-      <td>31.070000</td>
-      <td>-5.8</td>
-      <td>1.6</td>
-      <td>46.0</td>
+      <th>2000-01-03 02:00:00</th>
+      <td>-0.50</td>
+      <td>2.0</td>
     </tr>
     <tr>
-      <th>2010-11-28</th>
-      <td>6.360000</td>
-      <td>31.000000</td>
-      <td>-11.5</td>
-      <td>0.1</td>
-      <td>47.0</td>
+      <th>2000-01-03 03:00:00</th>
+      <td>-0.71</td>
+      <td>3.0</td>
     </tr>
     <tr>
-      <th>2010-12-05</th>
-      <td>6.210000</td>
-      <td>30.930000</td>
-      <td>-5.1</td>
-      <td>-1.1</td>
-      <td>48.0</td>
+      <th>2000-01-03 04:00:00</th>
+      <td>-0.87</td>
+      <td>4.0</td>
     </tr>
   </tbody>
 </table>
@@ -513,93 +482,91 @@ document.write(`
 </section>
 <section id="Define-components">
 <h2>Define components<a class="headerlink" href="#Define-components" title="Link to this heading">#</a></h2>
+<p>We instantiatiate each component brom their base class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with
+a mean 0 and a user-defined standard deviation of 0.05.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">()</span>
 <span class="n">local_acceleration</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">()</span>
 <span class="n">pattern</span> <span class="o">=</span> <span class="n">LstmNetwork</span><span class="p">(</span>
-        <span class="n">look_back_len</span><span class="o">=</span><span class="mi">51</span><span class="p">,</span>
-        <span class="n">num_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># number of data&#39;s columns + time covariates</span>
-        <span class="n">num_layer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
-        <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.04746</span><span class="p">)</span>
+    <span class="n">look_back_len</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">num_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">num_layer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">5e-2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Define-normal-and-abnormal-models">
-<h2>Define normal and abnormal models<a class="headerlink" href="#Define-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
+<section id="Define-the-normal-and-abnormal-models">
+<h2>Define the normal and abnormal models<a class="headerlink" href="#Define-the-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
+<p>The SKF requires defining a normal and an abnormal model. Here, the normal one correspond to a local trend component with no acceleration, and the abnormal one correspond to a local acceleration component. The former represent a trend-stationnary regime and the later represent a transitory changepoint with non-zero acceleration. Note that both the normal and abnormal models share the same <code class="docutils literal notranslate"><span class="pre">pattern</span></code> and <code class="docutils literal notranslate"><span class="pre">residual</span></code> components.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Normal model</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
-    <span class="n">local_trend</span><span class="p">,</span>
-    <span class="n">pattern</span><span class="p">,</span>
-    <span class="n">residual</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">local_trend</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">residual</span><span class="p">)</span>
 
 <span class="c1">#  Abnormal model</span>
-<span class="n">ab_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
-    <span class="n">local_acceleration</span><span class="p">,</span>
-    <span class="n">pattern</span><span class="p">,</span>
-    <span class="n">residual</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="n">ab_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">local_acceleration</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">residual</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Define-Switching-Kalman-Filter-(SKF)-model">
-<h2>Define Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
+<section id="Define-the-Switching-Kalman-Filter-(SKF)-model">
+<h2>Define the Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-the-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
+<p>We instantiate and initialize the SKF model by providing 1) the standard deviation of the process error that is added when transiting from the normal to the abnormal model, and 2) the prior probability of having a regime switch fron normal to abnormal, here set to 0.0001.</p>
+<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialized the baseline hidden states based on the first three years of data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">skf</span> <span class="o">=</span> <span class="n">SKF</span><span class="p">(</span>
     <span class="n">norm_model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
     <span class="n">abnorm_model</span><span class="o">=</span><span class="n">ab_model</span><span class="p">,</span>
-    <span class="n">std_transition_error</span><span class="o">=</span><span class="mf">3.288056287040139e-05</span><span class="p">,</span>
-    <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="mf">2.8867340936017124e-06</span><span class="p">,</span>
-    <span class="n">abnorm_to_norm_prob</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">,</span>
-    <span class="n">norm_model_prior_prob</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+    <span class="n">std_transition_error</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+    <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">52</span> <span class="o">*</span> <span class="mi">3</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">
-<h2>Train model – Objective: train LSTM neural network – skf.lstm_train()<a class="headerlink" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()" title="Link to this heading">#</a></h2>
+<section id="Train-the-LSTM-neural-network-model">
+<h2>Train the LSTM neural network model<a class="headerlink" href="#Train-the-LSTM-neural-network-model" title="Link to this heading">#</a></h2>
+<p>The first step is to train the LSTM neural network model associated with the <em>normal</em> model using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or
+trend-stationnary.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">52</span> <span class="o">*</span> <span class="mi">3</span><span class="p">])</span>
-<span class="n">max_num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
 <span class="n">states_optim</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="kc">None</span>
 
-<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_num_epoch</span><span class="p">):</span>
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epoch</span><span class="p">):</span>
     <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf</span><span class="o">.</span><span class="n">lstm_train</span><span class="p">(</span>
         <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
         <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
+    <span class="c1"># Unstandardize the predictions</span>
+    <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
         <span class="n">mu_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
 
-    <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
+    <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
         <span class="n">std_validation_preds</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
     <span class="p">)</span>
 
     <span class="n">validation_obs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -609,17 +576,19 @@ document.write(`
         <span class="n">std</span><span class="o">=</span><span class="n">std_validation_preds_unnorm</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">skf</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">(</span><span class="n">evaluate_metric</span><span class="o">=-</span><span class="n">validation_log_lik</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+    <span class="n">skf</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">(</span><span class="n">evaluate_metric</span><span class="o">=-</span><span class="n">validation_log_lik</span><span class="p">,</span> <span class="n">current_epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span> <span class="n">max_epoch</span><span class="o">=</span><span class="n">num_epoch</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">epoch</span> <span class="o">==</span> <span class="n">skf</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">:</span>
         <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="n">mu_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
+
+    <span class="n">skf</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">skf</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
         <span class="k">break</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optinal epoch       : </span><span class="si">{</span><span class="n">skf</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Validation MSE      :</span><span class="si">{</span><span class="n">skf</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="si">:</span><span class="s2"> 0.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optimal epoch               : </span><span class="si">{</span><span class="n">skf</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Validation Log-likelihood   :</span><span class="si">{</span><span class="n">skf</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="si">:</span><span class="s2"> 0.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -628,73 +597,45 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Optinal epoch       : 20
-Validation MSE      :-0.8030
+Optimal epoch               : 49
+Validation Log-likelihood   :-1.4718
 </pre></div></div>
 </div>
 </section>
-<section id="Plot-predictions">
-<h2>Plot predictions<a class="headerlink" href="#Plot-predictions" title="Link to this heading">#</a></h2>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-<span class="n">plot_data</span><span class="p">(</span>
-    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
-    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">plot_test_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">plot_column</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
-    <span class="n">validation_label</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">plot_prediction</span><span class="p">(</span>
-    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
-    <span class="n">mean_validation_pred</span><span class="o">=</span><span class="n">mu_validation_preds_optim</span><span class="p">,</span>
-    <span class="n">std_validation_pred</span><span class="o">=</span><span class="n">std_validation_preds_optim</span><span class="p">,</span>
-    <span class="n">validation_label</span><span class="o">=</span><span class="p">[</span><span class="sa">r</span><span class="s2">&quot;$\mu$&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;$\pm\sigma$&quot;</span><span class="p">],</span>
-<span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/examples_anomaly_detection_18_0.png" src="../_images/examples_anomaly_detection_18_0.png" />
-</div>
-</div>
-</section>
-<section id="Detect-anomaly-using-SKF-model">
-<h2>Detect anomaly using SKF model<a class="headerlink" href="#Detect-anomaly-using-SKF-model" title="Link to this heading">#</a></h2>
+<section id="Anomaly-detection">
+<h2>Anomaly detection<a class="headerlink" href="#Anomaly-detection" title="Link to this heading">#</a></h2>
+<p>Once the training is complete, we perform the changepoint detection by using the SKF <code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">smoother</span></code>. The <code class="docutils literal notranslate"><span class="pre">filter</span></code> represents the results obtained during online data processing and the <code class="docutils literal notranslate"><span class="pre">smoother</span></code> those obtained during offline processing.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">skf</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
-<span class="n">smooth_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf</span><span class="o">.</span><span class="n">smoother</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
+<span class="n">smooth_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Plot-results">
-<h2>Plot results<a class="headerlink" href="#Plot-results" title="Link to this heading">#</a></h2>
-<section id="Filter-results">
-<h3>Filter results<a class="headerlink" href="#Filter-results" title="Link to this heading">#</a></h3>
+<section id="Hidden-states-and-proability-of-anomalies">
+<h2>Hidden states and proability of anomalies<a class="headerlink" href="#Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
+a stationnary regime to a trend-stationnary one.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
     <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
     <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
-    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">,</span> <span class="s2">&quot;trend&quot;</span><span class="p">,</span> <span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="s2">&quot;white noise&quot;</span><span class="p">],</span>
     <span class="n">model_prob</span><span class="o">=</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span>
     <span class="n">legend_location</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Filter states&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">],</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;SKF hidden states&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;MM-DD&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -703,38 +644,9 @@ Validation MSE      :-0.8030
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_anomaly_detection_23_0.png" src="../_images/examples_anomaly_detection_23_0.png" />
+<img alt="../_images/examples_anomaly_detection_20_0.png" src="../_images/examples_anomaly_detection_20_0.png" />
 </div>
 </div>
-</section>
-<section id="Smoother-results">
-<h3>Smoother results<a class="headerlink" href="#Smoother-results" title="Link to this heading">#</a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
-    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
-    <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
-    <span class="n">states_type</span><span class="o">=</span><span class="s2">&quot;smooth&quot;</span><span class="p">,</span>
-    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;local level&quot;</span><span class="p">,</span> <span class="s2">&quot;local trend&quot;</span><span class="p">,</span> <span class="s2">&quot;lstm&quot;</span><span class="p">,</span> <span class="s2">&quot;white noise&quot;</span><span class="p">],</span>
-    <span class="n">model_prob</span><span class="o">=</span><span class="n">smooth_marginal_abnorm_prob</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span>
-    <span class="n">legend_location</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Smoother states&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/examples_anomaly_detection_25_0.png" src="../_images/examples_anomaly_detection_25_0.png" />
-</div>
-</div>
-</section>
 </section>
 </section>
 
@@ -750,20 +662,20 @@ Validation MSE      :-0.8030
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="forecasting.html"
+       href="forecasting_with_lstm_multivariate.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Forecasting</p>
+        <p class="prev-next-title">Forecasting with LSTM and explanatory time series</p>
       </div>
     </a>
     <a class="right-next"
-       href="../api/canari.html"
+       href="parameter_tuning.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">&lt;no title&gt;</p>
+        <p class="prev-next-title">Swithing Kalman filter parameter tuning using synthetic anomalies</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -784,20 +696,15 @@ Validation MSE      :-0.8030
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-components">Import components</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-components">Define components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-normal-and-abnormal-models">Define normal and abnormal models</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-Switching-Kalman-Filter-(SKF)-model">Define Switching Kalman Filter (SKF) model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-model----Objective:-train-LSTM-neural-network----skf.lstm_train()">Train model – Objective: train LSTM neural network – skf.lstm_train()</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Plot-predictions">Plot predictions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Detect-anomaly-using-SKF-model">Detect anomaly using SKF model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Plot-results">Plot results</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Filter-results">Filter results</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Smoother-results">Smoother results</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-normal-and-abnormal-models">Define the normal and abnormal models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-the-Switching-Kalman-Filter-(SKF)-model">Define the Switching Kalman Filter (SKF) model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Train-the-LSTM-neural-network-model">Train the LSTM neural network model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Anomaly-detection">Anomaly detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hidden-states-and-proability-of-anomalies">Hidden states and proability of anomalies</a></li>
 </ul>
   </nav></div>
 

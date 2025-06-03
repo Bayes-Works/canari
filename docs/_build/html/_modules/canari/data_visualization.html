@@ -154,28 +154,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -215,6 +227,21 @@
         <div class="header-article-item">
 
 <div class="article-header-buttons">
+
+
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
 
 
 
@@ -622,25 +649,44 @@ document.write(`
     <span class="n">len_states</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">_determine_time</span><span class="p">(</span><span class="n">data_processor</span><span class="p">,</span> <span class="n">len_states</span><span class="p">)</span>
 
-    <span class="c1"># Mean and std to plot</span>
-    <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
-        <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
-            <span class="n">mu_states</span><span class="p">,</span>
-            <span class="n">std_states</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-        <span class="p">)</span>
-
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
+
         <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">if</span> <span class="n">sub_plot</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">sub_plot</span>
+
+        <span class="c1"># Get mean and std to plot</span>
+        <span class="k">if</span> <span class="n">standardization</span><span class="p">:</span>
+            <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span> <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span> <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
+                <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
+                <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">scale_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
+                <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
+                <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
 
         <span class="c1"># Plot with uncertainty</span>
         <span class="n">plot_with_uncertainty</span><span class="p">(</span>
             <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
-            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
-            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">,</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">,</span>
             <span class="n">num_std</span><span class="o">=</span><span class="n">num_std</span><span class="p">,</span>
             <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
             <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>
@@ -728,25 +774,44 @@ document.write(`
     <span class="n">len_states</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">_determine_time</span><span class="p">(</span><span class="n">data_processor</span><span class="p">,</span> <span class="n">len_states</span><span class="p">)</span>
 
-    <span class="c1"># Mean and std to plot</span>
-    <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span><span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">states_to_plot</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
-        <span class="n">mu_states</span><span class="p">,</span> <span class="n">std_states</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">unstandardize_states</span><span class="p">(</span>
-            <span class="n">mu_states</span><span class="p">,</span>
-            <span class="n">std_states</span><span class="p">,</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-            <span class="n">data_processor</span><span class="o">.</span><span class="n">std_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
-        <span class="p">)</span>
-
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">plot_state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">states_to_plot</span><span class="p">):</span>
+
         <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+        <span class="c1"># Get mean and std to plot</span>
+        <span class="k">if</span> <span class="n">standardization</span><span class="p">:</span>
+            <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span> <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span> <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span> <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
+                <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
+                <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">scale_const_mean</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">std_states</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">get_std</span><span class="p">(</span>
+                <span class="n">states_type</span><span class="o">=</span><span class="n">states_type</span><span class="p">,</span>
+                <span class="n">states_name</span><span class="o">=</span><span class="n">plot_state</span><span class="p">,</span>
+                <span class="n">standardization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">scale_const_std</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span>
+                    <span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
 
         <span class="c1"># Plot with uncertainty</span>
         <span class="n">plot_with_uncertainty</span><span class="p">(</span>
             <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
-            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
-            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">[</span><span class="n">plot_state</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">mu</span><span class="o">=</span><span class="n">mu_states</span><span class="p">,</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_states</span><span class="p">,</span>
             <span class="n">num_std</span><span class="o">=</span><span class="n">num_std</span><span class="p">,</span>
             <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
             <span class="n">linestyle</span><span class="o">=</span><span class="n">linestyle</span><span class="p">,</span>

@@ -88,9 +88,9 @@ class SKFOptimizer:
         # Function for optimization
         def objective(
             config,
-            model_param_param: dict,
+            model_param: dict,
         ):
-            skf = self._initialize_skf(config, model_param_param)
+            skf = self._initialize_skf(config, model_param)
             slope = config["slope"]
 
             detection_rate, false_rate, false_alarm_train = (
@@ -132,7 +132,7 @@ class SKFOptimizer:
             optimizer_runner = tune.run(
                 tune.with_parameters(
                     objective,
-                    model_param_param=self._model_param,
+                    model_param=self._model_param,
                 ),
                 config=search_config,
                 name="SKF_optimizer",
@@ -167,7 +167,7 @@ class SKFOptimizer:
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         objective,
-                        model_param_param=self._model_param,
+                        model_param=self._model_param,
                     ),
                     config=search_config,
                     search_alg=OptunaSearch(metric="metric", mode="min"),
@@ -182,7 +182,7 @@ class SKFOptimizer:
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         objective,
-                        model_param_param=self._model_param,
+                        model_param=self._model_param,
                     ),
                     config=search_config,
                     name="SKF_optimizer",
@@ -216,6 +216,16 @@ class SKFOptimizer:
             Any: SKF instance corresponding to the optimal configuration.
         """
         return self.skf_optim
+
+    def get_best_param(self):
+        """
+        Retrieve the optimized parameters after running optimization.
+
+        Returns:
+            dict: Best hyperparameter values.
+
+        """
+        return self.param_optim
 
 
 class _CustomLogger(Callback):

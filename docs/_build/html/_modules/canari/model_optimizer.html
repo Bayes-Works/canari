@@ -154,28 +154,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -215,6 +227,21 @@
         <div class="header-article-item">
 
 <div class="article-header-buttons">
+
+
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
 
 
 
@@ -289,7 +316,6 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callback</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune.search.optuna</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptunaSearch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ray.tune.schedulers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ASHAScheduler</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
 
 <span class="c1"># Ignore segmentation fault signals</span>
 <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGSEGV</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
@@ -300,19 +326,18 @@ document.write(`
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelOptimizer</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune</span>
-<span class="sd">    external library.</span>
+<span class="sd">    external library using the metric :attr:`~canari.model.Model.metric_optim`.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        initialize_model (Callable):</span>
+<span class="sd">        model (Callable):</span>
 <span class="sd">            Function that returns a model instance given a model configuration.</span>
-<span class="sd">        train (Callable):</span>
-<span class="sd">            Function that define the training procedure for a model, it should return</span>
-<span class="sd">            `trained_model.early_stop_metric`.</span>
 <span class="sd">        param_space (Dict[str, list]):</span>
 <span class="sd">            Parameter search space: two-value lists [min, max] for defining the</span>
 <span class="sd">            bounds of the optimization.</span>
-<span class="sd">        data_processor (DataProcess):</span>
-<span class="sd">            DataProcess instance for data preparation.</span>
+<span class="sd">        train_data (Dict[str, np.ndarray], optional):</span>
+<span class="sd">            Training data.</span>
+<span class="sd">        validation_data (Dict[str, np.ndarray], optional):</span>
+<span class="sd">            Validation data.</span>
 <span class="sd">        num_optimization_trial (int, optional):</span>
 <span class="sd">            Number of random search trials (ignored for grid search). Defaults to 50.</span>
 <span class="sd">        grid_search (bool, optional):</span>
@@ -320,35 +345,38 @@ document.write(`
 <span class="sd">        algorithm (str, optional):</span>
 <span class="sd">            Search algorithm: &#39;default&#39; (OptunaSearch) or &#39;parallel&#39; (ASHAScheduler).</span>
 <span class="sd">            Defaults to &#39;OptunaSearch&#39;.</span>
+<span class="sd">        mode (str, optional): Direction for optimization stopping: &#39;min&#39; (default).</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        model_optim :</span>
 <span class="sd">            The best model instance initialized with optimal parameters after running optimize().</span>
-<span class="sd">        param_optim (Dict[str, Any]):</span>
+<span class="sd">        param_optim (Dict):</span>
 <span class="sd">            The best hyperparameter configuration found during optimization.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">initialize_model</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
-        <span class="n">train</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
         <span class="n">param_space</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">data_processor</span><span class="p">:</span> <span class="n">DataProcess</span><span class="p">,</span>
+        <span class="n">train_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">validation_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">num_optimization_trial</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
         <span class="n">grid_search</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;min&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the ModelOptimizer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span> <span class="o">=</span> <span class="n">initialize_model</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_train</span> <span class="o">=</span> <span class="n">train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_param_space</span> <span class="o">=</span> <span class="n">param_space</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data_processor</span> <span class="o">=</span> <span class="n">data_processor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span> <span class="o">=</span> <span class="n">train_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span> <span class="o">=</span> <span class="n">validation_data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span> <span class="o">=</span> <span class="n">num_optimization_trial</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_grid_search</span> <span class="o">=</span> <span class="n">grid_search</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">mode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -363,12 +391,10 @@ document.write(`
         <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span>
             <span class="n">config</span><span class="p">,</span>
         <span class="p">):</span>
-            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-            <span class="n">trained_model</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train</span><span class="p">(</span>
-                <span class="n">model</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_processor</span><span class="p">,</span>
+            <span class="n">trained_model</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
+                <span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span>
             <span class="p">)</span>
-            <span class="n">tune</span><span class="o">.</span><span class="n">report</span><span class="p">({</span><span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">early_stop_metric</span><span class="p">})</span>
+            <span class="n">tune</span><span class="o">.</span><span class="n">report</span><span class="p">({</span><span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">metric_optim</span><span class="p">})</span>
 
         <span class="c1"># Parameter space</span>
         <span class="n">search_config</span> <span class="o">=</span> <span class="p">{}</span>
@@ -411,7 +437,7 @@ document.write(`
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
-                    <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">),</span>
+                    <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">),</span>
                     <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Model_optimizer&quot;</span><span class="p">,</span>
                     <span class="n">num_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span><span class="p">,</span>
                     <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -419,7 +445,7 @@ document.write(`
                     <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">custom_logger</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">&quot;parallel&quot;</span><span class="p">:</span>
-                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
@@ -432,14 +458,18 @@ document.write(`
                 <span class="p">)</span>
 
         <span class="c1"># Get the optimal parameters</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_config</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
-        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_config</span><span class="p">(</span>
+            <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+        <span class="p">)</span>
+        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
         <span class="n">best_sample_number</span> <span class="o">=</span> <span class="n">custom_logger</span><span class="o">.</span><span class="n">trial_sample_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">best_trial</span><span class="o">.</span><span class="n">trial_id</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span>
         <span class="p">)</span>
 
         <span class="c1"># Get the optimal model</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_objective</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_data</span>
+        <span class="p">)</span>
 
         <span class="c1"># Print optimal parameters</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----&quot;</span><span class="p">)</span>
@@ -454,10 +484,24 @@ document.write(`
 <span class="sd">        Retrieve the optimized model instance after running optimization.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Any: Model instance initialized with the best hyperparameter values.</span>
+<span class="sd">            :class:`~canari.model.Model`:: Model instance initialized with the best</span>
+<span class="sd">                                            hyperparameter values.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span></div>
+
+
+<div class="viewcode-block" id="ModelOptimizer.get_best_param">
+<a class="viewcode-back" href="../../api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer.get_best_param">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_best_param</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve the optimized parameters after running optimization.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Best hyperparameter values.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span></div>
 </div>
 
 

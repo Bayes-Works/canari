@@ -1,0 +1,1054 @@
+
+<!DOCTYPE html>
+
+
+<html lang="EN" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Swithing Kalman filter parameter tuning using synthetic anomalies &#8212; canari v.0.0.2 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/parameter_tuning';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Read .csv data files" href="read_DAT_file.html" />
+    <link rel="prev" title="Anomaly detection using the swithing Kalman filter" href="anomaly_detection.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="EN"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .csv data files</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Swithing Kalman filter parameter tuning using synthetic anomalies</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.-Optimize-the-model-hyperparameters">A. Optimize the model hyperparameters</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.1.-Parameter-space">A.1. Parameter space</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.2.-Model-as-a-function-of-parameters">A.2. Model as a function of parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.3.-Define-optimizer">A.3. Define optimizer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.4-Get-optimal-model-hyperparameters">A.4 Get optimal model hyperparameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.5-Hidden-states-and-predictions">A.5 Hidden states and predictions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.-Optimize-the-switching-Kalman-silter-(SKF)-hyperparameters">B. Optimize the switching Kalman silter (SKF) hyperparameters</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.1.-hyparameter-space">B.1. hyparameter space</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.2.-SKF-model-as-a-function-of-parameters">B.2. SKF model as a function of parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.3.-Optimizer">B.3. Optimizer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.4.-Get-optimal-SKF">B.4. Get optimal SKF</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.5.-Anomaly-detection">B.5. Anomaly detection</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.6.-Hidden-states-and-proability-of-anomalies">B.6. Hidden states and proability of anomalies</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Swithing-Kalman-filter-parameter-tuning-using-synthetic-anomalies">
+<h1>Swithing Kalman filter parameter tuning using synthetic anomalies<a class="headerlink" href="#Swithing-Kalman-filter-parameter-tuning-using-synthetic-anomalies" title="Link to this heading">#</a></h1>
+<p>This tutorial example presents how to calibrate the hyperparameters of the SSM &amp; LSTM network, as well as the hyperparameters of a switching Kalman filter (SKF) using synthetic anomalies and the external Ray Tune library. The example involves the detection of anomalies that take the form of change points. The model relies on the SKF for estimating the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a
+change point in a time series.</p>
+<p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
+<p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
+<section id="Import-libraries">
+<h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
+<p>Import the various libraries that will be employed in this example.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ray</span>
+<span class="n">ray</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+<span class="n">ray</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+    <span class="n">runtime_env</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;working_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span><span class="p">),</span>
+        <span class="s2">&quot;excludes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;.git&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytagi.metric</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">metric</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-06-03 11:40:35,281 INFO worker.py:1852 -- Started a local Ray instance.
+2025-06-03 11:40:35,303 INFO packaging.py:575 -- Creating a file package for local module &#39;/Users/vuongdai/GitHub/canari&#39;.
+2025-06-03 11:40:35,318 INFO packaging.py:367 -- Pushing file package &#39;gcs://_ray_pkg_91a08a37fa1e6106.zip&#39; (2.69MiB) to Ray cluster...
+2025-06-03 11:40:35,322 INFO packaging.py:380 -- Successfully pushed file package &#39;gcs://_ray_pkg_91a08a37fa1e6106.zip&#39;.
+</pre></div></div>
+</div>
+</section>
+<section id="Import-from-Canari">
+<h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
+<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing model using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DataProcess</span><span class="p">,</span>
+    <span class="n">Model</span><span class="p">,</span>
+    <span class="n">SKF</span><span class="p">,</span>
+    <span class="n">ModelOptimizer</span><span class="p">,</span>
+    <span class="n">SKFOptimizer</span><span class="p">,</span>
+    <span class="n">plot_data</span><span class="p">,</span>
+    <span class="n">plot_prediction</span><span class="p">,</span>
+    <span class="n">plot_states</span><span class="p">,</span>
+    <span class="n">plot_skf_states</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LocalAcceleration</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Read-data">
+<h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Pandas external library.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">data_file</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine.csv&quot;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="c1"># Add synthetic anomaly to data</span>
+<span class="n">trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
+<span class="n">time_anomaly</span> <span class="o">=</span> <span class="mi">120</span>
+<span class="n">new_trend</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">time_anomaly</span><span class="p">)</span>
+<span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">=</span> <span class="n">trend</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">:]</span> <span class="o">+</span> <span class="n">new_trend</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1">#</span>
+<span class="n">data_file_time</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;data/toy_time_series/sine_datetime.csv&quot;</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file_time</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">time_index</span>
+<span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Data-preprocess">
+<h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
+<p>In terms of pre-processsing, we want to add the <em>hour-of-the-day</em> as time-covariate for the LSTM network. Moreover we define here our choice of using the first 40% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 50% are the implicitely defined as the test set.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_col</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">data_processor</span> <span class="o">=</span> <span class="n">DataProcess</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+    <span class="n">time_covariates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hour_of_day&quot;</span><span class="p">],</span>
+    <span class="n">train_split</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+    <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">output_col</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">,</span> <span class="n">test_data</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
+<span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>values</th>
+      <th>hour_of_day</th>
+    </tr>
+    <tr>
+      <th>time</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2000-01-03 00:00:00</th>
+      <td>0.00</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 01:00:00</th>
+      <td>-0.26</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 02:00:00</th>
+      <td>-0.50</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 03:00:00</th>
+      <td>-0.71</td>
+      <td>3.0</td>
+    </tr>
+    <tr>
+      <th>2000-01-03 04:00:00</th>
+      <td>-0.87</td>
+      <td>4.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="A.-Optimize-the-model-hyperparameters">
+<h2>A. Optimize the model hyperparameters<a class="headerlink" href="#A.-Optimize-the-model-hyperparameters" title="Link to this heading">#</a></h2>
+<p>This section presents how Canari relies on the Ray Tune library in order to optimize the hyperparameters for the SSM, the LSTM, and the SKF.</p>
+<section id="A.1.-Parameter-space">
+<h3>A.1. Parameter space<a class="headerlink" href="#A.1.-Parameter-space" title="Link to this heading">#</a></h3>
+<p>First, we need to define which hyperparameters will be optimized and for each of them what is the range of values to be searched. In this example, we search for the optimal look-back window length between 10 and 30 time steps, and the residual component’s standard deviation between 0.001 and 0.2.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_space</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;look_back_len&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span>
+    <span class="s2">&quot;sigma_v&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">2e-1</span><span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="A.2.-Model-as-a-function-of-parameters">
+<h3>A.2. Model as a function of parameters<a class="headerlink" href="#A.2.-Model-as-a-function-of-parameters" title="Link to this heading">#</a></h3>
+<p>We need to create a function that makes our model depends on the parameters to be search over.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">initialize_model</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">):</span>
+    <span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">()</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="n">LstmNetwork</span><span class="p">(</span>
+            <span class="n">look_back_len</span><span class="o">=</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;look_back_len&quot;</span><span class="p">],</span>
+            <span class="n">num_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">num_layer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+            <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;sigma_v&quot;</span><span class="p">])</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">local_trend</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">residual</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="mi">24</span><span class="p">])</span>
+
+    <span class="c1"># Training</span>
+    <span class="n">num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epoch</span><span class="p">):</span>
+        <span class="p">(</span><span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">states</span><span class="p">)</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_train</span><span class="p">(</span>
+            <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+            <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Unstandardize the predictions</span>
+        <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
+            <span class="n">mu_validation_preds</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">std_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span>
+            <span class="n">std_validation_preds</span><span class="p">,</span>
+            <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">output_col</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">validation_obs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">validation_log_lik</span> <span class="o">=</span> <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
+            <span class="n">prediction</span><span class="o">=</span><span class="n">mu_validation_preds_unnorm</span><span class="p">,</span>
+            <span class="n">observation</span><span class="o">=</span><span class="n">validation_obs</span><span class="p">,</span>
+            <span class="n">std</span><span class="o">=</span><span class="n">std_validation_preds_unnorm</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">(</span>
+            <span class="n">evaluate_metric</span><span class="o">=-</span><span class="n">validation_log_lik</span><span class="p">,</span>
+            <span class="n">current_epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
+            <span class="n">max_epoch</span><span class="o">=</span><span class="n">num_epoch</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">metric_optim</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">early_stop_metric</span>
+
+        <span class="k">if</span> <span class="n">epoch</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">:</span>
+            <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="n">mu_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
+            <span class="k">break</span>
+
+
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">states_optim</span><span class="p">,</span> <span class="n">mu_validation_preds_optim</span><span class="p">,</span> <span class="n">std_validation_preds_optim</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="A.3.-Define-optimizer">
+<h3>A.3. Define optimizer<a class="headerlink" href="#A.3.-Define-optimizer" title="Link to this heading">#</a></h3>
+<p>We instantiate and run the optimizer for our example. The results is a set of optimal hyperparameters for our model.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model_optimizer</span> <span class="o">=</span> <span class="n">ModelOptimizer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">initialize_model</span><span class="p">,</span>
+    <span class="n">param_space</span><span class="o">=</span><span class="n">param_space</span><span class="p">,</span>
+    <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+    <span class="n">validation_data</span> <span class="o">=</span> <span class="n">validation_data</span><span class="p">,</span>
+    <span class="n">num_optimization_trial</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model_optimizer</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+#  1/20 - Metric: -1.076 - Parameter: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.05328836981469993}
+#  2/20 - Metric: -1.100 - Parameter: {&#39;look_back_len&#39;: 21, &#39;sigma_v&#39;: 0.06919717649172338}
+#  3/20 - Metric: -0.633 - Parameter: {&#39;look_back_len&#39;: 29, &#39;sigma_v&#39;: 0.1866817610068976}
+#  4/20 - Metric: -0.912 - Parameter: {&#39;look_back_len&#39;: 13, &#39;sigma_v&#39;: 0.17408527179766783}
+#  5/20 - Metric: -0.679 - Parameter: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.19146201318103992}
+#  6/20 - Metric: -0.784 - Parameter: {&#39;look_back_len&#39;: 18, &#39;sigma_v&#39;: 0.18812016434569095}
+#  7/20 - Metric: -0.705 - Parameter: {&#39;look_back_len&#39;: 26, &#39;sigma_v&#39;: 0.17194872613948659}
+#  8/20 - Metric: -0.830 - Parameter: {&#39;look_back_len&#39;: 26, &#39;sigma_v&#39;: 0.12771785837990235}
+#  9/20 - Metric: -0.844 - Parameter: {&#39;look_back_len&#39;: 29, &#39;sigma_v&#39;: 0.1104751968541289}
+# 10/20 - Metric: -0.633 - Parameter: {&#39;look_back_len&#39;: 26, &#39;sigma_v&#39;: 0.19782127164397462}
+# 11/20 - Metric: -1.030 - Parameter: {&#39;look_back_len&#39;: 24, &#39;sigma_v&#39;: 0.031901177075863416}
+# 12/20 - Metric: -1.327 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.007680155280202473}
+# 13/20 - Metric: -1.251 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.05025105399317167}
+# 14/20 - Metric: -1.329 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.0035182210646527295}
+# 15/20 - Metric: -1.268 - Parameter: {&#39;look_back_len&#39;: 16, &#39;sigma_v&#39;: 0.008935335923750579}
+# 16/20 - Metric: -1.408 - Parameter: {&#39;look_back_len&#39;: 15, &#39;sigma_v&#39;: 0.0064736335252183275}
+# 17/20 - Metric: -1.697 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.0012226751572942474}
+# 18/20 - Metric: -1.377 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.08238787037357582}
+# 19/20 - Metric: -1.424 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.07367386097364725}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-06-03 11:40:53,479 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/Model_optimizer&#39; in 0.0092s.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+# 20/20 - Metric: -1.621 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.03413488586794264}
+-----
+Optimal parameters at trial #17: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.0012226751572942474}
+-----
+</pre></div></div>
+</div>
+</section>
+<section id="A.4-Get-optimal-model-hyperparameters">
+<h3>A.4 Get optimal model hyperparameters<a class="headerlink" href="#A.4-Get-optimal-model-hyperparameters" title="Link to this heading">#</a></h3>
+<p>We then get the best model parameters and set them for our model.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">model_optimizer</span><span class="o">.</span><span class="n">get_best_param</span><span class="p">()</span>
+<span class="n">model_optim</span><span class="p">,</span> <span class="n">states_optim</span><span class="p">,</span> <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span> <span class="o">=</span> <span class="n">initialize_model</span><span class="p">(</span><span class="n">param_optim</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">)</span>
+<span class="n">model_optim_dict</span> <span class="o">=</span> <span class="n">model_optim</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="A.5-Hidden-states-and-predictions">
+<h3>A.5 Hidden states and predictions<a class="headerlink" href="#A.5-Hidden-states-and-predictions" title="Link to this heading">#</a></h3>
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component.</p>
+<p>Note that in this first trainig phase, the results are only presented for the training and validation sets.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plot_data</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">plot_test_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">plot_column</span><span class="o">=</span><span class="n">output_col</span><span class="p">,</span>
+    <span class="n">test_label</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_prediction</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">mean_validation_pred</span><span class="o">=</span><span class="n">mu_validation_preds</span><span class="p">,</span>
+    <span class="n">std_validation_pred</span><span class="o">=</span><span class="n">std_validation_preds</span><span class="p">,</span>
+    <span class="n">validation_label</span><span class="o">=</span><span class="p">[</span><span class="sa">r</span><span class="s2">&quot;$\mu$&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;$\pm\sigma$&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">plot_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">states</span><span class="o">=</span><span class="n">states_optim</span><span class="p">,</span>
+    <span class="n">standardization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">states_to_plot</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">],</span>
+    <span class="n">sub_plot</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Validation predictions&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_parameter_tuning_19_0.png" src="../_images/examples_parameter_tuning_19_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="B.-Optimize-the-switching-Kalman-silter-(SKF)-hyperparameters">
+<h2>B. Optimize the switching Kalman silter (SKF) hyperparameters<a class="headerlink" href="#B.-Optimize-the-switching-Kalman-silter-(SKF)-hyperparameters" title="Link to this heading">#</a></h2>
+<p>In this second step, we again use the Ray Tune library in order to optimize the SKF hyperparameters in order to 1) limit the false alarms, and 2) maximize the detectability of synthetic anomalies.</p>
+<section id="B.1.-hyparameter-space">
+<h3>B.1. hyparameter space<a class="headerlink" href="#B.1.-hyparameter-space" title="Link to this heading">#</a></h3>
+<p>First, we need to define which hyperparameters will be optimized, and for each of them what is the range of values to be searched. In this example, we search for 1) the standard deviation of the process error that is added when transiting from the normal to the abnormal model, 2) the prior probability of having a regime switch fron normal to abnormal, and 3) the slope of the synthetic anomalies that will lead to a 50% detection rate.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">slope_upper_bound</span> <span class="o">=</span> <span class="mf">5e-2</span>
+<span class="n">slope_lower_bound</span> <span class="o">=</span> <span class="mf">1e-3</span>
+<span class="n">skf_param</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;std_transition_error&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">],</span>
+    <span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">],</span>
+    <span class="s2">&quot;slope&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">slope_lower_bound</span><span class="p">,</span> <span class="n">slope_upper_bound</span><span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.2.-SKF-model-as-a-function-of-parameters">
+<h3>B.2. SKF model as a function of parameters<a class="headerlink" href="#B.2.-SKF-model-as-a-function-of-parameters" title="Link to this heading">#</a></h3>
+<p>We create a function that will make our model depend on the hyperparameters defined above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">initialize_skf</span><span class="p">(</span><span class="n">skf_param</span><span class="p">,</span> <span class="n">model_param</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">norm_model</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">load_dict</span><span class="p">(</span><span class="n">model_param</span><span class="p">)</span>
+
+    <span class="n">local_acceleration</span> <span class="o">=</span> <span class="n">LocalAcceleration</span><span class="p">()</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="n">LstmNetwork</span><span class="p">()</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">()</span>
+    <span class="n">abnorm_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">local_acceleration</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">residual</span><span class="p">)</span>
+
+    <span class="n">skf</span> <span class="o">=</span> <span class="n">SKF</span><span class="p">(</span>
+        <span class="n">norm_model</span><span class="o">=</span><span class="n">norm_model</span><span class="p">,</span>
+        <span class="n">abnorm_model</span><span class="o">=</span><span class="n">abnorm_model</span><span class="p">,</span>
+        <span class="n">std_transition_error</span><span class="o">=</span><span class="n">skf_param</span><span class="p">[</span><span class="s2">&quot;std_transition_error&quot;</span><span class="p">],</span>
+        <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="n">skf_param</span><span class="p">[</span><span class="s2">&quot;norm_to_abnorm_prob&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">skf</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.3.-Optimizer">
+<h3>B.3. Optimizer<a class="headerlink" href="#B.3.-Optimizer" title="Link to this heading">#</a></h3>
+<p>We instantiate the optimizer and run it over 40 optimization runs, each involving the generation of 50 synthetic anomalies. This procedure will return the optimized hyperparameter values in order to maximize the detectability of the smallest anomalies having a detection rate of 50% while not causing any false detection.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">skf_optimizer</span> <span class="o">=</span> <span class="n">SKFOptimizer</span><span class="p">(</span>
+    <span class="n">initialize_skf</span><span class="o">=</span><span class="n">initialize_skf</span><span class="p">,</span>
+    <span class="n">param_space</span><span class="o">=</span><span class="n">skf_param</span><span class="p">,</span>
+    <span class="n">model_param</span><span class="o">=</span><span class="n">model_optim_dict</span><span class="p">,</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+    <span class="n">num_synthetic_anomaly</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_optimization_trial</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">skf_optimizer</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+#  1/40 - Metric: 1.104 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 7.548375686913468e-05, &#39;norm_to_abnorm_prob&#39;: 0.00014194611119770737, &#39;slope&#39;: 0.020780768880331115}
+#  2/40 - Metric: 1.046 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 7.884620831495087e-05, &#39;norm_to_abnorm_prob&#39;: 4.4572244275214544e-05, &#39;slope&#39;: 0.009221305128512295}
+#  3/40 - Metric: 0.564 - Detection rate: 0.54 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.543375653345208e-05, &#39;norm_to_abnorm_prob&#39;: 1.1636534202242209e-05, &#39;slope&#39;: 0.004745812548808954}
+#  4/40 - Metric: 1.074 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.4367341761031763e-05, &#39;norm_to_abnorm_prob&#39;: 0.0003547175103785403, &#39;slope&#39;: 0.014737126570637495}
+#  5/40 - Metric: 0.807 - Detection rate: 0.76 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0004001552683176568, &#39;norm_to_abnorm_prob&#39;: 3.512866813302457e-05, &#39;slope&#39;: 0.009453871625020283}
+#  6/40 - Metric: 0.806 - Detection rate: 0.72 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.3582386508506395e-05, &#39;norm_to_abnorm_prob&#39;: 1.984070662180288e-05, &#39;slope&#39;: 0.01714065163419181}
+#  7/40 - Metric: 2.021 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.918661013705935e-05, &#39;norm_to_abnorm_prob&#39;: 3.1912028427566147e-06, &#39;slope&#39;: 0.0041644253559859476}
+#  8/40 - Metric: 2.099 - Detection rate: 0.26 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 6.766258672263214e-06, &#39;norm_to_abnorm_prob&#39;: 5.284496651254192e-06, &#39;slope&#39;: 0.019785155363330025}
+#  9/40 - Metric: 2.168 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.0613238229229605e-06, &#39;norm_to_abnorm_prob&#39;: 3.420023630708142e-06, &#39;slope&#39;: 0.0335665478049676}
+# 10/40 - Metric: 2.011 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 6.85790392761211e-05, &#39;norm_to_abnorm_prob&#39;: 5.255344050612447e-06, &#39;slope&#39;: 0.0021384302252757214}
+# 11/40 - Metric: 2.018 - Detection rate: 0.10 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0009726800316985949, &#39;norm_to_abnorm_prob&#39;: 1.887192932461192e-05, &#39;slope&#39;: 0.0035479862014793128}
+# 12/40 - Metric: 2.026 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.3854224889392819e-05, &#39;norm_to_abnorm_prob&#39;: 3.0865455756059558e-06, &#39;slope&#39;: 0.005146581891777369}
+# 13/40 - Metric: 2.006 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0009669465975151814, &#39;norm_to_abnorm_prob&#39;: 0.00094970732148804, &#39;slope&#39;: 0.0011156751180375}
+# 14/40 - Metric: 2.026 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.718419614758865e-06, &#39;norm_to_abnorm_prob&#39;: 1.0080889614081176e-06, &#39;slope&#39;: 0.0051023451138064385}
+# 15/40 - Metric: 2.005 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.164182291443161e-06, &#39;norm_to_abnorm_prob&#39;: 1.360120845536992e-05, &#39;slope&#39;: 0.001093073057549373}
+# 16/40 - Metric: 2.250 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.8932716460304884e-06, &#39;norm_to_abnorm_prob&#39;: 1.0270506727217617e-06, &#39;slope&#39;: 0.04999742040136994}
+# 17/40 - Metric: 2.010 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00017505673983552155, &#39;norm_to_abnorm_prob&#39;: 7.065635109832837e-05, &#39;slope&#39;: 0.0020188665932831195}
+# 18/40 - Metric: 1.225 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00015846204612173466, &#39;norm_to_abnorm_prob&#39;: 7.267743102607682e-05, &#39;slope&#39;: 0.044945575250066094}
+# 19/40 - Metric: 1.065 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00016435930406128048, &#39;norm_to_abnorm_prob&#39;: 0.00013139956818144176, &#39;slope&#39;: 0.013080473238147145}
+# 20/40 - Metric: 2.057 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.5132430978750072e-06, &#39;norm_to_abnorm_prob&#39;: 1.0444860226789671e-05, &#39;slope&#39;: 0.01132058475841495}
+# 21/40 - Metric: 2.051 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.770362204426584e-06, &#39;norm_to_abnorm_prob&#39;: 1.1379169803735443e-05, &#39;slope&#39;: 0.010150232091134363}
+# 22/40 - Metric: 2.036 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.4231156755483033e-05, &#39;norm_to_abnorm_prob&#39;: 1.0840321536039143e-05, &#39;slope&#39;: 0.007221524605123355}
+# 23/40 - Metric: 2.031 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.2310711131224613e-05, &#39;norm_to_abnorm_prob&#39;: 2.0678272742588518e-05, &#39;slope&#39;: 0.006283986990080973}
+# 24/40 - Metric: 1.112 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00044706826034710673, &#39;norm_to_abnorm_prob&#39;: 2.5107002668741186e-05, &#39;slope&#39;: 0.02242649578493224}
+# 25/40 - Metric: 1.120 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00032596560130721393, &#39;norm_to_abnorm_prob&#39;: 3.157894706390093e-05, &#39;slope&#39;: 0.024080217793642215}
+# 26/40 - Metric: 1.098 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00047054598223676615, &#39;norm_to_abnorm_prob&#39;: 2.9919945210974092e-05, &#39;slope&#39;: 0.019632232706018434}
+# 27/40 - Metric: 2.015 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00039811452921051946, &#39;norm_to_abnorm_prob&#39;: 4.14904299396465e-05, &#39;slope&#39;: 0.002994981451818317}
+# 28/40 - Metric: 2.015 - Detection rate: 0.24 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.079935984657596e-05, &#39;norm_to_abnorm_prob&#39;: 5.35277656533547e-05, &#39;slope&#39;: 0.0029240924268901405}
+# 29/40 - Metric: 2.015 - Detection rate: 0.18 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.862066664443989e-05, &#39;norm_to_abnorm_prob&#39;: 7.366675591893923e-05, &#39;slope&#39;: 0.003054715563299041}
+# 30/40 - Metric: 0.873 - Detection rate: 0.84 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.691907956995337e-05, &#39;norm_to_abnorm_prob&#39;: 8.34193409475133e-05, &#39;slope&#39;: 0.006672952321015415}
+# 31/40 - Metric: 0.680 - Detection rate: 0.64 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.6753336362871745e-05, &#39;norm_to_abnorm_prob&#39;: 6.285513310224048e-06, &#39;slope&#39;: 0.007939482643674445}
+# 32/40 - Metric: 1.039 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 9.748761777962316e-05, &#39;norm_to_abnorm_prob&#39;: 0.0002022909231543896, &#39;slope&#39;: 0.007834113867160545}
+# 33/40 - Metric: 1.149 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.191507547642465e-05, &#39;norm_to_abnorm_prob&#39;: 6.854543731667889e-06, &#39;slope&#39;: 0.029701319029460858}
+# 34/40 - Metric: 1.045 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 9.331087849232703e-05, &#39;norm_to_abnorm_prob&#39;: 6.1425563234950555e-06, &#39;slope&#39;: 0.008961281839588402}
+# 35/40 - Metric: 1.002 - Detection rate: 0.92 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.0061919261242e-05, &#39;norm_to_abnorm_prob&#39;: 8.211261003554903e-06, &#39;slope&#39;: 0.016483097735057527}
+# 36/40 - Metric: 2.044 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 8.720446407859025e-06, &#39;norm_to_abnorm_prob&#39;: 2.086305317470769e-06, &#39;slope&#39;: 0.00878089941670478}
+# 37/40 - Metric: 2.079 - Detection rate: 0.36 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 9.335235826652898e-06, &#39;norm_to_abnorm_prob&#39;: 1.6893588628217497e-05, &#39;slope&#39;: 0.01582002036127946}
+# 38/40 - Metric: 1.001 - Detection rate: 0.94 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.5538000654214914e-05, &#39;norm_to_abnorm_prob&#39;: 1.6873240194386495e-06, &#39;slope&#39;: 0.012292715351676838}
+# 39/40 - Metric: 1.043 - Detection rate: 0.98 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.2365427441018736e-05, &#39;norm_to_abnorm_prob&#39;: 1.6044953628897597e-05, &#39;slope&#39;: 0.012581759631730768}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-06-03 11:41:30,059 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/SKF_optimizer&#39; in 0.0118s.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+# 40/40 - Metric: 1.019 - Detection rate: 0.96 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.4449162429654994e-05, &#39;norm_to_abnorm_prob&#39;: 4.5906336736635114e-05, &#39;slope&#39;: 0.011877575626329928}
+-----
+Optimal parameters at trial #3: {&#39;std_transition_error&#39;: 5.543375653345208e-05, &#39;norm_to_abnorm_prob&#39;: 1.1636534202242209e-05, &#39;slope&#39;: 0.004745812548808954}
+-----
+</pre></div></div>
+</div>
+</section>
+<section id="B.4.-Get-optimal-SKF">
+<h3>B.4. Get optimal SKF<a class="headerlink" href="#B.4.-Get-optimal-SKF" title="Link to this heading">#</a></h3>
+<p>Set the optimized hyperparameters into the model in order to process the data from the test set.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get optimal model</span>
+<span class="n">skf_param</span> <span class="o">=</span> <span class="n">skf_optimizer</span><span class="o">.</span><span class="n">get_best_param</span><span class="p">()</span>
+<span class="n">skf_optim</span> <span class="o">=</span> <span class="n">initialize_skf</span><span class="p">(</span><span class="n">skf_param</span><span class="p">,</span> <span class="n">model_optim_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.5.-Anomaly-detection">
+<h3>B.5. Anomaly detection<a class="headerlink" href="#B.5.-Anomaly-detection" title="Link to this heading">#</a></h3>
+<p>Once the training is complete, we perform the changepoint detection by using the SKF <code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">smoother</span></code>. The <code class="docutils literal notranslate"><span class="pre">filter</span></code> represents the results obtained during online data processing and the <code class="docutils literal notranslate"><span class="pre">smoother</span></code> those obtained during offline processing.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf_optim</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
+<span class="n">smooth_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf_optim</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="B.6.-Hidden-states-and-proability-of-anomalies">
+<h3>B.6. Hidden states and proability of anomalies<a class="headerlink" href="#B.6.-Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h3>
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
+a stationnary regime to a trend-stationnary one.</p>
+<p>Note that in this second optimization phase the results now extend into the test set.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
+    <span class="n">data_processor</span><span class="o">=</span><span class="n">data_processor</span><span class="p">,</span>
+    <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
+    <span class="n">model_prob</span><span class="o">=</span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">time_anomaly</span><span class="p">],</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;SKF hidden states&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;MM-DD&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_parameter_tuning_32_0.png" src="../_images/examples_parameter_tuning_32_0.png" />
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="anomaly_detection.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Anomaly detection using the swithing Kalman filter</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="read_DAT_file.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Read .csv data files</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#A.-Optimize-the-model-hyperparameters">A. Optimize the model hyperparameters</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.1.-Parameter-space">A.1. Parameter space</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.2.-Model-as-a-function-of-parameters">A.2. Model as a function of parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.3.-Define-optimizer">A.3. Define optimizer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.4-Get-optimal-model-hyperparameters">A.4 Get optimal model hyperparameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#A.5-Hidden-states-and-predictions">A.5 Hidden states and predictions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#B.-Optimize-the-switching-Kalman-silter-(SKF)-hyperparameters">B. Optimize the switching Kalman silter (SKF) hyperparameters</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.1.-hyparameter-space">B.1. hyparameter space</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.2.-SKF-model-as-a-function-of-parameters">B.2. SKF model as a function of parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.3.-Optimizer">B.3. Optimizer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.4.-Get-optimal-SKF">B.4. Get optimal SKF</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.5.-Anomaly-detection">B.5. Anomaly detection</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#B.6.-Hidden-states-and-proability-of-anomalies">B.6. Hidden states and proability of anomalies</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

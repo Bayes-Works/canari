@@ -20,6 +20,19 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 
+dependencies = [
+  "matplotlib==3.8.2",
+  "numpy==1.26.0",
+  "pandas==2.1.4",
+  "tqdm==4.66.1",
+  "fire==0.5.0",
+  "statsmodels==0.14.4",
+  "optuna==4.2.0",
+  "ray[tune]",
+  "scikit-optimize",
+  "pytest==8.3.4"
+]
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 

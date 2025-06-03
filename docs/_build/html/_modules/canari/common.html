@@ -154,28 +154,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -215,6 +227,21 @@
         <div class="header-article-item">
 
 <div class="article-header-buttons">
+
+
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
 
 
 
@@ -285,6 +312,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">LstmOutputHistory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">erf</span>
 
 
 <div class="viewcode-block" id="create_block_diag">
@@ -556,7 +584,7 @@ document.write(`
 <div class="viewcode-block" id="unstandardize_states">
 <a class="viewcode-back" href="../../api/canari.common.html#canari.common.unstandardize_states">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">unstandardize_states</span><span class="p">(</span>
-    <span class="n">mu_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_const_mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">mu_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale_const_mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Unstandardize standardized mean and standard deviation of states.</span>
@@ -564,8 +592,8 @@ document.write(`
 <span class="sd">    Args:</span>
 <span class="sd">        mu_norm (dict): Standardized means by key.</span>
 <span class="sd">        std_norm (dict): Standardized stds by key.</span>
-<span class="sd">        std_const_mean (float): Mean standardization constant.</span>
-<span class="sd">        std_const_std (float): Standard deviation standardization constant.</span>
+<span class="sd">        scale_const_mean (float): Mean standardization constant.</span>
+<span class="sd">        scale_const_std (float): Standard deviation standardization constant.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple[dict, dict]: Unstandardized means and stds.</span>
@@ -575,11 +603,11 @@ document.write(`
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mu_norm</span><span class="p">:</span>
         <span class="n">_mu_norm</span> <span class="o">=</span> <span class="n">mu_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="n">_std_norm</span> <span class="o">=</span> <span class="n">std_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">_std_const_mean</span> <span class="o">=</span> <span class="n">std_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">_scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="n">mu_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
-            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_std_const_mean</span><span class="p">,</span> <span class="n">std_const_std</span>
+            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_scale_const_mean</span><span class="p">,</span> <span class="n">scale_const_std</span>
         <span class="p">)</span>
-        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">std_const_std</span><span class="p">)</span>
+        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">mu_unnorm</span><span class="p">,</span> <span class="n">std_unnorm</span></div>
 
 
@@ -687,6 +715,32 @@ document.write(`
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span></div>
 </div>
+
+    
+<div class="viewcode-block" id="norm_cdf">
+<a class="viewcode-back" href="../../api/canari.common.html#canari.common.norm_cdf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">norm_cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cumulative distribution function (CDF) of the standard normal distribution.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        x (float or np.ndarray): Value(s) for which to compute the CDF.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        float or np.ndarray: CDF value(s) for the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">erf</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span></div>
+
+
+<div class="viewcode-block" id="norm_pdf">
+<a class="viewcode-back" href="../../api/canari.common.html#canari.common.norm_pdf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">norm_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Probability density function (PDF) of the standard normal distribution.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        x (float or np.ndarray): Value(s) for which to compute the PDF.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        float or np.ndarray: PDF value(s) for the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div>
 
 </pre></div>
 

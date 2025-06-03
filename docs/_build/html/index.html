@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>&lt;no title&gt; &#8212; canari v.0.0.2 documentation</title>
+    <title>Canari’s documentation &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -46,7 +46,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Forecasting" href="examples/forecasting.html" />
+    <link rel="next" title="Installation" href="installation_guide.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -158,28 +158,40 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples/anomaly_detection.html">Anomaly detection</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation_guide.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -221,51 +233,18 @@
 <div class="article-header-buttons">
 
 
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="_sources/index.rst" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
+<a href="https://github.com/Bayes-Works/canari.git" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
 <span class="btn__icon-container">
-  <i class="fas fa-file"></i>
+  <i class="fab fa-github"></i>
   </span>
-<span class="btn__text-container">.rst</span>
+
 </a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
 
 
 
@@ -316,7 +295,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1><no title></h1>
+    <h1>Canari’s documentation</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -326,8 +305,14 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-canari">What is Canari?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-does-it-work">How does it work?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting started</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributors">Contributors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgements">Acknowledgements</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-references">Related references</a></li>
 </ul>
-
             </nav>
         </div>
     </div>
@@ -338,73 +323,101 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <div class="toctree-wrapper compound" id="index">
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="examples/forecasting.html">Forecasting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples/anomaly_detection.html">Anomaly detection</a></li>
+  <section id="canari-s-documentation">
+<h1>Canari’s documentation<a class="headerlink" href="#canari-s-documentation" title="Link to this heading">#</a></h1>
+<section id="what-is-canari">
+<h2>What is Canari?<a class="headerlink" href="#what-is-canari" title="Link to this heading">#</a></h2>
+<p>Canari is an open-source library for online change point detection in univariate time series.
+It has been developed in the context of long-term online monitoring where we aim for the early
+detection of subtle change points in the baseline response, while limiting to a minimum the
+number of false alarms.</p>
+<p>Because Canari’s probabilistic change-point detection relies on 1-step ahead predictions,
+it is inherently capable of performing short- and long-term forecasting, as well as online
+data imputation. One-step ahead predictions can either rely solely on a target time series,
+or on explanatory time series that can be non-linearly related to the target.</p>
+<p>In addition to change-point detection and forecasting capabilities, it returns an interpretable
+decomposition of time series into baseline components representing the irreversible responses,
+recurrent pattern components caused by external effects, and residual components allowing the
+characterization of both the model prediction and the observation uncertainties.</p>
+</section>
+<section id="how-does-it-work">
+<h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Link to this heading">#</a></h2>
+<figure class="align-right">
+<a class="reference internal image-reference" href="_images/Canari_SSM_LSTM.png"><img alt="_images/Canari_SSM_LSTM.png" src="_images/Canari_SSM_LSTM.png" style="width: 195.29999999999998px; height: 153.0px;" />
+</a>
+</figure>
+<p>The methodological core behind the Canari library consists of a seamless integration between
+<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">state-space models (SSM)</a> and Bayesian
+neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and
+residuals, while on the other, <a class="reference external" href="https://github.com/lhnguyen102/cuTAGI/tree/main">Tractable Approximate Gaussian Inference (TAGI)</a>
+enables treating all parameters and hidden states in neural networks as Gaussians.</p>
+<p>Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies
+with respect to explanatory variables. Because both the SSM and LSTM rely on the same Gaussian
+conditional inference mechanism, their hidden states can be inferred analytically in a unified
+probabilistic framework.</p>
+<figure class="align-default">
+<img alt="_images/Canari_example.png" src="_images/Canari_example.png" />
+</figure>
+<p>The figure above presents an example where the raw data in red is decomposed into a baseline that
+is characterized by a baseline “level” component where its rate of change is described by the “trend.”
+The recurrent pattern is modelled by an LSTM Bayesian neural network where the training and validation
+set consists only of 4 years of data. The residual characterizing the model errors is itself modelled
+by a white “noise” component.</p>
+<p>Change point detection can be performed either online or offline after the training and validation
+period. The presence of change points is indicated by the probability of regime switches that rise
+toward 1 on several occasions.</p>
+</section>
+<section id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h2>
+<p>You can get started with Canari by going through our <a class="reference internal" href="installation_guide.html#installation-guide"><span class="std std-ref">Installation guide</span></a>
+and <a class="reference internal" href="tutorials.html#tutorials"><span class="std std-ref">Tutorials</span></a> covering all the main features of the library.</p>
+</section>
+<section id="contributors">
+<h2>Contributors<a class="headerlink" href="#contributors" title="Link to this heading">#</a></h2>
+<p>The principal developer of Canari is Van Dai Vuong with the mentoring of Luong Ha Nguyen and
+oversight by James-A. Goulet.</p>
+<p>The major contributors to the library are:</p>
+<ul class="simple">
+<li><p>Zhanwen Xin (Online AR, Bounded AR &amp; several+++ bug fixes through PRs)</p></li>
+<li><p>David Wardan (SLSTM component &amp; several+++ bug fixes through PRs)</p></li>
 </ul>
-</div>
+</section>
+<section id="acknowledgements">
+<h2>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Link to this heading">#</a></h2>
+<p>We acknowledge the financial support from Hydro-Québec and the Natural Sciences and
+Engineering Research Council of Canada in the development of the Canari library.</p>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<p>Canari is released under the MIT license.</p>
+<p><strong>THIS IS AN OPEN SOURCE SOFTWARE FOR RESEARCH PURPOSES ONLY. THIS IS NOT A PRODUCT. NO WARRANTY EXPRESSED OR IMPLIED.</strong></p>
+</section>
+<section id="related-references">
+<h2>Related references<a class="headerlink" href="#related-references" title="Link to this heading">#</a></h2>
+<p><strong>Papers</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0169207024000335">Coupling LSTM Neural Networks and State-Space Models through Analytically Tractable Inference</a> (Van Dai Vuong, Luong-Ha Nguyen and James-A. Goulet. <em>International Journal of Forecasting</em>, 2024)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Xin_Goulet_BAR_2024.pdf">Enhancing structural anomaly detection using a bounded autoregressive component</a> (Zhanwen Xin and James-A. Goulet, 2024)</p></li>
+<li><p><a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/Papers/Deka_TAGIV_2024_preprint.pdf">Analytically tractable heteroscedastic uncertainty quantification in Bayesian neural networks for regression tasks</a> (Bhargob Deka, Luong-Ha Nguyen and James-A. Goulet. <em>Neurocomputing</em>, 2024)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf">Approximate Gaussian Variance Inference for State-Space Models</a> (Bhargob Deka and James-A. Goulet, 2023)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Ha_Amiri_Goulet_GMA_2022_preprint.pdf">The Gaussian multiplicative approximation for state-space models</a> (Bhargob Deka, Luong Ha Nguyen, Saeed Amiri, and James-A. Goulet, 2021)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/2017_Nguyen_and_Goulet_AD-SKF.pdf">Anomaly Detection with the Switching Kalman Filter for Structural Health Monitoring</a> (Luong Ha Nguyen and James-A. Goulet, 2018)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Goulet_BDLM_SHM_2017_preprint.pdf">Bayesian dynamic linear models for structural health monitoring</a> (James-A. Goulet, 2017)</p></li>
+</ul>
+<p><strong>Theses</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/DV_Thesis_2024.pdf">Analytically Tractable Bayesian Recurrent Neural Networks with Structural Health Monitoring Applications</a> (Van-Dai Vuong, 2024)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf">Analytical Bayesian Parameter Inference for Probabilistic Models with Engineering Applications</a> (Bhargob Deka, 2022)</p></li>
+<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/LHNguyen_these_2019.pdf">Real-time Anomaly Detection in the Behaviour of Structures</a> (Luong Ha Nguyen, 2019)</p></li>
+</ul>
+<p><strong>Book chapter</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">Probabilistic machine learning for civil engineers (chapter 12 - SSM)</a> (James-A. Goulet. 2020)</p></li>
+</ul>
 <div class="toctree-wrapper compound">
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_process.html">canari.data_process</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_process.html#canari.data_process.DataProcess"><code class="docutils literal notranslate"><span class="pre">DataProcess</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.component.html">canari.component</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_struct.html">canari.data_struct</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_struct.html#canari.data_struct.StatesHistory"><code class="docutils literal notranslate"><span class="pre">StatesHistory</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.common.html">canari.common</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.GMA"><code class="docutils literal notranslate"><span class="pre">GMA</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.backward"><code class="docutils literal notranslate"><span class="pre">backward()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.calc_observation"><code class="docutils literal notranslate"><span class="pre">calc_observation()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.create_block_diag"><code class="docutils literal notranslate"><span class="pre">create_block_diag()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.forward"><code class="docutils literal notranslate"><span class="pre">forward()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.gaussian_mixture"><code class="docutils literal notranslate"><span class="pre">gaussian_mixture()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.pad_matrix"><code class="docutils literal notranslate"><span class="pre">pad_matrix()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.prepare_lstm_input"><code class="docutils literal notranslate"><span class="pre">prepare_lstm_input()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.rts_smoother"><code class="docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.common.html#canari.common.unstandardize_states"><code class="docutils literal notranslate"><span class="pre">unstandardize_states()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.model.html">canari.model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.model.html#canari.model.Model"><code class="docutils literal notranslate"><span class="pre">Model</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.model_optimizer.html">canari.model_optimizer</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer"><code class="docutils literal notranslate"><span class="pre">ModelOptimizer</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.skf.html">canari.skf</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.skf.html#canari.skf.SKF"><code class="docutils literal notranslate"><span class="pre">SKF</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.skf_optimizer.html">canari.skf_optimizer</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.skf_optimizer.html#canari.skf_optimizer.SKFOptimizer"><code class="docutils literal notranslate"><span class="pre">SKFOptimizer</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/canari.data_visualization.html">canari.data_visualization</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html#canari.data_visualization.plot_data"><code class="docutils literal notranslate"><span class="pre">plot_data()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html#canari.data_visualization.plot_prediction"><code class="docutils literal notranslate"><span class="pre">plot_prediction()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html#canari.data_visualization.plot_skf_states"><code class="docutils literal notranslate"><span class="pre">plot_skf_states()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html#canari.data_visualization.plot_states"><code class="docutils literal notranslate"><span class="pre">plot_states()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html#canari.data_visualization.plot_with_uncertainty"><code class="docutils literal notranslate"><span class="pre">plot_with_uncertainty()</span></code></a></li>
-</ul>
-</li>
-</ul>
 </div>
+</section>
+</section>
 
 
                 </article>
@@ -418,11 +431,11 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="right-next"
-       href="examples/forecasting.html"
+       href="installation_guide.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Forecasting</p>
+        <p class="prev-next-title">Installation</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -442,8 +455,14 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-canari">What is Canari?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-does-it-work">How does it work?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting started</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributors">Contributors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgements">Acknowledgements</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-references">Related references</a></li>
 </ul>
-
   </nav></div>
 
 </div></div>
