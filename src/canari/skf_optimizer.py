@@ -107,8 +107,7 @@ class SKFOptimizer:
                 or false_rate > self.false_rate_threshold
                 or false_alarm_train == "Yes"
             ):
-                # metric = 2 + 5 * slope
-                # metric = 2
+                # metric = 2 + 5 * self._param_space["slope"][1]
                 metric = self._param_space["slope"][1]
             else:
                 # metric = detection_rate + 5 * np.abs(slope)
