@@ -113,6 +113,10 @@ class Model:
         stop_training (bool):
             Flag indicating whether training has been stopped due to
             early stopping or by reaching maximum number of epoch.
+
+        # Optimization attribute
+        metric_optim (float): metric used for optimization in :class:`~canari.model_optimizer`
+
     """
 
     def __init__(
@@ -177,7 +181,6 @@ class Model:
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
 
-        # TODO: use internal variables
         # Autoregression-related attributes
         self.mu_W2bar = None
         self.var_W2bar = None
@@ -193,6 +196,9 @@ class Model:
         self.optimal_epoch = 0
         self._current_epoch = 0
         self.stop_training = False
+
+        # Metric for optimization
+        self.metric_optim = None
 
     def _initialize_model(self):
         """
@@ -307,12 +313,12 @@ class Model:
         self.lstm_net.backward()
         self.lstm_net.step()
 
-    def _white_noise_decay(
+    def white_noise_decay(
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
     ):
         """
-        TODO: remove epoch from input
-        Apply exponential decay to white noise standard deviation over epochs.
+        Apply exponential decay to white noise standard deviation over epochs, and modify
+        the variance for the white noise component in :attr:`~canari.model.Model.process_noise_matrix`.
         This decaying noise structure is intended to improve the training performance
         of TAGI-LSTM.
 
@@ -596,15 +602,9 @@ class Model:
         save_dict["components"] = self.components
         save_dict["mu_states"] = self.mu_states
         save_dict["var_states"] = self.var_states
+        save_dict["states_name"] = self.states_name
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-        # TODO: do save_dict["states_name"], remove saving indexes
-        if "phi" in self.states_name:
-            save_dict["phi_index"] = self.states_name.index("phi")
-        if "autoregression" in self.states_name:
-            save_dict["autoregression_index"] = self.states_name.index("autoregression")
-        if "W2bar" in self.states_name:
-            save_dict["W2bar_index"] = self.states_name.index("W2bar")
 
         return save_dict
 
@@ -766,15 +766,15 @@ class Model:
             self.set_states(mu_states_to_set, var_states_to_set)
             if self.lstm_net:
                 mu_lstm_to_set = states.get_mean(
-                    states_name=["lstm"], states_type="smooth"
+                    states_name="lstm", states_type="smooth"
                 )
-                mu_lstm_to_set = mu_lstm_to_set["lstm"][
+                mu_lstm_to_set = mu_lstm_to_set[
                     time_step - self.lstm_net.lstm_look_back_len : time_step
                 ]
                 std_lstm_to_set = states.get_std(
-                    states_name=["lstm"], states_type="smooth"
+                    states_name="lstm", states_type="smooth"
                 )
-                std_lstm_to_set = std_lstm_to_set["lstm"][
+                std_lstm_to_set = std_lstm_to_set[
                     time_step - self.lstm_net.lstm_look_back_len : time_step
                 ]
                 self.lstm_output_history.mu = mu_lstm_to_set
@@ -1148,7 +1148,7 @@ class Model:
 
         # Decaying observation's variance
         if white_noise_decay and self.get_states_index("white noise") is not None:
-            self._white_noise_decay(
+            self.white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
         self.filter(train_data)
@@ -1156,8 +1156,8 @@ class Model:
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
         # self.set_memory(states=self.states, time_step=0)
 
-        # TODO: to delete this internal count
         self._current_epoch += 1
+
         return (
             np.array(mu_validation_preds).flatten(),
             np.array(std_validation_preds).flatten(),

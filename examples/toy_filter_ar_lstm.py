@@ -45,12 +45,12 @@ data_processor = DataProcess(
 train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 
 # Standardization constants
-std_const_mean = data_processor.std_const_mean[output_col].item()
-std_const_std = data_processor.std_const_std[output_col].item()
+scale_const_mean = data_processor.scale_const_mean[output_col].item()
+scale_const_std = data_processor.scale_const_std[output_col].item()
 
 # Define model components
-trend_norm = trend_true / (std_const_std + 1e-10)
-level_norm = (5.0 - std_const_mean) / (std_const_std + 1e-10)
+trend_norm = trend_true / (scale_const_std + 1e-10)
+level_norm = (5.0 - scale_const_mean) / (scale_const_std + 1e-10)
 mu_W2bar_prior = 1e4
 var_AR_prior = 1e4
 var_W2bar_prior = 1e4
@@ -92,9 +92,11 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
 
     # Unstandardize the predictions
     mu_pred_unnorm = normalizer.unstandardize(
-        mu_validation_preds, std_const_mean, std_const_std
+        mu_validation_preds, scale_const_mean, scale_const_std
     )
-    std_pred_unnorm = normalizer.unstandardize_std(std_validation_preds, std_const_std)
+    std_pred_unnorm = normalizer.unstandardize_std(
+        std_validation_preds, scale_const_std
+    )
 
     # Calculate the evaluation metric
     obs_validation = data_processor.get_data("validation").flatten()
@@ -126,9 +128,9 @@ print(f"Validation MSE: {model.early_stop_metric:.4f}")
 ###########################
 # Reload pretrained model
 # Load learned parameters from the saved trained model
-phi_index = model_dict["phi_index"]
-W2bar_index = model_dict["W2bar_index"]
-autoregression_index = model_dict["autoregression_index"]
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
 mu_W2bar_learn = model_dict["mu_states_optimal"][W2bar_index].item()
 phi_AR_learn = model_dict["mu_states_optimal"][phi_index].item()
 mu_AR = model_dict["mu_states"][autoregression_index].item()

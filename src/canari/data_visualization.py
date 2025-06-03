@@ -335,25 +335,44 @@ def plot_states(
     len_states = len(states.mu_prior)
     time = _determine_time(data_processor, len_states)
 
-    # Mean and std to plot
-    mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
-    std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
-    if not standardization:
-        mu_states, std_states = common.unstandardize_states(
-            mu_states,
-            std_states,
-            data_processor.std_const_mean[data_processor.output_col],
-            data_processor.std_const_std[data_processor.output_col],
-        )
-
     for idx, plot_state in enumerate(states_to_plot):
+
         ax = axes[idx] if sub_plot is None else sub_plot
+
+        # Get mean and std to plot
+        if standardization:
+            mu_states = states.get_mean(
+                states_type=states_type, states_name=plot_state, standardization=True
+            )
+            std_states = states.get_std(
+                states_type=states_type, states_name=plot_state, standardization=True
+            )
+        else:
+            mu_states = states.get_mean(
+                states_type=states_type,
+                states_name=plot_state,
+                standardization=False,
+                scale_const_mean=data_processor.scale_const_mean[
+                    data_processor.output_col
+                ],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
+            )
+            std_states = states.get_std(
+                states_type=states_type,
+                states_name=plot_state,
+                standardization=False,
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
+            )
 
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_states[plot_state].flatten(),
-            std=std_states[plot_state].flatten(),
+            mu=mu_states,
+            std=std_states,
             num_std=num_std,
             color=color,
             linestyle=linestyle,
@@ -438,25 +457,44 @@ def plot_skf_states(
     len_states = len(states.mu_prior)
     time = _determine_time(data_processor, len_states)
 
-    # Mean and std to plot
-    mu_states = states.get_mean(states_type=states_type, states_name=states_to_plot)
-    std_states = states.get_std(states_type=states_type, states_name=states_to_plot)
-    if not standardization:
-        mu_states, std_states = common.unstandardize_states(
-            mu_states,
-            std_states,
-            data_processor.std_const_mean[data_processor.output_col],
-            data_processor.std_const_std[data_processor.output_col],
-        )
-
     for idx, plot_state in enumerate(states_to_plot):
+
         ax = axes[idx]
+
+        # Get mean and std to plot
+        if standardization:
+            mu_states = states.get_mean(
+                states_type=states_type, states_name=plot_state, standardization=True
+            )
+            std_states = states.get_std(
+                states_type=states_type, states_name=plot_state, standardization=True
+            )
+        else:
+            mu_states = states.get_mean(
+                states_type=states_type,
+                states_name=plot_state,
+                standardization=False,
+                scale_const_mean=data_processor.scale_const_mean[
+                    data_processor.output_col
+                ],
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
+            )
+            std_states = states.get_std(
+                states_type=states_type,
+                states_name=plot_state,
+                standardization=False,
+                scale_const_std=data_processor.scale_const_std[
+                    data_processor.output_col
+                ],
+            )
 
         # Plot with uncertainty
         plot_with_uncertainty(
             time=time,
-            mu=mu_states[plot_state].flatten(),
-            std=std_states[plot_state].flatten(),
+            mu=mu_states,
+            std=std_states,
             num_std=num_std,
             color=color,
             linestyle=linestyle,
