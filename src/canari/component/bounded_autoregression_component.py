@@ -22,6 +22,11 @@ class BoundedAutoregression(BaseComponent):
     Behavior:
         - Adds 1 extra state, i.e. `X^{BAR}`, if gamma is provided. Otherwise no constraint is applied.
 
+    References:
+        Xin, Z.  and Goulet, J.-A. (2024). `Enhancing structural anomaly detection using a bounded autoregressive component
+        <https://www.sciencedirect.com/science/article/abs/pii/S0925231223013061>`_.
+        Mechanical Systems and Signal Processing. Volume 212, pp.111279.
+
     Examples:
         >>> from canari.component import BoundedAutoregression
         >>> # with gamma
