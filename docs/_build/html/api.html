@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Canari Documentation &#8212; canari v.0.0.2 documentation</title>
+    <title>API Docs &#8212; canari v.0.0.2 documentation</title>
   
   
   
@@ -43,10 +43,11 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installation" href="installation_guide.html" />
+    <link rel="next" title="&lt;no title&gt;" href="api/canari.html" />
+    <link rel="prev" title="Read .csv data files" href="examples/read_DAT_file.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -109,8 +110,6 @@
       
       
       
-        
-      
       <div class="bd-sidebar-primary bd-sidebar">
         
 
@@ -129,7 +128,7 @@
     
   
 
-<a class="navbar-brand logo" href="#">
+<a class="navbar-brand logo" href="index.html">
   
   
   
@@ -158,7 +157,7 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
+        <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="installation_guide.html">Installation</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
@@ -169,7 +168,7 @@
 <li class="toctree-l2"><a class="reference internal" href="examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.data_process.html">canari.data_process</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/canari.component.base_component.html">canari.component.base_component</a></li>
@@ -243,7 +242,7 @@
       
       
       
-      <li><a href="_sources/index.rst" target="_blank"
+      <li><a href="_sources/api.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -314,9 +313,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -327,25 +324,11 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Canari Documentation</h1>
+    <h1>API Docs</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-canari">What is Canari?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-does-it-work">How does it work?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting started</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributors">Contributors</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgements">Acknowledgements</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-references">Related References</a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -355,102 +338,29 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="canari-documentation">
-<h1>Canari Documentation<a class="headerlink" href="#canari-documentation" title="Link to this heading">#</a></h1>
-<section id="what-is-canari">
-<h2>What is Canari?<a class="headerlink" href="#what-is-canari" title="Link to this heading">#</a></h2>
-<p>Canari is an open-source library for online change point detection in univariate time series.
-It has been developed in the context of long-term online monitoring where we aim for the early
-detection of subtle change points in the baseline response, while limiting to a minimum the
-number of false alarms.</p>
-<p>Because Canari’s probabilistic change-point detection relies on 1-step ahead predictions,
-it is inherently capable of performing short- and long-term forecasting, as well as online
-data imputation. One-step ahead predictions can either rely solely on a target time series,
-or on explanatory time series that can be non-linearly related to the target.</p>
-<p>In addition to change-point detection and forecasting capabilities, it returns an interpretable
-decomposition of time series into baseline components representing the irreversible responses,
-recurrent pattern components caused by external effects, and residual components allowing the
-characterization of both the model prediction and the observation uncertainties.</p>
-</section>
-<section id="how-does-it-work">
-<h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Link to this heading">#</a></h2>
-<figure class="align-right">
-<a class="reference internal image-reference" href="_images/Canari_SSM_LSTM.png"><img alt="_images/Canari_SSM_LSTM.png" src="_images/Canari_SSM_LSTM.png" style="width: 195.29999999999998px; height: 153.0px;" />
-</a>
-</figure>
-<p>The methodological core behind the Canari library consists of a seamless integration between
-<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">state-space models (SSM)</a> and Bayesian
-neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and
-residuals, while on the other, <a class="reference external" href="https://github.com/lhnguyen102/cuTAGI/tree/main">Tractable Approximate Gaussian Inference (TAGI)</a>
-enables treating all parameters and hidden states in neural networks as Gaussians.</p>
-<p>Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies
-with respect to explanatory variables. Because both the SSM and LSTM rely on the same Gaussian
-conditional inference mechanism, their hidden states can be inferred analytically in a unified
-probabilistic framework.</p>
-<figure class="align-default">
-<img alt="_images/Canari_example.png" src="_images/Canari_example.png" />
-</figure>
-<p>The figure above presents an example where the raw data in red is decomposed into a baseline that
-is characterized by a baseline “level” component where its rate of change is described by the “trend.”
-The recurrent pattern is modelled by an LSTM Bayesian neural network where the training and validation
-set consists only of 4 years of data. The residual characterizing the model errors is itself modelled
-by a white “noise” component.</p>
-<p>Change point detection can be performed either online or offline after the training and validation
-period. The presence of change points is indicated by the probability of regime switches that rise
-toward 1 on several occasions.</p>
-</section>
-<section id="getting-started">
-<h2>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h2>
-<p>You can get started with Canari by going through our <a class="reference internal" href="installation_guide.html#installation-guide"><span class="std std-ref">Installation guide</span></a>
-and <a class="reference internal" href="tutorials.html#tutorials"><span class="std std-ref">Tutorials</span></a> covering all the main features of the library.</p>
-</section>
-<section id="contributors">
-<h2>Contributors<a class="headerlink" href="#contributors" title="Link to this heading">#</a></h2>
-<p>The principal developer of Canari is Van Dai Vuong with the mentoring of Luong Ha Nguyen and
-oversight by James-A. Goulet.</p>
-<p>The major contributors to the library are:</p>
-<ul class="simple">
-<li><p>Zhanwen Xin (Online AR, Bounded AR &amp; several+++ bug fixes through PRs)</p></li>
-<li><p>David Wardan (SLSTM component &amp; several+++ bug fixes through PRs)</p></li>
-</ul>
-</section>
-<section id="acknowledgements">
-<h2>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Link to this heading">#</a></h2>
-<p>We acknowledge the financial support from Hydro-Québec and the Natural Sciences and
-Engineering Research Council of Canada in the development of the Canari library.</p>
-</section>
-<section id="license">
-<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
-<p>Canari is released under the MIT license.</p>
-<p><strong>THIS IS AN OPEN SOURCE SOFTWARE FOR RESEARCH PURPOSES ONLY. THIS IS NOT A PRODUCT. NO WARRANTY EXPRESSED OR IMPLIED.</strong></p>
-</section>
-<section id="related-references">
-<h2>Related References<a class="headerlink" href="#related-references" title="Link to this heading">#</a></h2>
-<p><strong>Papers</strong></p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0169207024000335">Coupling LSTM Neural Networks and State-Space Models through Analytically Tractable Inference</a> (Van Dai Vuong, Luong-Ha Nguyen and James-A. Goulet. <em>International Journal of Forecasting</em>, 2024)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Xin_Goulet_BAR_2024.pdf">Enhancing structural anomaly detection using a bounded autoregressive component</a> (Zhanwen Xin and James-A. Goulet, 2024)</p></li>
-<li><p><a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/Papers/Deka_TAGIV_2024_preprint.pdf">Analytically tractable heteroscedastic uncertainty quantification in Bayesian neural networks for regression tasks</a> (Bhargob Deka, Luong-Ha Nguyen and James-A. Goulet. <em>Neurocomputing</em>, 2024)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf">Approximate Gaussian Variance Inference for State-Space Models</a> (Bhargob Deka and James-A. Goulet, 2023)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Ha_Amiri_Goulet_GMA_2022_preprint.pdf">The Gaussian multiplicative approximation for state-space models</a> (Bhargob Deka, Luong Ha Nguyen, Saeed Amiri, and James-A. Goulet, 2021)</p></li>
-<li><p><a class="reference external" href="https://arxiv.org/pdf/2103.05461.pdf">Analytically tractable inference in deep neural networks</a> (Luong-Ha Nguyen and James-A. Goulet, 2021)</p></li>
-<li><p><a class="reference external" href="https://arxiv.org/pdf/2106.11086.pdf">Analytically tractable Bayesian deep Q-Learning</a> (Luong-Ha Nguyen and James-A. Goulet, 2021)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/2017_Nguyen_and_Goulet_AD-SKF.pdf">Anomaly Detection with the Switching Kalman Filter for Structural Health Monitoring</a> (Luong Ha Nguyen and James-A. Goulet, 2018)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Goulet_BDLM_SHM_2017_preprint.pdf">Bayesian dynamic linear models for structural health monitoring</a> (James-A. Goulet, 2017)</p></li>
-</ul>
-<p><strong>Theses</strong></p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/DV_Thesis_2024.pdf">Analytically Tractable Bayesian Recurrent Neural Networks with Structural Health Monitoring Applications</a> (Van-Dai Vuong, 2024)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf">Analytical Bayesian Parameter Inference for Probabilistic Models with Engineering Applications</a> (Bhargob Deka, 2022)</p></li>
-<li><p><a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/LHNguyen_these_2019.pdf">Real-time Anomaly Detection in the Behaviour of Structures</a> (Luong Ha Nguyen, 2019)</p></li>
-</ul>
-<p><strong>Book chapter</strong></p>
-<ul class="simple">
-<li><p><a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">Probabilistic machine learning for civil engineers (chapter 12 - SSM)</a> (James-A. Goulet. 2020)</p></li>
-</ul>
+  <section id="api-docs">
+<h1>API Docs<a class="headerlink" href="#api-docs" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.component.html">canari.component</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.common.html">canari.common</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.model.html">canari.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
 </div>
-</section>
 </section>
 
 
@@ -464,12 +374,21 @@ Engineering Research Council of Canada in the development of the Canari library.
                 <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
+    <a class="left-prev"
+       href="examples/read_DAT_file.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Read .csv data files</p>
+      </div>
+    </a>
     <a class="right-next"
-       href="installation_guide.html"
+       href="api/canari.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Installation</p>
+        <p class="prev-next-title">&lt;no title&gt;</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -479,27 +398,6 @@ Engineering Research Council of Canada in the development of the Canari library.
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-canari">What is Canari?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-does-it-work">How does it work?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting started</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributors">Contributors</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgements">Acknowledgements</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-references">Related References</a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

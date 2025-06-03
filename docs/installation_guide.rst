@@ -1,3 +1,5 @@
+.. _installation_guide:
+
 Installation
 ============
 
@@ -41,4 +43,10 @@ Installing locally
    .. code-block:: sh
 
       pip install -r requirements.txt
+
+4. Install pycanari package
+
+   .. code-block:: sh
+      
+      pip install .
 

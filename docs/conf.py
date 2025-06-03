@@ -39,3 +39,4 @@ html_theme_options = {
     "titles_only": False,
 }
 html_logo = "_static/canari_logo.png"
+html_static_path = ["_static"]
