@@ -37,8 +37,8 @@ class Periodic(BaseComponent):
         self,
         period: float,
         std_error: Optional[float] = 0.0,
-        mu_states: Optional[np.ndarray] = None,
-        var_states: Optional[np.ndarray] = None,
+        mu_states: Optional[list[float]] = None,
+        var_states: Optional[list[float]] = None,
     ):
         self.std_error = std_error
         self.period = period
