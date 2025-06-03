@@ -47,7 +47,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'examples/anomaly_detection';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Parameter tuning" href="parameter_tuning.html" />
+    <link rel="next" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
     <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
@@ -158,34 +158,39 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="list-caption"><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Installation</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
+        <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details open><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l1"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parameter_tuning.html">Parameter tuning</a></li>
-<li class="toctree-l1"><a class="reference internal" href="read_DAT_file.html">Read .csv data files</a></li>
-</ul></details></li><li class="toctree-l0 has-children"><details><summary><p aria-level="2" class="caption" role="heading"><span class="caption-text">API Docs</span></p><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
-</ul></details></li></ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
+</ul>
+</details></li>
+</ul>
+
     </div>
 </nav></div>
     </div>
@@ -379,7 +384,7 @@ import pytagi.metric as metric
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
 <p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing model using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -396,21 +401,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-2025-05-26 14:09:56,885 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-2025-05-26 14:09:56,972 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-</pre></div></div>
-</div>
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
-<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Panda external library.</p>
+<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Pandas external library.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -545,7 +539,7 @@ residual = WhiteNoise(std_error=5e-2)
 <h2>Define the normal and abnormal models<a class="headerlink" href="#Define-the-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
 <p>The SKF requires defining a normal and an abnormal model. Here, the normal one correspond to a local trend component with no acceleration, and the abnormal one correspond to a local acceleration component. The former represent a trend-stationnary regime and the later represent a transitory changepoint with non-zero acceleration. Note that both the normal and abnormal models share the same <code class="docutils literal notranslate"><span class="pre">pattern</span></code> and <code class="docutils literal notranslate"><span class="pre">residual</span></code> components.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Normal model
@@ -581,7 +575,7 @@ skf.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 52 * 3])
 <p>The first step is to train the LSTM neural network model associated with the <em>normal</em> model using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or
 trend-stationnary.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span>num_epoch = 50
@@ -635,7 +629,7 @@ print(f&quot;Validation Log-likelihood   :{skf.early_stop_metric: 0.4f}&quot;)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Optinal epoch               : 49
+Optimal epoch               : 49
 Validation Log-likelihood   :-1.4718
 </pre></div></div>
 </div>
@@ -658,7 +652,7 @@ smooth_marginal_abnorm_prob, states = skf.smoother()
 <p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
 a stationnary regime to a trend-stationnary one.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plot_skf_states(
@@ -713,7 +707,7 @@ plt.show()
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Parameter tuning</p>
+        <p class="prev-next-title">Swithing Kalman filter parameter tuning using synthetic anomalies</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
