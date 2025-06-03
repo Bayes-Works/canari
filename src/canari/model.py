@@ -30,6 +30,7 @@ import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from pytagi import Normalizer as normalizer
 
 
 class Model:
@@ -489,6 +490,56 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
+    
+    def _BAR_backward_modification(
+            self, 
+            mu_states_posterior, 
+            var_states_posterior
+        ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        BAR backward modification
+        """
+        """
+        Apply backward BAR moment updates during state-space filtering.
+
+        Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.
+
+        Args:
+            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
+        """
+
+        ar_index = self.get_states_index("autoregression")
+        bar_index = self.get_states_index("bounded autoregression")
+
+        mu_AR = mu_states_posterior[ar_index]
+        var_AR = var_states_posterior[ar_index, ar_index]
+        cov_AR = var_states_posterior[ar_index, :]
+
+        bound = (self.components["bounded autoregression"].gamma * 
+                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
+                    (1 - self.components["bounded autoregression"].phi**2)))
+        
+        l_bar = mu_AR + bound
+
+        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
+        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+
+        u_bar = -mu_AR + bound
+        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
+        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+
+        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
+        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
+        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        var_states_posterior[bar_index, :] = cov_bar
+        var_states_posterior[:, bar_index] = cov_bar
+        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
+        
+        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
@@ -846,6 +897,11 @@ class Model:
                 )
             )
 
+        if "bounded autoregression" in self.states_name:
+            mu_states_posterior, var_states_posterior = self._BAR_backward_modification(
+                mu_states_posterior, var_states_posterior
+            )
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -1165,7 +1221,7 @@ class Model:
 
         # Check for improvement
         improved = False
-        improved = current_epoch > skip_epoch and (
+        improved = current_epoch >= skip_epoch and (
             (mode == "max" and evaluate_metric > self.early_stop_metric)
             or (mode == "min" and evaluate_metric < self.early_stop_metric)
         )
