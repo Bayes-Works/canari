@@ -18,10 +18,6 @@ authors = [
   { name = "Van-Dai Vuong, Luong-Ha Nguyen, and James-A. Goulet", email = "james.goulet@polymtl.ca" }
 ]
 
-[project.urls]
-Homepage = "https://bayes-works.github.io/canari/index.html"
-Repository = "https://github.com/Bayes-Works/canari"
-
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
@@ -46,5 +42,9 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.urls]
+Homepage = "https://bayes-works.github.io/canari/index.html"
+Repository = "https://github.com/Bayes-Works/canari"
 
 
