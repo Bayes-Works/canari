@@ -23,7 +23,7 @@ How does it work?
 -----------------
 
 .. figure:: _static/Canari_SSM_LSTM.png
-   :scale: 25%
+   :scale: 28%
    :align: right
 
 The methodological core behind the Canari library consists of a seamless integration between
@@ -38,7 +38,7 @@ conditional <https://www.sciencedirect.com/science/article/pii/S0169207024000335
 probabilistic framework.
 
 .. figure:: _static/Canari_example.png
-   :scale: 25%
+   :scale: 21%
    :align: right
 
 The figure on the right presents an example where the raw data in red is decomposed into a baseline that
