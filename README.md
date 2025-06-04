@@ -1,5 +1,5 @@
 ## What is Canari?
-Canari is an open-source library for online change point detection in univariate time series. It has been developed in the context of long-term online monitoring where we aim for the early detection of subtle change points in the baseline response, while limiting to a minimum the number of false alarms. 
+Canari is an open-source library for online change point detection in univariate time series. It has been developed in the context of long-term online monitoring where we aim for the early detection of subtle change points in the baseline response, while limiting to a minimum the number of false alarms.
 
 Because Canari’s probabilistic change-point detection relies on 1-step ahead predictions, it is inherently capable of performing short- and long-term forecasting, as well as online data imputation; One-step ahead predictions can either rely solely on a target time series, or on explanatory time series that can be non-linearly related to the target.
 
@@ -7,14 +7,14 @@ In addition to change-point detection and forecasting capabilities, it returns a
 
 ## How does it work?
 
-<img src="docs/_static/Canari_SSM_LSTM.png" alt="Canari SSM LSTM" width="23%" align="right">
+<img src="./docs/_static/Canari_SSM_LSTM.png" alt="Canari SSM LSTM" width="23%" align="right">
 
-The methodological core behind the canary library consists of a seamless integration between [state-space models (SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) and Bayesian neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and residuals, while on the other, [Tractable Approximate Gaussian Inference (TAGI)](https://github.com/lhnguyen102/cuTAGI/tree/main) also enables treating all parameters and hidden states in neural networks as Gaussians. 
+The methodological core behind the canary library consists of a seamless integration between [state-space models (SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) and Bayesian neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and residuals, while on the other, [Tractable Approximate Gaussian Inference (TAGI)](https://github.com/lhnguyen102/cuTAGI/tree/main) also enables treating all parameters and hidden states in neural networks as Gaussians.
 
-Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies with respect to explanatory variables. Because both the SSM and LSTM rely on the same Gaussian conditional inference mechanism, their hidden states can be inferred analytically in a same unified probabilistic framework.
+Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies with respect to explanatory variables. Because both the [SSM and LSTM rely on the same Gaussian conditional](https://www.sciencedirect.com/science/article/pii/S0169207024000335) inference mechanism, their hidden states can be inferred analytically in a same unified probabilistic framework.
 
 <p align="center">
-  <img src="docs/_static/Canari_example.png" alt="Canari example" width="45%">
+  <img src="./docs/_static/Canari_example.png" alt="Canari example" width="45%">
 </p>
 
 The figure above presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
