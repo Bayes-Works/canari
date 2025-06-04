@@ -13,7 +13,7 @@ The methodological core behind the canary library consists of a seamless integra
 
 Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies with respect to explanatory variables. Because both the [SSM and LSTM rely on the same Gaussian conditional](https://www.sciencedirect.com/science/article/pii/S0169207024000335) inference mechanism, their hidden states can be inferred analytically in a same unified probabilistic framework.
 
-<img src="./docs/_static/Canari_example.png" alt="Canari example" width="23%"align="right">
+<img src="./docs/_static/Canari_example.png" alt="Canari example" width="23%" align="right">
 
 The figure above presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
 
