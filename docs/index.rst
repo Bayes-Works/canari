@@ -38,7 +38,7 @@ conditional <https://www.sciencedirect.com/science/article/pii/S0169207024000335
 probabilistic framework.
 
 .. figure:: _static/Canari_example.png
-   :scale: 23%
+   :scale: 24%
    :align: right
 
 The figure on the right presents an example where the raw data in red is decomposed into a baseline that
