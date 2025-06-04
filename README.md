@@ -3,17 +3,14 @@ Canari is an open-source library for online change point detection in univariate
 In addition to change-point detection and forecasting capabilities, it returns an interpretable decomposition of time series into baseline components representing the irreversible responses, recurrent pattern components caused by external effects, and residual components allowing the characterization of both the model prediction and the observation uncertainties.
 
 ## How does it work?
-![Canari SSM LSTM](docs/_static/Canari_SSM_LSTM.png)
-<!-- ```{figure} ../docs/_static/Canari_SSM_LSTM.png
----
-scale: 30%
-align: right
----
-``` -->
+
+<img src="docs/_static/Canari_SSM_LSTM.png" alt="Canari SSM LSTM" width="30%" align="right">
+
 The methodological core behind the canary library consists of a seamless integration between [state-space models (SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) and Bayesian neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and residuals, while on the other, [Tractable Approximate Gaussian Inference (TAGI)](https://github.com/lhnguyen102/cuTAGI/tree/main) also enables treating all parameters and hidden states in neural networks as Gaussians. Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies with respect to explanatory variables. Because both the SSM and LSTM rely on the same Gaussian conditional inference mechanism, their hidden states can be inferred analytically in a same unified probabilistic framework.
-The figure on the right presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
-```{figure} ../docs/_static/Canari_example.png
-```
+
+<img src="docs/_static/Canari_example.png" alt="Canari example">
+
+The above figure presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
 
 ## Getting started
 You can get started with Canari by going through our [installation guide](https://bayes-works.github.io/canari/installation_guide.html) and [tutorials](https://bayes-works.github.io/canari/tutorials.html) covering all the main features of the library.
