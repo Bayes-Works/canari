@@ -7,7 +7,7 @@ In addition to change-point detection and forecasting capabilities, it returns a
 
 ## How does it work?
 
-<img src="docs/_static/Canari_SSM_LSTM.png" alt="Canari SSM LSTM" width="25%" align="right">
+<img src="docs/_static/Canari_SSM_LSTM.png" alt="Canari SSM LSTM" width="23%" align="right">
 
 The methodological core behind the canary library consists of a seamless integration between [state-space models (SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) and Bayesian neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and residuals, while on the other, [Tractable Approximate Gaussian Inference (TAGI)](https://github.com/lhnguyen102/cuTAGI/tree/main) also enables treating all parameters and hidden states in neural networks as Gaussians. 
 
