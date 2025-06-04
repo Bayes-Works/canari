@@ -23,7 +23,7 @@ How does it work?
 -----------------
 
 .. figure:: _static/Canari_SSM_LSTM.png
-   :scale: 28%
+   :scale: 30%
    :align: right
 
 The methodological core behind the Canari library consists of a seamless integration between
