@@ -8,7 +8,7 @@ sys.path.insert(
 project = "canari"
 copyright = "2025, Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet"
 author = "Van-Dai Vuong, Luong-Ha Nguyen, James-A. Goulet"
-release = "v.0.0.2"
+release = "v.0.0.3"
 
 extensions = [
     "sphinx.ext.autodoc",
