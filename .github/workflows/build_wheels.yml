@@ -33,21 +33,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install build twine
-          # pip install pytagi
-
-          # # Install pytagi from github (TODO: because cannot install from pip)
-          # # git clone --branch v0.2.0 https://github.com/lhnguyen102/cuTAGI.git
-          # # cd cuTAGI
-          # # git submodule update --init --recursive
-          # # pip install -r requirements.txt
-          # # pip install .
-          # # cd ..
-          # # 
-          # pip install -e .
-      
-      # - name: Run unit tests
-      #   run: pytest canari/test
-      #   working-directory: ${{ github.workspace }}/..
 
       - name: Clean build environment
         run: rm -rf dist/ build/ *.egg-info
@@ -78,18 +63,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # python -m pip install --upgrade pip
-          # python -m pip install build twine
-
-          # git clone --branch v0.2.0 https://github.com/lhnguyen102/cuTAGI.git
-          # cd cuTAGI
-          # git submodule update --init --recursive
-          # pip install -r requirements.txt
-          # pip install .
-          # cd ..
           pip install pytagi
           pip install -e .
-          
+
       - name: Run unit tests
         run: pytest canari/test
         working-directory: ${{ github.workspace }}/..
