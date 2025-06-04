@@ -13,33 +13,61 @@ from canari import (
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
+import Rbeast as rb
 import pickle
 
 
 # # Read data
-data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
+beach, year = rb.load_example('googletrend')
+beach = beach.to_frame(name='values')
 
-data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
-df_raw.index = time_series
-df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+# Convert year (fractional year) to datetime
+def fractional_year_to_datetime(fractional_year):
+    year = int(fractional_year)
+    fraction = fractional_year - year
+    
+    # Determine the actual year length (for leap years)
+    year_start = pd.Timestamp(year=year, month=1, day=1)
+    year_end = pd.Timestamp(year=year + 1, month=1, day=1)
+    year_length_days = (year_end - year_start).days
+    
+    # Compute elapsed days (including fractions for time of day)
+    elapsed_days = fraction * year_length_days
+    
+    # Convert to timedelta to include time component
+    dt = year_start + pd.to_timedelta(elapsed_days, unit='D')
+    return dt
+
+year = year.apply(fractional_year_to_datetime)
+beach.index = year
+beach.index.name = "date_time"
+df_raw = beach.copy()
+
+# data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
+# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+# # linear_space = np.linspace(0, 2, num=len(df_raw))
+# # df_raw = df_raw.add(linear_space, axis=0)
+
+# data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
+# time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+# time_series = pd.to_datetime(time_series[0])
+# df_raw.index = time_series
+# df_raw.index.name = "date_time"
+# df_raw.columns = ["values"]
+# print(df_raw)
+# 1/0
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
-    time_covariates=["week_of_year"],
-    train_split=0.289,
-    validation_split=0.0693*2,
+    time_covariates=["month_of_year"],
+    train_split=0.25,
+    validation_split=0.1,
     output_col=output_col,
 )
 
-num_epoch = 200
+num_epoch = 600
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
@@ -48,7 +76,7 @@ AR_process_error_var_prior = 1e4
 var_W2bar_prior = 1e4
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=19,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -114,10 +142,10 @@ model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/toy_simple_model_rebased.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
+# Save model_dict to local
+import pickle
+with open("saved_params/toy_beach_model_rebased.pkl", "wb") as f:
+    pickle.dump(model_dict, f)
 
 state_type = "prior"
 # Plot states from AR learner
