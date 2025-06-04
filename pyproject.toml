@@ -4,15 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycanari"
-version = "0.0.2"
-description = "Open-source library for probabilistic anomaly detection in time series"
-readme = "README.md"
+version = "0.0.3"
+description = "Canari is an open-source library for online change point detection in univariate time series. 
+              It has been developed in the context of long-term online monitoring where we aim for the early 
+              detection of subtle change points in the baseline response, while limiting to a minimum the number
+              of false alarms."
 license = { text = "MIT" }
 requires-python = ">=3.10"
 
 authors = [
   { name = "Van-Dai Vuong, Luong-Ha Nguyen, and James-A. Goulet", email = "james.goulet@polymtl.ca" }
 ]
+
+urls = { 
+  "Homepage" = "https://bayes-works.github.io/canari/index.html",
+  "Repository" = "https://github.com/Bayes-Works/canari",
+}
 
 classifiers = [
   "License :: OSI Approved :: MIT License",
