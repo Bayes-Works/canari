@@ -23,7 +23,7 @@ How does it work?
 -----------------
 
 .. figure:: _static/Canari_SSM_LSTM.png
-   :scale: 30%
+   :scale: 25%
    :align: right
 
 The methodological core behind the Canari library consists of a seamless integration between 
@@ -37,9 +37,11 @@ with respect to explanatory variables. Because both the SSM and LSTM rely on the
 conditional inference mechanism, their hidden states can be inferred analytically in a unified 
 probabilistic framework.
 
-.. figure:: _static/Canari_example.png
+.. figure:: _static/Canari_SSM_LSTM.png
+   :scale: 35%
+   :align: right
 
-The figure above presents an example where the raw data in red is decomposed into a baseline that 
+The figure on the right presents an example where the raw data in red is decomposed into a baseline that 
 is characterized by a baseline “level” component where its rate of change is described by the “trend.” 
 The recurrent pattern is modelled by an LSTM Bayesian neural network where the training and validation 
 set consists only of 4 years of data. The residual characterizing the model errors is itself modelled 
