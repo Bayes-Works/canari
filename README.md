@@ -1,127 +1,46 @@
-# pycanari
-Open-source library for probabilistic anomaly detection in time series 
+## What is Canari?
+Canari is an open-source library for online change point detection in univariate time series. It has been developed in the context of long-term online monitoring where we aim for the early detection of subtle change points in the baseline response, while limiting to a minimum the number of false alarms. Because Canari’s probabilistic change-point detection relies on 1-step ahead predictions, it is inherently capable of performing short- and long-term forecasting, as well as online data imputation; One-step ahead predictions can either rely solely on a target time series, or on explanatory time series that can be non-linearly related to the target.
+In addition to change-point detection and forecasting capabilities, it returns an interpretable decomposition of time series into baseline components representing the irreversible responses, recurrent pattern components caused by external effects, and residual components allowing the characterization of both the model prediction and the observation uncertainties.
 
-## Installation
-
-#### Create Miniconda Environment
-
-1. Install Miniconda by following these [instructions](https://docs.conda.io/en/latest/miniconda.html)
-2. Create a conda environment named `canari`:
-
-    ```sh
-    conda create --name canari python=3.10
-    ```
-
-3. Activate conda environment:
-
-    ```sh
-    conda activate canari
-    ```
-
-#### Install pycanari
-1. Install pycanari
-
-    ```sh
-    pip install pycanari
-    ```
-
-2. [Search pycanari and download pycanari-0.0.2.tar.gz file from the lastest version](https://pypi.org)
-
-3. Copy the downloaded pycanari-0.0.2.tar file to the your working folder
-
-4. Extract the pycanari-0.0.2.tar file using:
-
-    ```sh
-    tar -xvf pycanari-0.0.2.tar
-    ```
-5. Set directory
-    ```sh
-    cd pycanari-0.0.2
-    ```
-    
-6. Install requirements:
-
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-7. Test **pycanari** package:
-
-    ```sh
-    python -m examples.toy_forecast
-    ```
-
-NOTE: Replace the name `pycanari-0.0.2` with the corresponding version, e.g. pycanari-0.0.3
-
-
-## Code organization
-for development purposes
+## How does it work?
+```{figure} ../docs/_static/Canari_SSM_LSTM.png
+---
+scale: 30%
+align: right
+---
 ```
-canari
-|
-|----src
-|    |----dataProcess (class) 
-|    |      (v0) read data
-|    |      (v0) resampling 
-|    |      (v0) split data into train/validation/test sets 
-|    |      (v0) standardization/unstandardization (from pytagi)
-|    |      (v1) automated outliers removal 
-|    |      (v1) save data 
-|    |
-|    |----common (class)
-|    |      (v0) forward(1 sample)
-|    |      (v0) backward(1 sample)
-|    |      (v0) RTS(1 sample)
-|    |      (v0) step()
-|    |
-|    |----base_component (class) (v0)
-|    |----baseline_component (derived class)
-|    |      (v0) LL(param_value, initial hidden states),LT, LA, LcT, LcA, TcA 
-|    |      (v2) exponential smoothing
-|    |----intervention_component (derived class)
-|    |      (v1) LL, LT, LA
-|    |      (v2) \theta for LSTM
-|    |----LSTM_component (derived class) (v0)
-|    |----periodic_component (derived class) (v0)
-|    |----residual_component (derived class)
-|    |      (v0) AR: deterministic
-|    |      (v1) AR: online
-|    |      (v2) BAR
-|    |
-|    |----base_model (class) (v0)
-|    |----TAGI-LSTM/SSM model (derived class)
-|    |      (v0) training: model.train(ts_data) (v0)
-|    |                     goal: obtain TAGI-LSTM's weights and biases.
-|    |      (v0) filter: model.filter(ts_data), recursively apply forward(1sample) and backward(1sample),
-|    |                   goal: only update SSM's hidden states
-|    |      (v0) forecast: model.forecast(ts_data), recursively apply forward(1sample)
-|    |      (v0) smoother: model.smoother(ts_data), recursively apply forward(1sample), backward() and RTS()
-|    |                     goal: smoothed estimates for SSM's hidden states, and LSTM's hidden and cell states
-|    |      (v1) hyper-paramters grid-search: model.gridSearch()
-|    |      (v1) save/load model/parameters: component wise
-|    |      (v2) parallel computing with multiple seeds: model.seeds([1]) or model.seeds([1 2 3]).
-|    |      (v2) online learning (David): model.onlineTrain()
-|    |----SKF model (derived class)
-|    |      (v0) filter: model.filter
-|    |      (v0) forecast: model.forecast
-|    |      (v0) smoother: model.smoother
-|    |      (v1) hyper-paramters grid-search: model.gridSearch()
-|    |      (v1) save/load model/parameters: component wise
-|    |      (v2) parallel computing with multiple seeds: model.seeds([1]) or model.seeds([1 2 3]).
-|    |----RL model (derived class) (v2)
-|    |
-|    |
-|    |----metrics(Likelihood, log-likelihood (v0), MSE/RMSE, MAE, p50, p90 (v1))
-|    |----dataVisualization (plot data, predictions, hidden states) (v0:basic, v1:advanced)
-|    |----task
-|           (v0) unit tests
-|           (v1) synthetic data generation
-|           (v2) benmarking on some datasetes
-|
-|----data
-|----examples
-|----unit_test
-|----saved_results
-|----saved_models
-
+The methodological core behind the canary library consists of a seamless integration between [state-space models (SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) and Bayesian neural networks. On the one hand, the Gaussian SSM theory enables modelling baseline responses and residuals, while on the other, [Tractable Approximate Gaussian Inference (TAGI)](https://github.com/lhnguyen102/cuTAGI/tree/main) also enables treating all parameters and hidden states in neural networks as Gaussians. Canari uses LSTM neural networks to model recurrent patterns as well as non-linear dependencies with respect to explanatory variables. Because both the SSM and LSTM rely on the same Gaussian conditional inference mechanism, their hidden states can be inferred analytically in a same unified probabilistic framework.
+The figure on the right presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
+```{figure} ../docs/_static/Canari_example.png
 ```
+
+## Getting started
+You can get started with Canari by going through our [installation guide](https://bayes-works.github.io/canari/installation_guide.html) and [tutorials](https://bayes-works.github.io/canari/tutorials.html) covering all the main features of the library.
+
+## Contributors
+The principal developer of canary is Van Dai Vuong with the mentoring of Luong Ha Nguyen and oversight by James-A. Goulet. The major contributors to the library are
+	- Zhanwen Xin (Online AR, Bounded AR & several+++ bug fixes through PRs)
+	- David Wardan (SLSTM component & several+++ bug fixes through PRs)
+
+# Acknowledgements
+We acknowledge the financial support from Hydro-Québec and the Natural Sciences and Engineering Research Council of Canada in the development of the Canari library.
+
+## License
+Canari is released under the MIT license.
+**THIS IS AN OPEN SOURCE SOFTWARE FOR RESEARCH PURPOSES ONLY. THIS IS NOT A PRODUCT. NO WARRANTY EXPRESSED OR IMPLIED.**
+
+## Related references
+### Papers
+* [Coupling LSTM Neural Networks and State-Space Models through Analytically Tractable Inference](https://www.sciencedirect.com/science/article/pii/S0169207024000335) (Van Dai Vuong, Luong-Ha Nguyen and James-A. Goulet. International Journal of Forecasting, 2024)
+* [Enhancing structural anomaly detection using a bounded autoregressive component](https://profs.polymtl.ca/jagoulet/Site/Papers/Xin_Goulet_BAR_2024.pdf)(Zhanwen Xin and James-A. Goulet, 2024)
+* [Analytically tractable heteroscedastic uncertainty quantification in Bayesian neural networks for regression tasks](http://profs.polymtl.ca/jagoulet/Site/Papers/Deka_TAGIV_2024_preprint.pdf) (Bhargob Deka, Luong-Ha Nguyen and James-A. Goulet. Neurocomputing, 2024)
+* [Approximate Gaussian Variance Inference for State-Space Models](https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf) (Bhargob Deka and James-A. Goulet, 2023)
+* [The Gaussian multiplicative approximation for state-space models](https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Ha_Amiri_Goulet_GMA_2022_preprint.pdf)(Bhargob Deka, Luong Ha Nguyen, Saeed Amiri, and James-A. Goulet, 2021)
+* [Anomaly Detection with the Switching Kalman Filter for Structural Health Monitoring](https://profs.polymtl.ca/jagoulet/Site/Papers/2017_Nguyen_and_Goulet_AD-SKF.pdf) (Luong Ha Nguyen and James-A. Goulet, 2018)
+* [Bayesian dynamic linear models for structural health monitoring](https://profs.polymtl.ca/jagoulet/Site/Papers/Goulet_BDLM_SHM_2017_preprint.pdf)(James-A. Goulet, 2017)
+### Theses
+[Analytically Tractable Bayesian Recurrent Neural Networks with Structural Health Monitoring Applications](https://profs.polymtl.ca/jagoulet/Site/Papers/DV_Thesis_2024.pdf) (Van-Dai Vuong, 2024)
+* [Analytical Bayesian Parameter Inference for Probabilistic Models with Engineering Applications](https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf) (Bhargob Deka, 2022)
+* [Real-time Anomaly Detection in the Behaviour of Structures](https://profs.polymtl.ca/jagoulet/Site/Papers/LHNguyen_these_2019.pdf) (Luong Ha Nguyen, 2019)
+### Book chapter
+* [Probabilistic machine learning for civil engineers (chapter 12 - SSM)](http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html) (James-A. Goulet. 2020)
