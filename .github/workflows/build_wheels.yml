@@ -89,6 +89,7 @@ jobs:
           # cd ..
           pip install pytagi
           pip install -e .
-
+          
       - name: Run unit tests
         run: pytest canari/test
+        working-directory: ${{ github.workspace }}/..
