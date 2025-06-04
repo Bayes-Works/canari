@@ -19,8 +19,8 @@ authors = [
 ]
 
 urls = { 
-  "Homepage" = "https://bayes-works.github.io/canari/index.html",
-  "Repository" = "https://github.com/Bayes-Works/canari",
+  Homepage = "https://bayes-works.github.io/canari/index.html",
+  Repository = "https://github.com/Bayes-Works/canari"
 }
 
 classifiers = [
