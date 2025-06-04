@@ -37,7 +37,7 @@ with respect to explanatory variables. Because both the SSM and LSTM rely on the
 conditional inference mechanism, their hidden states can be inferred analytically in a unified 
 probabilistic framework.
 
-.. figure:: _static/Canari_SSM_LSTM.png
+.. figure:: _static/Canari_example.png
    :scale: 35%
    :align: right
 
