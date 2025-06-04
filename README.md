@@ -21,8 +21,10 @@ The above figure presents an example where the raw data in red is decomposed in 
 You can get started with Canari by going through our [installation guide](https://bayes-works.github.io/canari/installation_guide.html) and [tutorials](https://bayes-works.github.io/canari/tutorials.html) covering all the main features of the library.
 
 ## Contributors
-The principal developer of canary is Van Dai Vuong with the mentoring of Luong Ha Nguyen and oversight by James-A. Goulet. The major contributors to the library are
+The principal developer of canary is Van Dai Vuong with the mentoring of Luong Ha Nguyen and oversight by James-A. Goulet. The major contributors to the library are:
+
 	- Zhanwen Xin (Online AR, Bounded AR & several+++ bug fixes through PRs)
+    
 	- David Wardan (SLSTM component & several+++ bug fixes through PRs)
 
 # Acknowledgements
