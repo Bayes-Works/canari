@@ -21,8 +21,6 @@ extensions = [
 ]
 nbsphinx_execute = "never"
 
-autodoc_mock_imports = ["pytagi"]
-
 templates_path = ["_templates"]
 exclude_patterns = []
 
