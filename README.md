@@ -17,8 +17,14 @@ Canari uses LSTM neural networks to model recurrent patterns as well as non-line
 The above figure presents an example where the raw data in red is decomposed in a baseline that is characterized by a baseline “level” component where its rate of change is described by the “trend”. The recurrent pattern is modelled by a LSTM Bayesian neural network where the training and validation set consists only in 4 years of data. The residual characterizing the model errors is itself modelled by a white “noise” component. The change point detection can be performed either online or offline after the training and validation period; The presence of change points is indicated by the probability of regime switches that rise toward 1 on several occasions.
 
 ## Getting started
-You can get started with Canari by going through our [installation guide](https://bayes-works.github.io/canari/installation_guide.html) and [tutorials](https://bayes-works.github.io/canari/tutorials.html) covering all the main features of the library.
+You can get started with Canari by going through our [tutorials](https://bayes-works.github.io/canari/tutorials.html) covering all the main features of the library.
 
+## Installation
+Canari available on PyPI, for installation, execute the following command in Terminal:
+```
+pip install pycanari
+```
+For more info. on how to install, visit our [installation guide](https://bayes-works.github.io/canari/installation_guide.html).
 ## Contributors
 The principal developer of canary is Van Dai Vuong with the mentoring of Luong Ha Nguyen and oversight by James-A. Goulet. The major contributors to the library are:
 - Zhanwen Xin (Online AR, Bounded AR & several+++ bug fixes through PRs)
