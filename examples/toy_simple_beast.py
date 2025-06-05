@@ -33,14 +33,16 @@ data = data.add(anm_baseline, axis=0)
 data = data[:-52*5]
 year = year[:-52*5]
 
-o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0)
-# o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0, scp_minmax=[0,0], torder_minmax=[0,1])
-# o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0, scp_minmax=[0,0], tcp_minmax=[0,5], torder_minmax=[0,1])
+# o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0)
+o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0, scp_minmax=[0,0], torder_minmax=[0,1])
+# o = rb.beast(data, start=year.iloc[0], deltat=1/52, period=1.0, scp_minmax=[0,0], tcp_minmax=[0,1], torder_minmax=[0,1])
 
 rb.plot(o, title='Beast - synthetic time series')
 plt.show()
 rb.print(o)
 
+#############################################################################################
+#############################################################################################
 
 # nile, year = rb.load_example('nile')                     # nile is a 1d Python array or numpy vector
 # o          = rb.beast( nile, start=1871, season='none')  # season='none' bcz the data has no seasonal/periodic component
@@ -52,6 +54,9 @@ rb.print(o)
 # rb.plot(o, title='Annual streamflow of the Nile River')
 # plt.show()
 # rb.print(o)
+
+#############################################################################################
+#############################################################################################
 
 # Print a list of fields in the output variable (e.g, o.data, o.RMSE, o.trend.cp, o.time, and o.tend.cpOccPr)
 # Check the R manual for expalanations of the output (https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf) 
