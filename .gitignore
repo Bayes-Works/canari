@@ -17,4 +17,3 @@ docs/_build/*
 
 # Figures
 !saved_results/time_series_toy.png
-/data/hsl_tsad_training_samples
