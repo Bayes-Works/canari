@@ -20,43 +20,19 @@ from tqdm import tqdm
 import random
 
 # # Read data
-data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
+data_file = "./data/benchmark_data/test_5_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-
-anm_start_index = 52*10
-
-# LT anomaly
-# anm_mag = 0.010416667/10
-anm_mag = 0.3/52
-# anm_baseline = np.linspace(0, 3, num=len(df_raw))
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
-anm_baseline[:anm_start_index] = 0
-
-# # LL anomaly
-# anm_mag = 0.5
-# anm_baseline = np.zeros_like(df_raw)
-# anm_baseline[anm_start_index:] += anm_mag
-
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
+df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
 train_split=0.289
 validation_split=0.0693*2
-
-# Remove the last 52*5 rows in df_raw
-train_split = train_split * len(df_raw) / len(df_raw[:-52*5])
-validation_split = validation_split * len(df_raw) / len(df_raw[:-52*5])
-df_raw = df_raw[:-52*5]
 
 data_processor = DataProcess(
     data=df_raw,
@@ -74,7 +50,7 @@ test_start = df_raw.index[data_processor.test_start]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/toy_simple_model_rebased.pkl", "rb") as f:
+with open("saved_params/real_ts5_model_rebased.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -88,22 +64,24 @@ LSTM = LstmNetwork(
 print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
 
+
 # No detection: 3, 7
-std_trans_error_norm_to_abnorm_prob_combs = [[9.071695294535155e-05, 1.868087933183173e-05],
-                                             [0.00016505810563284892, 6.649584723836106e-05],
-                                             [9.576918003754531e-05, 3.93909192450963e-05],
-                                             [7.035565975236214e-05, 3.536052819001997e-05],
-                                             [0.00010141380801670065, 4.191206006804935e-05],
-                                             [4.511363487888017e-05, 4.745170095866313e-06],
-                                             [0.000250741525534511, 6.253788006219711e-05],
-                                             [0.00033269839078191706, 3.373058014590806e-05],
-                                             [2.5680600231225998e-05, 2.2552079898506394e-05],
-                                             [0.0003496257032030168, 4.608870014641291e-06]
+std_trans_error_norm_to_abnorm_prob_combs = [[2.338684239873693e-05, 0.0002962674875429233],
+                                             [1.8375154282368036e-05, 8.20479620349539e-05],
+                                             [2.9738634349295472e-05, 2.3642786293939953e-05],
+                                             [0.00016745810435491771, 0.00013015428669050342],
+                                             [0.00014488199573833057, 6.354177957238564e-05],
+                                             [0.00016885502675486832, 2.9963728999873942e-06],
+                                             [0.005250989305736423, 1.1007776480374377e-06],
+                                             [0.00015258287393320067, 1.3185932704980428e-06],
+                                             [0.00011103072861924886, 8.214369712669897e-06],
+                                             [0.0014337531657054882, 2.454952839595189e-05]
                                             ]
+
 norm_const_std = data_processor.std_const_std[data_processor.output_col]
 
 # Load the CSV
-df = pd.read_csv("data/prob_eva_syn_time_series/toy_simple_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/toy_real_ts5gen.csv")
 # Containers for restored data
 restored_data = []
 for _, row in df.iterrows():
@@ -163,16 +141,14 @@ for k in tqdm(range(len(restored_data))):
                     var_states=[model_dict['early_stop_init_var_states'][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
     )
     abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
-
     skf = SKF(
-        norm_model=norm_model,
-        abnorm_model=abnorm_model,
-        std_transition_error=0.0008005024870053932,
-        norm_to_abnorm_prob=1.6648750624135252e-06,
-        abnorm_to_norm_prob=1e-1,
-        norm_model_prior_prob=0.99,
-    )
-
+            norm_model=norm_model,
+            abnorm_model=abnorm_model,
+            std_transition_error=0.0008005024870053932,
+            norm_to_abnorm_prob=1.6648750624135252e-06,
+            abnorm_to_norm_prob=1e-1,
+            norm_model_prior_prob=0.99,
+        )
     # Random pick one of the std_transition_error_norm_to_abnorm_prob_combs
     std_trans_error_norm_to_abnorm_prob_comb = random.choice(std_trans_error_norm_to_abnorm_prob_combs)
     skf.std_transition_error = std_trans_error_norm_to_abnorm_prob_comb[0]
@@ -276,6 +252,7 @@ for k in tqdm(range(len(restored_data))):
     #     sub_plot=ax1,
     # )
     # ax1.set_xticklabels([])
+    # ax1.set_ylim(-0.002, 0.005)
 
     # plot_states(
     #     data_processor=data_processor,
@@ -310,4 +287,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/toy_simple_results_skf_rebased.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/real_ts5_results_skf.csv", index=False)
