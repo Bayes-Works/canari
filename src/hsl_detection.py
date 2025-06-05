@@ -627,7 +627,7 @@ class hsl_detection:
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=True, anomaly_mag_range=anm_mag_range, 
-                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
+                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=True)
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
