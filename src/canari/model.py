@@ -32,6 +32,7 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
+import matplotlib.pyplot as plt
 
 
 class Model:
@@ -182,6 +183,7 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_states = None
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -654,7 +656,7 @@ class Model:
         out_updater = OutputUpdater(device)
 
         for _ in range(look_back_len):
-            dummy_covariates = [np.nan] * num_covariates
+            dummy_covariates = [] * num_covariates
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, dummy_covariates
             )
@@ -805,7 +807,6 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
-        # TODO: set lstm intial smoothed states
         if self.lstm_net.smooth:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
@@ -1211,7 +1212,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
@@ -1273,15 +1274,12 @@ class Model:
         self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
 
-        if self.lstm_net.smooth:
-            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
-            var_sequence = var_zo_smooth[: self.lstm_net.lstm_look_back_len]
-            self.lstm_output_history.mu = mu_sequence
-            self.lstm_output_history.var = var_sequence
-            self.initialize_states_with_smoother_estimates()
-        else:
-            self.set_memory(states=self.states, time_step=0)
+        # save lstm_states
+        self.lstm_states = self.lstm_net.get_lstm_states()
+
+        # reset memory
+        self.set_memory(states=self.states, time_step=0)
+
         # TODO: to delete this internal count
         self._current_epoch += 1
 
