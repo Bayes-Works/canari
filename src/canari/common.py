@@ -4,7 +4,8 @@ Utility functions that are used in mulitple classes.
 
 from typing import Tuple, Optional
 import numpy as np
-from canari.data_struct import LstmOutputHistory
+from pytagi import Normalizer
+from canari.data_struct import LstmOutputHistory, LstmEmbedding
 from math import erf
 
 
@@ -215,6 +216,7 @@ def rts_smoother(
 def prepare_lstm_input(
     lstm_output_history: LstmOutputHistory,
     input_covariates: np.ndarray,
+    lstm_embedding: tuple[np.ndarray, np.ndarray],,
     var_input_covariates: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -227,14 +229,21 @@ def prepare_lstm_input(
     Returns:
         Tuple[np.ndarray, np.ndarray]: LSTM input mean and variance vectors.
     """
-    mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
+    mu_lstm_input = np.concatenate(
+        (lstm_output_history.mu, input_covariates, lstm_embedding[0])
+    )
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     if var_input_covariates is not None:
-        var_lstm_input = np.concatenate((lstm_output_history.var, var_input_covariates))
+        var_lstm_input = np.concatenate((lstm_output_history.var, var_input_covariates, lstm_embedding[1]))
     else:
         var_lstm_input = np.concatenate(
-            (lstm_output_history.var, np.zeros(len(input_covariates)))
+            (
+            lstm_output_history.var,
+            np.zeros(len(input_covariates)),
+            lstm_embedding[1],
         )
+        )
+    # var_lstm_input = np.nan_to_num(var_lstm_input, nan=0.0)
     return mu_lstm_input, var_lstm_input
 
 

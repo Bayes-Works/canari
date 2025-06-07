@@ -27,7 +27,7 @@ import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 from canari import common
-from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
+from canari.data_struct import LstmOutputHistory, StatesHistory, LstmEmbedding, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 
@@ -184,6 +184,8 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_embedding = LstmEmbedding()
+        self.ts_idx = 0  # Index of the time series being processed
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -286,6 +288,9 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            self.lstm_embedding.initialize(
+                self.lstm_net.embedding_dim, self.lstm_net.nb_ts
+            )
 
     def _initialize_autoregression(self):
         """
@@ -1138,7 +1143,9 @@ class Model:
                 )
             else:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, input_covariates
+                    self.lstm_output_history,
+                input_covariates,
+                self.lstm_embedding[self.ts_idx],
                 )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1452,6 +1459,13 @@ class Model:
             if self.lstm_net:
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
+                    if self.lstm_net.embedding_dim:
+                        delta_e_mu, delta_e_var = self.lstm_net.get_input_states()
+                        self.lstm_embedding.update(
+                            delta_e_mu[-self.lstm_net.embedding_dim :],
+                            delta_e_var[-self.lstm_net.embedding_dim :],
+                            self.ts_idx,
+                        )
                 self.update_lstm_history(mu_states_posterior, var_states_posterior)
 
             # Store variables
