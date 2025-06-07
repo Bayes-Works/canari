@@ -84,7 +84,7 @@ class LstmNetwork(BaseComponent):
         model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
-        smoother: Optional[bool] = False,
+        smoother: Optional[bool] = True,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
