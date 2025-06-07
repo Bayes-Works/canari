@@ -5,7 +5,7 @@ Utility functions that are used in mulitple classes.
 from typing import Tuple, Optional
 import numpy as np
 from pytagi import Normalizer
-from canari.data_struct import LstmOutputHistory
+from canari.data_struct import LstmOutputHistory, LstmEmbedding
 from math import erf
 
 
@@ -173,7 +173,9 @@ def rts_smoother(
 
 
 def prepare_lstm_input(
-    lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
+    lstm_output_history: LstmOutputHistory,
+    input_covariates: np.ndarray,
+    lstm_embedding: tuple[np.ndarray, np.ndarray],
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Prepare LSTM input by concatenating past LSTM outputs with current input covariates.
@@ -185,11 +187,18 @@ def prepare_lstm_input(
     Returns:
         Tuple[np.ndarray, np.ndarray]: LSTM input mean and variance vectors.
     """
-    mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
+    mu_lstm_input = np.concatenate(
+        (lstm_output_history.mu, input_covariates, lstm_embedding[0])
+    )
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     var_lstm_input = np.concatenate(
-        (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float32))
+        (
+            lstm_output_history.var,
+            np.zeros(len(input_covariates), dtype=np.float32),
+            lstm_embedding[1],
+        )
     )
+    # var_lstm_input = np.nan_to_num(var_lstm_input, nan=0.0)
     return np.float32(mu_lstm_input), np.float32(var_lstm_input)
 
 
@@ -368,7 +377,8 @@ class GMA(object):
             Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
         """
         return self.mu, self.var
-    
+
+
 def norm_cdf(x) -> np.ndarray:
     """
     Cumulative distribution function (CDF) of the standard normal distribution.
@@ -378,6 +388,7 @@ def norm_cdf(x) -> np.ndarray:
         float or np.ndarray: CDF value(s) for the input.
     """
     return 0.5 * (1 + erf(x / np.sqrt(2)))
+
 
 def norm_pdf(x) -> np.ndarray:
     """

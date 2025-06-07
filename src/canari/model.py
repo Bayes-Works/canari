@@ -27,7 +27,7 @@ import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 import canari.common as common
-from canari.data_struct import LstmOutputHistory, StatesHistory
+from canari.data_struct import LstmOutputHistory, StatesHistory, LstmEmbedding
 from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi import Normalizer as normalizer
@@ -180,6 +180,8 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_embedding = LstmEmbedding()
+        self.ts_idx = 0  # Index of the time series being processed
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -276,6 +278,9 @@ class Model:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_net.update_param = self._update_lstm_param
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            self.lstm_embedding.initialize(
+                self.lstm_net.embedding_dim, self.lstm_net.nb_ts
+            )
 
     def _initialize_autoregression(self):
         """
@@ -490,12 +495,10 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
-    
+
     def _BAR_backward_modification(
-            self, 
-            mu_states_posterior, 
-            var_states_posterior
-        ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mu_states_posterior, var_states_posterior
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         BAR backward modification
         """
@@ -519,26 +522,56 @@ class Model:
         var_AR = var_states_posterior[ar_index, ar_index]
         cov_AR = var_states_posterior[ar_index, :]
 
-        bound = (self.components["bounded autoregression"].gamma * 
-                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
-                    (1 - self.components["bounded autoregression"].phi**2)))
-        
+        bound = self.components["bounded autoregression"].gamma * np.sqrt(
+            self.components["bounded autoregression"].std_error ** 2
+            / (1 - self.components["bounded autoregression"].phi ** 2)
+        )
+
         l_bar = mu_AR + bound
 
-        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+        mu_L = (
+            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - bound
+        )
+        var_L = (
+            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - (mu_L + bound) ** 2
+        )
 
         u_bar = -mu_AR + bound
-        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+        mu_U = (
+            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            + bound
+        )
+        var_U = (
+            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            - (-mu_U + bound) ** 2
+        )
 
         mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        cov_bar = cov_AR * (
+            common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - 1
+        )
+        var_bar = (
+            var_L
+            + (mu_L - mu_AR) ** 2
+            + var_U
+            + (mu_U - mu_AR) ** 2
+            - (mu_states_posterior[bar_index] - mu_AR) ** 2
+            - var_AR
+        )
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
-        
+        var_states_posterior[bar_index, bar_index] = np.maximum(
+            var_bar, 1e-8
+        )  # For numerical stability
+
         return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
     def _prepare_covariates_generation(
@@ -819,7 +852,9 @@ class Model:
         lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
+                self.lstm_output_history,
+                input_covariates,
+                self.lstm_embedding[self.ts_idx],
             )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1061,6 +1096,13 @@ class Model:
                     self.lstm_net.update_param(
                         np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
                     )
+                    if self.lstm_net.embedding_dim:
+                        delta_e_mu, delta_e_var = self.lstm_net.get_input_states()
+                        self.lstm_embedding.update(
+                            delta_e_mu[-self.lstm_net.embedding_dim :],
+                            delta_e_var[-self.lstm_net.embedding_dim :],
+                            self.ts_idx,
+                        )
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[lstm_index, lstm_index],
