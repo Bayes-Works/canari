@@ -67,7 +67,10 @@ for epoch in range(num_epoch):
     model.lstm_net.train()
 
     # set white noise decay
-    model._white_noise_decay(epoch, white_noise_max_std=3, white_noise_decay_factor=0.9)
+    model.white_noise_decay(epoch, white_noise_max_std=3, white_noise_decay_factor=0.9)
+
+    # initialize the lookback states
+    model._store_initial_lookback()
 
     # filter on train data
     mu_preds_train, std_preds_train, states = model.filter(train_data, train_lstm=True)
@@ -82,12 +85,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.std_const_mean[output_col],
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     # Calculate the log-likelihood metric
@@ -134,12 +137,12 @@ mu_test_preds, std_test_preds, test_states = model.forecast(
 # Unstandardize the predictions
 mu_test_preds = normalizer.unstandardize(
     mu_test_preds,
-    data_processor.std_const_mean[output_col],
-    data_processor.std_const_std[output_col],
+    data_processor.scale_const_mean[output_col],
+    data_processor.scale_const_std[output_col],
 )
 std_test_preds = normalizer.unstandardize_std(
     std_test_preds,
-    data_processor.std_const_std[output_col],
+    data_processor.scale_const_std[output_col],
 )
 
 # calculate the test metrics
