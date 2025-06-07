@@ -83,7 +83,7 @@ class LstmNetwork(BaseComponent):
         load_lstm_net: Optional[str] = None,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
-        smoother: Optional[bool] = False,
+        smoother: Optional[bool] = True,
     ):
         self.std_error = std_error
         self.num_layer = num_layer

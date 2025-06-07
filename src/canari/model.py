@@ -32,6 +32,7 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
+import matplotlib.pyplot as plt
 
 
 class Model:
@@ -181,6 +182,7 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_states = None
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -494,12 +496,10 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar.item()
 
         return mu_states_posterior, var_states_posterior
-    
+
     def _BAR_backward_modification(
-            self, 
-            mu_states_posterior, 
-            var_states_posterior
-        ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mu_states_posterior, var_states_posterior
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         BAR backward modification
         """
@@ -523,22 +523,50 @@ class Model:
         var_AR = var_states_posterior[ar_index, ar_index].item()
         cov_AR = var_states_posterior[ar_index, :]
 
-        bound = (self.components["bounded autoregression"].gamma * 
-                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
-                    (1 - self.components["bounded autoregression"].phi**2)))
-        
+        bound = self.components["bounded autoregression"].gamma * np.sqrt(
+            self.components["bounded autoregression"].std_error ** 2
+            / (1 - self.components["bounded autoregression"].phi ** 2)
+        )
+
         l_bar = mu_AR + bound
 
-        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+        mu_L = (
+            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - bound
+        )
+        var_L = (
+            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - (mu_L + bound) ** 2
+        )
 
         u_bar = -mu_AR + bound
-        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+        mu_U = (
+            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            + bound
+        )
+        var_U = (
+            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            - (-mu_U + bound) ** 2
+        )
 
         mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        cov_bar = cov_AR * (
+            common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - 1
+        )
+        var_bar = (
+            var_L
+            + (mu_L - mu_AR) ** 2
+            + var_U
+            + (mu_U - mu_AR) ** 2
+            - (mu_states_posterior[bar_index] - mu_AR) ** 2
+            - var_AR
+        )
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
         var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8).item() # For numerical stability
@@ -608,7 +636,7 @@ class Model:
         out_updater = OutputUpdater(device)
 
         for _ in range(look_back_len):
-            dummy_covariates = [np.nan] * num_covariates
+            dummy_covariates = [] * num_covariates
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, dummy_covariates
             )
@@ -759,7 +787,6 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
-        # TODO: set lstm intial smoothed states
         if self.lstm_net.smooth:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
@@ -1155,7 +1182,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
@@ -1217,15 +1244,12 @@ class Model:
         self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
 
-        if self.lstm_net.smooth:
-            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
-            var_sequence = var_zo_smooth[: self.lstm_net.lstm_look_back_len]
-            self.lstm_output_history.mu = mu_sequence
-            self.lstm_output_history.var = var_sequence
-            self.initialize_states_with_smoother_estimates()
-        else:
-            self.set_memory(states=self.states, time_step=0)
+        # save lstm_states
+        self.lstm_states = self.lstm_net.get_lstm_states()
+
+        # reset memory
+        self.set_memory(states=self.states, time_step=0)
+
         # TODO: to delete this internal count
         self._current_epoch += 1
 

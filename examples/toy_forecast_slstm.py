@@ -6,6 +6,7 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend
+from examples.plot_smooth_states import main
 
 
 # # Read data
@@ -30,26 +31,25 @@ num_epoch = 50
 
 data_processor = DataProcess(
     data=df,
-    time_covariates=["hour_of_day"],
-    train_split=0.5,
-    validation_split=0.2,
+    # time_covariates=["hour_of_day"],
+    train_split=0.8,
+    validation_split=0.1,
     output_col=output_col,
 )
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.001
+sigma_v = 0.1
 model = Model(
     # LocalTrend(),
     LstmNetwork(
         look_back_len=24,
-        num_features=2,
+        num_features=1,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=1,
-        smoother=True,
+        # manual_seed=42,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -62,15 +62,17 @@ for epoch in range(num_epoch):
         validation_data=validation_data,
     )
 
+    main(model.lstm_net.lstm_look_back_len)
+
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.std_const_mean[output_col],
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     # Calculate the log-likelihood metric
@@ -89,9 +91,6 @@ for epoch in range(num_epoch):
 
     if model.stop_training:
         break
-    else:
-        # reset memory
-        model.set_memory(states=model.states, time_step=0)
 
     fig, ax = plot_states(
         data_processor=data_processor,
@@ -104,7 +103,7 @@ for epoch in range(num_epoch):
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
-# model.lstm_net.set_lstm_states(lstm_optim_states)
+model.lstm_net.set_lstm_states(model.lstm_states)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
@@ -118,12 +117,12 @@ mu_test_preds, std_test_preds, test_states = model.forecast(
 # Unstandardize the predictions
 mu_test_preds = normalizer.unstandardize(
     mu_test_preds,
-    data_processor.std_const_mean[output_col],
-    data_processor.std_const_std[output_col],
+    data_processor.scale_const_mean[output_col],
+    data_processor.scale_const_std[output_col],
 )
 std_test_preds = normalizer.unstandardize_std(
     std_test_preds,
-    data_processor.std_const_std[output_col],
+    data_processor.scale_const_std[output_col],
 )
 
 # calculate the test metrics
