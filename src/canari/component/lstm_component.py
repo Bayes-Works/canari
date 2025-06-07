@@ -74,6 +74,8 @@ class LstmNetwork(BaseComponent):
         num_hidden_unit: Optional[int] = 50,
         look_back_len: Optional[int] = 1,
         num_features: Optional[int] = 1,
+        embedding_dim: Optional[int] = 0,
+        nb_ts: Optional[int] = 1,
         num_output: Optional[int] = 1,
         device: Optional[str] = "cpu",
         num_thread: Optional[int] = 1,
@@ -90,6 +92,8 @@ class LstmNetwork(BaseComponent):
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
         self.num_features = num_features
+        self.embedding_dim = embedding_dim
+        self.nb_ts = nb_ts
         self.device = device
         self.num_thread = num_thread
         self.manual_seed = manual_seed
@@ -171,7 +175,7 @@ class LstmNetwork(BaseComponent):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
         layers.append(
             LSTM(
-                self.num_features + self.look_back_len - 1,
+                self.num_features + self.look_back_len + self.embedding_dim - 1,
                 self.num_hidden_unit[0],
                 1,
                 gain_weight=self.gain_weight,
@@ -194,6 +198,10 @@ class LstmNetwork(BaseComponent):
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
+        lstm_network.embedding_dim = self.embedding_dim
+        lstm_network.nb_ts = self.nb_ts
+        if self.embedding_dim > 0:
+            lstm_network.input_state_update = True
         lstm_network.model_noise = self.model_noise
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
