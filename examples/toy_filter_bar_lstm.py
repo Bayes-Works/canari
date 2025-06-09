@@ -50,8 +50,8 @@ data_processor = DataProcess(
 train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 
 # Standardization constants
-std_const_mean = data_processor.std_const_mean[output_col].item()
-std_const_std = data_processor.std_const_std[output_col].item()
+std_const_mean = data_processor.scale_const_mean[output_col].item()
+std_const_std = data_processor.scale_const_std[output_col].item()
 
 # Define model components
 trend_norm = trend_true / (std_const_std + 1e-10)
@@ -131,9 +131,9 @@ print(f"Validation MSE: {model.early_stop_metric:.4f}")
 ###########################
 # Reload pretrained model
 # Load learned parameters from the saved trained model
-phi_index = model_dict["phi_index"]
-W2bar_index = model_dict["W2bar_index"]
-autoregression_index = model_dict["autoregression_index"]
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
 mu_W2bar_learn = model_dict["mu_states_optimal"][W2bar_index].item()
 phi_AR_learn = model_dict["mu_states_optimal"][phi_index].item()
 mu_AR = model_dict["mu_states"][autoregression_index].item()

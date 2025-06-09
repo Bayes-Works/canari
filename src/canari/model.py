@@ -128,11 +128,8 @@ class Model:
         """
 
         self._initialize_attributes()
-        # self.components = {
-        #     component.component_name: component for component in components
-        # }
         self.components = {
-            f"{component.component_name}_{i}": component
+            f"{component.component_name} {i}": component
             for i, component in enumerate(components)
         }
         self._initialize_model()
@@ -272,7 +269,7 @@ class Model:
             (
                 component
                 for component in self.components.values()
-                if component.component_name == "lstm"
+                if "lstm" in component.component_name
             ),
             None,
         )
@@ -291,7 +288,7 @@ class Model:
             (
                 component
                 for component in self.components.values()
-                if component.component_name == "autoregression"
+                if "autoregression" in component.component_name
             ),
             None,
         )
@@ -336,8 +333,18 @@ class Model:
         scheduled_sigma_v = white_noise_max_std * np.exp(
             -white_noise_decay_factor * epoch
         )
-        if scheduled_sigma_v < self.components["white noise"].std_error:
-            scheduled_sigma_v = self.components["white noise"].std_error
+
+        white_noise_component = next(
+            (
+                component
+                for component in self.components.values()
+                if "white noise" in component.component_name
+            ),
+            None,
+        )
+
+        if scheduled_sigma_v < white_noise_component.std_error:
+            scheduled_sigma_v = white_noise_component.std_error
         self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
     def _save_states_history(self):
@@ -499,9 +506,8 @@ class Model:
         self, mu_states_posterior, var_states_posterior
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        BAR backward modification
-        """
-        """
+        BAR backward modification.
+
         Apply backward BAR moment updates during state-space filtering.
 
         Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.
@@ -521,9 +527,17 @@ class Model:
         var_AR = var_states_posterior[ar_index, ar_index].item()
         cov_AR = var_states_posterior[ar_index, :]
 
-        bound = self.components["bounded autoregression"].gamma * np.sqrt(
-            self.components["bounded autoregression"].std_error ** 2
-            / (1 - self.components["bounded autoregression"].phi ** 2)
+        bar_component = next(
+            (
+                component
+                for component in self.components.values()
+                if "bounded autoregression" in component.component_name
+            ),
+            None,
+        )
+
+        bound = bar_component.gamma * np.sqrt(
+            bar_component.std_error**2 / (1 - bar_component.phi**2)
         )
 
         l_bar = mu_AR + bound
