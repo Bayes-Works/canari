@@ -283,15 +283,15 @@ def test_local_acceleration_other_components():
     )
 
 
-def test_online_AR_forward_modification():
-    """Test function model._online_AR_forward_modification"""
-    mu_W2bar_prior = 1e4
-    var_AR_prior = 1e4
-    var_W2bar_prior = 1e4
+def test_online_AR_modification():
+    """Test function model._online_AR_forward_modification and model._online_AR_backward_modification"""
+    mu_W2bar_prior = 3
+    var_AR_prior = 10
+    var_W2bar_prior = 2.5
 
     ar = Autoregression(
-        mu_states=[0, 0, 0, 0, 0, mu_W2bar_prior],
-        var_states=[1e-6, 0.01, 0, var_AR_prior, 0, var_W2bar_prior],
+        mu_states=[0.2, 0.8, 0, 0, 0, mu_W2bar_prior],
+        var_states=[1.2, 0.25, 0, var_AR_prior, 0, var_W2bar_prior],
     )
 
     model = Model(ar)
@@ -304,14 +304,56 @@ def test_online_AR_forward_modification():
         var_states_posterior,
     ) = model.backward(0.1)
 
-    print(mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior)
-    print(mu_states_posterior, var_states_posterior)
-    npt.assert_allclose(1, 1, rtol=1e-6, atol=1e-8)
+    mu_obs_true = np.array([[0.]])
+    var_obs_true = np.array([[3.]])
+    mu_states_prior_true = np.array([[0., 0.8, 0., 0., 3., 3.]]).T
+    var_states_prior_true = np.array(
+        [
+            [3.0, 0.0, 0.0, 3.0, 0.0, 0.0],
+            [0.0, 0.25, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0, 3.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 25.5, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 2.5],
+        ]
+    )
 
-def test_online_AR_backward_modification():
-    """Test function model._online_AR_backward_modification"""
-
-    npt.assert_allclose(1, 1, rtol=1e-6, atol=1e-8)
+    delta_mu_states_true = np.array([[0.1, 0.0, 0.0, 0.1, 0.0, 0.0]]).T
+    delta_var_states_true = np.array(
+        [
+            [-3.0, 0.0, 0.0, -3.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [-3.0, 0.0, 0.0, -3.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ]
+    )
+    mu_states_posterior_true = np.array([[0.1, 0.8, 0.08, 0.1, 0.01, 2.70686275]]).T
+    var_states_posterior_true = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.25, 0.025, 0.0, 0.0, 0.0],
+            [0.0, 0.025, 0.0025, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 2.25490196],
+        ]
+    )
+    npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_obs_pred, var_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(mu_states_prior, mu_states_prior_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_states_prior, var_states_prior_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(delta_mu_states, delta_mu_states_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(
+        delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        mu_states_posterior, mu_states_posterior_true, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-8
+    )
 
 def test_BAR_backward_modification():
     """Test function model._BAR_backward_modification"""
