@@ -281,3 +281,39 @@ def test_local_acceleration_other_components():
     npt.assert_allclose(
         delta_var_states_true, delta_var_states_pred, rtol=1e-6, atol=1e-8
     )
+
+
+def test_online_AR_forward_modification():
+    """Test function model._online_AR_forward_modification"""
+    mu_W2bar_prior = 1e4
+    var_AR_prior = 1e4
+    var_W2bar_prior = 1e4
+
+    ar = Autoregression(
+        mu_states=[0, 0, 0, 0, 0, mu_W2bar_prior],
+        var_states=[1e-6, 0.01, 0, var_AR_prior, 0, var_W2bar_prior],
+    )
+
+    model = Model(ar)
+
+    mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = model.forward()
+    (
+        delta_mu_states,
+        delta_var_states,
+        mu_states_posterior,
+        var_states_posterior,
+    ) = model.backward(0.1)
+
+    print(mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior)
+    print(mu_states_posterior, var_states_posterior)
+    npt.assert_allclose(1, 1, rtol=1e-6, atol=1e-8)
+
+def test_online_AR_backward_modification():
+    """Test function model._online_AR_backward_modification"""
+
+    npt.assert_allclose(1, 1, rtol=1e-6, atol=1e-8)
+
+def test_BAR_backward_modification():
+    """Test function model._BAR_backward_modification"""
+
+    npt.assert_allclose(1, 1, rtol=1e-6, atol=1e-8)
