@@ -91,6 +91,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
+    skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -120,7 +121,6 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
     if skf.stop_training:
         break
 

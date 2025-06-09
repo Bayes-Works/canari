@@ -44,8 +44,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
         (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_decay=True,
         )
+        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -69,7 +69,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
-        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 

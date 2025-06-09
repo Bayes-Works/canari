@@ -12,7 +12,12 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, Autoregression, BoundedAutoregression
+from canari.component import (
+    LocalTrend,
+    LstmNetwork,
+    Autoregression,
+    BoundedAutoregression,
+)
 
 
 ###########################
@@ -89,6 +94,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         train_data=train_data,
         validation_data=val_data,
     )
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_pred_unnorm = normalizer.unstandardize(
@@ -110,7 +116,6 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
-    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
@@ -195,14 +200,14 @@ fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
 plt.show()
 
 # # Plotting results from pre-trained model
-fig, axes=plot_states(
+fig, axes = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type="smooth",
     standardization=True,
 )
 fig.suptitle("Smoother States")
-fig, axes=plot_states(
+fig, axes = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type="posterior",
