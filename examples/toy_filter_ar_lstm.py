@@ -89,6 +89,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         train_data=train_data,
         validation_data=val_data,
     )
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_pred_unnorm = normalizer.unstandardize(
@@ -112,7 +113,6 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
-    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
