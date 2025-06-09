@@ -515,8 +515,8 @@ class Model:
         ar_index = self.get_states_index("autoregression")
         bar_index = self.get_states_index("bounded autoregression")
 
-        mu_AR = mu_states_posterior[ar_index]
-        var_AR = var_states_posterior[ar_index, ar_index]
+        mu_AR = mu_states_posterior[ar_index].item()
+        var_AR = var_states_posterior[ar_index, ar_index].item()
         cov_AR = var_states_posterior[ar_index, :]
 
         bound = (self.components["bounded autoregression"].gamma * 
@@ -537,7 +537,7 @@ class Model:
         var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
+        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8).item() # For numerical stability
         
         return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
