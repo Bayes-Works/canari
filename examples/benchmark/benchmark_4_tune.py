@@ -285,13 +285,13 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-4)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         # states_to_plot=["level", "trend", "lstm", "white noise"],
-        # states_type="smooth",
+        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
         color="b",
         legend_location="upper left",

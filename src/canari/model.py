@@ -128,8 +128,12 @@ class Model:
         """
 
         self._initialize_attributes()
+        # self.components = {
+        #     component.component_name: component for component in components
+        # }
         self.components = {
-            component.component_name: component for component in components
+            f"{component.component_name}_{i}": component
+            for i, component in enumerate(components)
         }
         self._initialize_model()
         self.states = StatesHistory()
@@ -490,12 +494,10 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
         return mu_states_posterior, var_states_posterior
-    
+
     def _BAR_backward_modification(
-            self, 
-            mu_states_posterior, 
-            var_states_posterior
-        ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mu_states_posterior, var_states_posterior
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         BAR backward modification
         """
@@ -519,26 +521,56 @@ class Model:
         var_AR = var_states_posterior[ar_index, ar_index]
         cov_AR = var_states_posterior[ar_index, :]
 
-        bound = (self.components["bounded autoregression"].gamma * 
-                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
-                    (1 - self.components["bounded autoregression"].phi**2)))
-        
+        bound = self.components["bounded autoregression"].gamma * np.sqrt(
+            self.components["bounded autoregression"].std_error ** 2
+            / (1 - self.components["bounded autoregression"].phi ** 2)
+        )
+
         l_bar = mu_AR + bound
 
-        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+        mu_L = (
+            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - bound
+        )
+        var_L = (
+            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - (mu_L + bound) ** 2
+        )
 
         u_bar = -mu_AR + bound
-        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+        mu_U = (
+            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            + bound
+        )
+        var_U = (
+            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            - (-mu_U + bound) ** 2
+        )
 
         mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        cov_bar = cov_AR * (
+            common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - 1
+        )
+        var_bar = (
+            var_L
+            + (mu_L - mu_AR) ** 2
+            + var_U
+            + (mu_U - mu_AR) ** 2
+            - (mu_states_posterior[bar_index] - mu_AR) ** 2
+            - var_AR
+        )
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8) # For numerical stability
-        
+        var_states_posterior[bar_index, bar_index] = np.maximum(
+            var_bar, 1e-8
+        )  # For numerical stability
+
         return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
     def _prepare_covariates_generation(
@@ -1077,13 +1109,20 @@ class Model:
             self.states,
         )
 
-    def smoother(self) -> StatesHistory:
+    def smoother(
+        self,
+        matrix_inversion_tol: Optional[float] = 1e-12,
+    ) -> StatesHistory:
         """
         Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
         RTS smoothing equation over multiple time steps.
 
         This function is used at the entire-dataset-level. Recall repeatedly the function
         :meth:`rts_smoother` at one-time-step level from :class:`~canari.model.Model`.
+
+        Args:
+            matrix_inversion_tol (float): Numerical stability threshold for matrix
+                                            pseudoinversion (pinv). Defaults to 1E-12.
 
         Returns:
             StatesHistory:
@@ -1096,7 +1135,7 @@ class Model:
 
         num_time_steps = len(self.states.mu_smooth)
         for time_step in reversed(range(0, num_time_steps - 1)):
-            self.rts_smoother(time_step)
+            self.rts_smoother(time_step, matrix_inversion_tol)
 
         return self.states
 
