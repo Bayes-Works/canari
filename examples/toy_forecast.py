@@ -87,6 +87,8 @@ for epoch in range(num_epoch):
     if model.stop_training:
         break
 
+dict = model.get_dict()
+
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
