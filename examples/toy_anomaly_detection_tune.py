@@ -93,6 +93,7 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
             )
+            model.set_memory(states=states, time_step=0)
 
             # Unstandardize the predictions
             mu_validation_preds_unnorm = Normalizer.unstandardize(
@@ -125,7 +126,6 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
-            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 

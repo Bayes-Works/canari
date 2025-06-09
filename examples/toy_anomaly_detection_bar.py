@@ -53,7 +53,7 @@ local_acceleration = LocalAcceleration(
 periodic = Periodic(period=52, mu_states=[5 * 5, 0], var_states=[1e-12, 1e-12])
 # Gamma can be changed to see how it affects the anomaly detection
 bar = BoundedAutoregression(
-    std_error=5, 
+    std_error=5,
     phi=0.9,
     mu_states=[-0.0621, -0.0621],
     var_states=[6.36e-05, 6.36e-05],
@@ -99,6 +99,6 @@ fig, ax = plot_skf_states(
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 time = data_processor.get_time(split="all")
-ax[0].axvline(x=time[time_anomaly], color='r', linestyle='--')
-ax[-1].axvline(x=time[time_anomaly], color='r', linestyle='--')
+ax[0].axvline(x=time[time_anomaly], color="r", linestyle="--")
+ax[-1].axvline(x=time[time_anomaly], color="r", linestyle="--")
 plt.show()
