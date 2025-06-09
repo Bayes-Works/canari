@@ -1010,7 +1010,11 @@ class SKF:
 
         return mu_states_posterior, var_states_posterior
 
-    def rts_smoother(self, time_step: int):
+    def rts_smoother(
+        self,
+        time_step: int,
+        matrix_inversion_tol: Optional[float] = 1e-4,
+    ):
         """
         Smoother for the Switching Kalman filter at a given time step.
 
@@ -1020,6 +1024,8 @@ class SKF:
 
         Args:
             time_step (int): Index at which to perform smoothing.
+            matrix_inversion_tol (float): Numerical stability threshold for matrix
+                                            pseudoinversion (pinv). Defaults to 1E-4.
 
         Returns:
             None
@@ -1027,7 +1033,9 @@ class SKF:
 
         epsilon = 0 * 1e-20
         for transition_model in self.model.values():
-            transition_model.rts_smoother(time_step, matrix_inversion_tol=1e-3)
+            transition_model.rts_smoother(
+                time_step, matrix_inversion_tol=matrix_inversion_tol
+            )
 
         joint_transition_prob = self._transition()
         arrival_state_marginal = self._marginal()
@@ -1173,7 +1181,10 @@ class SKF:
             self.states,
         )
 
-    def smoother(self) -> Tuple[np.ndarray, StatesHistory]:
+    def smoother(
+        self,
+        matrix_inversion_tol: Optional[float] = 1e-4,
+    ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman smoother over an entire time series data.
 
@@ -1181,7 +1192,8 @@ class SKF:
         :meth:`.rts_smoother` at one-time-step level from :class:`~canari.skf.SKF`.
 
         Args:
-            data (dict): Contains 'x' and 'y' arrays for smoothing.
+            matrix_inversion_tol (float): Numerical stability threshold for matrix
+                                            pseudoinversion (pinv). Defaults to 1E-4.
 
         Returns:
             Tuple[np.ndarray, StatesHistory]:
@@ -1197,7 +1209,7 @@ class SKF:
         self.smooth_marginal_prob_history = copy.copy(self.filter_marginal_prob_history)
         self._initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
-            self.rts_smoother(time_step)
+            self.rts_smoother(time_step, matrix_inversion_tol)
 
         return (
             np.array(self.smooth_marginal_prob_history["abnorm"]),
