@@ -394,13 +394,13 @@ class Model:
             # Forward path to compute the moments of W
             # # W2bar
             mu_states_prior[W2bar_index] = self.mu_W2bar
-            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar.item()
 
             # # From W2bar to W2
             self.mu_W2_prior = self.mu_W2bar
             self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
             mu_states_prior[W2_index] = self.mu_W2_prior
-            var_states_prior[W2_index, W2_index] = self.var_W2_prior
+            var_states_prior[W2_index, W2_index] = self.var_W2_prior.item()
 
             # # From W2 to W
             mu_states_prior[ar_error_index] = 0
@@ -410,9 +410,9 @@ class Model:
             var_states_prior[:, ar_error_index] = np.zeros_like(
                 var_states_prior[:, ar_error_index]
             )
-            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
-            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
-            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar.item()
+            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar.item()
+            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar.item()
         return mu_states_prior, var_states_prior
 
     def _online_AR_backward_modification(
@@ -470,7 +470,7 @@ class Model:
             var_states_posterior[:, W2_index] = np.zeros_like(
                 var_states_posterior[:, W2_index]
             )
-            var_states_posterior[W2_index, W2_index] = var_W2_posterior
+            var_states_posterior[W2_index, W2_index] = var_W2_posterior.item()
 
             # # From W2 to W2bar
             K = self.var_W2bar / self.var_W2_prior
@@ -485,9 +485,9 @@ class Model:
             var_states_posterior[:, W2bar_index] = np.zeros_like(
                 var_states_posterior[:, W2bar_index]
             )
-            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar.item()
 
-            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar.item()
 
         return mu_states_posterior, var_states_posterior
     
