@@ -28,10 +28,11 @@ df = df_raw.resample("H").mean()
 # Define parameters
 output_col = [0]
 num_epoch = 50
+covariate = ['hour_of_day', 'day_of_week']  # Add covariates if needed, e.g., 'hour_of_day', 'day_of_week'
 
 data_processor = DataProcess(
     data=df,
-    # time_covariates=["hour_of_day"],
+    time_covariates=covariate,
     train_split=0.8,
     validation_split=0.1,
     output_col=output_col,
@@ -44,25 +45,60 @@ sigma_v = 0.1
 model = Model(
     # LocalTrend(),
     LstmNetwork(
-        look_back_len=24,
-        num_features=1,
+        look_back_len=10,
+        num_features=3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        # manual_seed=42,
+        manual_seed=42,
     ),
     WhiteNoise(std_error=sigma_v),
 )
 # model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
+if covariate:
+    time_covariate_scale_const_mean = data_processor.scale_const_mean[
+        data_processor.covariates_col
+    ]
+    time_covariate_scale_const_std = data_processor.scale_const_std[
+        data_processor.covariates_col
+    ]
+    train_index, val_index, test_index = data_processor.get_split_indices()
+    initial_time_covariate = data_processor.data.values[
+        train_index[0], data_processor.covariates_col
+    ]
+    start_time = data_processor.get_time('train')[0]  # Ensure start_time is a single timestamp
+    infer_len_start = start_time - pd.DateOffset(hours=model.lstm_net.lstm_look_back_len * 2)
+
+    # generate look-back covariates
+    look_back_cov = pd.DataFrame(
+        index=pd.date_range(
+            start=infer_len_start,
+            end=start_time - pd.DateOffset(hours=1),
+            freq="H"
+        )
+    )
+    look_back_cov['hour_of_day'] = look_back_cov.index.hour
+    look_back_cov['day_of_week'] = look_back_cov.index.dayofweek
+
+    # store in numpy array
+    look_back_cov = np.array(look_back_cov).reshape(-1, 1)
+
+
+    look_back_cov = normalizer.standardize(
+        look_back_cov, time_covariate_scale_const_mean, time_covariate_scale_const_std
+    )
+
+
 for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        lookback_covariates=look_back_cov,
     )
 
-    main(model.lstm_net.lstm_look_back_len)
+    main(model.lstm_net.lstm_look_back_len*2, observations=train_data["y"], epoch=epoch)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -92,14 +128,14 @@ for epoch in range(num_epoch):
     if model.stop_training:
         break
 
-    fig, ax = plot_states(
-        data_processor=data_processor,
-        states=model.states,
-        states_type="prior",
-    )
-    filename = f"saved_results/smoother#{epoch}.png"
-    plt.savefig(filename)
-    plt.close()
+    # fig, ax = plot_states(
+    #     data_processor=data_processor,
+    #     states=model.states,
+    #     states_type="prior",
+    # )
+    # filename = f"saved_results/smoother#{epoch}.png"
+    # plt.savefig(filename)
+    # plt.close()
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
