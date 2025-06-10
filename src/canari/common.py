@@ -82,7 +82,17 @@ def forward(
 
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-            Predicted observation mean/var and state prior mean/var.
+            A tuple containing:
+
+                - **mu_obs_predict** (np.ndarray):
+                    The mean for the forecast.
+                - **std_obs_preds** (np.ndarray):
+                    The standard deviation for the forecast.
+                - **mu_states_prior** (np.ndarray):
+                    The prior means for states.
+                - **var_states_prior** (np.ndarray):
+                    The prior covariance matrix for states.
+
     """
     mu_states_prior = transition_matrix @ mu_states_posterior
     var_states_prior = (
@@ -122,7 +132,13 @@ def backward(
         observation_matrix (np.ndarray): Observation matrix.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: Delta/Correction for hidden states' mean and covariance matrix.
+        Tuple[np.ndarray, np.ndarray]:
+            A tuple containing:
+
+                - **delta_mu_states** (np.ndarray):
+                    The delta or corrections for the hidden states means.
+                - **delta_var_states** (np.ndarray):
+                    The delta or corrections for the hidden states covariance matrix.
     """
     cov_obs_states = observation_matrix @ var_states_prior
     delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
@@ -158,6 +174,12 @@ def rts_smoother(
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.
+            A tuple containing:
+
+                - **mu_states_smooth** (np.ndarray):
+                    Updated smoothed means.
+                - **var_states_smooth** (np.ndarray):
+                    Updated smoothed covariance matrix.
     """
     jcb = cross_cov_states @ np.linalg.pinv(
         var_states_prior, rcond=matrix_inversion_tol
@@ -251,34 +273,6 @@ def gaussian_mixture(
     return np.float32(mu_mixture), np.float32(var_mixture)
 
 
-def unstandardize_states(
-    mu_norm: dict, std_norm: dict, scale_const_mean: float, scale_const_std: float
-) -> Tuple[dict, dict]:
-    """
-    Unstandardize standardized mean and standard deviation of states.
-
-    Args:
-        mu_norm (dict): Standardized means by key.
-        std_norm (dict): Standardized stds by key.
-        scale_const_mean (float): Mean standardization constant.
-        scale_const_std (float): Standard deviation standardization constant.
-
-    Returns:
-        Tuple[dict, dict]: Unstandardized means and stds.
-    """
-    mu_unnorm = {}
-    std_unnorm = {}
-    for key in mu_norm:
-        _mu_norm = mu_norm[key]
-        _std_norm = std_norm[key]
-        _scale_const_mean = scale_const_mean if key == "level" else 0
-        mu_unnorm[key] = Normalizer.unstandardize(
-            _mu_norm, _scale_const_mean, scale_const_std
-        )
-        std_unnorm[key] = Normalizer.unstandardize_std(_std_norm, scale_const_std)
-    return mu_unnorm, std_unnorm
-
-
 class GMA(object):
     """
     Gaussian Multiplicative Approximation (GMA).
@@ -368,7 +362,8 @@ class GMA(object):
             Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
         """
         return self.mu, self.var
-    
+
+
 def norm_cdf(x) -> np.ndarray:
     """
     Cumulative distribution function (CDF) of the standard normal distribution.
@@ -378,6 +373,7 @@ def norm_cdf(x) -> np.ndarray:
         float or np.ndarray: CDF value(s) for the input.
     """
     return 0.5 * (1 + erf(x / np.sqrt(2)))
+
 
 def norm_pdf(x) -> np.ndarray:
     """
