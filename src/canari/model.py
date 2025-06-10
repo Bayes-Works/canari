@@ -619,7 +619,7 @@ class Model:
                 ) % 4 + 1
         return covariates_generation
 
-    def _store_initial_lookback(self):
+    def _store_initial_lookback(self, time_covariates=None):
         """
         Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
@@ -631,15 +631,19 @@ class Model:
         dummy_mu_obs = np.array([np.nan], dtype=np.float32)
         dummy_var_obs = np.array([0.0], dtype=np.float32)
 
-        num_covariates = self.lstm_net.num_covariates
-
         out_updater = OutputUpdater(device)
 
-        for _ in range(look_back_len):
-            dummy_covariates = [] * num_covariates
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, dummy_covariates
-            )
+        for i in range(look_back_len * 2):
+            if time_covariates is None:
+                dummy_covariates = [np.nan] * self.lstm_net.num_covariates
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, dummy_covariates, True
+                )
+            else:
+                dummy_covariates = time_covariates[i]
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, dummy_covariates
+                )
 
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=mu_lstm_input.astype(np.float32),
@@ -789,8 +793,12 @@ class Model:
             self.mu_states[local_level_index] = self._mu_local_level
         if self.lstm_net.smooth:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_look_back_len]
-            var_sequence = var_zo_smooth[: self.lstm_net.lstm_look_back_len]
+            mu_sequence = mu_zo_smooth[
+                self.lstm_net.lstm_look_back_len : self.lstm_net.lstm_look_back_len * 2
+            ]
+            var_sequence = var_zo_smooth[
+                self.lstm_net.lstm_look_back_len : self.lstm_net.lstm_look_back_len * 2
+            ]
             self.lstm_output_history.mu = mu_sequence
             self.lstm_output_history.var = var_sequence
 
@@ -1182,8 +1190,9 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 1,
+        white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
+        lookback_covariates: Optional[List[str]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1224,7 +1233,7 @@ class Model:
         """
 
         if self.lstm_net.smooth and self._current_epoch == 0:
-            self.lstm_net.num_samples = self.lstm_net.lstm_look_back_len + len(
+            self.lstm_net.num_samples = self.lstm_net.lstm_look_back_len * 2 + len(
                 train_data["y"]
             )
 
@@ -1236,7 +1245,10 @@ class Model:
             )
 
         if self.lstm_net.smooth:
-            self._store_initial_lookback()
+            if lookback_covariates is not None:
+                self._store_initial_lookback(lookback_covariates)
+            else:
+                self._store_initial_lookback()
 
         self.filter(train_data)
         self.smoother()
