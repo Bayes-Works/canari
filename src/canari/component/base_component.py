@@ -64,35 +64,35 @@ class BaseComponent(ABC):
     @property
     def transition_matrix(self):
         """
-        np.ndarray: Transition matrix for the component. 2D array.
+        np.ndarray: Transition matrix for the component as an 2D array.
         """
         return self._transition_matrix
 
     @property
     def observation_matrix(self):
         """
-        np.ndarray: Observation matrix for the component. 2D array.
+        np.ndarray: Observation matrix for the component as an 2D array.
         """
         return self._observation_matrix
 
     @property
     def process_noise_matrix(self):
         """
-        np.ndarray: Process noise covariance matrix. 2D array.
+        np.ndarray: Process noise covariance matrix as an 2D array.
         """
         return self._process_noise_matrix
 
     @property
     def mu_states(self):
         """
-        np.ndarray: mean values. 2D array.
+        np.ndarray: mean values as an 2D array.
         """
         return self._mu_states
 
     @property
     def var_states(self):
         """
-        np.ndarray: covariance matrix. 2D array.
+        np.ndarray: covariance matrix as an 2D array.
         """
         return self._var_states
 
@@ -117,29 +117,29 @@ class BaseComponent(ABC):
     @abstractmethod
     def initialize_mu_states(self):
         """
-        Initialize the mean of the hidden states. 2D np.ndarray.
+        Initialize the mean of the hidden states. Output an 2D array.
         """
 
     @abstractmethod
     def initialize_var_states(self):
         """
-        Initialize the covariance matrix of the hidden states. 2D np.ndarray.
+        Initialize the covariance matrix of the hidden states. Output an 2D array.
         """
 
     @abstractmethod
     def initialize_transition_matrix(self):
         """
-        Initialize the transition matrix. 2D np.ndarray.
+        Initialize the transition matrix. Output an 2D array.
         """
 
     @abstractmethod
     def initialize_observation_matrix(self):
         """
-        Initialize the observation matrix. 2D np.ndarray.
+        Initialize the observation matrix. Output an 2D array.
         """
 
     @abstractmethod
     def initialize_process_noise_matrix(self):
         """
-        Initialize the process noise covariance matrix. 2D np.ndarray.
+        Initialize the process noise covariance matrix. Output an 2D array.
         """

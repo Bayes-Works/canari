@@ -105,9 +105,9 @@ class Model:
         early_stop_lstm_param (Dict):
             LSTM's weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.
         early_stop_init_mu_states (np.ndarray):
-            Copy of `mu_states` at time step :math:`t=0` of the optimal epoch .
+            Copy of `mu_states` at time step `t=0` of the optimal epoch .
         early_stop_init_var_states (np.ndarray):
-            Copy of `var_states` at time step :math:`t=0` of the optimal epoch .
+            Copy of `var_states` at time step `t=0` of the optimal epoch .
         optimal_epoch (int):
             Epoch at which the metric being monitored was best.
         stop_training (bool):

@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.skf &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.skf &#8212; canari v.0.0.3 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../../_static/documentation_options.js?v=9c904ad8"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -162,7 +162,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -1356,7 +1356,11 @@ document.write(`
 
 <div class="viewcode-block" id="SKF.rts_smoother">
 <a class="viewcode-back" href="../../api/canari.skf.html#canari.skf.SKF.rts_smoother">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">rts_smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rts_smoother</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Smoother for the Switching Kalman filter at a given time step.</span>
 
@@ -1366,6 +1370,8 @@ document.write(`
 
 <span class="sd">        Args:</span>
 <span class="sd">            time_step (int): Index at which to perform smoothing.</span>
+<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
+<span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-4.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
@@ -1373,7 +1379,9 @@ document.write(`
 
         <span class="n">epsilon</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="mf">1e-20</span>
         <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="n">transition_model</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+            <span class="n">transition_model</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span>
+                <span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="n">matrix_inversion_tol</span>
+            <span class="p">)</span>
 
         <span class="n">joint_transition_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transition</span><span class="p">()</span>
         <span class="n">arrival_state_marginal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_marginal</span><span class="p">()</span>
@@ -1525,7 +1533,10 @@ document.write(`
 
 <div class="viewcode-block" id="SKF.smoother">
 <a class="viewcode-back" href="../../api/canari.skf.html#canari.skf.SKF.smoother">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the Kalman smoother over an entire time series data.</span>
 
@@ -1533,7 +1544,8 @@ document.write(`
 <span class="sd">        :meth:`.rts_smoother` at one-time-step level from :class:`~canari.skf.SKF`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            data (dict): Contains &#39;x&#39; and &#39;y&#39; arrays for smoothing.</span>
+<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
+<span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-4.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple[np.ndarray, StatesHistory]:</span>
@@ -1549,7 +1561,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_smoother</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
