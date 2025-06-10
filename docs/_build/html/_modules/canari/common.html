@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.common &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.common &#8212; canari v.0.0.3 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../../_static/documentation_options.js?v=9c904ad8"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -162,7 +162,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -396,7 +396,17 @@ document.write(`
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:</span>
-<span class="sd">            Predicted observation mean/var and state prior mean/var.</span>
+<span class="sd">            A tuple containing:</span>
+
+<span class="sd">                - **mu_obs_predict** (np.ndarray):</span>
+<span class="sd">                    The mean for the forecast.</span>
+<span class="sd">                - **std_obs_preds** (np.ndarray):</span>
+<span class="sd">                    The standard deviation for the forecast.</span>
+<span class="sd">                - **mu_states_prior** (np.ndarray):</span>
+<span class="sd">                    The prior means for states.</span>
+<span class="sd">                - **var_states_prior** (np.ndarray):</span>
+<span class="sd">                    The prior covariance matrix for states.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mu_states_prior</span> <span class="o">=</span> <span class="n">transition_matrix</span> <span class="o">@</span> <span class="n">mu_states_posterior</span>
     <span class="n">var_states_prior</span> <span class="o">=</span> <span class="p">(</span>
@@ -439,7 +449,13 @@ document.write(`
 <span class="sd">        observation_matrix (np.ndarray): Observation matrix.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Tuple[np.ndarray, np.ndarray]: Delta/Correction for hidden states&#39; mean and covariance matrix.</span>
+<span class="sd">        Tuple[np.ndarray, np.ndarray]:</span>
+<span class="sd">            A tuple containing:</span>
+
+<span class="sd">                - **delta_mu_states** (np.ndarray):</span>
+<span class="sd">                    The delta or corrections for the hidden states means.</span>
+<span class="sd">                - **delta_var_states** (np.ndarray):</span>
+<span class="sd">                    The delta or corrections for the hidden states covariance matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cov_obs_states</span> <span class="o">=</span> <span class="n">observation_matrix</span> <span class="o">@</span> <span class="n">var_states_prior</span>
     <span class="n">delta_mu_states</span> <span class="o">=</span> <span class="n">cov_obs_states</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">var_obs_predict</span> <span class="o">@</span> <span class="p">(</span><span class="n">obs</span> <span class="o">-</span> <span class="n">mu_obs_predict</span><span class="p">)</span>
@@ -478,6 +494,12 @@ document.write(`
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.</span>
+<span class="sd">            A tuple containing:</span>
+
+<span class="sd">                - **mu_states_smooth** (np.ndarray):</span>
+<span class="sd">                    Updated smoothed means.</span>
+<span class="sd">                - **var_states_smooth** (np.ndarray):</span>
+<span class="sd">                    Updated smoothed covariance matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jcb</span> <span class="o">=</span> <span class="n">cross_cov_states</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span>
         <span class="n">var_states_prior</span><span class="p">,</span> <span class="n">rcond</span><span class="o">=</span><span class="n">matrix_inversion_tol</span>
@@ -578,37 +600,6 @@ document.write(`
     <span class="n">m2</span> <span class="o">=</span> <span class="n">mu2</span> <span class="o">-</span> <span class="n">mu_mixture</span>
     <span class="n">var_mixture</span> <span class="o">=</span> <span class="n">coef1</span> <span class="o">*</span> <span class="p">(</span><span class="n">var1</span> <span class="o">+</span> <span class="n">m1</span> <span class="o">@</span> <span class="n">m1</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="n">coef2</span> <span class="o">*</span> <span class="p">(</span><span class="n">var2</span> <span class="o">+</span> <span class="n">m2</span> <span class="o">@</span> <span class="n">m2</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">mu_mixture</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">var_mixture</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="unstandardize_states">
-<a class="viewcode-back" href="../../api/canari.common.html#canari.common.unstandardize_states">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">unstandardize_states</span><span class="p">(</span>
-    <span class="n">mu_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">std_norm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale_const_mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">:</span> <span class="nb">float</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Unstandardize standardized mean and standard deviation of states.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        mu_norm (dict): Standardized means by key.</span>
-<span class="sd">        std_norm (dict): Standardized stds by key.</span>
-<span class="sd">        scale_const_mean (float): Mean standardization constant.</span>
-<span class="sd">        scale_const_std (float): Standard deviation standardization constant.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        Tuple[dict, dict]: Unstandardized means and stds.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">mu_unnorm</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">std_unnorm</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mu_norm</span><span class="p">:</span>
-        <span class="n">_mu_norm</span> <span class="o">=</span> <span class="n">mu_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">_std_norm</span> <span class="o">=</span> <span class="n">std_norm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">_scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
-        <span class="n">mu_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
-            <span class="n">_mu_norm</span><span class="p">,</span> <span class="n">_scale_const_mean</span><span class="p">,</span> <span class="n">scale_const_std</span>
-        <span class="p">)</span>
-        <span class="n">std_unnorm</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize_std</span><span class="p">(</span><span class="n">_std_norm</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">mu_unnorm</span><span class="p">,</span> <span class="n">std_unnorm</span></div>
 
 
 
@@ -716,7 +707,8 @@ document.write(`
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span></div>
 </div>
 
-    
+
+
 <div class="viewcode-block" id="norm_cdf">
 <a class="viewcode-back" href="../../api/canari.common.html#canari.common.norm_cdf">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">norm_cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -728,6 +720,7 @@ document.write(`
 <span class="sd">        float or np.ndarray: CDF value(s) for the input.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">erf</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span></div>
+
 
 
 <div class="viewcode-block" id="norm_pdf">
