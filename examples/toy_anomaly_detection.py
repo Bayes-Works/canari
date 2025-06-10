@@ -48,7 +48,7 @@ sigma_v = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=10,
+    look_back_len=12,
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
@@ -81,7 +81,7 @@ skf = SKF(
 skf.auto_initialize_baseline_states(train_data["y"][0:23])
 
 #  Training
-num_epoch = 30
+num_epoch = 50
 states_optim = None
 mu_validation_preds_optim = None
 std_validation_preds_optim = None
