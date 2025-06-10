@@ -18,8 +18,7 @@ from pytagi import Normalizer
 class LstmOutputHistory:
     """
     Container for saving a rolling history of LSTM output means and variances
-    over a fixed lookback window. New predictions shift the window forward,
-    saving the most recent predictions, and discard the oldest ones.
+    over a fixed lookback window.
 
     Examples:
         >>> lstm_history = LstmOutputHistory()
@@ -115,7 +114,7 @@ class StatesHistory:
         standardization: Optional[bool] = True,
         scale_const_mean: Optional[float] = 0,
         scale_const_std: Optional[float] = 1,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """
         Retrieve the mean values over time for a specified hidden states and for either
         a) the prior predicted value, b) the posterior updated values after the filter step,
@@ -160,7 +159,7 @@ class StatesHistory:
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
         scale_const_std: Optional[float] = 1,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """
         Retrieve the standard deviation values over time for a specified hidden states and
         for either a) the prior predicted value, b) the posterior updated values after the
