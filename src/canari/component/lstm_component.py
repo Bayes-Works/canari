@@ -73,6 +73,7 @@ class LstmNetwork(BaseComponent):
         num_layer: Optional[int] = 1,
         num_hidden_unit: Optional[int] = 50,
         look_back_len: Optional[int] = 1,
+        infer_len: Optional[int] = 1,
         num_features: Optional[int] = 1,
         num_output: Optional[int] = 1,
         device: Optional[str] = "cpu",
@@ -90,6 +91,7 @@ class LstmNetwork(BaseComponent):
         self.num_layer = num_layer
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
+        self.infer_len = infer_len
         self.num_features = num_features
         self.device = device
         self.num_thread = num_thread
@@ -221,6 +223,7 @@ class LstmNetwork(BaseComponent):
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.num_covariates = self.num_features - 1
+        lstm_network.lstm_infer_len = self.infer_len
         lstm_network.model_noise = self.model_noise
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)

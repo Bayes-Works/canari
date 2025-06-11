@@ -5,7 +5,7 @@ from canari import DataProcess
 from pytagi import Normalizer as normalizer
 
 
-def main(L=24, observations=None, epoch=0):
+def main(L=23, observations=None, epoch=0):
     # set lookback
 
     # --- 1. Load the raw CSV (no header) ---
@@ -30,8 +30,7 @@ def main(L=24, observations=None, epoch=0):
         label = row[1]
         values = row.iloc[2:].astype(float)
         std = np.sqrt(var_dict.get(label.replace("mu", "var"), np.zeros_like(values)))
-        print(len(values))
-        plt.plot(time_steps, values, color=color, label=label)
+        plt.plot(time_steps, values, color=color, label=label, linestyle="-", marker="x")
         plt.fill_between(time_steps, values - std, values + std, color=color, alpha=0.3)
 
     # add real data
