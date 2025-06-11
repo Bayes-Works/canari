@@ -653,7 +653,7 @@ class Model:
 
         out_updater = OutputUpdater(device)
 
-        for i in range(look_back_len * 2):
+        for i in range(self.lstm_net.lstm_infer_len - 1):
             if time_covariates is None:
                 dummy_covariates = [np.nan] * self.lstm_net.num_covariates
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -813,12 +813,20 @@ class Model:
             self.mu_states[local_level_index] = self._mu_local_level
         if self.lstm_net.smooth:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[
-                self.lstm_net.lstm_look_back_len : self.lstm_net.lstm_look_back_len * 2
-            ]
-            var_sequence = var_zo_smooth[
-                self.lstm_net.lstm_look_back_len : self.lstm_net.lstm_look_back_len * 2
-            ]
+            mu_sequence = mu_zo_smooth[:self.lstm_net.lstm_infer_len]
+            var_sequence = var_zo_smooth[:self.lstm_net.lstm_infer_len]
+            mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
+            var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
+            # plt.plot(mu_sequence, label="LSTM mu")
+            # plt.fill_between(
+            #     np.arange(len(mu_sequence)),
+            #     mu_sequence - np.sqrt(var_sequence),
+            #     mu_sequence + np.sqrt(var_sequence),
+            #     alpha=0.2,
+            #     label="LSTM var",
+            # )
+            # plt.legend()
+            # plt.show()
             self.lstm_output_history.mu = mu_sequence
             self.lstm_output_history.var = var_sequence
 
@@ -855,8 +863,8 @@ class Model:
 
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
-            if self.lstm_net and not self.lstm_net.smooth:
-                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if self.lstm_net:
+                # self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
                 lstm_states = self.lstm_net.get_lstm_states()
                 for key in lstm_states:
                     old_tuple = lstm_states[key]
@@ -1263,8 +1271,8 @@ class Model:
         """
 
         if self.lstm_net.smooth and self._current_epoch == 0:
-            self.lstm_net.num_samples = self.lstm_net.lstm_look_back_len * 2 + len(
-                train_data["y"]
+            self.lstm_net.num_samples = (
+                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
             )
 
         # Decaying observation's variance
