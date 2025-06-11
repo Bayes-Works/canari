@@ -12,11 +12,18 @@ from examples.plot_smooth_states import main
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
+linear_space = np.linspace(0, 2, num=len(df_raw))
+df_raw = df_raw.add(linear_space, axis=0)
+
+# remove first N rows
+N = 12
+df_raw = df_raw.iloc[N:]
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+
+time_series = time_series.iloc[N:]
+
 time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
 df_raw.index.name = "date_time"
@@ -28,7 +35,9 @@ df = df_raw.resample("H").mean()
 # Define parameters
 output_col = [0]
 num_epoch = 50
-covariate = ['hour_of_day', 'day_of_week']  # Add covariates if needed, e.g., 'hour_of_day', 'day_of_week'
+covariate = [
+    "hour_of_day"
+]  # Add covariates if needed, e.g., 'hour_of_day', 'day_of_week'
 
 data_processor = DataProcess(
     data=df,
@@ -43,18 +52,19 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 # Model
 sigma_v = 0.1
 model = Model(
-    # LocalTrend(),
+    LocalTrend(),
     LstmNetwork(
-        look_back_len=10,
-        num_features=3,
-        num_layer=1,
+        look_back_len=12,
+        infer_len=24,  # corresponding to one cycle
+        num_features=2,
+        num_layer=2,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=42,
+        # manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),
 )
-# model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 if covariate:
@@ -68,23 +78,24 @@ if covariate:
     initial_time_covariate = data_processor.data.values[
         train_index[0], data_processor.covariates_col
     ]
-    start_time = data_processor.get_time('train')[0]  # Ensure start_time is a single timestamp
-    infer_len_start = start_time - pd.DateOffset(hours=model.lstm_net.lstm_look_back_len * 2)
+    start_time = data_processor.get_time("train")[
+        0
+    ]  # Ensure start_time is a single timestamp
+    infer_len_start = start_time - pd.DateOffset(
+        hours=model.lstm_net.lstm_infer_len - 1
+    )
 
     # generate look-back covariates
     look_back_cov = pd.DataFrame(
         index=pd.date_range(
-            start=infer_len_start,
-            end=start_time - pd.DateOffset(hours=1),
-            freq="H"
+            start=infer_len_start, end=start_time - pd.DateOffset(hours=1), freq="H"
         )
     )
-    look_back_cov['hour_of_day'] = look_back_cov.index.hour
-    look_back_cov['day_of_week'] = look_back_cov.index.dayofweek
+    look_back_cov["hour_of_day"] = look_back_cov.index.hour
+    # look_back_cov['day_of_week'] = look_back_cov.index.dayofweek
 
     # store in numpy array
     look_back_cov = np.array(look_back_cov).reshape(-1, 1)
-
 
     look_back_cov = normalizer.standardize(
         look_back_cov, time_covariate_scale_const_mean, time_covariate_scale_const_std
@@ -98,7 +109,7 @@ for epoch in range(num_epoch):
         lookback_covariates=look_back_cov,
     )
 
-    main(model.lstm_net.lstm_look_back_len*2, observations=train_data["y"], epoch=epoch)
+    main(model.lstm_net.lstm_infer_len - 1, observations=train_data["y"], epoch=epoch)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
