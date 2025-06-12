@@ -20,10 +20,15 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters
-sigma_v_fix = 0.06107626430664278
-look_back_len_fix = 60
-SKF_std_transition_error_fix = 5.066668002029218e-05
-SKF_norm_to_abnorm_prob_fix = 1.514736559162257e-06
+# sigma_v_fix = 0.06107626430664278
+# look_back_len_fix = 60
+# SKF_std_transition_error_fix = 5.066668002029218e-05
+# SKF_norm_to_abnorm_prob_fix = 1.514736559162257e-06
+
+sigma_v_fix = 0.04414653429183879
+look_back_len_fix = 74
+SKF_std_transition_error_fix = 2.8354005250218493e-05
+SKF_norm_to_abnorm_prob_fix = 2.5388671820133726e-05
 
 
 def main(
@@ -169,7 +174,6 @@ def main(
         }
 
     # Train best model
-    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -284,12 +288,11 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
-    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-4)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-3)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -302,6 +305,9 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
+
+    print("Model parameters used:", param)
+    print("SKF model parameters used:", skf_param)
 
 
 if __name__ == "__main__":
