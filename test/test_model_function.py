@@ -13,6 +13,7 @@ from canari.component import (
     Periodic,
     BaseComponent,
 )
+import fire
 
 
 def compute_observation_and_state_updates(
@@ -52,20 +53,13 @@ def model_forward_backward(
     """
 
     model = Model(*components)
-    mu_obs_pred, var_obs_pred, _, var_states_prior = common.forward(
-        model.mu_states,
-        model.var_states,
-        model.transition_matrix,
-        model.process_noise_matrix,
-        model.observation_matrix,
+    mu_obs_pred, var_obs_pred, _, _ = model.forward(
+        mu_lstm_pred=np.array([0]),
+        var_lstm_pred=np.array([0]),
     )
     obs = 0.5
-    delta_mu_states_pred, delta_var_states_pred = common.backward(
+    delta_mu_states_pred, delta_var_states_pred, _, _ = model.backward(
         obs,
-        mu_obs_pred,
-        var_obs_pred,
-        var_states_prior,
-        model.observation_matrix,
     )
     return mu_obs_pred, var_obs_pred, delta_mu_states_pred, delta_var_states_pred, model
 
@@ -92,8 +86,8 @@ def test_local_level_other_components():
     process_noise_matrix_true = np.zeros(transition_matrix_true.shape)
     process_noise_matrix_true[-1, -1] = std_observation_noise**2
     observation_matrix_true = np.array([[1, 1, 0, 1, 1, 1]])
-    mu_states_true = np.array([[0.15, 0.1, 0.2, 0.6, 0.5, 0]]).T
-    var_states_true = np.diagflat([[0.25, 0.1, 0.2, 0.6, 0.5, 0]])
+    mu_states_true = np.array([[0.15, 0.1, 0.2, 0, 0.5, 0]]).T
+    var_states_true = np.diagflat([[0.25, 0.1, 0.2, 0, 0.5, 0]])
 
     mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
         compute_observation_and_state_updates(
@@ -119,8 +113,6 @@ def test_local_level_other_components():
             num_features=1,
             num_layer=2,
             num_hidden_unit=50,
-            mu_states=[0.6],
-            var_states=[0.6],
         ),
         Autoregression(phi=phi_ar, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=std_observation_noise),
@@ -163,8 +155,8 @@ def test_local_trend_other_components():
     process_noise_matrix_true = np.zeros(transition_matrix_true.shape)
     process_noise_matrix_true[-1, -1] = std_observation_noise**2
     observation_matrix_true = np.array([[1, 0, 1, 0, 1, 1, 1]])
-    mu_states_true = np.array([[0.15, 0.5, 0.1, 0.2, 0.6, 0.5, 0]]).T
-    var_states_true = np.diagflat([[0.3, 0.25, 0.1, 0.2, 0.6, 0.5, 0]])
+    mu_states_true = np.array([[0.15, 0.5, 0.1, 0.2, 0, 0.5, 0]]).T
+    var_states_true = np.diagflat([[0.3, 0.25, 0.1, 0.2, 0, 0.5, 0]])
 
     mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
         compute_observation_and_state_updates(
@@ -190,8 +182,6 @@ def test_local_trend_other_components():
             num_features=1,
             num_layer=2,
             num_hidden_unit=50,
-            mu_states=[0.6],
-            var_states=[0.6],
         ),
         Autoregression(phi=phi_ar, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=std_observation_noise),
@@ -235,8 +225,8 @@ def test_local_acceleration_other_components():
     process_noise_matrix_true = np.zeros(transition_matrix_true.shape)
     process_noise_matrix_true[-1, -1] = std_observation_noise**2
     observation_matrix_true = np.array([[1, 0, 0, 1, 0, 1, 1, 1]])
-    mu_states_true = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0.6, 0.5, 0]]).T
-    var_states_true = np.diagflat([[0.1, 0.2, 0.3, 0.1, 0.2, 0.6, 0.5, 0]])
+    mu_states_true = np.array([[0.1, 0.1, 0.1, 0.1, 0.2, 0, 0.5, 0]]).T
+    var_states_true = np.diagflat([[0.1, 0.2, 0.3, 0.1, 0.2, 0, 0.5, 0]])
 
     mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
         compute_observation_and_state_updates(
@@ -262,8 +252,6 @@ def test_local_acceleration_other_components():
             num_features=1,
             num_layer=2,
             num_hidden_unit=50,
-            mu_states=[0.6],
-            var_states=[0.6],
         ),
         Autoregression(phi=phi_ar, std_error=0, mu_states=[0.5], var_states=[0.5]),
         WhiteNoise(std_error=std_observation_noise),

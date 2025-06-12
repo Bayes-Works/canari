@@ -297,7 +297,7 @@ def main(
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_type="smooth",
+        # states_type="smooth",
         # states_to_plot=["level", "trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
     )
