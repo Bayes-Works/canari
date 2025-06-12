@@ -53,7 +53,7 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    manual_seed=1,
+    manual_seed=3,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -129,7 +129,7 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(matrix_inversion_tol=1e-4)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
@@ -159,8 +159,7 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    states_type="smooth",
-    states_to_plot=["level", "trend", "lstm", "white noise"],
+    # states_type="smooth",
     model_prob=marginal_abnorm_prob_plot,
     # standardization=True,
     color="b",
