@@ -20,15 +20,20 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters:
-sigma_v_fix = 0.04745968073623808
-look_back_len_fix = 51
-SKF_std_transition_error_fix = 3.288056287040139e-05
-SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
+# sigma_v_fix = 0.04745968073623808
+# look_back_len_fix = 51
+# SKF_std_transition_error_fix = 3.288056287040139e-05
+# SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
+
+sigma_v_fix = 0.03981217904013953
+look_back_len_fix = 22
+SKF_std_transition_error_fix = 2.1829253939567905e-4
+SKF_norm_to_abnorm_prob_fix = 1.7128781359364095e-5
 
 
 def main(
-    num_trial_optimization: int = 50,
-    param_optimization: bool = False,
+    num_trial_optimization: int = 20,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
 ):
     # Read data
@@ -138,7 +143,7 @@ def main(
     if param_optimization or param_grid_search:
         if param_optimization:
             param_space = {
-                "look_back_len": [12, 52],
+                "look_back_len": [12, 70],
                 "sigma_v": [1e-3, 2e-1],
             }
         elif param_grid_search:
@@ -165,7 +170,6 @@ def main(
         }
 
     # Train best model
-    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -220,8 +224,8 @@ def main(
         return skf
 
     # Define parameter search space
-    slope_upper_bound = 5e-2
-    slope_lower_bound = 1e-3
+    slope_upper_bound = 1e-1
+    slope_lower_bound = 1e-2
     # # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
         train_data,
@@ -248,6 +252,7 @@ def main(
             "largest anomaly tested",
         ]
     )
+    plt.show()
 
     if param_grid_search or param_optimization:
         if param_grid_search:
@@ -258,8 +263,8 @@ def main(
             }
         elif param_optimization:
             skf_param_space = {
-                "std_transition_error": [1e-6, 1e-4],
-                "norm_to_abnorm_prob": [1e-6, 1e-4],
+                "std_transition_error": [1e-5, 1e-3],
+                "norm_to_abnorm_prob": [1e-5, 1e-3],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         skf_optimizer = SKFOptimizer(
@@ -280,12 +285,23 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
-    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_optim_dict)
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-4)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-3)
+
+    fig, ax = plot_skf_states(
+        data_processor=data_processor,
+        states=states,
+        # states_to_plot=["level", "trend", "lstm", "white noise"],
+        # states_type="smooth",
+        model_prob=filter_marginal_abnorm_prob,
+        color="b",
+        legend_location="upper left",
+    )
+    fig.suptitle("SKF hidden states", fontsize=10, y=1)
+    plt.show()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -298,6 +314,9 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
+
+    print("Model parameters used:", param)
+    print("SKF model parameters used:", skf_param)
 
 
 if __name__ == "__main__":
