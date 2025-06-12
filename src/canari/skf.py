@@ -939,6 +939,8 @@ class SKF:
             ) = transition_model.forward(
                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
+            # if np.isnan(mu_pred_transit[transit]):
+            #     check = 1
 
         self.transition_coef = self._estimate_transition_coef(
             obs,
