@@ -284,7 +284,7 @@ def test_local_acceleration_other_components():
     )
 
 
-def test_online_AR_modification():
+def test_online_AR():
     """Test function model._online_AR_forward_modification and model._online_AR_backward_modification"""
     mu_W2bar_prior = 3
     var_AR_prior = 10
@@ -356,7 +356,7 @@ def test_online_AR_modification():
         var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-8
     )
 
-def test_BAR_modification():
+def test_BAR():
     """Test function model._BAR_backward_modification"""
 
     bar = BoundedAutoregression(
