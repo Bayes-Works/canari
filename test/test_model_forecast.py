@@ -93,7 +93,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
 
 def test_model_forecast(run_mode, plot_mode):
-    # def main(run_mode="save_threshold", plot_mode=False):
     """Test model forecastin with lstm component"""
     # Model
     model = Model(
@@ -129,7 +128,3 @@ def test_model_forecast(run_mode, plot_mode):
         assert (
             abs(mse - threshold) < 1e-6
         ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
-
-
-# if __name__ == "__main__":
-#     fire.Fire(main)

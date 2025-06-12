@@ -181,13 +181,28 @@ def rts_smoother(
                 - **var_states_smooth** (np.ndarray):
                     Updated smoothed covariance matrix.
     """
-    jcb = cross_cov_states @ np.linalg.pinv(
-        var_states_prior, rcond=matrix_inversion_tol
+    # jcb = cross_cov_states @ np.linalg.pinv(
+    #     var_states_prior, rcond=matrix_inversion_tol
+    # )
+
+    left_singular_vectors, singular_values, right_singular_vectors_trans = (
+        np.linalg.svd(var_states_prior)
     )
+    inverse_singular_values = np.array(
+        [1 / sv if sv > matrix_inversion_tol else 0 for sv in singular_values]
+    )
+    var_states_prior_pinv = (
+        right_singular_vectors_trans.T
+        @ np.diag(inverse_singular_values)
+        @ left_singular_vectors.T
+    )
+    jcb = cross_cov_states @ var_states_prior_pinv
+
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
+
     return (
         np.float32(mu_states_smooth),
         np.float32(var_states_smooth),
