@@ -51,9 +51,11 @@ lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
     num_layer=1,
+    infer_len=24,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -159,7 +161,7 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    states_type="smooth",
+    states_type="prior",
     states_to_plot=["level", "trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
     # standardization=True,
