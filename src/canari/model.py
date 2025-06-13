@@ -362,6 +362,256 @@ class Model:
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
 
+    def _exponential_forward_update(
+        self,
+        mu_states,
+        var_states,
+        mu_states_prior,
+        var_states_prior,
+    ):
+
+        # Fonction pour actualiser avec amplitude en plus
+
+        M_GMA = lambda M_X1, M_X2, CovX1X2: M_X1 * M_X2 + CovX1X2
+        Cov_GMA = lambda M_X1, M_X2, CovX1X3, CovX2X3: CovX1X3 * M_X2 + CovX2X3 * M_X1
+        V_GMA = (
+            lambda M_X1, M_X2, CovX1X2, V_X1, V_X2: V_X1 * V_X2
+            + CovX1X2**2
+            + 2 * CovX1X2 * M_X1 * M_X2
+            + V_X1 * M_X2**2
+            + V_X2 * M_X1**2
+        )
+
+        if "exp" in self.states_name:
+            exp_level_index = self.get_states_index("exp level")
+            exp_trend_index = self.get_states_index("exp trend")
+            exp_amplitude_index = self.get_states_index("exp amplitude")
+            exp_index = self.get_states_index("exp")
+            expwithamp_index = self.get_states_index("exp with amplitude")
+
+            mu_states_prior[exp_index] = (
+                np.exp(
+                    -mu_states_prior[exp_level_index]
+                    + 0.5 * (var_states_prior[exp_level_index, exp_level_index])
+                )
+                - 1
+            )
+
+            var_states_prior[exp_index, exp_level_index] = -var_states_prior[
+                exp_level_index, exp_level_index
+            ] * np.exp(
+                -mu_states_prior[exp_level_index]
+                + 0.5 * (var_states_prior[exp_level_index, exp_level_index])
+            )
+
+            var_states_prior[exp_level_index, exp_index] = var_states_prior[
+                exp_index, exp_level_index
+            ]
+
+            var_states_prior[exp_index, exp_trend_index] = -np.exp(
+                -mu_states_prior[exp_level_index]
+                + 0.5 * (var_states_prior[exp_level_index, exp_level_index])
+            ) * (
+                var_states[exp_trend_index, exp_trend_index]
+                + var_states[exp_trend_index, exp_level_index]
+            )
+            var_states_prior[exp_trend_index, exp_index] = var_states_prior[
+                exp_index, exp_trend_index
+            ]
+            a = (
+                var_states_prior[exp_index, exp_level_index]
+                / var_states_prior[exp_level_index, exp_level_index]
+            )
+            var_states_prior[exp_index, exp_amplitude_index] = (
+                a * var_states_prior[exp_amplitude_index, exp_level_index]
+            )
+            var_states_prior[exp_amplitude_index, exp_index] = var_states_prior[
+                exp_index, exp_amplitude_index
+            ]
+
+            var_states_prior[exp_index, exp_index] = np.exp(
+                -2 * mu_states_prior[exp_level_index]
+                + var_states_prior[exp_level_index, exp_level_index]
+            ) * (np.exp(var_states_prior[exp_level_index, exp_level_index]) - 1)
+
+            mu_states_prior[expwithamp_index] = M_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_index],
+            ).item()
+
+            var_states_prior[expwithamp_index, exp_level_index] = Cov_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_level_index],
+                var_states_prior[exp_index, exp_level_index],
+            ).item()
+            var_states_prior[exp_level_index, expwithamp_index] = var_states_prior[
+                expwithamp_index, exp_level_index
+            ]
+
+            var_states_prior[expwithamp_index, exp_trend_index] = Cov_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_trend_index],
+                var_states_prior[exp_index, exp_trend_index],
+            ).item()
+            var_states_prior[exp_trend_index, expwithamp_index] = var_states_prior[
+                expwithamp_index, exp_trend_index
+            ]
+
+            var_states_prior[expwithamp_index, exp_amplitude_index] = Cov_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_amplitude_index],
+                var_states_prior[exp_index, exp_amplitude_index],
+            ).item()
+            var_states_prior[exp_amplitude_index, expwithamp_index] = var_states_prior[
+                expwithamp_index, exp_amplitude_index
+            ]
+
+            var_states_prior[expwithamp_index, exp_index] = Cov_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_index],
+                var_states_prior[exp_index, exp_index],
+            ).item()
+            var_states_prior[exp_index, expwithamp_index] = var_states_prior[
+                expwithamp_index, exp_index
+            ]
+
+            var_states_prior[expwithamp_index, expwithamp_index] = V_GMA(
+                mu_states_prior[exp_amplitude_index],
+                mu_states_prior[exp_index],
+                var_states_prior[exp_amplitude_index, exp_index],
+                var_states_prior[exp_amplitude_index, exp_amplitude_index],
+                var_states_prior[exp_index, exp_index],
+            ).item()
+            mu_obs_predict, var_obs_predict = common.calc_observation(
+                mu_states_prior, var_states_prior, self.observation_matrix
+            )
+
+        return (
+            mu_states_prior,
+            var_states_prior,
+            np.float32(mu_obs_predict),
+            np.float32(var_obs_predict),
+        )
+
+    def _exponential_backward_update(self, mu_states_posterior, var_states_posterior):
+        M_GMA = lambda M_X1, M_X2, CovX1X2: M_X1 * M_X2 + CovX1X2
+        Cov_GMA = lambda M_X1, M_X2, CovX1X3, CovX2X3: CovX1X3 * M_X2 + CovX2X3 * M_X1
+        V_GMA = (
+            lambda M_X1, M_X2, CovX1X2, V_X1, V_X2: V_X1 * V_X2
+            + CovX1X2**2
+            + 2 * CovX1X2 * M_X1 * M_X2
+            + V_X1 * M_X2**2
+            + V_X2 * M_X1**2
+        )
+
+        if "exp" in self.states_name:
+            exp_level_index = self.get_states_index("exp level")
+            exp_trend_index = self.get_states_index("exp trend")
+            exp_amplitude_index = self.get_states_index("exp amplitude")
+            exp_index = self.get_states_index("exp")
+            expwithamp_index = self.get_states_index("exp with amplitude")
+
+            mu_states_posterior[exp_index] = (
+                np.exp(
+                    -mu_states_posterior[exp_level_index]
+                    + 0.5 * (var_states_posterior[exp_level_index, exp_level_index])
+                )
+                - 1
+            )
+
+            var_states_posterior[exp_index, exp_level_index] = -var_states_posterior[
+                exp_level_index, exp_level_index
+            ] * np.exp(
+                -mu_states_posterior[exp_level_index]
+                + 0.5 * (var_states_posterior[exp_level_index, exp_level_index])
+            )
+
+            var_states_posterior[exp_level_index, exp_index] = var_states_posterior[
+                exp_index, exp_level_index
+            ]
+            a = (
+                var_states_posterior[exp_index, exp_level_index]
+                / var_states_posterior[exp_level_index, exp_level_index]
+            )
+            var_states_posterior[exp_index, exp_amplitude_index] = (
+                a * var_states_posterior[exp_amplitude_index, exp_level_index]
+            )
+            var_states_posterior[exp_amplitude_index, exp_index] = var_states_posterior[
+                exp_index, exp_amplitude_index
+            ]
+
+            var_states_posterior[exp_index, exp_trend_index] = (
+                a * var_states_posterior[exp_trend_index, exp_level_index]
+            )
+            var_states_posterior[exp_trend_index, exp_index] = var_states_posterior[
+                exp_index, exp_trend_index
+            ]
+
+            var_states_posterior[exp_index, exp_index] = np.exp(
+                -2 * mu_states_posterior[exp_level_index]
+                + var_states_posterior[exp_level_index, exp_level_index]
+            ) * (np.exp(var_states_posterior[exp_level_index, exp_level_index]) - 1)
+
+            mu_states_posterior[expwithamp_index] = M_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_index],
+            ).item()
+
+            var_states_posterior[expwithamp_index, exp_level_index] = Cov_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_level_index],
+                var_states_posterior[exp_index, exp_level_index],
+            ).item()
+            var_states_posterior[exp_level_index, expwithamp_index] = (
+                var_states_posterior[expwithamp_index, exp_level_index]
+            )
+
+            var_states_posterior[expwithamp_index, exp_trend_index] = Cov_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_trend_index],
+                var_states_posterior[exp_index, exp_trend_index],
+            ).item()
+            var_states_posterior[exp_trend_index, expwithamp_index] = (
+                var_states_posterior[expwithamp_index, exp_trend_index]
+            )
+
+            var_states_posterior[expwithamp_index, exp_amplitude_index] = Cov_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_amplitude_index],
+                var_states_posterior[exp_index, exp_amplitude_index],
+            ).item()
+            var_states_posterior[exp_amplitude_index, expwithamp_index] = (
+                var_states_posterior[expwithamp_index, exp_amplitude_index]
+            )
+
+            var_states_posterior[expwithamp_index, exp_index] = Cov_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_index],
+                var_states_posterior[exp_index, exp_index],
+            ).item()
+            var_states_posterior[exp_index, expwithamp_index] = var_states_posterior[
+                expwithamp_index, exp_index
+            ]
+
+            var_states_posterior[expwithamp_index, expwithamp_index] = V_GMA(
+                mu_states_posterior[exp_amplitude_index],
+                mu_states_posterior[exp_index],
+                var_states_posterior[exp_amplitude_index, exp_index],
+                var_states_posterior[exp_amplitude_index, exp_amplitude_index],
+                var_states_posterior[exp_index, exp_index],
+            ).item()
+        return mu_states_posterior, var_states_posterior
+
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
         Apply forward path autoregressive (AR) moment transformations.
@@ -786,6 +1036,17 @@ class Model:
             lstm_states_index,
         )
 
+        # Exponential prediction update :
+        if "exp" in self.states_name:
+            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
+                self._exponential_forward_update(
+                    self.mu_states,
+                    self.var_states,
+                    mu_states_prior,
+                    var_states_prior,
+                )
+            )
+
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
@@ -846,6 +1107,13 @@ class Model:
                 )
             )
 
+        if "exp" in self.states_name:
+            mu_states_posterior, var_states_posterior = (
+                self._exponential_backward_update(
+                    mu_states_posterior, var_states_posterior
+                )
+            )
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -888,6 +1156,239 @@ class Model:
             self.states.cov_states[time_step + 1],
             matrix_inversion_tol,
         )
+        # if "exp" in self.states_name:
+
+        #     M_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.exp(
+        #         -M_XEL - M_XET + 0.5 * (V_XEL + V_XET + 2 * Cov_XEL_XET)
+        #     )
+        #     V_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: (
+        #         (M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)) ** 2
+        #     ) * (np.exp(V_XEL + V_XET + 2 * Cov_XEL_XET) - 1)
+        #     Cov_exp02test = (
+        #         lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XELPrior: -(
+        #             M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
+        #         )
+        #         * (V_XELPrior)
+        #     )
+        #     Cov_exp02 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: -(
+        #         M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
+        #     ) * (V_XEL)
+        #     Cov_exp12 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: -(
+        #         M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
+        #     ) * (V_XET + Cov_XEL_XET)
+        #     Cov_exp12test = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XETtest, Cov_XEL_XETtest: -(
+        #         M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
+        #     ) * (
+        #         V_XETtest + Cov_XEL_XETtest
+        #     )
+
+        #     # Fonction pour actualiser avec amplitude en plus
+
+        #     M_GMA = lambda M_X1, M_X2, CovX1X2: M_X1 * M_X2 + CovX1X2
+        #     Cov_GMA = (
+        #         lambda M_X1, M_X2, CovX1X3, CovX2X3: CovX1X3 * M_X2 + CovX2X3 * M_X1
+        #     )
+        #     V_GMA = (
+        #         lambda M_X1, M_X2, CovX1X2, V_X1, V_X2: V_X1 * V_X2
+        #         + CovX1X2**2
+        #         + 2 * CovX1X2 * M_X1 * M_X2
+        #         + V_X1 * M_X2**2
+        #         + V_X2 * M_X1**2
+        #     )
+
+        # exp_level_index = self.get_states_index("exp level")
+        # exp_trend_index = self.get_states_index("exp trend")
+        # exp_amplitude_index = self.get_states_index("exp amplitude")
+        # exp_index = self.get_states_index("exp")
+        # expwithamp_index = self.get_states_index("exp with amplitude")
+
+        # for i in range(exp_level_index, expwithamp_index + 1):
+        #     self.states.mu_smooth[time_step][i] = 0
+        #     for k in range(exp_level_index, expwithamp_index + 1):
+        #         self.states.var_smooth[time_step][i, k] = 0
+
+        # # Linear update of exponential
+        # A = self.transition_matrix.copy()
+        # A_lin = A[
+        #     exp_level_index : exp_amplitude_index + 1,
+        #     exp_level_index : exp_amplitude_index + 1,
+        # ]
+        # cross_cov = (
+        #     self.states.var_posterior[time_step][
+        #         exp_level_index : exp_amplitude_index + 1,
+        #         exp_level_index : exp_amplitude_index + 1,
+        #     ]
+        #     @ A_lin.T
+        # )
+        # j_lin = cross_cov @ np.linalg.pinv(
+        #     self.states.var_prior[time_step + 1][
+        #         exp_level_index : exp_amplitude_index + 1,
+        #         exp_level_index : exp_amplitude_index + 1,
+        #     ],
+        #     rcond=matrix_inversion_tol,
+        # )
+        # self.states.mu_smooth[time_step][
+        #     exp_level_index : exp_amplitude_index + 1
+        # ] = self.states.mu_posterior[time_step][
+        #     exp_level_index : exp_amplitude_index + 1
+        # ] + j_lin @ (
+        #     self.states.mu_smooth[time_step + 1][
+        #         exp_level_index : exp_amplitude_index + 1
+        #     ]
+        #     - self.states.mu_prior[time_step + 1][
+        #         exp_level_index : exp_amplitude_index + 1
+        #     ]
+        # )
+        # self.states.var_smooth[time_step][
+        #     exp_level_index : exp_amplitude_index + 1,
+        #     exp_level_index : exp_amplitude_index + 1,
+        # ] = (
+        #     self.states.var_posterior[time_step][
+        #         exp_level_index : exp_amplitude_index + 1,
+        #         exp_level_index : exp_amplitude_index + 1,
+        #     ]
+        #     + j_lin
+        #     @ (
+        #         self.states.var_smooth[time_step + 1][
+        #             exp_level_index : exp_amplitude_index + 1,
+        #             exp_level_index : exp_amplitude_index + 1,
+        #         ]
+        #         - self.states.var_prior[time_step + 1][
+        #             exp_level_index : exp_amplitude_index + 1,
+        #             exp_level_index : exp_amplitude_index + 1,
+        #         ]
+        #     )
+        #     @ j_lin.T
+        # )
+
+        # # Unlinear part of the exponential
+        # self.states.mu_smooth[time_step][exp_index] = (
+        #     M_exp(
+        #         self.states.mu_smooth[time_step][exp_level_index],
+        #         self.states.var_smooth[time_step][exp_level_index, exp_level_index],
+        #         self.states.mu_smooth[time_step][exp_trend_index],
+        #         self.states.var_smooth[time_step][exp_trend_index, exp_trend_index],
+        #         self.states.var_smooth[time_step][exp_trend_index, exp_level_index],
+        #     )
+        #     - 1
+        # )
+
+        # self.states.var_smooth[time_step][exp_index, exp_level_index] = Cov_exp02(
+        #     self.states.mu_smooth[time_step][exp_level_index],
+        #     self.states.var_smooth[time_step][exp_level_index, exp_level_index],
+        #     self.states.mu_smooth[time_step][exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_level_index],
+        # )
+
+        # self.states.var_smooth[time_step][exp_level_index, exp_index] = (
+        #     self.states.var_smooth[time_step][exp_index, exp_level_index]
+        # )
+
+        # self.states.var_smooth[time_step][exp_index, exp_trend_index] = Cov_exp12(
+        #     self.states.mu_smooth[time_step][exp_level_index],
+        #     self.states.var_smooth[time_step][exp_level_index, exp_level_index],
+        #     self.states.mu_smooth[time_step][exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_level_index],
+        # )
+
+        # self.states.var_smooth[time_step][exp_trend_index, exp_index] = (
+        #     self.states.var_smooth[time_step][exp_index, exp_trend_index]
+        # )
+
+        # a = (
+        #     self.states.var_smooth[time_step][exp_index, exp_level_index]
+        #     / self.states.var_smooth[time_step][exp_level_index, exp_level_index]
+        # )
+        # self.states.var_smooth[time_step][exp_index, exp_amplitude_index] = (
+        #     a
+        #     * self.states.var_smooth[time_step][
+        #         exp_amplitude_index, exp_level_index
+        #     ]
+        # )
+        # self.states.var_smooth[time_step][exp_amplitude_index, exp_index] = (
+        #     self.states.var_smooth[time_step][exp_index, exp_amplitude_index]
+        # )
+
+        # self.states.var_smooth[time_step][exp_index, exp_index] = V_exp(
+        #     self.states.mu_smooth[time_step][exp_level_index],
+        #     self.states.var_smooth[time_step][exp_level_index, exp_level_index],
+        #     self.states.mu_smooth[time_step][exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_trend_index],
+        #     self.states.var_smooth[time_step][exp_trend_index, exp_level_index],
+        # )
+
+        # self.states.mu_smooth[time_step][expwithamp_index] = M_GMA(
+        #     self.states.mu_smooth[time_step][exp_amplitude_index],
+        #     self.states.mu_smooth[time_step][exp_index],
+        #     self.states.var_smooth[time_step][exp_amplitude_index, exp_index],
+        # )
+
+        # self.states.var_smooth[time_step][expwithamp_index, exp_level_index] = (
+        #     Cov_GMA(
+        #         self.states.mu_smooth[time_step][exp_amplitude_index],
+        #         self.states.mu_smooth[time_step][exp_index],
+        #         self.states.var_smooth[time_step][
+        #             exp_amplitude_index, exp_level_index
+        #         ],
+        #         self.states.var_smooth[time_step][exp_index, exp_level_index],
+        #     )
+        # )
+        # self.states.var_smooth[time_step][exp_level_index, expwithamp_index] = (
+        #     self.states.var_smooth[time_step][expwithamp_index, exp_level_index]
+        # )
+
+        # self.states.var_smooth[time_step][expwithamp_index, exp_trend_index] = (
+        #     Cov_GMA(
+        #         self.states.mu_smooth[time_step][exp_amplitude_index],
+        #         self.states.mu_smooth[time_step][exp_index],
+        #         self.states.var_smooth[time_step][
+        #             exp_amplitude_index, exp_trend_index
+        #         ],
+        #         self.states.var_smooth[time_step][exp_index, exp_trend_index],
+        #     )
+        # )
+        # self.states.var_smooth[time_step][exp_trend_index, expwithamp_index] = (
+        #     self.states.var_smooth[time_step][expwithamp_index, exp_trend_index]
+        # )
+
+        # self.states.var_smooth[time_step][expwithamp_index, exp_amplitude_index] = (
+        #     Cov_GMA(
+        #         self.states.mu_smooth[time_step][exp_amplitude_index],
+        #         self.states.mu_smooth[time_step][exp_index],
+        #         self.states.var_smooth[time_step][
+        #             exp_amplitude_index, exp_amplitude_index
+        #         ],
+        #         self.states.var_smooth[time_step][exp_index, exp_amplitude_index],
+        #     )
+        # )
+        # self.states.var_smooth[time_step][exp_amplitude_index, expwithamp_index] = (
+        #     self.states.var_smooth[time_step][expwithamp_index, exp_amplitude_index]
+        # )
+
+        # self.states.var_smooth[time_step][expwithamp_index, exp_index] = Cov_GMA(
+        #     self.states.mu_smooth[time_step][exp_amplitude_index],
+        #     self.states.mu_smooth[time_step][exp_index],
+        #     self.states.var_smooth[time_step][exp_amplitude_index, exp_index],
+        #     self.states.var_smooth[time_step][exp_index, exp_index],
+        # )
+        # self.states.var_smooth[time_step][exp_index, expwithamp_index] = (
+        #     self.states.var_smooth[time_step][expwithamp_index, exp_index]
+        # )
+
+        # self.states.var_smooth[time_step][expwithamp_index, expwithamp_index] = (
+        #     V_GMA(
+        #         self.states.mu_smooth[time_step][exp_amplitude_index],
+        #         self.states.mu_smooth[time_step][exp_index],
+        #         self.states.var_smooth[time_step][exp_amplitude_index, exp_index],
+        #         self.states.var_smooth[time_step][
+        #             exp_amplitude_index, exp_amplitude_index
+        #         ],
+        #         self.states.var_smooth[time_step][exp_index, exp_index],
+        #     )
+        # )
+        # print(self.states.var_smooth[time_step][exp_level_index, exp_level_index])
 
     def forecast(
         self, data: Dict[str, np.ndarray]

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import copy
 from scipy import stats
-from matplotlib import pyplot as plt, cm
+from matplotlib import pyplot as plt
 import sys
 import os
 from pathlib import Path
@@ -11,8 +11,6 @@ project_root = Path.cwd().resolve().parents[1]
 sys.path.append(str(project_root))
 from canari import DataProcess, plot_data
 
-
-# set plotting parameters
 plt.rcParams.update(
     {
         "pgf.texsystem": "pdflatex",
@@ -21,9 +19,6 @@ plt.rcParams.update(
         "pgf.rcfonts": False,
     }
 )
-
-# set plotting style
-# plt.style.use("seaborn-v0_8-colorblind")
 
 import matplotlib as mpl
 
@@ -35,87 +30,73 @@ mpl.rcParams.update(
 )
 
 df_raw = pd.read_csv(
-    "/Users/michelwu/Desktop/Exponential component/2650F162.CSV",
-    sep=";",  # Semicolon as delimiter
-    quotechar='"',  # Double quotes as text qualifier
-    engine="python",  # Python engine for complex cases
-    na_values=[""],  # Treat empty strings as NaN
-    skipinitialspace=True,  # Skip spaces after delimiter
+    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques6.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/2650F162.CSV",
+    sep=";",
+    quotechar='"',
+    engine="python",
+    na_values=[""],
+    skipinitialspace=True,
     encoding="ISO-8859-1",
-    parse_dates=["Date"],
-    index_col="Date",
+    # parse_dates=["Date"],
+    # index_col="Date",
+    parse_dates=["temps"],
+    index_col="temps",
 )
-df = df_raw["Deplacements cumulatif X (mm)"]
-df = df
+# df = df_raw["Deplacements cumulatif X (mm)"].astype(np.float32) + np.float32(5.0)
+df = df_raw["exponential"].astype(np.float32)
 df = df.iloc[:]
-print(len(df))
-
-
-# df = df_raw.iloc[1:,6]
-# time=pd.to_datetime(df_raw.iloc[1:,3])
-# df.index = time
-# df.index.name = "time"
-# df.columns = ["crack opening"]
-# df.head()
 
 fig = plt.subplots(figsize=(12, 3))
 plt.scatter(df.index, df.values, color="r")
-plt.title("Orginal data")
+plt.title("Original data")
 
-df = df.resample("M").mean()
-df.head()
-print(len(df))
+# df = df.resample("M").mean().astype(np.float32)
+
 
 fig = plt.subplots(figsize=(5, 3))
 plt.scatter(df.index, df.values, color="r", s=5)
 plt.ylabel("Data")
 plt.ylim(-6, 4)
-# plt.savefig("sample.pdf", bbox_inches="tight", pad_inches=0, transparent=True)
 
-
-M_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.exp(
-    -M_XEL - M_XET + 0.5 * (V_XEL + V_XET + 2 * Cov_XEL_XET)
+M_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.float32(
+    np.exp(-M_XEL - M_XET + 0.5 * (V_XEL + V_XET + 2 * Cov_XEL_XET))
 )
-V_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: (
-    (M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)) ** 2
-) * (np.exp(V_XEL + V_XET + 2 * Cov_XEL_XET) - 1)
-Cov_exp02test = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XELPrior: -(
-    M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
-) * (V_XELPrior)
-Cov_exp02 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: -(
-    M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
-) * (V_XEL)
-Cov_exp12 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: -(
-    M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
-) * (V_XET + Cov_XEL_XET)
-Cov_exp12test = (
-    lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XETtest, Cov_XEL_XETtest: -(
-        M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET)
-    )
-    * (V_XETtest + Cov_XEL_XETtest)
+V_exp = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.float32(
+    (M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET) ** 2)
+    * (np.exp(V_XEL + V_XET + 2 * Cov_XEL_XET) - 1)
+)
+Cov_exp02test = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XELPrior: np.float32(
+    -M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET) * V_XELPrior
+)
+Cov_exp02 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.float32(
+    -M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET) * V_XEL
+)
+Cov_exp12 = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET: np.float32(
+    -M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET) * (V_XET + Cov_XEL_XET)
+)
+Cov_exp12test = lambda M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET, V_XETtest, Cov_XEL_XETtest: np.float32(
+    -M_exp(M_XEL, V_XEL, M_XET, V_XET, Cov_XEL_XET) * (V_XETtest + Cov_XEL_XETtest)
 )
 
-# Fonction pour actualiser avec amplitude en plus
-
-M_GMA = lambda M_X1, M_X2, CovX1X2: M_X1 * M_X2 + CovX1X2
-Cov_GMA = lambda M_X1, M_X2, CovX1X3, CovX2X3: CovX1X3 * M_X2 + CovX2X3 * M_X1
-V_GMA = (
-    lambda M_X1, M_X2, CovX1X2, V_X1, V_X2: V_X1 * V_X2
+M_GMA = lambda M_X1, M_X2, CovX1X2: np.float32(M_X1 * M_X2 + CovX1X2)
+Cov_GMA = lambda M_X1, M_X2, CovX1X3, CovX2X3: np.float32(
+    CovX1X3 * M_X2 + CovX2X3 * M_X1
+)
+V_GMA = lambda M_X1, M_X2, CovX1X2, V_X1, V_X2: np.float32(
+    V_X1 * V_X2
     + CovX1X2**2
     + 2 * CovX1X2 * M_X1 * M_X2
     + V_X1 * M_X2**2
     + V_X2 * M_X1**2
 )
 
-# Fonction à approximer
+f = lambda X_A, X_EL: np.float32(X_A * (np.exp(-X_EL) - 1))
 
-f = lambda X_A, X_EL: X_A * (np.exp(-X_EL) - 1)
-
-
-# Initialisation
-
-M_X0 = np.array([[0], [0.005], [20]])
-V_X0 = np.array([[(0.2) ** 2, 0, 0], [0, (0.05) ** 2, 0], [0, 0, (3) ** 2]])
+M_X0 = np.array([[0.0], [0.03], [12]], dtype=np.float32)
+V_X0 = np.array(
+    [[(0.2) ** 2, 0, 0], [0, (0.04) ** 2, 0], [0, 0, (1) ** 2]], dtype=np.float32
+)
 
 M_Exp0 = np.array([M_exp(M_X0[0], V_X0[0, 0], M_X0[1], V_X0[1, 1], V_X0[1, 0]) - 1])
 V_Exp0 = np.array([V_exp(M_X0[0], V_X0[0, 0], M_X0[1], V_X0[1, 1], V_X0[1, 0]).item()])
@@ -185,7 +166,7 @@ A = np.array(
 
 C = np.array([0, 0, 0, 0, 1])
 
-R = 1**2
+R = 1e-5
 
 # Création des observations
 
@@ -390,6 +371,7 @@ Vexp_prior = [arr[4] for arr in V_Xlistediag_prior]
 # tliste_prior = tliste[:len(x_eLprior)]
 
 ##Smoother
+A_lin = A  # Sous-matrice pour le smoother (3x3)
 
 M_smooth_base = [None] * len(M_Xliste)
 V_smooth_base = [None] * len(V_Xliste)
@@ -758,4 +740,4 @@ plt.close()
 
 
 (plt.show())
-print(V_Xliste_prior)
+print(df)
