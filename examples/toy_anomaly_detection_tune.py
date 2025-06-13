@@ -65,6 +65,7 @@ def main(
                     look_back_len=param["look_back_len"],
                     num_features=2,
                     num_layer=1,
+                    inefer_len=24,
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
@@ -287,4 +288,7 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    main(
+        num_trial_optimization=1,
+        param_optimization=True,
+    )

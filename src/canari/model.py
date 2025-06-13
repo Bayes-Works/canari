@@ -183,7 +183,6 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
-        self.lstm_states = None
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -645,7 +644,7 @@ class Model:
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
         Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
         """
-        look_back_len = self.lstm_net.lstm_look_back_len
+        self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
         device = self.lstm_net.device
 
         dummy_mu_obs = np.array([np.nan], dtype=np.float32)
@@ -700,16 +699,23 @@ class Model:
         save_dict["states_name"] = self.states_name
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
+            if self.lstm_net.smooth:
+                save_dict["lstm_output_history"] = (
+                    self.lstm_net.smooth_look_back_mu,
+                    self.lstm_net.smooth_look_back_var,
+                )
 
         return save_dict
 
     @staticmethod
-    def load_dict(save_dict: dict):
+    def load_dict(save_dict: dict, use_smoothed_look_back: Optional[bool] = False):
         """
         Reconstruct a model instance from a saved dictionary.
 
         Args:
             save_dict (dict): Dictionary containing saved model structure and parameters.
+            use_smoothed_look_back (bool, optional): If True, uses the smoothed look-back
+                sequences from the saved dictionary. Defaults to False.
 
         Returns:
             Model: An instance of :class:`~canari.model.Model` generated from the input dictionary.
@@ -724,6 +730,10 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+            if model.lstm_net.smooth and use_smoothed_look_back:
+                model.lstm_output_history.mu, model.lstm_output_history.var = save_dict[
+                    "lstm_output_history"
+                ]
 
         return model
 
@@ -811,24 +821,23 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
+        # TODO: add it somewhere else in order not to run into problems with tune
+        # if self.lstm_net.smooth and smoothed_look_back is None:
+        #     mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
+        #     mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+        #     var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+        #     mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
+        #     var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
+        #     self.lstm_output_history.mu = mu_sequence
+        #     self.lstm_output_history.var = var_sequence
+        #     # save the smoothed look-back sequences
+        #     self.smooth_look_back_mu = mu_sequence
+        #     self.smooth_look_back_var = var_sequence
         if self.lstm_net.smooth:
-            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[:self.lstm_net.lstm_infer_len]
-            var_sequence = var_zo_smooth[:self.lstm_net.lstm_infer_len]
-            mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
-            var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
-            # plt.plot(mu_sequence, label="LSTM mu")
-            # plt.fill_between(
-            #     np.arange(len(mu_sequence)),
-            #     mu_sequence - np.sqrt(var_sequence),
-            #     mu_sequence + np.sqrt(var_sequence),
-            #     alpha=0.2,
-            #     label="LSTM var",
-            # )
-            # plt.legend()
-            # plt.show()
-            self.lstm_output_history.mu = mu_sequence
-            self.lstm_output_history.var = var_sequence
+            self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
+            self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+        else:
+            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def initialize_states_history(self):
         """
@@ -862,9 +871,8 @@ class Model:
         """
 
         if time_step == 0:
-            self.initialize_states_with_smoother_estimates()
+            self.initialize_states_with_smoother_estimates()  # TODO move to somewhere else
             if self.lstm_net:
-                # self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
                 lstm_states = self.lstm_net.get_lstm_states()
                 for key in lstm_states:
                     old_tuple = lstm_states[key]
@@ -1221,6 +1229,16 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
+        # TODO: test if it is optimal to place it here
+        if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
+            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
+            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+            mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
+            var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
+            self.lstm_net.smooth_look_back_mu = mu_sequence
+            self.lstm_net.smooth_look_back_var = var_sequence
+
         return self.states
 
     def lstm_train(
@@ -1269,7 +1287,7 @@ class Model:
         Examples:
             >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
-
+        # TODO check for a better intialzation that is not relient on epoch count
         if self.lstm_net.smooth and self._current_epoch == 0:
             self.lstm_net.num_samples = (
                 self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
@@ -1296,9 +1314,6 @@ class Model:
 
         # save lstm_states
         self.lstm_states = self.lstm_net.get_lstm_states()
-
-        # reset memory
-        self.set_memory(states=self.states, time_step=0)
 
         # TODO: to delete this internal count
         self._current_epoch += 1
