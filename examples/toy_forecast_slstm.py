@@ -16,7 +16,7 @@ linear_space = np.linspace(0, 2, num=len(df_raw))
 df_raw = df_raw.add(linear_space, axis=0)
 
 # remove first N rows
-N = 12
+N = 0
 df_raw = df_raw.iloc[N:]
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
@@ -50,7 +50,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.1
+sigma_v = 0.01
 model = Model(
     LocalTrend(),
     LstmNetwork(
@@ -81,15 +81,11 @@ if covariate:
     start_time = data_processor.get_time("train")[
         0
     ]  # Ensure start_time is a single timestamp
-    infer_len_start = start_time - pd.DateOffset(
-        hours=model.lstm_net.lstm_infer_len - 1
-    )
+    infer_len_start = start_time - pd.DateOffset(hours=model.lstm_net.lstm_infer_len)
 
     # generate look-back covariates
     look_back_cov = pd.DataFrame(
-        index=pd.date_range(
-            start=infer_len_start, end=start_time - pd.DateOffset(hours=1), freq="H"
-        )
+        index=pd.date_range(start=infer_len_start, end=start_time, freq="H")
     )
     look_back_cov["hour_of_day"] = look_back_cov.index.hour
     # look_back_cov['day_of_week'] = look_back_cov.index.dayofweek
@@ -108,8 +104,6 @@ for epoch in range(num_epoch):
         validation_data=validation_data,
         lookback_covariates=look_back_cov,
     )
-
-    main(model.lstm_net.lstm_infer_len - 1, observations=train_data["y"], epoch=epoch)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -138,15 +132,17 @@ for epoch in range(num_epoch):
 
     if model.stop_training:
         break
+    else:
+        model.set_memory(states=model.states, time_step=0)
 
-    # fig, ax = plot_states(
-    #     data_processor=data_processor,
-    #     states=model.states,
-    #     states_type="prior",
-    # )
-    # filename = f"saved_results/smoother#{epoch}.png"
-    # plt.savefig(filename)
-    # plt.close()
+    fig, ax = plot_states(
+        data_processor=data_processor,
+        states=model.states,
+        states_type="prior",
+    )
+    filename = f"saved_results/smoother#{epoch}.png"
+    plt.savefig(filename)
+    plt.close()
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
