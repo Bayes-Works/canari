@@ -50,9 +50,11 @@ lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
     num_layer=1,
+    infer_len=24,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    # smoother=False,
     model_noise=True,
 )
 
