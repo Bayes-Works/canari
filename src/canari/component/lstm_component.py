@@ -209,14 +209,21 @@ class LstmNetwork(BaseComponent):
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.num_covariates = self.num_features - 1
-        lstm_network.lstm_infer_len = self.infer_len
+        lstm_network.lstm_infer_len = self.infer_len * 2  # infers twice the length
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
-            lstm_network.to_device("cuda")
+            # TODO: remove this warning when SLSTM supports GPU
+            if self.smoother:
+                print("Warning: pytagi SLSTM does not support GPU. Resetting to CPU.")
+                lstm_network.set_threads(self.num_thread)
+            else:
+                lstm_network.to_device("cuda")
 
         if self.smoother:
             lstm_network.smooth = True
+            lstm_network.smooth_look_back_mu = None
+            lstm_network.smooth_look_back_var = None
         else:
             lstm_network.smooth = False
 
