@@ -62,6 +62,7 @@ lstm = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
+    smoother=False,
     # manual_seed=1,
 )
 ar = Autoregression(
@@ -157,6 +158,13 @@ pretrained_model = Model(
 
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+if pretrained_model.lstm_net.smooth:
+    pretrained_model.lstm_output_history.mu = model_dict[
+        "smooth_lstm_look_back_mu"
+    ]
+    pretrained_model.lstm_output_history.var = model_dict[
+        "smooth_lstm_look_back_var"
+    ]
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)
