@@ -26,10 +26,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 # SKF_std_transition_error_fix = 1e-4
 # SKF_norm_to_abnorm_prob_fix = 1e-4
 
-sigma_v_fix = 0.015519087402266298
-look_back_len_fix = 11
-SKF_std_transition_error_fix = 0.0006733112773884772
-SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
+sigma_v_fix = 0.006937912051061413
+look_back_len_fix = 10
+SKF_std_transition_error_fix = 0.00011047635352343857
+SKF_norm_to_abnorm_prob_fix = 0.004389777602761127
 
 
 def main(
@@ -280,7 +280,7 @@ def main(
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        states_type="smooth",
+        # states_type="smooth",
         states_to_plot=["level", "trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         standardization=False,
