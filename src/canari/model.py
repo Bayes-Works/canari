@@ -962,6 +962,7 @@ class Model:
         self,
         time_step: int,
         matrix_inversion_tol: Optional[float] = 1e-12,
+        tol_type: Optional[str] = "relative",  # relative of absolute
     ):
         """
         Apply RTS smoothing equations for a specity timestep. As a result of this function,
@@ -989,6 +990,7 @@ class Model:
             self.states.var_posterior[time_step],
             self.states.cov_states[time_step + 1],
             matrix_inversion_tol,
+            tol_type,
         )
 
     def forecast(
@@ -1126,6 +1128,7 @@ class Model:
     def smoother(
         self,
         matrix_inversion_tol: Optional[float] = 1e-12,
+        tol_type: Optional[str] = "relative",  # relative of absolute
     ) -> StatesHistory:
         """
         Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
@@ -1149,7 +1152,7 @@ class Model:
 
         num_time_steps = len(self.states.mu_smooth)
         for time_step in reversed(range(0, num_time_steps - 1)):
-            self.rts_smoother(time_step, matrix_inversion_tol)
+            self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
         return self.states
 
