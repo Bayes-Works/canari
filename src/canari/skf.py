@@ -750,7 +750,7 @@ class SKF:
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-            save_dict["lstm_output_history"] = (
+            save_dict["lstm_smooth_output_history"] = (
                 self.lstm_net.smooth_look_back_mu,
                 self.lstm_net.smooth_look_back_var,
             )
@@ -780,9 +780,9 @@ class SKF:
             norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
             if norm_model.lstm_net.smooth:
                 (
-                    norm_model.lstm_net.lstm_output_history.mu,
-                    norm_model.lstm_net.lstm_output_history.var,
-                ) = save_dict["lstm_output_history"]
+                    norm_model.lstm_output_history.mu,
+                    norm_model.lstm_output_history.var,
+                ) = save_dict["lstm_smooth_output_history"]
 
         # Create abnormal model
         ab_components = list(save_dict["abnorm_model"]["components"].values())
@@ -809,7 +809,7 @@ class SKF:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
-        data_process: Optional[DataProcess] = None,
+        data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component
@@ -853,7 +853,7 @@ class SKF:
             white_noise_decay,
             white_noise_max_std,
             white_noise_decay_factor,
-            data_processor=data_process,
+            data_processor=data_processor,
         )
 
     def early_stopping(
