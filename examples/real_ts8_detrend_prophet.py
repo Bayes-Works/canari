@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from prophet import Prophet
 from prophet.plot import add_changepoints_to_plot
 
-data_file = "./data/benchmark_data/test_5_data.csv"
+data_file = "./data/benchmark_data/test_8_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0]).dt.strftime('%Y-%m-%d %H:%M:%S')
 df_raw = df_raw.iloc[:, 1:]
@@ -37,8 +37,8 @@ axs[0].plot(df_detrend["y"], label="Detrended Data")
 # Plot a horizontal line at y=0
 axs[0].axhline(0, color='red', linestyle='--')
 axs[0].fill_between(df_detrend.index, min_value, max_value, color='red', alpha=0.1)
-axs[0].legend()
-axs[0].set_title("Prophet detrend: real TS5")
+axs[0].legend(loc='upper right')
+axs[0].set_title("Prophet detrend: real TS8")
 axs[1].plot(trend)
 axs[1].set_ylabel("Trend")
 axs[2].plot(seasonal)
