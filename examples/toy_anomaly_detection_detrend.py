@@ -81,6 +81,7 @@ local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
+    infer_len=24,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
@@ -120,7 +121,9 @@ std_validation_preds_optim = None
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, states) = model_lstm.lstm_train(
-        train_data=train_data, validation_data=validation_data
+        train_data=train_data,
+        validation_data=validation_data,
+        data_processor=data_processor,
     )
     model_lstm.set_memory(states=states, time_step=0)
 
@@ -161,6 +164,10 @@ print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
 # # Anomaly Detection
 skf.model["norm_norm"].lstm_net = model_lstm.lstm_net
 skf.lstm_net = model_lstm.lstm_net
+# Set the smoothed look-back for the LSTM network
+if model_lstm.lstm_net.smooth:
+    skf.lstm_output_history.mu = model_lstm.lstm_net.smooth_look_back_mu
+    skf.lstm_output_history.var = model_lstm.lstm_net.smooth_look_back_var
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother()
 

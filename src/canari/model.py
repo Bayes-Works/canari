@@ -279,7 +279,17 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_net.update_param = self._update_lstm_param
-            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if (
+                self.lstm_net.smooth_look_back_mu is not None
+                and self.lstm_net.smooth_look_back_var is not None
+            ):
+                self.lstm_output_history.set(
+                    mu=self.lstm_net.smooth_look_back_mu,
+                    var=self.lstm_net.smooth_look_back_var,
+                )
+            else:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            # TODO: check for better intialization
             self.lstm_net.num_samples = (
                 1  # dummy intialization until otherwise specified
             )
@@ -655,7 +665,7 @@ class Model:
 
         for i in range(self.lstm_net.lstm_infer_len - 1):
             if time_covariates is None:
-                dummy_covariates = [np.nan] * self.lstm_net.num_covariates
+                dummy_covariates = []
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, dummy_covariates
                 )
@@ -686,24 +696,54 @@ class Model:
         """
         Generate standardized look-back covariates for the LSTM by re-using
         Model._prepare_covariates_generation.
+        Supports both time covariates and lagged features, including periods before the first observation.
         """
-        # get split and initial covariate
+        # Get indices and look-back length
         train_idx, _, _ = data_processor.get_split_indices()
-        initial_cov = data_processor.data.values[
-            train_idx[0], data_processor.covariates_col
-        ]
-        # the LSTM infer length
-        infer_len = self.lstm_net.lstm_infer_len
-        # raw cyclic covariates (returns shape (infer_len+1, cov_dim))
-        raw_cov = self._prepare_covariates_generation(
-            initial_cov,
-            num_generated_samples=infer_len + 1,
-            time_covariates=data_processor.time_covariates,
-        )
-        # now standardize
-        mean = data_processor.scale_const_mean[data_processor.covariates_col]
-        std = data_processor.scale_const_std[data_processor.covariates_col]
-        return normalizer.standardize(raw_cov, mean, std)
+        lookback_len = self.lstm_net.lstm_infer_len + 1
+
+        # Gather covariate column names and count
+        cov_names = list(data_processor.data.columns[data_processor.covariates_col])
+        n_cov = len(cov_names)
+
+        # Initialize dummy array with NaNs
+        dummy = np.full((lookback_len, n_cov), np.nan, dtype=np.float32)
+
+        # --- Handle time covariates ---
+        time_covs = data_processor.time_covariates or []
+        for tc in time_covs:
+            if tc not in cov_names:
+                continue
+            col_idx = cov_names.index(tc)
+            init_val = data_processor.data[tc].iloc[train_idx[0]]
+            raw = self._prepare_covariates_generation(
+                init_val.reshape(1), num_generated_samples=lookback_len, time_covariates=[tc]
+            )
+            data_col_idx = data_processor.data.columns.get_loc(tc)
+            mu = data_processor.scale_const_mean[data_col_idx]
+            std = data_processor.scale_const_std[data_col_idx]
+            normed = normalizer.standardize(raw, mu, std)
+            dummy[:, col_idx] = normed[:, 0]
+
+        # --- Handle lagged features ---
+        for name in cov_names:
+            if "_lag" not in name:
+                continue
+            col_idx = cov_names.index(name)
+            hist_vals = data_processor.data[name].values
+            start = train_idx[0] - (lookback_len - 1)
+            end = train_idx[0] + 1
+            if start < 0:
+                pad = np.full(-start, np.nan, dtype=np.float32)
+                segment = np.concatenate([pad, hist_vals[:end]])
+            else:
+                segment = hist_vals[start:end]
+            data_col_idx = data_processor.data.columns.get_loc(name)
+            mu = data_processor.scale_const_mean[data_col_idx]
+            std = data_processor.scale_const_std[data_col_idx]
+            dummy[:, col_idx] = (segment - mu) / std
+
+        return dummy
 
     def get_dict(self) -> dict:
         """
@@ -724,7 +764,7 @@ class Model:
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
             if self.lstm_net.smooth:
-                save_dict["lstm_output_history"] = (
+                save_dict["lstm_smoothed_look_back"] = (
                     self.lstm_net.smooth_look_back_mu,
                     self.lstm_net.smooth_look_back_var,
                 )
@@ -732,7 +772,7 @@ class Model:
         return save_dict
 
     @staticmethod
-    def load_dict(save_dict: dict, use_smoothed_look_back: Optional[bool] = False):
+    def load_dict(save_dict: dict):
         """
         Reconstruct a model instance from a saved dictionary.
 
@@ -754,10 +794,11 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            if model.lstm_net.smooth and use_smoothed_look_back:
-                model.lstm_output_history.mu, model.lstm_output_history.var = save_dict[
-                    "lstm_output_history"
-                ]
+            if model.lstm_net.smooth:
+                (
+                    model.lstm_output_history.mu,
+                    model.lstm_output_history.var,
+                ) = save_dict["lstm_smoothed_look_back"]
 
         return model
 
@@ -1314,7 +1355,7 @@ class Model:
             )
 
         if self.lstm_net.smooth:
-            if data_processor is not None and data_processor.time_covariates:
+            if data_processor is not None and any(data_processor.covariates_col):
                 # Generate standardized look-back covariates
                 lookback_covariates = self._generate_look_back_covariates(
                     data_processor
