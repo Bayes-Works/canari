@@ -71,8 +71,6 @@ class LstmOutputHistory:
         Raises:
             ValueError: If the shapes of `mu` and `var` do not match the initialized window size.
         """
-        if mu.shape != self.mu.shape or var.shape != self.var.shape:
-            raise ValueError("Shapes of `mu` and `var` must match the initialized window size.")
         self.mu = mu.astype(np.float32)
         self.var = var.astype(np.float32)
 
