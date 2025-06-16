@@ -20,20 +20,20 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters:
-sigma_v_fix = 0.04745968073623808
-look_back_len_fix = 51
-SKF_std_transition_error_fix = 3.288056287040139e-05
-SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
+# sigma_v_fix = 0.04745968073623808
+# look_back_len_fix = 51
+# SKF_std_transition_error_fix = 3.288056287040139e-05
+# SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
 
-# sigma_v_fix = 0.03981217904013953
-# look_back_len_fix = 22
-# SKF_std_transition_error_fix = 2.1829253939567905e-4s
-# SKF_norm_to_abnorm_prob_fix = 1.7128781359364095e-5
+sigma_v_fix = 0.03981217904013953
+look_back_len_fix = 22
+SKF_std_transition_error_fix = 2.1829253939567905e-4
+SKF_norm_to_abnorm_prob_fix = 1.7128781359364095e-5
 
 
 def main(
     num_trial_optimization: int = 20,
-    param_optimization: bool = False,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
 ):
     # Read data
