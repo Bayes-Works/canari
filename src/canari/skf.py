@@ -379,6 +379,19 @@ class SKF:
             None
         """
 
+        self.model["norm_abnorm"].states.mu_smooth[-1] = (
+            self.model["abnorm_abnorm"].states.mu_posterior[-1].copy()
+        )
+        self.model["norm_abnorm"].states.var_smooth[-1] = (
+            self.model["abnorm_abnorm"].states.var_posterior[-1].copy()
+        )
+        self.model["abnorm_norm"].states.mu_smooth[-1] = (
+            self.model["norm_norm"].states.mu_posterior[-1].copy()
+        )
+        self.model["abnorm_norm"].states.var_smooth[-1] = (
+            self.model["norm_norm"].states.var_posterior[-1].copy()
+        )
+
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
             self.model["norm_norm"].states.var_posterior[-1],
@@ -710,7 +723,7 @@ class SKF:
         self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
-            self.marginal_prob["norm"] = self.norm_model_prior_prob
+            self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
             self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
@@ -1013,7 +1026,8 @@ class SKF:
     def rts_smoother(
         self,
         time_step: int,
-        matrix_inversion_tol: Optional[float] = 1e-4,
+        matrix_inversion_tol: Optional[float] = 1e-3,
+        tol_type: Optional[str] = "relative",  # relative of absolute
     ):
         """
         Smoother for the Switching Kalman filter at a given time step.
@@ -1034,7 +1048,7 @@ class SKF:
         epsilon = 0 * 1e-20
         for transition_model in self.model.values():
             transition_model.rts_smoother(
-                time_step, matrix_inversion_tol=matrix_inversion_tol
+                time_step, matrix_inversion_tol=matrix_inversion_tol, tol_type=tol_type
             )
 
         joint_transition_prob = self._transition()
@@ -1081,10 +1095,10 @@ class SKF:
 
         self.smooth_marginal_prob_history["norm"][time_step] = self.marginal_prob[
             "norm"
-        ]
+        ].copy()
         self.smooth_marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
             "abnorm"
-        ]
+        ].copy()
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -1112,10 +1126,10 @@ class SKF:
                 transit = f"{origin_state}_{arrival_state}"
                 self.model[transit].states.mu_smooth[time_step] = mu_states_marginal[
                     arrival_state
-                ]
+                ].copy()
                 self.model[transit].states.var_smooth[time_step] = var_states_marginal[
                     arrival_state
-                ]
+                ].copy()
 
     def filter(
         self,
@@ -1184,6 +1198,7 @@ class SKF:
     def smoother(
         self,
         matrix_inversion_tol: Optional[float] = 1e-4,
+        tol_type: Optional[str] = "relative",  # relative of absolute
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman smoother over an entire time series data.
@@ -1209,7 +1224,7 @@ class SKF:
         self.smooth_marginal_prob_history = copy.copy(self.filter_marginal_prob_history)
         self._initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
-            self.rts_smoother(time_step, matrix_inversion_tol)
+            self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
         return (
             np.array(self.smooth_marginal_prob_history["abnorm"]),
