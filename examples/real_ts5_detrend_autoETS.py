@@ -1,0 +1,70 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+
+# # Read data
+data_file = "./data/benchmark_data/test_5_data.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
+df_raw.index = time_series
+df_raw.index.name = "Period"
+df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
+df_raw = df_raw.iloc[:, :-3]
+df_raw = df_raw.interpolate()
+
+# Convert to <class 'pandas.core.series.Series'>
+y = df_raw.squeeze()  # Convert DataFrame to Series
+y.index.freq = 'W-SUN'
+
+print(y)
+print(type(y))
+
+# Fit ETS model with automatic configuration
+model = ETSModel(
+    y,
+    error='add',
+    trend='add',
+    seasonal='add',
+    seasonal_periods=52,
+    bounds = {
+        "smoothing_level": (0.02, 0.02),
+        "smoothing_trend": (1e-10, 1e-10),
+        # "smoothing_seasonal": (0.1, 0.9),
+        # "damping_trend": (1e-3, 1e-3),
+    },
+    initialization_method="heuristic",
+    damped_trend=True
+)
+fit = model.fit()
+
+# Extract components
+trend = fit.level 
+# trend = fit.slope if fit.model.trend else np.zeros_like(level)
+seasonal = fit.season
+fittedvalues = fit.fittedvalues
+residual = fit.resid
+# trend = fittedvalues.values - (seasonal.values + residual.values)
+
+
+df_detrend = df_raw.copy()
+df_detrend.values = df_raw.values - trend.values.reshape(-1, 1)
+# df_detrend["values"] = seasonal.values + residual.values
+max_value = df_detrend["values"].max()
+min_value = df_detrend["values"].min()
+
+fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
+axs[0].plot(df_raw["values"], label="Raw Data")
+axs[0].plot(df_detrend["values"], label="Detrended Data")
+axs[0].axhline(0, color='red', linestyle='--')
+axs[0].fill_between(df_detrend.index, min_value, max_value, color='red', alpha=0.1)
+axs[0].legend()
+axs[0].set_title("Exponential smoothing detrending")
+axs[1].plot(trend)
+axs[1].set_ylabel("Trend")
+axs[2].plot(seasonal)
+axs[2].set_ylabel("Seasonal")
+axs[3].plot(residual)
+axs[3].set_ylabel("Residual")
+plt.show()
