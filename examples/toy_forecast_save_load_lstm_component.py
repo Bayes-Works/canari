@@ -54,6 +54,7 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
         # manual_seed=3,
+        smoother=False,  # Use smoother if needed
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -110,10 +111,12 @@ model2 = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=1,
+        infer_len=24,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         load_lstm_net=params_path,  # Load the pre-trained LSTM network
+        smoother=False,  # Use smoother if needed
     ),
     WhiteNoise(std_error=sigma_v),
 )
