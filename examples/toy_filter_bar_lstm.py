@@ -12,7 +12,12 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, Autoregression, BoundedAutoregression
+from canari.component import (
+    LocalTrend,
+    LstmNetwork,
+    Autoregression,
+    BoundedAutoregression,
+)
 
 
 ###########################
@@ -128,9 +133,9 @@ print(f"Validation MSE: {model.early_stop_metric:.4f}")
 ###########################
 # Reload pretrained model
 # Load learned parameters from the saved trained model
-phi_index = model_dict["phi_index"]
-W2bar_index = model_dict["W2bar_index"]
-autoregression_index = model_dict["autoregression_index"]
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
 mu_W2bar_learn = model_dict["mu_states_optimal"][W2bar_index].item()
 phi_AR_learn = model_dict["mu_states_optimal"][phi_index].item()
 mu_AR = model_dict["mu_states"][autoregression_index].item()
@@ -157,6 +162,11 @@ pretrained_model = Model(
 
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+if pretrained_model.lstm_net.smooth:
+    (
+        pretrained_model.lstm_net.lstm_output_history.mu,
+        pretrained_model.lstm_net.lstm_output_history.var,
+    ) = model_dict["lstm_smoothed_look_back"]
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)
@@ -197,14 +207,14 @@ fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
 plt.show()
 
 # # Plotting results from pre-trained model
-fig, axes=plot_states(
+fig, axes = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type="smooth",
     standardization=True,
 )
 fig.suptitle("Smoother States")
-fig, axes=plot_states(
+fig, axes = plot_states(
     data_processor=data_processor,
     states=pretrained_model.states,
     states_type="posterior",

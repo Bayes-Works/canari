@@ -91,7 +91,7 @@ std_validation_preds_optim = None
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
-        train_data=train_data, validation_data=validation_data
+        train_data=train_data, validation_data=validation_data, data_processor=data_processor
     )
 
     # # Unstandardize the predictions
@@ -161,7 +161,7 @@ plt.show()
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    states_type="prior",
+    states_type="smooth",
     states_to_plot=["level", "trend", "lstm", "white noise"],
     model_prob=marginal_abnorm_prob_plot,
     # standardization=True,

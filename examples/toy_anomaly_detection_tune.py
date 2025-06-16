@@ -202,7 +202,7 @@ def main(
 
     # Parameter optimization for SKF
     def initialize_skf(skf_param_space, model_param: dict):
-        norm_model = Model.load_dict(model_param, use_smoothed_look_back=True)
+        norm_model = Model.load_dict(model_param)
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(),
@@ -299,6 +299,6 @@ def main(
 
 if __name__ == "__main__":
     main(
-        num_trial_optimization=1,
+        num_trial_optimization=20,
         param_optimization=True,
     )
