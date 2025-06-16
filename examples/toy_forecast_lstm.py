@@ -100,7 +100,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
+model.load_dict(model_optim_dict, use_smoothed_look_back=False)
 model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(
     states=states_optim,

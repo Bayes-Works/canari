@@ -46,7 +46,7 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
-        infer_len=24,  # inferred length before first step
+        infer_len=24,  # corresponds to one period
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
@@ -125,8 +125,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
-model.lstm_net.set_lstm_states(lstm_optim_states)
+model.load_dict(model_optim_dict, use_smoothed_look_back=False)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,

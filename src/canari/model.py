@@ -183,7 +183,6 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
-        self.lstm_states = None  # LSTM states for forecasting
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -700,14 +699,14 @@ class Model:
         """
         # Get indices and look-back length
         train_idx, _, _ = data_processor.get_split_indices()
-        lookback_len = self.lstm_net.lstm_infer_len + 1
+        inferred_len = self.lstm_net.lstm_infer_len
 
         # Gather covariate column names and count
         cov_names = list(data_processor.data.columns[data_processor.covariates_col])
         n_cov = len(cov_names)
 
         # Initialize dummy array with NaNs
-        dummy = np.full((lookback_len, n_cov), np.nan, dtype=np.float32)
+        dummy = np.full((inferred_len, n_cov), np.nan, dtype=np.float32)
 
         # --- Handle time covariates ---
         time_covs = data_processor.time_covariates or []
@@ -717,7 +716,7 @@ class Model:
             col_idx = cov_names.index(tc)
             init_val = data_processor.data[tc].iloc[train_idx[0]]
             raw = self._prepare_covariates_generation(
-                init_val.reshape(1), num_generated_samples=lookback_len, time_covariates=[tc]
+                init_val.reshape(1), num_generated_samples=inferred_len, time_covariates=[tc]
             )
             data_col_idx = data_processor.data.columns.get_loc(tc)
             mu = data_processor.scale_const_mean[data_col_idx]
@@ -726,12 +725,13 @@ class Model:
             dummy[:, col_idx] = normed[:, 0]
 
         # --- Handle lagged features ---
+        # TODO: how to handle laggs
         for name in cov_names:
             if "_lag" not in name:
                 continue
             col_idx = cov_names.index(name)
             hist_vals = data_processor.data[name].values
-            start = train_idx[0] - (lookback_len - 1)
+            start = train_idx[0] - (inferred_len - 1)
             end = train_idx[0] + 1
             if start < 0:
                 pad = np.full(-start, np.nan, dtype=np.float32)
@@ -772,7 +772,7 @@ class Model:
         return save_dict
 
     @staticmethod
-    def load_dict(save_dict: dict):
+    def load_dict(save_dict: dict, use_smoothed_look_back: bool = True):
         """
         Reconstruct a model instance from a saved dictionary.
 
@@ -794,7 +794,7 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            if model.lstm_net.smooth:
+            if model.lstm_net.smooth and use_smoothed_look_back:
                 (
                     model.lstm_output_history.mu,
                     model.lstm_output_history.var,
@@ -1282,7 +1282,7 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
-        # TODO: test if it is optimal to place it here
+        # TODO: find a better condtion to check if smoothing is needed
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
@@ -1301,7 +1301,6 @@ class Model:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
-        lookback_covariates: Optional[List[str]] = None,
         data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
@@ -1368,12 +1367,10 @@ class Model:
 
         self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        self.lstm_states = self.lstm_net.get_lstm_states()
 
         # Aplly smoother on the training set
         self.smoother()
 
-        # TODO: to delete this internal count
         self._current_epoch += 1
 
         return (
