@@ -948,8 +948,6 @@ class SKF:
         var_states_transit = self._transition()
 
         if self.lstm_net:
-            print("LSTM output history mu: {}".format(self.lstm_output_history.mu))
-            print("LSTM output history var: {}".format(self.lstm_output_history.var))
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, input_covariates
             )
@@ -1184,11 +1182,6 @@ class SKF:
         self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
-            print(
-                "Processing time step {} of {}".format(
-                    len(mu_obs_preds) + 1, len(data["y"])
-                )
-            )
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
 
