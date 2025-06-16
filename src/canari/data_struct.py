@@ -25,6 +25,7 @@ class LstmOutputHistory:
         >>> lstm_history = LstmOutputHistory()
         >>> lstm_history.initialize(look_back_len=10)
         >>> lstm_history.update(mu_lstm=np.array([0.5]), var_lstm=np.array([0.2]))
+        >>> lstm_history.set(mu=np.array([0.1, 0.2, 0.3]), var=np.array([0.01, 0.02, 0.03]))
 
     Attributes:
         mu (np.ndarray): Rolling array storing the LSTM mean outputs.
@@ -59,6 +60,22 @@ class LstmOutputHistory:
         self.var = np.roll(self.var, -1)
         self.mu[-1] = mu_lstm.item()
         self.var[-1] = var_lstm.item()
+
+    def set(self, mu: np.ndarray, var: np.ndarray):
+        """
+        Set the entire rolling window directly with new values for `mu` and `var`.
+
+        Args:
+            mu (np.ndarray): Array of mean values to set.
+            var (np.ndarray): Array of variance values to set.
+
+        Raises:
+            ValueError: If the shapes of `mu` and `var` do not match the initialized window size.
+        """
+        if mu.shape != self.mu.shape or var.shape != self.var.shape:
+            raise ValueError("Shapes of `mu` and `var` must match the initialized window size.")
+        self.mu = mu.astype(np.float32)
+        self.var = var.astype(np.float32)
 
 
 @dataclass
