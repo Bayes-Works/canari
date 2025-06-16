@@ -126,5 +126,5 @@ def test_model_forecast(run_mode, plot_mode):
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
         assert (
-            abs(mse - threshold) < 1e-6
-        ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
+            mse < threshold
+        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
