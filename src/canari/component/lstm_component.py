@@ -82,6 +82,7 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
+        load_lstm_look_back: Optional[tuple] = None,
         model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
@@ -99,6 +100,7 @@ class LstmNetwork(BaseComponent):
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
+        self.load_lstm_look_back = load_lstm_look_back
         self.model_noise = model_noise
         self._mu_states = mu_states
         self._var_states = var_states
@@ -237,8 +239,16 @@ class LstmNetwork(BaseComponent):
 
         if self.smoother:
             lstm_network.smooth = True
-            lstm_network.smooth_look_back_mu = None
-            lstm_network.smooth_look_back_var = None
+            if self.load_lstm_look_back is not None:
+                lstm_network.smooth_look_back_mu = np.array(
+                    self.load_lstm_look_back[0], dtype=np.float32
+                )
+                lstm_network.smooth_look_back_var = np.array(
+                    self.load_lstm_look_back[1], dtype=np.float32
+                )
+            else:
+                lstm_network.smooth_look_back_mu = None
+                lstm_network.smooth_look_back_var = None
         else:
             lstm_network.smooth = False
 
