@@ -326,12 +326,12 @@ class GMA(object):
             + 2 * self.mu[index1] * self.mu[index2] * self.var[index1][index2]
             + self.var[index1][index1] * self.mu[index2] ** 2
             + self.var[index2][index2] * self.mu[index1] ** 2
-        )
+        ).item()
         for i in range(len(self.mu)):
             cov_i = (
                 self.var[i][index1] * self.mu[index2]
                 + self.var[i][index2] * self.mu[index1]
-            )
+            ).item()
             GMA_var[i][-1] = cov_i
             GMA_var[-1][i] = cov_i
         self.mu = GMA_mu
