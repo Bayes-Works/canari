@@ -58,6 +58,7 @@ var_W2bar_prior = 1e4
 lstm = LstmNetwork(
     look_back_len=52,
     num_features=2,
+    infer_len=52,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
