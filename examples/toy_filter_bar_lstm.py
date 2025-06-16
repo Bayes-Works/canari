@@ -63,6 +63,7 @@ var_W2bar_prior = 1e4
 lstm = LstmNetwork(
     look_back_len=52,
     num_features=2,
+    infer_len=52,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
@@ -93,6 +94,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     mu_validation_preds, std_validation_preds, states = model.lstm_train(
         train_data=train_data,
         validation_data=val_data,
+        data_processor=data_processor,
     )
     model.set_memory(states=states, time_step=0)
 

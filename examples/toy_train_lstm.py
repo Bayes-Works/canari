@@ -46,15 +46,22 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
+        infer_len=24,  # inferred length before first step
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=235,
+        manual_seed=1,
+        # smoother=False,
     ),
     WhiteNoise(std_error=sigma_v),
 )
 
 model.auto_initialize_baseline_states(train_data["y"][0:24])
+
+if model.lstm_net.smooth:
+    model.lstm_net.num_samples = (
+        model.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+    )
 
 # Training
 for epoch in range(num_epoch):
@@ -63,12 +70,21 @@ for epoch in range(num_epoch):
     model.white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
 
     # filter on train data
+    model.lstm_net.train()
+
+    # warm-up for infer_len steps
+    if model.lstm_net.smooth:
+        if data_processor is not None and data_processor.time_covariates:
+            # Generate standardized look-back covariates
+            lookback_covariates = model._generate_look_back_covariates(data_processor)
+            model._store_initial_lookback(lookback_covariates)
+        else:
+            model._store_initial_lookback()
+
     model.filter(train_data, train_lstm=True)
 
-    # smooth on train data
-    model.smoother()
-
     # forecast on the validation set
+    model.lstm_net.eval()
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
     # Unstandardize the predictions
@@ -97,6 +113,10 @@ for epoch in range(num_epoch):
         model_optim_dict = model.get_dict()
         lstm_optim_states = model.lstm_net.get_lstm_states()
 
+    # smooth on train data
+    model.smoother()
+
+    # reset the memory to smoothed states
     model.set_memory(states=model.states, time_step=0)
     if model.stop_training:
         break
