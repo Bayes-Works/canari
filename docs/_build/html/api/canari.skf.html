@@ -159,6 +159,7 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
@@ -412,8 +413,6 @@ used to model an abnormal one. At each time step, SKF estimates the probability 
 <span class="go">        abnorm_model=abnormal_model,</span>
 <span class="go">        std_transition_error=1e-4,</span>
 <span class="go">        norm_to_abnorm_prob=1e-4,</span>
-<span class="go">        abnorm_to_norm_prob=1e-1,</span>
-<span class="go">        norm_model_prior_prob=0.99,</span>
 <span class="go">    )</span>
 </pre></div>
 </div>
@@ -989,7 +988,7 @@ deviation each epoch. Defaults to 0.9.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.rts_smoother">
-<span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
 <dd><p>Smoother for the Switching Kalman filter at a given time step.</p>
 <p>Recall <a class="reference internal" href="canari.common.html#canari.common.rts_smoother" title="canari.common.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> for all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
 <p>This function is used at the one-time-step level.</p>
