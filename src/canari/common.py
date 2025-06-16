@@ -215,7 +215,6 @@ def rts_smoother(
 def prepare_lstm_input(
     lstm_output_history: LstmOutputHistory,
     input_covariates: np.ndarray,
-    learn_covariates: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Prepare LSTM input by concatenating past LSTM outputs with current input covariates.
@@ -229,14 +228,9 @@ def prepare_lstm_input(
     """
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
-    if learn_covariates:
-        var_lstm_input = np.concatenate(
-            (lstm_output_history.var, np.ones(len(input_covariates), dtype=np.float32))
-        )
-    else:
-        var_lstm_input = np.concatenate(
-            (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float32))
-        )
+    var_lstm_input = np.concatenate(
+        (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float32))
+    )
     return np.float32(mu_lstm_input), np.float32(var_lstm_input)
 
 

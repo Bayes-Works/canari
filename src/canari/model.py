@@ -183,6 +183,7 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_states = None  # LSTM states for forecasting
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -656,7 +657,7 @@ class Model:
             if time_covariates is None:
                 dummy_covariates = [np.nan] * self.lstm_net.num_covariates
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, dummy_covariates, True
+                    self.lstm_output_history, dummy_covariates
                 )
             else:
                 dummy_covariates = time_covariates[i]
@@ -680,6 +681,29 @@ class Model:
             self.lstm_net.step()
 
             self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
+
+    def _generate_look_back_covariates(self, data_processor):
+        """
+        Generate standardized look-back covariates for the LSTM by re-using
+        Model._prepare_covariates_generation.
+        """
+        # get split and initial covariate
+        train_idx, _, _ = data_processor.get_split_indices()
+        initial_cov = data_processor.data.values[
+            train_idx[0], data_processor.covariates_col
+        ]
+        # the LSTM infer length
+        infer_len = self.lstm_net.lstm_infer_len
+        # raw cyclic covariates (returns shape (infer_len+1, cov_dim))
+        raw_cov = self._prepare_covariates_generation(
+            initial_cov,
+            num_generated_samples=infer_len + 1,
+            time_covariates=data_processor.time_covariates,
+        )
+        # now standardize
+        mean = data_processor.scale_const_mean[data_processor.covariates_col]
+        std = data_processor.scale_const_std[data_processor.covariates_col]
+        return normalizer.standardize(raw_cov, mean, std)
 
     def get_dict(self) -> dict:
         """
@@ -821,22 +845,10 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
-        # TODO: add it somewhere else in order not to run into problems with tune
-        # if self.lstm_net.smooth and smoothed_look_back is None:
-        #     mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-        #     mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
-        #     var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
-        #     mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
-        #     var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
-        #     self.lstm_output_history.mu = mu_sequence
-        #     self.lstm_output_history.var = var_sequence
-        #     # save the smoothed look-back sequences
-        #     self.smooth_look_back_mu = mu_sequence
-        #     self.smooth_look_back_var = var_sequence
         if self.lstm_net.smooth:
             self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
             self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
-        else:
+        elif self.lstm_net:
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def initialize_states_history(self):
@@ -871,7 +883,7 @@ class Model:
         """
 
         if time_step == 0:
-            self.initialize_states_with_smoother_estimates()  # TODO move to somewhere else
+            self.initialize_states_with_smoother_estimates()
             if self.lstm_net:
                 lstm_states = self.lstm_net.get_lstm_states()
                 for key in lstm_states:
@@ -1249,6 +1261,7 @@ class Model:
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
         lookback_covariates: Optional[List[str]] = None,
+        data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1301,19 +1314,23 @@ class Model:
             )
 
         if self.lstm_net.smooth:
-            if lookback_covariates is not None:
+            if data_processor is not None and data_processor.time_covariates:
+                # Generate standardized look-back covariates
+                lookback_covariates = self._generate_look_back_covariates(
+                    data_processor
+                )
                 self._store_initial_lookback(lookback_covariates)
             else:
                 self._store_initial_lookback()
 
         self.filter(train_data)
-        self.smoother()
 
         self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-
-        # save lstm_states
         self.lstm_states = self.lstm_net.get_lstm_states()
+
+        # Aplly smoother on the training set
+        self.smoother()
 
         # TODO: to delete this internal count
         self._current_epoch += 1
