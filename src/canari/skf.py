@@ -362,6 +362,9 @@ class SKF:
         Returns:
             None
         """
+        # if "acceleration" in self.states_name:
+        #     index_acc = self.states_name.index("acceleration")
+        #     self.model["norm_norm"].var_states[index_acc, index_acc] = 1e-10
 
         for transition_model in self.model.values():
             transition_model.set_states(
@@ -378,6 +381,19 @@ class SKF:
         Returns:
             None
         """
+
+        self.model["norm_abnorm"].states.mu_smooth[-1] = (
+            self.model["abnorm_abnorm"].states.mu_posterior[-1].copy()
+        )
+        self.model["norm_abnorm"].states.var_smooth[-1] = (
+            self.model["abnorm_abnorm"].states.var_posterior[-1].copy()
+        )
+        self.model["abnorm_norm"].states.mu_smooth[-1] = (
+            self.model["norm_norm"].states.mu_posterior[-1].copy()
+        )
+        self.model["abnorm_norm"].states.var_smooth[-1] = (
+            self.model["norm_norm"].states.var_posterior[-1].copy()
+        )
 
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
             self.model["norm_norm"].states.mu_posterior[-1],
@@ -445,9 +461,9 @@ class SKF:
                     transition_likelihood[transit] = np.mean(
                         np.exp(
                             metric.log_likelihood(
-                                mu_pred_transit[transit] + noise,
-                                obs,
-                                (var_pred_transit[transit] - var_obs_error) ** 0.5,
+                                prediction=mu_pred_transit[transit] + noise,
+                                observation=obs,
+                                std=(var_pred_transit[transit] - var_obs_error) ** 0.5,
                             )
                         )
                     )
@@ -455,9 +471,9 @@ class SKF:
                 for transit in transition_likelihood:
                     transition_likelihood[transit] = np.exp(
                         metric.log_likelihood(
-                            mu_pred_transit[transit],
-                            obs,
-                            var_pred_transit[transit] ** 0.5,
+                            prediction=mu_pred_transit[transit],
+                            observation=obs,
+                            std=var_pred_transit[transit] ** 0.5,
                         )
                     )
         return transition_likelihood
@@ -540,6 +556,10 @@ class SKF:
             )
         )
 
+        var_states_marginal["norm"] = (
+            var_states_marginal["norm"] + var_states_marginal["norm"].T
+        ) / 2
+
         # Retrieve states for abnorm mixture
         mu_abnorm_1 = mu_states_transit[abnorm_keys[0]]
         var_abnorm_1 = var_states_transit[abnorm_keys[0]]
@@ -556,6 +576,9 @@ class SKF:
                 self.transition_coef[abnorm_keys[1]],
             )
         )
+        var_states_marginal["abnorm"] = (
+            var_states_marginal["abnorm"] + var_states_marginal["abnorm"].T
+        ) / 2
 
         # Combine the two final distributions
         mu_states_combined, var_states_combined = common.gaussian_mixture(
@@ -566,6 +589,7 @@ class SKF:
             var_states_marginal["abnorm"],
             self.marginal_prob["abnorm"],
         )
+        var_states_combined = (var_states_combined + var_states_combined.T) / 2
 
         return (
             mu_states_combined,
@@ -710,7 +734,7 @@ class SKF:
         self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
-            self.marginal_prob["norm"] = self.norm_model_prior_prob
+            self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
             self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
     def get_dict(self) -> dict:
@@ -939,8 +963,6 @@ class SKF:
             ) = transition_model.forward(
                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
-            # if np.isnan(mu_pred_transit[transit]):
-            #     check = 1
 
         self.transition_coef = self._estimate_transition_coef(
             obs,
@@ -1002,7 +1024,8 @@ class SKF:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
                 self.model[transit]._set_posterior_states(
-                    mu_states_marginal[origin_state], var_states_marginal[origin_state]
+                    mu_states_marginal[origin_state],
+                    var_states_marginal[origin_state],
                 )
 
         self.mu_states_posterior = mu_states_posterior
@@ -1013,7 +1036,7 @@ class SKF:
     def rts_smoother(
         self,
         time_step: int,
-        matrix_inversion_tol: Optional[float] = 1e-4,
+        matrix_inversion_tol: Optional[float] = 1e-3,
     ):
         """
         Smoother for the Switching Kalman filter at a given time step.
@@ -1081,10 +1104,10 @@ class SKF:
 
         self.smooth_marginal_prob_history["norm"][time_step] = self.marginal_prob[
             "norm"
-        ]
+        ].copy()
         self.smooth_marginal_prob_history["abnorm"][time_step] = self.marginal_prob[
             "abnorm"
-        ]
+        ].copy()
 
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
@@ -1112,10 +1135,10 @@ class SKF:
                 transit = f"{origin_state}_{arrival_state}"
                 self.model[transit].states.mu_smooth[time_step] = mu_states_marginal[
                     arrival_state
-                ]
+                ].copy()
                 self.model[transit].states.var_smooth[time_step] = var_states_marginal[
                     arrival_state
-                ]
+                ].copy()
 
     def filter(
         self,

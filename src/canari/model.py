@@ -889,6 +889,8 @@ class Model:
                 mu_states_prior, var_states_prior
             )
 
+        var_states_prior = (var_states_prior + var_states_prior.T) / 2
+
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
         self.mu_obs_predict = mu_obs_pred
@@ -934,6 +936,7 @@ class Model:
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
         mu_states_posterior = self.mu_states_prior + delta_mu_states
         var_states_posterior = self.var_states_prior + delta_var_states
+        var_states_posterior = (var_states_posterior + var_states_posterior.T) / 2
 
         if "autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = (
@@ -948,6 +951,7 @@ class Model:
                 mu_states_posterior, var_states_posterior
             )
 
+        var_states_posterior = (var_states_posterior + var_states_posterior.T) / 2
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
