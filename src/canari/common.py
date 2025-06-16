@@ -158,6 +158,7 @@ def rts_smoother(
     var_states_posterior: np.ndarray,
     cross_cov_states: np.ndarray,
     matrix_inversion_tol: Optional[float] = 1e-12,
+    tol_type: Optional[str] = "relative",  # relative of absolute
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Rauch-Tung-Striebel (RTS) smoother.
@@ -181,22 +182,24 @@ def rts_smoother(
                 - **var_states_smooth** (np.ndarray):
                     Updated smoothed covariance matrix.
     """
-    # jcb = cross_cov_states @ np.linalg.pinv(
-    #     var_states_prior, rcond=matrix_inversion_tol
-    # )
 
-    left_singular_vectors, singular_values, right_singular_vectors_trans = (
-        np.linalg.svd(var_states_prior)
-    )
-    inverse_singular_values = np.array(
-        [1 / sv if sv > matrix_inversion_tol else 0 for sv in singular_values]
-    )
-    var_states_prior_pinv = (
-        right_singular_vectors_trans.T
-        @ np.diag(inverse_singular_values)
-        @ left_singular_vectors.T
-    )
-    jcb = cross_cov_states @ var_states_prior_pinv
+    if tol_type == "absolute":
+        left_singular_vectors, singular_values, right_singular_vectors_trans = (
+            np.linalg.svd(var_states_prior)
+        )
+        inverse_singular_values = np.array(
+            [1 / sv if sv > matrix_inversion_tol else 0 for sv in singular_values]
+        )
+        var_states_prior_pinv = (
+            right_singular_vectors_trans.T
+            @ np.diag(inverse_singular_values)
+            @ left_singular_vectors.T
+        )
+        jcb = cross_cov_states @ var_states_prior_pinv
+    elif tol_type == "relative":
+        jcb = cross_cov_states @ np.linalg.pinv(
+            var_states_prior, rcond=matrix_inversion_tol
+        )
 
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
