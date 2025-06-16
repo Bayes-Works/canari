@@ -103,6 +103,8 @@ def forward(
         mu_states_prior[lstm_indice] = mu_lstm_pred.item()
         var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
 
+    var_states_prior = (var_states_prior + var_states_prior.T) / 2
+
     mu_obs_predict, var_obs_predict = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix
     )
@@ -198,14 +200,15 @@ def rts_smoother(
     )
     jcb = cross_cov_states @ var_states_prior_pinv
 
-    mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
-    var_states_smooth = (
+    _mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
+    _var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
+    _var_states_smooth = (_var_states_smooth + _var_states_smooth.T) / 2
 
     return (
-        np.float32(mu_states_smooth),
-        np.float32(var_states_smooth),
+        np.float32(_mu_states_smooth),
+        np.float32(_var_states_smooth),
     )
 
 
