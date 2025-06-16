@@ -156,6 +156,7 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
@@ -1226,6 +1227,8 @@ document.write(`
                 <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span>
             <span class="p">)</span>
 
+        <span class="n">var_states_prior</span> <span class="o">=</span> <span class="p">(</span><span class="n">var_states_prior</span> <span class="o">+</span> <span class="n">var_states_prior</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span> <span class="o">=</span> <span class="n">mu_states_prior</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span> <span class="o">=</span> <span class="n">var_states_prior</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_obs_predict</span> <span class="o">=</span> <span class="n">mu_obs_pred</span>
@@ -1274,6 +1277,7 @@ document.write(`
         <span class="n">delta_var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">delta_var_states</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
         <span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_prior</span> <span class="o">+</span> <span class="n">delta_mu_states</span>
         <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_states_prior</span> <span class="o">+</span> <span class="n">delta_var_states</span>
+        <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="p">(</span><span class="n">var_states_posterior</span> <span class="o">+</span> <span class="n">var_states_posterior</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
         <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="p">:</span>
             <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="p">(</span>
@@ -1288,6 +1292,7 @@ document.write(`
                 <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
             <span class="p">)</span>
 
+        <span class="n">var_states_posterior</span> <span class="o">=</span> <span class="p">(</span><span class="n">var_states_posterior</span> <span class="o">+</span> <span class="n">var_states_posterior</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="n">mu_states_posterior</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states_posterior</span> <span class="o">=</span> <span class="n">var_states_posterior</span>
 
