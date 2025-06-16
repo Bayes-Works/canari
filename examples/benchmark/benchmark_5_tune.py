@@ -45,7 +45,7 @@ def main(
     df_raw.index.name = "date_time"
     df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
     lags = [0, 4, 4, 4]
-    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+    # df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
@@ -68,6 +68,7 @@ def main(
                 num_hidden_unit=50,
                 device="cpu",
                 manual_seed=1,
+                smoother=False, 
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )
@@ -96,6 +97,7 @@ def main(
             mu_validation_preds, std_validation_preds, states = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
+                data_processor=data_processor,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(

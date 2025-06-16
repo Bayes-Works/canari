@@ -60,6 +60,7 @@ def main(
                 look_back_len=param["look_back_len"],
                 num_features=2,
                 num_layer=1,
+                infer_len=52,
                 num_hidden_unit=50,
                 device="cpu",
                 manual_seed=1,
@@ -91,6 +92,7 @@ def main(
             mu_validation_preds, std_validation_preds, states = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
+                data_processor=data_processor,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
