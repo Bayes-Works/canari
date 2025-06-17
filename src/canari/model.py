@@ -583,7 +583,7 @@ class Model:
         var_states_posterior[:, bar_index] = cov_bar
         var_states_posterior[bar_index, bar_index] = np.maximum(
             var_bar, 1e-8
-        )  # For numerical stability
+        ).item()  # For numerical stability
 
         return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
