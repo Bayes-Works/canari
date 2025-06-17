@@ -73,8 +73,10 @@ LSTM = LstmNetwork(
     look_back_len=52,
     num_features=2,
     num_layer=1,
+    infer_len=52,
     num_hidden_unit=50,
     device="cpu",
+    # smoother=False,  # smoother=False for faster training
 )
 
 # Define AR model
@@ -102,6 +104,7 @@ for epoch in range(num_epoch):
     mu_validation_preds, std_validation_preds, states = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        data_processor=data_processor,
     )
     model.set_memory(states=states, time_step=0)
 

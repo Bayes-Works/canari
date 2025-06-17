@@ -101,6 +101,7 @@ def test_model_forecast(run_mode, plot_mode):
             look_back_len=19,
             num_features=1,
             num_layer=1,
+            infer_len=24,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,

@@ -32,7 +32,6 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
-import matplotlib.pyplot as plt
 
 
 class Model:
@@ -708,7 +707,7 @@ class Model:
         # Initialize dummy array with NaNs
         dummy = np.full((inferred_len, n_cov), np.nan, dtype=np.float32)
 
-        # --- Handle time covariates ---
+        # Handle time covariates
         time_covs = data_processor.time_covariates or []
         for tc in time_covs:
             if tc not in cov_names:
@@ -716,7 +715,9 @@ class Model:
             col_idx = cov_names.index(tc)
             init_val = data_processor.data[tc].iloc[train_idx[0]]
             raw = self._prepare_covariates_generation(
-                init_val.reshape(1), num_generated_samples=inferred_len, time_covariates=[tc]
+                init_val.reshape(1),
+                num_generated_samples=inferred_len,
+                time_covariates=[tc],
             )
             data_col_idx = data_processor.data.columns.get_loc(tc)
             mu = data_processor.scale_const_mean[data_col_idx]
@@ -726,22 +727,6 @@ class Model:
 
         # --- Handle lagged features ---
         # TODO: how to handle laggs
-        for name in cov_names:
-            if "_lag" not in name:
-                continue
-            col_idx = cov_names.index(name)
-            hist_vals = data_processor.data[name].values
-            start = train_idx[0] - (inferred_len - 1)
-            end = train_idx[0] + 1
-            if start < 0:
-                pad = np.full(-start, np.nan, dtype=np.float32)
-                segment = np.concatenate([pad, hist_vals[:end]])
-            else:
-                segment = hist_vals[start:end]
-            data_col_idx = data_processor.data.columns.get_loc(name)
-            mu = data_processor.scale_const_mean[data_col_idx]
-            std = data_processor.scale_const_std[data_col_idx]
-            dummy[:, col_idx] = (segment - mu) / std
 
         return dummy
 
@@ -798,6 +783,10 @@ class Model:
                 (
                     model.lstm_output_history.mu,
                     model.lstm_output_history.var,
+                ) = save_dict["lstm_smoothed_look_back"]
+                (
+                    model.lstm_net.smooth_look_back_mu,
+                    model.lstm_net.smooth_look_back_var,
                 ) = save_dict["lstm_smoothed_look_back"]
 
         return model

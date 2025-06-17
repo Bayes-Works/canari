@@ -45,7 +45,7 @@ def main(
     df_raw.index.name = "date_time"
     df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
     lags = [0, 4, 4, 4]
-    # df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
