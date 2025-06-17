@@ -708,8 +708,8 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
-
-        # self.model["norm_norm"].set_memory(states=states, time_step=0)
+ 
+        self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = self.norm_model_prior_prob

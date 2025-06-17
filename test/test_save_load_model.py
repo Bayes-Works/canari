@@ -11,6 +11,7 @@ lstm_network_1 = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    smoother=False,
 )
 lstm_network_2 = LstmNetwork(
     look_back_len=lstm_look_back_len,
@@ -19,6 +20,7 @@ lstm_network_2 = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=2,
+    smoother=False,
 )
 
 # Model
