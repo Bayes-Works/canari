@@ -13,6 +13,7 @@ from canari import (
     plot_states,
 )
 from canari.component import LocalTrend, LstmNetwork, Autoregression
+import pickle
 
 
 ###########################
@@ -28,6 +29,28 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
+# Add synthetic anomaly to data
+# anm_mag = 0
+anm_index = 200
+
+# LT anomaly
+anm_mag = -15/52
+anm_baseline = np.arange(0, len(df_raw)-anm_index, dtype='float')
+anm_baseline *= anm_mag
+
+# # LL anomaly
+# anm_mag = -50
+# anm_baseline = np.zeros(len(df_raw)-anm_index, dtype='float')
+# anm_baseline += anm_mag
+
+# # Recurrent anomaly
+# anm_mag = -30
+# anm_baseline = np.zeros(len(df_raw)-anm_index, dtype='float')
+# for i in range(len(df_raw) - anm_index):
+#     anm_baseline[i] = anm_mag * np.sin(i / 10)
+df_raw.values[anm_index:] = (df_raw.values[anm_index:].squeeze() + anm_baseline).reshape(-1, 1)
+
+
 # Add trend
 trend_true = 0.1
 df_raw["values"] += np.arange(len(df_raw)) * trend_true
@@ -42,18 +65,19 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
+data_processor.scale_const_mean = np.array([35.571228, 26.068333])
+data_processor.scale_const_std = np.array([28.92418, 15.090957])
+
 train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 
 # Standardization constants
 scale_const_mean = data_processor.scale_const_mean[output_col].item()
 scale_const_std = data_processor.scale_const_std[output_col].item()
 
-# Define model components
-trend_norm = trend_true / (scale_const_std + 1e-10)
-level_norm = (5.0 - scale_const_mean) / (scale_const_std + 1e-10)
-mu_W2bar_prior = 1e4
-var_AR_prior = 1e4
-var_W2bar_prior = 1e4
+with open("saved_params/toy_simple_model_smaller_phi_AR.pkl", "rb") as f:
+# with open("saved_params/toy_simple_model_bigger_LSTM_uncertainty.pkl", "rb") as f:
+# with open("saved_params/toy_simple_model.pkl", "rb") as f:
+    model_dict = pickle.load(f)
 
 lstm = LstmNetwork(
     look_back_len=52,
@@ -63,73 +87,11 @@ lstm = LstmNetwork(
     device="cpu",
     # manual_seed=1,
 )
-ar = Autoregression(
-    mu_states=[0, 0, 0, 0, 0, mu_W2bar_prior],
-    var_states=[1e-6, 0.01, 0, var_AR_prior, 0, var_W2bar_prior],
-)
-
-model = Model(
-    LocalTrend(),
-    lstm,
-    ar,
-)
-model.auto_initialize_baseline_states(train_data["y"][0:52*8])
-
-###########################
-###########################
-# Training model
-num_epochs = 200
-states_optim = None
-optimal_mu_val_preds = None
-optimal_std_val_preds = None
-for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
-    mu_validation_preds, std_validation_preds, states = model.lstm_train(
-        train_data=train_data,
-        validation_data=val_data,
-    )
-
-    # Unstandardize the predictions
-    mu_pred_unnorm = normalizer.unstandardize(
-        mu_validation_preds, scale_const_mean, scale_const_std
-    )
-    std_pred_unnorm = normalizer.unstandardize_std(
-        std_validation_preds, scale_const_std
-    )
-
-    # Calculate the evaluation metric
-    obs_validation = data_processor.get_data("validation").flatten()
-    mse = metric.mse(mu_pred_unnorm, obs_validation)
-    val_log_lik = metric.log_likelihood(mu_pred_unnorm, obs_validation, std_pred_unnorm)
-
-    # Early-stopping
-    model.early_stopping(
-        evaluate_metric=-val_log_lik, current_epoch=epoch, max_epoch=num_epochs, skip_epoch = 100
-    )
-    if epoch == model.optimal_epoch:
-        optimal_mu_val_preds = mu_validation_preds.copy()
-        optimal_std_val_preds = std_validation_preds.copy()
-        states_optim = copy.copy(states)
-
-    model.set_memory(states=states, time_step=0)
-    if model.stop_training:
-        break
-
-print(f"Optimal epoch: {model.optimal_epoch}")
-print(f"Validation MSE: {model.early_stop_metric:.4f}")
-
-# save model
-model_dict = model.get_dict()
-model_dict['states_optimal'] = states_optim
-
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/toy_simple_model_smaller_phi_AR.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
-
 
 ###########################
 ###########################
 # Reload pretrained model
+
 # Load learned parameters from the saved trained model
 phi_index = model_dict["states_name"].index("phi")
 W2bar_index = model_dict["states_name"].index("W2bar")
@@ -154,46 +116,14 @@ pretrained_model = Model(
 )
 
 # load lstm's component
-pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 # filter and smoother
-pretrained_model.filter(standardized_data, train_lstm=False)
+mu_obs_preds, var_obs_preds, _ = pretrained_model.filter(standardized_data, train_lstm=False)
 pretrained_model.smoother()
 
 
-# # Plotting results at the optimal epoch when training model
 state_type = "prior"
-fig, ax = plot_states(
-    data_processor=data_processor,
-    states=states_optim,
-    standardization=True,
-    states_type=state_type,
-    states_to_plot=[
-        "level",
-        "trend",
-        "lstm",
-        "autoregression",
-        "phi",
-        "W2bar",
-    ],
-)
-plot_data(
-    data_processor=data_processor,
-    standardization=True,
-    plot_column=output_col,
-    validation_label="y",
-    sub_plot=ax[0],
-    plot_test_data=False,
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=optimal_mu_val_preds,
-    std_validation_pred=optimal_std_val_preds,
-    sub_plot=ax[0],
-)
-fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
-plt.show()
-
 # # Plotting results from pre-trained model
 fig, ax = plot_states(
     data_processor=data_processor,
@@ -213,13 +143,24 @@ plot_data(
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax[0],
-    plot_test_data=False,
+    plot_test_data=True,
 )
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=optimal_mu_val_preds,
-    std_validation_pred=optimal_std_val_preds,
-    sub_plot=ax[0],
+time = data_processor.get_time(split="all")
+ax[0].plot(time, mu_obs_preds)
+ax[0].fill_between(
+    time,
+    mu_obs_preds - np.sqrt(var_obs_preds),
+    mu_obs_preds + np.sqrt(var_obs_preds),
+    alpha=0.2,
+    color="C0",
 )
+# Plot the location when the anomaly starts
+if anm_mag != 0:
+    ax[0].axvline(
+        x=df_raw.index[anm_index],
+        color="red",
+        linestyle="--",
+        label="Anomaly start",
+    )
 fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()

@@ -21,7 +21,7 @@ df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
 # Resampling data
-df = df_raw.resample("H").mean()
+df = df_raw.resample("h").mean()
 
 # Define parameters
 output_col = [0]
