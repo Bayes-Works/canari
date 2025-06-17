@@ -2,6 +2,7 @@
 
 Installation
 ============
+This section presents how to install the Canari libraty using either PyPi, or through a local installation for developpement purposes. Note that prior to installing, you should first create a Miniconda environement in order to ensure the compatibility with the `pyTAGI <https://github.com/lhnguyen102/cuTAGI>`_ external library.
 
 Create Miniconda Environment
 ----------------------------
@@ -47,6 +48,6 @@ Installing locally
 4. Install pycanari package
 
    .. code-block:: sh
-      
+
       pip install .
 
