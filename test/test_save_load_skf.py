@@ -7,12 +7,12 @@ from test.test_save_load_model import compare_model_dict
 skf = SKF(
     norm_model=Model(
         LocalTrend(),
-        LstmNetwork(look_back_len=10, num_layer=2, num_hidden_unit=10, smoother=False),
+        LstmNetwork(look_back_len=10, num_layer=2, num_hidden_unit=10),
         WhiteNoise(),
     ),
     abnorm_model=Model(
         LocalAcceleration(),
-        LstmNetwork(look_back_len=10, num_layer=2, num_hidden_unit=10, smoother=False),
+        LstmNetwork(look_back_len=10, num_layer=2, num_hidden_unit=10),
         WhiteNoise(),
     ),
     std_transition_error=1e-4,
