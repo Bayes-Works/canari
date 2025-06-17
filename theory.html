@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Installation &#8212; canari v.0.1.0 documentation</title>
+    <title>Theory &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -41,11 +41,11 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'installation_guide';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'theory';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Theory" href="theory.html" />
-    <link rel="prev" title="Canari’s documentation" href="index.html" />
+    <link rel="next" title="Tutorials" href="tutorials.html" />
+    <link rel="prev" title="Installation" href="installation_guide.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -156,8 +156,8 @@
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">Theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_guide.html">Installation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
@@ -293,7 +293,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Installation</h1>
+    <h1>Theory</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -303,9 +303,10 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-miniconda-environment">Create Miniconda Environment</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-from-pypi">Installing from PyPi</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-locally">Installing locally</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#context">Context</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#background">Background</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-space-models">State-space Models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tagi-lstm-neural-networks">TAGI &amp; LSTM Neural Networks</a></li>
 </ul>
             </nav>
         </div>
@@ -317,51 +318,42 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="installation">
-<span id="installation-guide"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h1>
-<section id="create-miniconda-environment">
-<h2>Create Miniconda Environment<a class="headerlink" href="#create-miniconda-environment" title="Link to this heading">#</a></h2>
-<ol class="arabic">
-<li><p>Install Miniconda by following these <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">instructions</a>.</p></li>
-<li><p>Create a conda environment named <code class="docutils literal notranslate"><span class="pre">canari</span></code>:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>canari<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.10
-</pre></div>
-</div>
-</li>
-<li><p>Activate conda environment:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>canari
-</pre></div>
-</div>
-</li>
-</ol>
+  <section id="theory">
+<h1>Theory<a class="headerlink" href="#theory" title="Link to this heading">#</a></h1>
+<section id="context">
+<h2>Context<a class="headerlink" href="#context" title="Link to this heading">#</a></h2>
+<p>The Canary library relies on the integration of state-space models (SSM) and Bayesian neural networks with recurrent architectures. This section contains resources to understand the theory and methods behind the library.</p>
 </section>
-<section id="installing-from-pypi">
-<h2>Installing from PyPi<a class="headerlink" href="#installing-from-pypi" title="Link to this heading">#</a></h2>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pycanari
-</pre></div>
-</div>
+<section id="background">
+<h2>Background<a class="headerlink" href="#background" title="Link to this heading">#</a></h2>
+<p>Both SSMs and Bayesian neural networks rely extensively on linear algebra and probability theory.</p>
+<p><strong>Linear Algebra</strong>
+- Probabilistic Machine Learning for Civil Engineers [<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH2.html">Chapter 2 - Linear Algebra</a>] [<a class="reference external" href="https://youtu.be/ORDbWuYzuRE?si=rsb1XMG8ENW0GFiy">YouTube</a>]</p>
+<p><strong>Probability Theory</strong>
+- Probabilistic Machine Learning for Civil Engineers [<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH3.html">Chapter 3 - Probability Theory</a>] [<a class="reference external" href="https://youtu.be/Ndu3z4uUREs?si=JcA4FqjNua0crJ9i">YouTube</a>]
+- Probabilistic Machine Learning for Civil Engineers [<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH4.html">Chapter 4 - Distributions</a>] [<a class="reference external" href="https://youtu.be/BKs_2q1hnTk?si=IKO4sLmU4Yzxw6Hh">YouTube</a>]</p>
 </section>
-<section id="installing-locally">
-<h2>Installing locally<a class="headerlink" href="#installing-locally" title="Link to this heading">#</a></h2>
-<ol class="arabic">
-<li><p>Clone this repository:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Bayes-Works/canari.git
-<span class="nb">cd</span><span class="w"> </span>canari
-</pre></div>
-</div>
-</li>
-<li><p>Create conda environment following the above instructions</p></li>
-<li><p>Install requirements</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-</pre></div>
-</div>
-</li>
-<li><p>Install pycanari package</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.
-</pre></div>
-</div>
-</li>
-</ol>
+<section id="state-space-models">
+<h2>State-space Models<a class="headerlink" href="#state-space-models" title="Link to this heading">#</a></h2>
+<p>State-space models (SSM), or more specifically linear-Gaussian SSMs used by Canary, model dynamic systems in a recurrent manner using a vector of hidden (i.e., not directly observed) states. The dynamic evolution between two consecutive time steps is governed by a first system of linear equations. A second set of linear equations defines the observation model as a function of the same hidden state vector.</p>
+<p>In the case of linear-Gaussian SSMs, exact tractability of all calculations is maintained. This enables closed-form exact Bayesian inference and marginalization using the Kalman Filter and Rauch–Tung–Striebel (RTS) smoother.</p>
+<p><strong>Kalman Filtering, Smoothing, and Regime Switching</strong>
+- <a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">Probabilistic Machine Learning for Civil Engineers, Chapter 12 - State-space Models</a>
+- <a class="reference external" href="https://youtu.be/8lPBkkbtNW8?si=CuPIZObGkpZTsjX7">State-space Models, Video Lecture</a></p>
+<p><strong>Basic Components: Level (LL), Trend (LT), Acceleration (LA), Periodic (PD), Autoregressive (AR), and White Noise</strong>
+- Probabilistic Machine Learning for Civil Engineers [<a class="reference external" href="http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH12.html">Chapter 12 - State-space Models</a>] [<a class="reference external" href="https://youtu.be/2vf-d_fRCXs?si=pLsuMwG6N3PQ4tFo">YouTube</a>]</p>
+<p><strong>Advanced Components</strong>
+- Online Autoregressive [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf">Paper</a>] [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf">Thesis</a>] [<a class="reference external" href="https://youtu.be/Jzkiof8X244">YouTube</a>]
+- Approximate Gaussian Variance Inference for SSM [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf">Paper</a>] [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf">Thesis</a>] [<a class="reference external" href="https://youtu.be/ho2wvuq2H68">YouTube</a>]
+- Bounded Autoregressive Component [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Xin_Goulet_BAR_2024.pdf">Paper</a>] [<a class="reference external" href="https://youtu.be/8jqwKp97PoY">YouTube</a>]</p>
+</section>
+<section id="tagi-lstm-neural-networks">
+<h2>TAGI &amp; LSTM Neural Networks<a class="headerlink" href="#tagi-lstm-neural-networks" title="Link to this heading">#</a></h2>
+<p>The TAGI method treats all the parameters and hidden units in a neural network as Gaussian random variables. This enables reliance on the same closed-form Gaussian conditional equations as the linear-Gaussian SSM.</p>
+<ul class="simple">
+<li><p>Tractable Approximate Gaussian Inference (TAGI) for Bayesian Neural Networks [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/2021_Goulet_Nguyen_Amiri_TAGI_JMLR.pdf">Paper</a>] [<a class="reference external" href="https://youtu.be/jqd3Bj0q2Sc">YouTube</a>]</p></li>
+<li><p>Coupling LSTM Neural Networks and SSM through Analytically Tractable Inference [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/Vuong_el_al_TAGI_LSTM_2024.pdf">Paper</a>] [<a class="reference external" href="https://profs.polymtl.ca/jagoulet/Site/Papers/DV_Thesis_2024.pdf">Thesis</a>] [<a class="reference external" href="https://youtu.be/urYuJXzMzrk">YouTube</a>]</p></li>
+</ul>
 </section>
 </section>
 
@@ -377,20 +369,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="index.html"
+       href="installation_guide.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Canari’s documentation</p>
+        <p class="prev-next-title">Installation</p>
       </div>
     </a>
     <a class="right-next"
-       href="theory.html"
+       href="tutorials.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Theory</p>
+        <p class="prev-next-title">Tutorials</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -410,9 +402,10 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-miniconda-environment">Create Miniconda Environment</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-from-pypi">Installing from PyPi</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-locally">Installing locally</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#context">Context</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#background">Background</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-space-models">State-space Models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tagi-lstm-neural-networks">TAGI &amp; LSTM Neural Networks</a></li>
 </ul>
   </nav></div>
 
