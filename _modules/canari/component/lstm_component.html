@@ -544,7 +544,6 @@ document.write(`
         <span class="c1"># Initialize lstm network</span>
         <span class="n">lstm_network</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">(</span><span class="o">*</span><span class="n">layers</span><span class="p">)</span>
         <span class="n">lstm_network</span><span class="o">.</span><span class="n">lstm_look_back_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">look_back_len</span>
-        <span class="n">lstm_network</span><span class="o">.</span><span class="n">num_covariates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_features</span> <span class="o">-</span> <span class="mi">1</span>
         <span class="n">lstm_network</span><span class="o">.</span><span class="n">lstm_infer_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_len</span> <span class="o">*</span> <span class="mi">3</span>  <span class="c1"># for better smoothing</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
             <span class="n">lstm_network</span><span class="o">.</span><span class="n">set_threads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_thread</span><span class="p">)</span>

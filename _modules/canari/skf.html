@@ -1033,8 +1033,8 @@ document.write(`
 <span class="sd">            &gt;&gt;&gt; # If the next analysis starts from t = 200</span>
 <span class="sd">            &gt;&gt;&gt; skf.set_memory(states=skf.states, time_step=200))</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1"># self.model[&quot;norm_norm&quot;].set_memory(states=states, time_step=0)</span>
+ 
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">time_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">load_initial_states</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_model_prior_prob</span>
