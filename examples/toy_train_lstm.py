@@ -71,8 +71,6 @@ for epoch in range(num_epoch):
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
-    model.set_memory(states=model.states, time_step=0)
-
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
@@ -99,6 +97,7 @@ for epoch in range(num_epoch):
         model_optim_dict = model.get_dict()
         lstm_optim_states = model.lstm_net.get_lstm_states()
 
+    model.set_memory(states=model.states, time_step=0)
     if model.stop_training:
         break
 
