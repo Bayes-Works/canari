@@ -12,7 +12,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari.component import LocalTrend, LstmNetwork, Autoregression, WhiteNoise
 import pickle
 from scipy.interpolate import interp1d
 
@@ -65,13 +65,13 @@ df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
-# anm_mag = 0
-anm_index = 700
+anm_mag = 0
+anm_index = 800
 
-# LT anomaly
-anm_mag = -35/52
-anm_baseline = np.arange(0, len(df_raw)-anm_index, dtype='float')
-anm_baseline *= anm_mag
+# # LT anomaly
+# anm_mag = -25/52
+# anm_baseline = np.arange(0, len(df_raw)-anm_index, dtype='float')
+# anm_baseline *= anm_mag
 
 # # LL anomaly
 # anm_mag = -50
@@ -79,21 +79,21 @@ anm_baseline *= anm_mag
 # anm_baseline += anm_mag
 
 # # Recurrent anomaly
-# anm_index = 600
+# anm_index = 800
 # anm_mag = 50
 # anm_baseline = np.zeros(len(df_raw)-anm_index, dtype='float')
 # for i in range(len(df_raw) - anm_index):
 #     anm_baseline[i] = anm_mag * np.sin(i / 10)
 
-df_raw.values[anm_index:] = (df_raw.values[anm_index:].squeeze() + anm_baseline).reshape(-1, 1)
+# df_raw.values[anm_index:] = (df_raw.values[anm_index:].squeeze() + anm_baseline).reshape(-1, 1)
 
-# anm_mag=1
-# _, df_raw.values = stretch_timeseries(
-#     df_raw.values.squeeze(),
-#     np.arange(len(df_raw)),
-#     change_index=anm_index,
-#     new_period_ratio=0.2,
-# )
+anm_mag=1
+_, df_raw.values = stretch_timeseries(
+    df_raw.values.squeeze(),
+    np.arange(len(df_raw)),
+    change_index=anm_index,
+    new_period_ratio=0.2,
+)
 
 
 # Add trend
@@ -110,8 +110,8 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
-data_processor.scale_const_mean = np.array([35.571228, 26.068333])
-data_processor.scale_const_std = np.array([28.92418, 15.090957])
+# data_processor.scale_const_mean = np.array([35.571228, 26.068333])
+# data_processor.scale_const_std = np.array([28.92418, 15.090957])
 
 train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 
@@ -119,9 +119,7 @@ train_data, val_data, test_data, standardized_data = data_processor.get_splits()
 scale_const_mean = data_processor.scale_const_mean[output_col].item()
 scale_const_std = data_processor.scale_const_std[output_col].item()
 
-# with open("saved_params/toy_simple_model_smaller_phi_AR.pkl", "rb") as f:
-with open("saved_params/toy_simple_model_bigger_LSTM_uncertainty.pkl", "rb") as f:
-# with open("saved_params/toy_simple_model.pkl", "rb") as f:
+with open("saved_params/toy_simple_model_white_noise_smallest.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 lstm = LstmNetwork(
@@ -137,29 +135,15 @@ lstm = LstmNetwork(
 ###########################
 # Reload pretrained model
 
-# Load learned parameters from the saved trained model
-phi_index = model_dict["states_name"].index("phi")
-W2bar_index = model_dict["states_name"].index("W2bar")
-autoregression_index = model_dict["states_name"].index("autoregression")
-mu_W2bar_learn = model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()
-phi_AR_learn = model_dict['states_optimal'].mu_prior[-1][phi_index].item()
-mu_AR = model_dict["mu_states"][autoregression_index].item()
-var_AR = model_dict["var_states"][autoregression_index, autoregression_index].item()
-
-print("Learned phi_AR =", phi_AR_learn)
-print("Learned sigma_AR =", np.sqrt(mu_W2bar_learn))
-
 # # # # # # #
+sigma_v = 1e-3
 # Define pretrained model:
 pretrained_model = Model(
     LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), 
                var_states=[model_dict['states_optimal'].var_prior[0][0,0].item(), 
                            model_dict['states_optimal'].var_prior[0][1,1].item()]),
     lstm,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict['states_optimal'].mu_prior[0][autoregression_index].item()], 
-                   var_states=[model_dict['states_optimal'].var_prior[0][autoregression_index, autoregression_index].item()]),
+    WhiteNoise(std_error=sigma_v),
 )
 
 # load lstm's component
@@ -167,7 +151,7 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 # filter and smoother
 mu_obs_preds, var_obs_preds, _ = pretrained_model.filter(standardized_data, train_lstm=False)
-pretrained_model.smoother()
+# pretrained_model.smoother()
 
 # Get lstm states
 lstm_states = pretrained_model.states.get_mean(
@@ -214,7 +198,7 @@ fig, ax = plot_states(
         "level",
         "trend",
         "lstm",
-        "autoregression",
+        "white noise",
     ],
 )
 plot_data(
