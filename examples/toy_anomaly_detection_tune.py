@@ -288,7 +288,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(
-        num_trial_optimization=20,
-        param_optimization=True,
-    )
+    fire.Fire(main)
