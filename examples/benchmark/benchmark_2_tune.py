@@ -20,15 +20,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters
-# sigma_v_fix = 0.06107626430664278
-# look_back_len_fix = 60
-# SKF_std_transition_error_fix = 5.066668002029218e-05
-# SKF_norm_to_abnorm_prob_fix = 1.514736559162257e-06
-
-sigma_v_fix = 0.04414653429183879
-look_back_len_fix = 74
-SKF_std_transition_error_fix = 2.8354005250218493e-05
-SKF_norm_to_abnorm_prob_fix = 2.5388671820133726e-05
+sigma_v_fix = 0.07611100046925366
+look_back_len_fix = 54
+SKF_std_transition_error_fix = 7.082910365723074e-05
+SKF_norm_to_abnorm_prob_fix = 4.892477330860902e-05
 
 
 def main(
@@ -147,7 +142,7 @@ def main(
     if param_optimization or param_grid_search:
         if param_optimization:
             param_space = {
-                "look_back_len": [5, 76],
+                "look_back_len": [12, 76],
                 "sigma_v": [1e-3, 2e-1],
             }
         elif param_grid_search:
@@ -292,7 +287,9 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-3)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(
+        matrix_inversion_tol=1e-3, tol_type="relative"
+    )
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
