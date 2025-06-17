@@ -17,10 +17,11 @@ lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
     num_layer=1,
+    infer_len=24,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    smoother=False,
+    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -73,7 +74,9 @@ def SKF_anomaly_detection_runner(
     test_model.auto_initialize_baseline_states(train_data["y"][0:23])
     for epoch in range(num_epoch):
         (mu_validation_preds, std_validation_preds, states) = test_model.lstm_train(
-            train_data=train_data, validation_data=validation_data
+            train_data=train_data,
+            validation_data=validation_data,
+            data_processor=data_processor,
         )
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
