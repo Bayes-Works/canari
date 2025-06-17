@@ -218,6 +218,8 @@ class SKF:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = None
+        self.smooth_look_back_mu = None
+        self.smooth_look_back_var = None
 
         # Early stopping attributes
         self.stop_training = False
@@ -353,6 +355,13 @@ class SKF:
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
+            if self.model["norm_norm"].lstm_net.smooth:
+                self.smooth_look_back_mu = self.model[
+                    "norm_norm"
+                ].lstm_net.smooth_look_back_mu
+                self.smooth_look_back_var = self.model[
+                    "norm_norm"
+                ].lstm_net.smooth_look_back_var
 
     def _set_same_states_transition_models(self):
         """
@@ -723,8 +732,11 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
- 
         self.model["norm_norm"].set_memory(states=states, time_step=0)
+        # TODO: find a better way to reset the LSTM output history here
+        if self.model["norm_norm"].lstm_net.smooth:
+            self.model["norm_norm"].lstm_output_history.mu = self.smooth_look_back_mu
+            self.model["norm_norm"].lstm_output_history.var = self.smooth_look_back_var
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
