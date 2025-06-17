@@ -97,7 +97,6 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
             )
-            model.set_memory(states=states, time_step=0)
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
                 mu_validation_preds,
@@ -129,6 +128,7 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
+            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 
@@ -290,7 +290,7 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-5)
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
