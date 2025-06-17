@@ -20,6 +20,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
