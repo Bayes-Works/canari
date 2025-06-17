@@ -20,6 +20,7 @@ lstm_network = LstmNetwork(
     look_back_len=lstm_look_back_len,
     num_features=2,
     num_layer=1,
+    infer_len=24,
     num_hidden_unit=50,
     device="cpu",
     smoother=False,
