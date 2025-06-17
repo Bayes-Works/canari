@@ -12,7 +12,7 @@ Both SSMs and Bayesian neural networks rely extensively on linear algebra and pr
 - Probabilistic Machine Learning for Civil Engineers [`Chapter 3 - Probability Theory <http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH3.html>`_] [`YouTube <https://youtu.be/Ndu3z4uUREs?si=JcA4FqjNua0crJ9i>`_]
 - Probabilistic Machine Learning for Civil Engineers [`Chapter 4 - Distributions <http://profs.polymtl.ca/jagoulet/Site/PMLCE/CH4.html>`_] [`YouTube <https://youtu.be/BKs_2q1hnTk?si=IKO4sLmU4Yzxw6Hh>`_]
 
-State-space Models
+State-Space Models
 ------------------
 
 State-space models (SSM), or more specifically linear-Gaussian SSMs used by Canary, model dynamic systems in a recurrent manner using a vector of hidden (i.e., not directly observed) states. The dynamic evolution between two consecutive time steps is governed by a first system of linear equations. A second set of linear equations defines the observation model as a function of the same hidden state vector.
@@ -29,7 +29,7 @@ In the case of linear-Gaussian SSMs, exact tractability of all calculations is m
 
 **Advanced Components**
 
-- Online Autoregressive [`Paper <https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf>`_] [`Thesis <https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf>`_] [`YouTube <https://youtu.be/Jzkiof8X244>`_]
+- Online Autoregressive & Gaussian Multiplicative Approcimation (GMA) [`Paper <https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Ha_Amiri_Goulet_GMA_2022_preprint.pdf>`_] [`Thesis <https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf>`_] [`YouTube <https://youtu.be/Jzkiof8X244>`_]
 - Approximate Gaussian Variance Inference for SSM [`Paper <https://profs.polymtl.ca/jagoulet/Site/Papers/Deka_Goulet_AGVI_Preprint_2023.pdf>`_] [`Thesis <https://profs.polymtl.ca/jagoulet/Site/Papers/BhargobDekaThesis.pdf>`_] [`YouTube <https://youtu.be/ho2wvuq2H68>`_]
 - Bounded Autoregressive Component [`Paper <https://profs.polymtl.ca/jagoulet/Site/Papers/Xin_Goulet_BAR_2024.pdf>`_] [`YouTube <https://youtu.be/8jqwKp97PoY>`_]
 
