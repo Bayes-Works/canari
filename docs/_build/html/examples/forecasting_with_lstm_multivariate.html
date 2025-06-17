@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Forecasting with LSTM and explanatory time series &#8212; canari v.0.0.3 documentation</title>
+    <title>Forecasting with LSTM and explanatory time series &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=9c904ad8"></script>
+    <script src="../_static/documentation_options.js?v=773eff52"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -592,7 +592,7 @@ document.write(`
 <h2>Training the LSTM neural network<a class="headerlink" href="#Training-the-LSTM-neural-network" title="Link to this heading">#</a></h2>
 <p>The training of the LSTM neural network model is done using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or trend-stationnary.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
@@ -601,7 +601,6 @@ document.write(`
         <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
         <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="c1"># Unstandardize the predictions</span>
     <span class="n">mu_validation_preds</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
@@ -628,6 +627,7 @@ document.write(`
         <span class="p">)</span>
         <span class="n">lstm_optim_states</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">get_lstm_states</span><span class="p">()</span>
 
+    <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
         <span class="k">break</span>
 </pre></div>
