@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.model &#8212; canari v.0.1.0 documentation</title>
+    <title>canari.model &#8212; canari v.0.0.3 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../../_static/documentation_options.js?v=9c904ad8"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -156,14 +156,13 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -337,7 +336,9 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">LstmOutputHistory</span><span class="p">,</span> <span class="n">StatesHistory</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.common</span><span class="w"> </span><span class="kn">import</span> <span class="n">GMA</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataProcess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytagi.nn</span><span class="w"> </span><span class="kn">import</span> <span class="n">OutputUpdater</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normalizer</span> <span class="k">as</span> <span class="n">normalizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 
 <div class="viewcode-block" id="Model">
@@ -414,9 +415,9 @@ document.write(`
 <span class="sd">        early_stop_lstm_param (Dict):</span>
 <span class="sd">            LSTM&#39;s weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.</span>
 <span class="sd">        early_stop_init_mu_states (np.ndarray):</span>
-<span class="sd">            Copy of `mu_states` at time step `t=0` of the optimal epoch .</span>
+<span class="sd">            Copy of `mu_states` at time step :math:`t=0` of the optimal epoch .</span>
 <span class="sd">        early_stop_init_var_states (np.ndarray):</span>
-<span class="sd">            Copy of `var_states` at time step `t=0` of the optimal epoch .</span>
+<span class="sd">            Copy of `var_states` at time step :math:`t=0` of the optimal epoch .</span>
 <span class="sd">        optimal_epoch (int):</span>
 <span class="sd">            Epoch at which the metric being monitored was best.</span>
 <span class="sd">        stop_training (bool):</span>
@@ -438,8 +439,7 @@ document.write(`
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_attributes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">component</span><span class="o">.</span><span class="n">component_name</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">component</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">component</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+            <span class="n">component</span><span class="o">.</span><span class="n">component_name</span><span class="p">:</span> <span class="n">component</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span>
         <span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">StatesHistory</span><span class="p">()</span>
@@ -578,14 +578,27 @@ document.write(`
             <span class="p">(</span>
                 <span class="n">component</span>
                 <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="s2">&quot;lstm&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
+                <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span> <span class="o">==</span> <span class="s2">&quot;lstm&quot;</span>
             <span class="p">),</span>
             <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">lstm_component</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span> <span class="o">=</span> <span class="n">lstm_component</span><span class="o">.</span><span class="n">initialize_lstm_network</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">update_param</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_lstm_param</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_mu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_var</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+                    <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_mu</span><span class="p">,</span>
+                    <span class="n">var</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_var</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span>
+            <span class="c1"># TODO: check for better intialization</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="mi">1</span>  <span class="c1"># dummy intialization until otherwise specified</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_autoregression</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -597,7 +610,7 @@ document.write(`
             <span class="p">(</span>
                 <span class="n">component</span>
                 <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
+                <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span> <span class="o">==</span> <span class="s2">&quot;autoregression&quot;</span>
             <span class="p">),</span>
             <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
@@ -644,18 +657,8 @@ document.write(`
         <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="n">white_noise_max_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
             <span class="o">-</span><span class="n">white_noise_decay_factor</span> <span class="o">*</span> <span class="n">epoch</span>
         <span class="p">)</span>
-
-        <span class="n">white_noise_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="n">component</span>
-                <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="s2">&quot;white noise&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
-            <span class="p">),</span>
-            <span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">scheduled_sigma_v</span> <span class="o">&lt;</span> <span class="n">white_noise_component</span><span class="o">.</span><span class="n">std_error</span><span class="p">:</span>
-            <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="n">white_noise_component</span><span class="o">.</span><span class="n">std_error</span>
+        <span class="k">if</span> <span class="n">scheduled_sigma_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span><span class="p">:</span>
+            <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">noise_index</span><span class="p">,</span> <span class="n">noise_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduled_sigma_v</span><span class="o">**</span><span class="mi">2</span></div>
 
 
@@ -818,8 +821,9 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        BAR backward modification.</span>
-
+<span class="sd">        BAR backward modification</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply backward BAR moment updates during state-space filtering.</span>
 
 <span class="sd">        Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.</span>
@@ -839,17 +843,9 @@ document.write(`
         <span class="n">var_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
         <span class="n">cov_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="p">:]</span>
 
-        <span class="n">bar_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="n">component</span>
-                <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="s2">&quot;bounded autoregression&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
-            <span class="p">),</span>
-            <span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="n">bound</span> <span class="o">=</span> <span class="n">bar_component</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
-            <span class="n">bar_component</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">bar_component</span><span class="o">.</span><span class="n">phi</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">bound</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">phi</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="n">l_bar</span> <span class="o">=</span> <span class="n">mu_AR</span> <span class="o">+</span> <span class="n">bound</span>
@@ -945,6 +941,103 @@ document.write(`
                 <span class="p">)</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">covariates_generation</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_store_initial_lookback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the</span>
+<span class="sd">        `lstm_output_history` gets filled with `lstm_look_back_len` predictions.</span>
+<span class="sd">        Assumes `self.lstm_net` and `self.lstm_output_history` already exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">device</span>
+
+        <span class="n">dummy_mu_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">dummy_var_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="n">out_updater</span> <span class="o">=</span> <span class="n">OutputUpdater</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_infer_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">time_covariates</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">dummy_covariates</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">mu_lstm_input</span><span class="p">,</span> <span class="n">var_lstm_input</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">prepare_lstm_input</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="p">,</span> <span class="n">dummy_covariates</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dummy_covariates</span> <span class="o">=</span> <span class="n">time_covariates</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">mu_lstm_input</span><span class="p">,</span> <span class="n">var_lstm_input</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">prepare_lstm_input</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="p">,</span> <span class="n">dummy_covariates</span>
+                <span class="p">)</span>
+
+            <span class="n">mu_lstm_pred</span><span class="p">,</span> <span class="n">var_lstm_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span>
+                <span class="n">mu_x</span><span class="o">=</span><span class="n">mu_lstm_input</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="n">var_x</span><span class="o">=</span><span class="n">var_lstm_input</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="n">out_updater</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">output_states</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">output_z_buffer</span><span class="p">,</span>
+                <span class="n">mu_obs</span><span class="o">=</span><span class="n">dummy_mu_obs</span><span class="p">,</span>
+                <span class="n">var_obs</span><span class="o">=</span><span class="n">dummy_var_obs</span><span class="p">,</span>
+                <span class="n">delta_states</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">input_delta_z_buffer</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">mu_lstm_pred</span><span class="p">,</span> <span class="n">var_lstm_pred</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_generate_look_back_covariates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_processor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate standardized look-back covariates for the LSTM by re-using</span>
+<span class="sd">        Model._prepare_covariates_generation.</span>
+<span class="sd">        Supports both time covariates and lagged features, including periods before the first observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get indices and look-back length</span>
+        <span class="n">train_idx</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_split_indices</span><span class="p">()</span>
+        <span class="n">inferred_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_infer_len</span>
+
+        <span class="c1"># Gather covariate column names and count</span>
+        <span class="n">cov_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">data_processor</span><span class="o">.</span><span class="n">covariates_col</span><span class="p">])</span>
+        <span class="n">n_cov</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cov_names</span><span class="p">)</span>
+
+        <span class="c1"># Initialize dummy array with NaNs</span>
+        <span class="n">dummy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">inferred_len</span><span class="p">,</span> <span class="n">n_cov</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="c1"># --- Handle time covariates ---</span>
+        <span class="n">time_covs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">time_covariates</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">tc</span> <span class="ow">in</span> <span class="n">time_covs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">tc</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cov_names</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">col_idx</span> <span class="o">=</span> <span class="n">cov_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">tc</span><span class="p">)</span>
+            <span class="n">init_val</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">tc</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">train_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_covariates_generation</span><span class="p">(</span>
+                <span class="n">init_val</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">num_generated_samples</span><span class="o">=</span><span class="n">inferred_len</span><span class="p">,</span> <span class="n">time_covariates</span><span class="o">=</span><span class="p">[</span><span class="n">tc</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">data_col_idx</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">tc</span><span class="p">)</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">data_col_idx</span><span class="p">]</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_col_idx</span><span class="p">]</span>
+            <span class="n">normed</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">standardize</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+            <span class="n">dummy</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">normed</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># --- Handle lagged features ---</span>
+        <span class="c1"># TODO: how to handle laggs</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cov_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;_lag&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">col_idx</span> <span class="o">=</span> <span class="n">cov_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">hist_vals</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">train_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">inferred_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">train_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">pad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="o">-</span><span class="n">start</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+                <span class="n">segment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">pad</span><span class="p">,</span> <span class="n">hist_vals</span><span class="p">[:</span><span class="n">end</span><span class="p">]])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">segment</span> <span class="o">=</span> <span class="n">hist_vals</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+            <span class="n">data_col_idx</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_mean</span><span class="p">[</span><span class="n">data_col_idx</span><span class="p">]</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">scale_const_std</span><span class="p">[</span><span class="n">data_col_idx</span><span class="p">]</span>
+            <span class="n">dummy</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">segment</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span>
+
+        <span class="k">return</span> <span class="n">dummy</span>
+
 <div class="viewcode-block" id="Model.get_dict">
 <a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.get_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
@@ -965,6 +1058,11 @@ document.write(`
         <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;states_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
             <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_network_params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
+                <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smoothed_look_back&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_mu</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_var</span><span class="p">,</span>
+                <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">save_dict</span></div>
 
@@ -972,12 +1070,14 @@ document.write(`
 <div class="viewcode-block" id="Model.load_dict">
 <a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.load_dict">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">load_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">use_smoothed_look_back</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reconstruct a model instance from a saved dictionary.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            save_dict (dict): Dictionary containing saved model structure and parameters.</span>
+<span class="sd">            use_smoothed_look_back (bool, optional): If True, uses the smoothed look-back</span>
+<span class="sd">                sequences from the saved dictionary. Defaults to False.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Model: An instance of :class:`~canari.model.Model` generated from the input dictionary.</span>
@@ -992,6 +1092,11 @@ document.write(`
         <span class="n">model</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;mu_states&quot;</span><span class="p">],</span> <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;var_states&quot;</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
             <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_network_params&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span> <span class="ow">and</span> <span class="n">use_smoothed_look_back</span><span class="p">:</span>
+                <span class="p">(</span>
+                    <span class="n">model</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
+                <span class="p">)</span> <span class="o">=</span> <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smoothed_look_back&quot;</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">model</span></div>
 
@@ -1090,7 +1195,12 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">if</span> <span class="s2">&quot;level&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_mu_local_level&quot;</span><span class="p">):</span>
             <span class="n">local_level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;level&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span><span class="p">[</span><span class="n">local_level_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_local_level</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu_states</span><span class="p">[</span><span class="n">local_level_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_local_level</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_mu</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_var</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Model.initialize_states_history">
@@ -1132,7 +1242,6 @@ document.write(`
         <span class="k">if</span> <span class="n">time_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">initialize_states_with_smoother_estimates</span><span class="p">()</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span><span class="p">)</span>
                 <span class="n">lstm_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">get_lstm_states</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">lstm_states</span><span class="p">:</span>
                     <span class="n">old_tuple</span> <span class="o">=</span> <span class="n">lstm_states</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
@@ -1306,7 +1415,6 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply RTS smoothing equations for a specity timestep. As a result of this function,</span>
@@ -1334,7 +1442,6 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_posterior</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">cov_states</span><span class="p">[</span><span class="n">time_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
             <span class="n">matrix_inversion_tol</span><span class="p">,</span>
-            <span class="n">tol_type</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -1478,21 +1585,13 @@ document.write(`
 
 <div class="viewcode-block" id="Model.smoother">
 <a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.smoother">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the Kalman smoother over an entire time series data, i.e., repeatly apply the</span>
 <span class="sd">        RTS smoothing equation over multiple time steps.</span>
 
 <span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
 <span class="sd">        :meth:`rts_smoother` at one-time-step level from :class:`~canari.model.Model`.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
-<span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-12.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            StatesHistory:</span>
@@ -1505,7 +1604,17 @@ document.write(`
 
         <span class="n">num_time_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="p">,</span> <span class="n">tol_type</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
+
+        <span class="c1"># TODO: find a better condtion to check if smoothing is needed</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">mu_zo_smooth</span><span class="p">,</span> <span class="n">var_zo_smooth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
+            <span class="n">mu_sequence</span> <span class="o">=</span> <span class="n">mu_zo_smooth</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_infer_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">var_sequence</span> <span class="o">=</span> <span class="n">var_zo_smooth</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_infer_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">mu_sequence</span> <span class="o">=</span> <span class="n">mu_sequence</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span> <span class="p">:]</span>
+            <span class="n">var_sequence</span> <span class="o">=</span> <span class="n">var_sequence</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_look_back_len</span> <span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_mu</span> <span class="o">=</span> <span class="n">mu_sequence</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth_look_back_var</span> <span class="o">=</span> <span class="n">var_sequence</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span></div>
 
@@ -1519,6 +1628,7 @@ document.write(`
         <span class="n">white_noise_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">white_noise_max_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span>
+        <span class="n">data_processor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DataProcess</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided</span>
@@ -1557,16 +1667,36 @@ document.write(`
 <span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO check for a better intialzation that is not relient on epoch count</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">lstm_infer_len</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+            <span class="p">)</span>
 
         <span class="c1"># Decaying observation&#39;s variance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">white_noise_decay</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">white_noise_decay</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span><span class="p">,</span> <span class="n">white_noise_max_std</span><span class="p">,</span> <span class="n">white_noise_decay_factor</span>
             <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data_processor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">data_processor</span><span class="o">.</span><span class="n">covariates_col</span><span class="p">):</span>
+                <span class="c1"># Generate standardized look-back covariates</span>
+                <span class="n">lookback_covariates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_look_back_covariates</span><span class="p">(</span>
+                    <span class="n">data_processor</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_store_initial_lookback</span><span class="p">(</span><span class="n">lookback_covariates</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_store_initial_lookback</span><span class="p">()</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
         <span class="n">mu_validation_preds</span><span class="p">,</span> <span class="n">std_validation_preds</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span><span class="n">validation_data</span><span class="p">)</span>
-        <span class="c1"># self.set_memory(states=self.states, time_step=0)</span>
+
+        <span class="c1"># Aplly smoother on the training set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_epoch</span> <span class="o">+=</span> <span class="mi">1</span>
 
