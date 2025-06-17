@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.skf &#8212; canari v.0.0.3 documentation</title>
+    <title>canari.skf &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9c904ad8"></script>
+    <script src="../../_static/documentation_options.js?v=773eff52"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -671,9 +671,6 @@ document.write(`
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># if &quot;acceleration&quot; in self.states_name:</span>
-        <span class="c1">#     index_acc = self.states_name.index(&quot;acceleration&quot;)</span>
-        <span class="c1">#     self.model[&quot;norm_norm&quot;].var_states[index_acc, index_acc] = 1e-10</span>
 
         <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">transition_model</span><span class="o">.</span><span class="n">set_states</span><span class="p">(</span>
@@ -770,9 +767,9 @@ document.write(`
                     <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
                         <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
                             <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
-                                <span class="n">prediction</span><span class="o">=</span><span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">noise</span><span class="p">,</span>
-                                <span class="n">observation</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span>
-                                <span class="n">std</span><span class="o">=</span><span class="p">(</span><span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">-</span> <span class="n">var_obs_error</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
+                                <span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">noise</span><span class="p">,</span>
+                                <span class="n">obs</span><span class="p">,</span>
+                                <span class="p">(</span><span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">-</span> <span class="n">var_obs_error</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
                             <span class="p">)</span>
                         <span class="p">)</span>
                     <span class="p">)</span>
@@ -780,9 +777,9 @@ document.write(`
                 <span class="k">for</span> <span class="n">transit</span> <span class="ow">in</span> <span class="n">transition_likelihood</span><span class="p">:</span>
                     <span class="n">transition_likelihood</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
                         <span class="n">metric</span><span class="o">.</span><span class="n">log_likelihood</span><span class="p">(</span>
-                            <span class="n">prediction</span><span class="o">=</span><span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
-                            <span class="n">observation</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span>
-                            <span class="n">std</span><span class="o">=</span><span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
+                            <span class="n">mu_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+                            <span class="n">obs</span><span class="p">,</span>
+                            <span class="n">var_pred_transit</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span>
                         <span class="p">)</span>
                     <span class="p">)</span>
         <span class="k">return</span> <span class="n">transition_likelihood</span>
@@ -865,10 +862,6 @@ document.write(`
             <span class="p">)</span>
         <span class="p">)</span>
 
-        <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
-        <span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-
         <span class="c1"># Retrieve states for abnorm mixture</span>
         <span class="n">mu_abnorm_1</span> <span class="o">=</span> <span class="n">mu_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         <span class="n">var_abnorm_1</span> <span class="o">=</span> <span class="n">var_states_transit</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
@@ -885,9 +878,6 @@ document.write(`
                 <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span><span class="p">[</span><span class="n">abnorm_keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
             <span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
-        <span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
         <span class="c1"># Combine the two final distributions</span>
         <span class="n">mu_states_combined</span><span class="p">,</span> <span class="n">var_states_combined</span> <span class="o">=</span> <span class="n">common</span><span class="o">.</span><span class="n">gaussian_mixture</span><span class="p">(</span>
@@ -898,7 +888,6 @@ document.write(`
             <span class="n">var_states_marginal</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">],</span>
         <span class="p">)</span>
-        <span class="n">var_states_combined</span> <span class="o">=</span> <span class="p">(</span><span class="n">var_states_combined</span> <span class="o">+</span> <span class="n">var_states_combined</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">mu_states_combined</span><span class="p">,</span>
@@ -1304,6 +1293,8 @@ document.write(`
             <span class="p">)</span> <span class="o">=</span> <span class="n">transition_model</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span>
                 <span class="n">mu_lstm_pred</span><span class="o">=</span><span class="n">mu_lstm_pred</span><span class="p">,</span> <span class="n">var_lstm_pred</span><span class="o">=</span><span class="n">var_lstm_pred</span>
             <span class="p">)</span>
+            <span class="c1"># if np.isnan(mu_pred_transit[transit]):</span>
+            <span class="c1">#     check = 1</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">transition_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_estimate_transition_coef</span><span class="p">(</span>
             <span class="n">obs</span><span class="p">,</span>
@@ -1368,8 +1359,7 @@ document.write(`
             <span class="k">for</span> <span class="n">arrival_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_list</span><span class="p">:</span>
                 <span class="n">transit</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">origin_state</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">arrival_state</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span><span class="o">.</span><span class="n">_set_posterior_states</span><span class="p">(</span>
-                    <span class="n">mu_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">],</span>
-                    <span class="n">var_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">],</span>
+                    <span class="n">mu_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">],</span> <span class="n">var_states_marginal</span><span class="p">[</span><span class="n">origin_state</span><span class="p">]</span>
                 <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_states_posterior</span> <span class="o">=</span> <span class="n">mu_states_posterior</span>
@@ -1384,6 +1374,7 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span>
+        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Smoother for the Switching Kalman filter at a given time step.</span>
@@ -1404,7 +1395,7 @@ document.write(`
         <span class="n">epsilon</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="mf">1e-20</span>
         <span class="k">for</span> <span class="n">transition_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">transition_model</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span>
-                <span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="n">matrix_inversion_tol</span>
+                <span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="n">matrix_inversion_tol</span><span class="p">,</span> <span class="n">tol_type</span><span class="o">=</span><span class="n">tol_type</span>
             <span class="p">)</span>
 
         <span class="n">joint_transition_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transition</span><span class="p">()</span>
@@ -1560,6 +1551,7 @@ document.write(`
     <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">StatesHistory</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the Kalman smoother over an entire time series data.</span>
@@ -1585,7 +1577,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_smoother</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="p">,</span> <span class="n">tol_type</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smooth_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
