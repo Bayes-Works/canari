@@ -17,14 +17,22 @@ import pickle
 
 
 # # Read data
-data_file = "./data/benchmark_data/test_5_data.csv"
+# data_file = "./data/benchmark_data/test_5_data.csv"
+# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+# time_series = pd.to_datetime(df_raw.iloc[:, 0])
+# df_raw = df_raw.iloc[:, 1:]
+# df_raw.index = time_series
+# df_raw.index.name = "date_time"
+# df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+# df_raw = df_raw.iloc[:, :-3]
+
+data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -116,7 +124,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # Save model_dict to local
 import pickle
-with open("saved_params/real_ts5_model_rebased.pkl", "wb") as f:
+with open("saved_params/real_ts5_detrend_tsmodel.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
 ####################################################################
