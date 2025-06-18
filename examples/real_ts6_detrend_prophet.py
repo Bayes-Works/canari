@@ -31,6 +31,9 @@ df_detrend["y"] = df_detrend["y"] - trend["trend"]
 max_value = df_detrend["y"].max()
 min_value = df_detrend["y"].min()
 
+# Save the detrended data
+df_detrend.to_csv("./data/benchmark_data/detrended_data/test_6_data_detrended.csv", index=False)
+
 fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=False)
 axs[0].plot(df_raw["y"], label="Raw Data")
 axs[0].plot(df_detrend["y"], label="Detrended Data")
