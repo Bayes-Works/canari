@@ -15,15 +15,23 @@ from matplotlib import gridspec
 import pickle
 
 
-# # Read data
-data_file = "./data/benchmark_data/test_5_data.csv"
+# # # Read data
+# data_file = "./data/benchmark_data/test_5_data.csv"
+# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+# time_series = pd.to_datetime(df_raw.iloc[:, 0])
+# df_raw = df_raw.iloc[:, 1:]
+# df_raw.index = time_series
+# df_raw.index.name = "date_time"
+# df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+# df_raw = df_raw.iloc[:, :-3]
+
+data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -84,10 +92,10 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 6.432222189908136e-06
-hsl_tsad_agent.LTd_std = 4.3852475084405016e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
+hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.mu_LTd = 6.432222189908136e-06
+# hsl_tsad_agent.LTd_std = 4.3852475084405016e-05
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
@@ -96,7 +104,7 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_
                                   load_model_path='saved_params/NN_detection_model_real_ts5_rebased.pkl', max_training_epoch=50)
 # hsl_tsad_agent.tune(decay_factor=0.95)
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.8573749999999998)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
 state_type = "prior"
