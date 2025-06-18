@@ -161,6 +161,7 @@ def rts_smoother(
     jcb = cross_cov_states @ np.linalg.pinv(
         var_states_prior, rcond=matrix_inversion_tol
     )
+
     mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
@@ -367,3 +368,131 @@ class GMA(object):
             Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
         """
         return self.mu, self.var
+
+
+def non_linear_smoother(
+    mu_states_prior: np.ndarray,
+    var_states_prior: np.ndarray,
+    mu_states_smooth: np.ndarray,
+    var_states_smooth: np.ndarray,
+    mu_states_posterior: np.ndarray,
+    var_states_posterior: np.ndarray,
+    transition_matrix: np.ndarray,
+    matrix_inversion_tol: Optional[float] = 1e-12,
+    exp_level_index: Optional[int] = None,
+    exp_trend_index: Optional[int] = None,
+    exp_amplitude_index: Optional[int] = None,
+    exp_index: Optional[int] = None,
+    expwithamp_index: Optional[int] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Rauch-Tung-Striebel (RTS) smoother.
+
+    Args:
+        mu_states_prior (np.ndarray): Prior mean vector.
+        var_states_prior (np.ndarray): Prior covariance metrix.
+        mu_states_smooth (np.ndarray): Smoothed mean vector.
+        var_states_smooth (np.ndarray): Smoothed covariance matrix.
+        mu_states_posterior (np.ndarray): Posterior mean vector.
+        var_states_posterior (np.ndarray): Posterior covariance matrix.
+        cross_cov_states (np.ndarray): Cross-covariance matrix between hidden states at two consecutive time steps.
+        matrix_inversion_tol (Optional[float]): Regularization tolerance.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.
+    """
+    jcb_1 = (
+        var_states_posterior[:exp_index, :exp_index]
+        @ transition_matrix[:exp_index, :exp_index].T
+        @ np.linalg.pinv(
+            var_states_prior[:exp_index, :exp_index], rcond=matrix_inversion_tol
+        )
+    )
+    mu_states_smooth[:exp_index] = mu_states_posterior[:exp_index] + jcb_1 @ (
+        mu_states_smooth[:exp_index] - mu_states_prior[:exp_index]
+    )
+    var_states_smooth[:exp_index, :exp_index] = (
+        var_states_posterior[:exp_index, :exp_index]
+        + jcb_1
+        @ (
+            var_states_smooth[:exp_index, :exp_index]
+            - var_states_prior[:exp_index, :exp_index]
+        )
+        @ jcb_1.T
+    )
+    mu_states_smooth[exp_index] = (
+        np.exp(
+            -mu_states_smooth[exp_level_index]
+            + 0.5 * (var_states_smooth[exp_level_index, exp_level_index])
+        )
+        - 1
+    )
+    var_states_smooth[exp_index, exp_level_index] = -var_states_smooth[
+        exp_level_index, exp_level_index
+    ] * np.exp(
+        -mu_states_smooth[exp_level_index]
+        + 0.5 * (var_states_smooth[exp_level_index, exp_level_index])
+    )
+    var_states_smooth[exp_level_index, exp_index] = var_states_smooth[
+        exp_index, exp_level_index
+    ]
+    a = (
+        var_states_smooth[exp_index, exp_level_index]
+        / var_states_smooth[exp_level_index, exp_level_index]
+    )
+    skip_index = {exp_level_index, exp_index}
+    for i in range(len(mu_states_smooth)):
+        if i not in skip_index:
+            var_states_smooth[i, exp_index] = var_states_smooth[i, exp_level_index] * a
+            var_states_smooth[exp_index, i] = var_states_smooth[i, exp_index]
+
+    var_states_smooth[exp_index, exp_index] = np.exp(
+        -2 * mu_states_smooth[exp_level_index]
+        + var_states_smooth[exp_level_index, exp_level_index]
+    ) * (np.exp(var_states_smooth[exp_level_index, exp_level_index]) - 1)
+
+    mu_states_smooth, var_states_smooth = GMA(
+        mu_states_smooth,
+        var_states_smooth,
+        index1=exp_amplitude_index,
+        index2=exp_index,
+        replace_index=expwithamp_index,
+    ).get_results()
+
+    jcb_2 = (
+        var_states_prior[expwithamp_index + 1 :, expwithamp_index + 1 :]
+        @ (transition_matrix[expwithamp_index + 1 :, expwithamp_index + 1 :]).T
+        @ np.linalg.pinv(
+            var_states_posterior[expwithamp_index + 1 :, expwithamp_index + 1 :],
+            rcond=matrix_inversion_tol,
+        )
+    )
+    # jcb_2 = (
+    #     var_states_prior
+    #     @ (transition_matrix).T
+    #     @ np.linalg.pinv(
+    #         var_states_posterior,
+    #         rcond=matrix_inversion_tol,
+    #     )
+    # )[expwithamp_index + 1 :, expwithamp_index + 1 :]
+
+    mu_states_smooth[expwithamp_index + 1 :] = mu_states_posterior[
+        expwithamp_index + 1 :
+    ] + jcb_2 @ (
+        mu_states_smooth[expwithamp_index + 1 :]
+        - mu_states_prior[expwithamp_index + 1 :]
+    )
+    var_states_smooth[expwithamp_index + 1 :, expwithamp_index + 1 :] = (
+        var_states_posterior[expwithamp_index + 1 :, expwithamp_index + 1 :]
+        + jcb_2
+        @ (
+            var_states_smooth[expwithamp_index + 1 :, expwithamp_index + 1 :]
+            - var_states_prior[expwithamp_index + 1 :, expwithamp_index + 1 :]
+        )
+        @ jcb_2.T
+    )
+
+    return (
+        np.float32(mu_states_smooth),
+        np.float32(var_states_smooth),
+    )

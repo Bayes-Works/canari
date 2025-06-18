@@ -18,8 +18,11 @@ from canari import (
 from canari.component import Exponential, WhiteNoise, Periodic, LocalTrend
 
 df_raw = pd.read_csv(
-    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques7.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs6.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques7.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs7.CSV",
+    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend7.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend8.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiod7.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques5.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avecerreurobs2.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avecperiodiqueeterreurobs.CSV",
@@ -50,17 +53,26 @@ data_processor = DataProcess(
 )
 train_data, validation_data, _, all_data = data_processor.get_splits()
 
-sigma_v = np.sqrt(10 - 6)
+sigma_v = np.sqrt(0.75)
+# sigma_v = np.sqrt(0.15)
+
+# exponential = Exponential(
+#     std_error=0.0,
+#     mu_states=[0, 0.001, 11.0, 0, 0],
+#     var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
+# )
 
 exponential = Exponential(
     std_error=0.0,
-    mu_states=[0, 0.0005, 12.0, 0, 0],
+    mu_states=[0, 0.0010, 11.0, 0, 0],
     var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
 )
 noise = WhiteNoise(std_error=sigma_v)
-periodic = Periodic(period=12, mu_states=[1.5, 0], var_states=[1e-6, 1e-3], std_error=0)
-localtrend = LocalTrend(mu_states=[1.5, -0.01], var_states=[1e-1, 1e-1], std_error=0)
-model = Model(exponential, noise)
+periodic = Periodic(
+    period=365.24, mu_states=[1.4, 0], var_states=[1e-1, 1e-3], std_error=0
+)
+localtrend = LocalTrend(mu_states=[1.95, -0.0], var_states=[0.1, 1e-4], std_error=0)
+model = Model(exponential, noise, localtrend)
 
 model.filter(data=all_data)
 model.smoother()
@@ -105,4 +117,5 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
+
 plt.show()
