@@ -79,12 +79,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.std_const_mean[output_col],
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.std_const_std[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     # Calculate the evaluation metric
@@ -130,16 +130,20 @@ with open("saved_params/real_ts5_detrend_tsmodel.pkl", "wb") as f:
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
+
+print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-                   mu_states=[model_dict["mu_states"][model_dict['autoregression_index']].item()], 
-                   var_states=[model_dict["var_states"][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
+    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
+                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
 )
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
