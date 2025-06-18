@@ -65,16 +65,16 @@ for epoch in range(num_epoch):
         data_processor=data_processor,
     )
 
-    # Unstandardize the predictions
-    mu_validation_preds = normalizer.unstandardize(
-        mu_validation_preds,
-        data_processor.scale_const_mean[output_col],
-        data_processor.scale_const_std[output_col],
-    )
-    std_validation_preds = normalizer.unstandardize_std(
-        std_validation_preds,
-        data_processor.scale_const_std[output_col],
-    )
+    # # Unstandardize the predictions
+    # mu_validation_preds = normalizer.unstandardize(
+    #     mu_validation_preds,
+    #     data_processor.scale_const_mean[output_col],
+    #     data_processor.scale_const_std[output_col],
+    # )
+    # std_validation_preds = normalizer.unstandardize_std(
+    #     std_validation_preds,
+    #     data_processor.scale_const_std[output_col],
+    # )
 
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
@@ -112,16 +112,16 @@ mu_test_preds, std_test_preds, test_states = model.forecast(
     data=test_data,
 )
 
-# Unstandardize the predictions
-mu_test_preds = normalizer.unstandardize(
-    mu_test_preds,
-    data_processor.scale_const_mean[output_col],
-    data_processor.scale_const_std[output_col],
-)
-std_test_preds = normalizer.unstandardize_std(
-    std_test_preds,
-    data_processor.scale_const_std[output_col],
-)
+# # Unstandardize the predictions
+# mu_test_preds = normalizer.unstandardize(
+#     mu_test_preds,
+#     data_processor.scale_const_mean[output_col],
+#     data_processor.scale_const_std[output_col],
+# )
+# std_test_preds = normalizer.unstandardize_std(
+#     std_test_preds,
+#     data_processor.scale_const_std[output_col],
+# )
 
 # calculate the test metrics
 test_obs = data_processor.get_data("test").flatten()
@@ -135,7 +135,7 @@ print(f"Test Log-Lik        :{log_lik: 0.2f}")
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
-    standardization=False,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
 )
@@ -154,4 +154,35 @@ plot_prediction(
 )
 plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
 plt.tight_layout()
+plt.show()
+
+# # Plotting results at the optimal epoch when training model
+state_type = "prior"
+fig, ax = plot_states(
+    data_processor=data_processor,
+    states=states_optim,
+    standardization=True,
+    states_type=state_type,
+    states_to_plot=[
+        "level",
+        "trend",
+        "lstm",
+        "white noise",
+    ],
+)
+plot_data(
+    data_processor=data_processor,
+    standardization=True,
+    plot_column=output_col,
+    validation_label="y",
+    sub_plot=ax[0],
+    plot_test_data=False,
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
+    sub_plot=ax[0],
+)
+fig.suptitle("Hidden states at the optimal epoch in training", fontsize=10, y=1)
 plt.show()

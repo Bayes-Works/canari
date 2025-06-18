@@ -30,6 +30,7 @@ def main():
         plt.plot(time_steps, values, color=color, label=label)
         plt.fill_between(time_steps, values - std, values + std, color=color, alpha=0.3)
 
+    plt.axvline(x=52*6, color="red", linestyle="--")
     plt.xlabel("Time Step")
     plt.ylabel("Value")
     plt.legend(loc=(0, 1.01), ncol=4)
