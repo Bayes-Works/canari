@@ -66,12 +66,12 @@ df_raw.columns = ["values"]
 
 # Add synthetic anomaly to data
 anm_mag = 0
-anm_index = 800
+anm_index = 700
 
-# # LT anomaly
-# anm_mag = -25/52
-# anm_baseline = np.arange(0, len(df_raw)-anm_index, dtype='float')
-# anm_baseline *= anm_mag
+# LT anomaly
+anm_mag = -25/52
+anm_baseline = np.arange(0, len(df_raw)-anm_index, dtype='float')
+anm_baseline *= anm_mag
 
 # # LL anomaly
 # anm_mag = -50
@@ -79,21 +79,21 @@ anm_index = 800
 # anm_baseline += anm_mag
 
 # # Recurrent anomaly
-# anm_index = 800
+# anm_index = 700
 # anm_mag = 50
 # anm_baseline = np.zeros(len(df_raw)-anm_index, dtype='float')
 # for i in range(len(df_raw) - anm_index):
 #     anm_baseline[i] = anm_mag * np.sin(i / 10)
 
-# df_raw.values[anm_index:] = (df_raw.values[anm_index:].squeeze() + anm_baseline).reshape(-1, 1)
+df_raw.values[anm_index:] = (df_raw.values[anm_index:].squeeze() + anm_baseline).reshape(-1, 1)
 
-anm_mag=1
-_, df_raw.values = stretch_timeseries(
-    df_raw.values.squeeze(),
-    np.arange(len(df_raw)),
-    change_index=anm_index,
-    new_period_ratio=0.2,
-)
+# anm_mag=1
+# _, df_raw.values = stretch_timeseries(
+#     df_raw.values.squeeze(),
+#     np.arange(len(df_raw)),
+#     change_index=anm_index,
+#     new_period_ratio=0.6,
+# )
 
 
 # Add trend
@@ -106,7 +106,7 @@ data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
     train_split=0.6,
-    validation_split=0.2,
+    validation_split=0,
     output_col=output_col,
 )
 
@@ -187,7 +187,7 @@ mp, mpi = past_only_matrix_profile(np.array(lstm_states).astype("float64"), m, n
 # mp = (mp - np.min(mp)) / (np.max(mp) - np.min(mp))
 # mp = stumpy.stump(np.array(lstm_states).astype("float64"), m=52, normalize=False)
 
-state_type = "prior"
+state_type = "posterior"
 # # Plotting results from pre-trained model
 fig, ax = plot_states(
     data_processor=data_processor,
@@ -213,9 +213,10 @@ time = data_processor.get_time(split="all")
 ax[2].plot(
     time[:len(mp)],
     mp,
-    label="MPI",
+    label="MP metric",
     color="C1",
 )
+ax[2].legend()
 ax[0].plot(time, mu_obs_preds)
 ax[0].fill_between(
     time,
@@ -232,5 +233,5 @@ if anm_mag != 0:
         linestyle="--",
         label="Anomaly start",
     )
-fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
+# fig.suptitle("Hidden states estimated by the pre-trained model", fontsize=10, y=1)
 plt.show()
