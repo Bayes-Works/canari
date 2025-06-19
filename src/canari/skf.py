@@ -773,9 +773,10 @@ class SKF:
                     norm_model.lstm_output_history.var,
                 ) = save_dict["lstm_smooth_output_history"]
                 # set smoothed look back states
-                norm_model.lstm_net.set_lstm_states(
-                    save_dict["lstm_smoothed_look_back_states"]
-                )
+                if save_dict["lstm_smoothed_look_back_states"] is not None:
+                    norm_model.lstm_net.set_lstm_states(
+                        save_dict["lstm_smoothed_look_back_states"]
+                    )
 
         # Create abnormal model
         ab_components = list(save_dict["abnorm_model"]["components"].values())
