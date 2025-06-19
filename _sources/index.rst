@@ -109,6 +109,5 @@ Related references
    :hidden:
 
    installation_guide
-   theory
    tutorials
    api
