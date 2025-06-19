@@ -559,11 +559,11 @@ document.write(`
 
         <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth_look_back_mu</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth_look_back_var</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth_look_back_states</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="p">:</span>
             <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth</span> <span class="o">=</span> <span class="kc">True</span>
 
-            <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth_look_back_states</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_lstm_look_back</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">lstm_network</span><span class="o">.</span><span class="n">smooth_look_back_mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">load_lstm_look_back</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>

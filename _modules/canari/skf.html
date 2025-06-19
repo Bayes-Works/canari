@@ -1104,9 +1104,10 @@ document.write(`
                     <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_output_history</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
                 <span class="p">)</span> <span class="o">=</span> <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smooth_output_history&quot;</span><span class="p">]</span>
                 <span class="c1"># set smoothed look back states</span>
-                <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">set_lstm_states</span><span class="p">(</span>
-                    <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smoothed_look_back_states&quot;</span><span class="p">]</span>
-                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smoothed_look_back_states&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">norm_model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">set_lstm_states</span><span class="p">(</span>
+                        <span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;lstm_smoothed_look_back_states&quot;</span><span class="p">]</span>
+                    <span class="p">)</span>
 
         <span class="c1"># Create abnormal model</span>
         <span class="n">ab_components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">save_dict</span><span class="p">[</span><span class="s2">&quot;abnorm_model&quot;</span><span class="p">][</span><span class="s2">&quot;components&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
