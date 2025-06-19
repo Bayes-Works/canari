@@ -16,7 +16,7 @@ import pickle
 
 
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_2_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_6_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -43,11 +43,11 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts2_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts6_detrend_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=19,
+        look_back_len=24,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -86,10 +86,10 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 3.21739484932891e-05
-hsl_tsad_agent.LTd_std = 7.497153326473905e-05
+hsl_tsad_agent.mu_LTd = -4.223665344064848e-05
+hsl_tsad_agent.LTd_std = 5.315307094280698e-05
 # hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.8)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.4)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'

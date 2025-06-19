@@ -1,46 +1,37 @@
-import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-from src import (
-    LocalLevel,
-    LocalTrend,
-    LocalAcceleration,
-    LstmNetwork,
-    Periodic,
-    Autoregression,
-    WhiteNoise,
+from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari import (
+    DataProcess,
     Model,
     plot_data,
     plot_prediction,
     plot_states,
 )
-from examples import DataProcess
-from pytagi import exponential_scheduler
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
 
 
-# # Read data
-data_file = "./data/benchmark_data/test_4_data.csv"
+# # # Read data
+data_file = "./data/benchmark_data/detrended_data/test_4_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.23,
-    validation_split=0.07,
+    train_split=0.3,
+    validation_split=0.1,
     output_col=output_col,
 )
 
@@ -53,7 +44,7 @@ AR_process_error_var_prior = 1e4
 var_W2bar_prior = 1e4
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=50,
+        look_back_len=26,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -61,12 +52,12 @@ LSTM = LstmNetwork(
     )
 
 model = Model(
-    LocalTrend(),
+    LocalTrend(mu_states=[0, 0], std_error=0),
     LSTM,
     AR,
 )
-# model._mu_local_level = -0.00902307
-model.auto_initialize_baseline_states(train_data["y"][5:5+52])
+model._mu_local_level = 0
+# model.auto_initialize_baseline_states(train_data["y"][0:104])
 
 
 # Training
@@ -79,12 +70,12 @@ for epoch in range(num_epoch):
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.norm_const_mean[output_col],
-        data_processor.norm_const_std[output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.norm_const_std[output_col],
+        data_processor.scale_const_std[output_col],
     )
 
     # Calculate the evaluation metric
@@ -101,7 +92,8 @@ for epoch in range(num_epoch):
 
     # Early-stopping
     # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min")
+    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
+                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 50)
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -123,28 +115,32 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # # Save model_dict to local
 # import pickle
-# with open("saved_params/real_ts4_model.pkl", "wb") as f:
+# with open("saved_params/real_ts4_detrend_tsmodel.pkl", "wb") as f:
 #     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
+
+print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
-                   mu_states=[model_dict["mu_states"][model_dict['autoregression_index']].item()], 
-                   var_states=[model_dict["var_states"][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
+    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
+                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
 )
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 
 pretrained_model.filter(normalized_data,train_lstm=False)
-pretrained_model.smoother(normalized_data)
+pretrained_model.smoother()
 
 #  Plot
 state_type = "prior"
@@ -157,33 +153,33 @@ ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
 plot_data(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax0,
 )
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['local level'],
+    states_to_plot=['level'],
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
 ax0.set_title("Hidden states estimated by the pre-trained model")
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=pretrained_model.states,
     states_type=state_type,
-    states_to_plot=['local trend'],
+    states_to_plot=['trend'],
     sub_plot=ax1,
 )
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -192,7 +188,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=pretrained_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -213,7 +209,7 @@ ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
 plot_data(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   plot_column=output_col,
   validation_label="y",
   sub_plot=ax0,
@@ -227,26 +223,26 @@ plot_prediction(
 )
 plot_states(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['local level'],
+  states_to_plot=['level'],
   sub_plot=ax0,
 )
 ax0.set_xticklabels([])
 ax0.set_title("Hidden states at the optimal epoch in training")
 plot_states(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   states=states_optim,
   states_type=state_type,
-  states_to_plot=['local trend'],
+  states_to_plot=['trend'],
   sub_plot=ax1,
 )
 ax1.set_xticklabels([])
 plot_states(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['lstm'],
@@ -255,7 +251,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
   data_processor=data_processor,
-  normalization=True,
+  standardization=True,
   states=states_optim,
   states_type=state_type,
   states_to_plot=['autoregression'],
@@ -265,7 +261,7 @@ ax3.set_xticklabels([])
 if "phi" in model.states_name:
   plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['phi'],
@@ -275,7 +271,7 @@ if "phi" in model.states_name:
 if "W2bar" in model.states_name:
   plot_states(
     data_processor=data_processor,
-    normalization=True,
+    standardization=True,
     states=states_optim,
     states_type=state_type,
     states_to_plot=['W2bar'],
