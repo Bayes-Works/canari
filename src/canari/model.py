@@ -287,7 +287,7 @@ class Model:
                 )
             else:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            if self.lstm_net.smooth_look_back_states is not None : 
+            if self.lstm_net.smooth_look_back_states is not None:
                 self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
             # TODO: check for better intialization
             self.lstm_net.num_samples = (
@@ -797,15 +797,22 @@ class Model:
                     model.lstm_net.smooth_look_back_mu,
                     model.lstm_net.smooth_look_back_var,
                 ) = save_dict["lstm_smoothed_look_back"]
-                model.lstm_output_history.set(
-                    mu=model.lstm_net.smooth_look_back_mu,
-                    var=model.lstm_net.smooth_look_back_var,
-                )
+                if (
+                    model.lstm_net.smooth_look_back_mu is not None
+                    and model.lstm_net.smooth_look_back_var is not None
+                ):
+                    model.lstm_output_history.set(
+                        mu=model.lstm_net.smooth_look_back_mu,
+                        var=model.lstm_net.smooth_look_back_var,
+                    )
                 # set smoothed cell and hidden states
                 model.lstm_net.smooth_look_back_states = save_dict[
                     "lstm_smoothed_look_back_states"
                 ]
-                model.lstm_net.set_lstm_states(model.lstm_net.smooth_look_back_states)
+                if model.lstm_net.smooth_look_back_states is not None:
+                    model.lstm_net.set_lstm_states(
+                        model.lstm_net.smooth_look_back_states
+                    )
 
         return model
 
