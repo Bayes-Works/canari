@@ -225,11 +225,11 @@ class LstmNetwork(BaseComponent):
 
         lstm_network.smooth_look_back_mu = None
         lstm_network.smooth_look_back_var = None
+        lstm_network.smooth_look_back_states = None
 
         if self.smoother:
             lstm_network.smooth = True
 
-            lstm_network.smooth_look_back_states = None
             if self.load_lstm_look_back is not None:
                 lstm_network.smooth_look_back_mu = np.array(
                     self.load_lstm_look_back[0], dtype=np.float32
