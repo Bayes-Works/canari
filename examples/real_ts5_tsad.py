@@ -26,7 +26,7 @@ df_raw.columns = ["obs"]
 
 # LT anomaly
 # anm_mag = 0.010416667/10
-anm_start_index = 52*10
+anm_start_index = 52*8
 anm_mag = 0.3/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -103,11 +103,12 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_detrended.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -5.059305e-06, 0.0006066528, np.array([-1.4416198e-04, -1.5709320e-02, 1.0682231e+02]), np.array([1.10610565e-02, 1.36221123e+00, 6.24293327e+01])
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -5.059305e-06, 0.0006066528, np.array([-1.4416198e-04, -1.5709320e-02, 1.0682231e+02]), np.array([1.10610565e-02, 1.36221123e+00, 6.24293327e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_detrended.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts5_detrended.pkl', max_training_epoch=50)
 # hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 # #  Plot
