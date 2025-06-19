@@ -287,6 +287,8 @@ class Model:
                 )
             else:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if self.lstm_net.smooth_look_back_states is not None : 
+                self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
             # TODO: check for better intialization
             self.lstm_net.num_samples = (
                 1  # dummy intialization until otherwise specified
@@ -619,32 +621,39 @@ class Model:
             np.ndarray: Encoded covariate matrix of shape (num_generated_samples, 1).
         """
 
-        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
+        step = 1 if num_generated_samples >= 0 else -1
+        covariates_generation = np.arange(0, num_generated_samples, step).reshape(-1, 1)
+        if num_generated_samples < 0:
+            covariates_generation = covariates_generation[::-1]
+
+        def safe_mod(x, base):
+            return (x % base + base) % base
+
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 24 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 24
+                )
             elif time_cov == "day_of_week":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 7 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 7
+                )
             elif time_cov == "day_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 365 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 365
+                )
             elif time_cov == "week_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 52 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 52
+                )
             elif time_cov == "month_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 12 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 12
+                )
             elif time_cov == "quarter_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 4 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 4
+                )
         return covariates_generation
 
     def _store_initial_lookback(self, time_covariates=None):
@@ -716,7 +725,7 @@ class Model:
             init_val = data_processor.data[tc].iloc[train_idx[0]]
             raw = self._prepare_covariates_generation(
                 init_val.reshape(1),
-                num_generated_samples=inferred_len,
+                num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
             data_col_idx = data_processor.data.columns.get_loc(tc)
@@ -753,6 +762,9 @@ class Model:
                     self.lstm_net.smooth_look_back_mu,
                     self.lstm_net.smooth_look_back_var,
                 )
+                save_dict["lstm_smoothed_look_back_states"] = (
+                    self.lstm_net.smooth_look_back_states
+                )
 
         return save_dict
 
@@ -780,14 +792,20 @@ class Model:
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
             if model.lstm_net.smooth and use_smoothed_look_back:
-                (
-                    model.lstm_output_history.mu,
-                    model.lstm_output_history.var,
-                ) = save_dict["lstm_smoothed_look_back"]
+                # set smoothed look back length
                 (
                     model.lstm_net.smooth_look_back_mu,
                     model.lstm_net.smooth_look_back_var,
                 ) = save_dict["lstm_smoothed_look_back"]
+                model.lstm_output_history.set(
+                    mu=model.lstm_net.smooth_look_back_mu,
+                    var=model.lstm_net.smooth_look_back_var,
+                )
+                # set smoothed cell and hidden states
+                model.lstm_net.smooth_look_back_states = save_dict[
+                    "lstm_smoothed_look_back_states"
+                ]
+                model.lstm_net.set_lstm_states(model.lstm_net.smooth_look_back_states)
 
         return model
 
@@ -878,8 +896,18 @@ class Model:
         if self.lstm_net.smooth:
             self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
             self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+            self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
         elif self.lstm_net:
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            # reset LSTM states to zeros
+            lstm_states = self.lstm_net.get_lstm_states()
+            for key in lstm_states:
+                old_tuple = lstm_states[key]
+                new_tuple = tuple(
+                    np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                )
+                lstm_states[key] = new_tuple
+            self.lstm_net.set_lstm_states(lstm_states)
 
     def initialize_states_history(self):
         """
@@ -914,15 +942,6 @@ class Model:
 
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
-            if self.lstm_net:
-                lstm_states = self.lstm_net.get_lstm_states()
-                for key in lstm_states:
-                    old_tuple = lstm_states[key]
-                    new_tuple = tuple(
-                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                    )
-                    lstm_states[key] = new_tuple
-                self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -1280,6 +1299,11 @@ class Model:
             var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
             self.lstm_net.smooth_look_back_mu = mu_sequence
             self.lstm_net.smooth_look_back_var = var_sequence
+
+            # get smoothed LSTM states
+            self.lstm_net.smooth_look_back_states = (
+                self.lstm_net.get_lstm_states_smooth(self.lstm_net.lstm_infer_len - 2)
+            )
 
         return self.states
 

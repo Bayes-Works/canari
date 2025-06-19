@@ -218,8 +218,6 @@ class SKF:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = None
-        self.smooth_look_back_mu = None
-        self.smooth_look_back_var = None
 
         # Early stopping attributes
         self.stop_training = False
@@ -355,13 +353,6 @@ class SKF:
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
-            if self.model["norm_norm"].lstm_net.smooth:
-                self.smooth_look_back_mu = self.model[
-                    "norm_norm"
-                ].lstm_net.smooth_look_back_mu
-                self.smooth_look_back_var = self.model[
-                    "norm_norm"
-                ].lstm_net.smooth_look_back_var
 
     def _set_same_states_transition_models(self):
         """
@@ -733,10 +724,6 @@ class SKF:
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
         self.model["norm_norm"].set_memory(states=states, time_step=0)
-        # TODO: find a better way to reset the LSTM output history here
-        if self.model["norm_norm"].lstm_net.smooth:
-            self.model["norm_norm"].lstm_output_history.mu = self.smooth_look_back_mu
-            self.model["norm_norm"].lstm_output_history.var = self.smooth_look_back_var
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
@@ -762,10 +749,14 @@ class SKF:
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-            save_dict["lstm_smooth_output_history"] = (
-                self.lstm_net.smooth_look_back_mu,
-                self.lstm_net.smooth_look_back_var,
-            )
+            if self.lstm_net.smooth:
+                save_dict["lstm_smooth_output_history"] = (
+                    self.lstm_net.smooth_look_back_mu,
+                    self.lstm_net.smooth_look_back_var,
+                )
+                save_dict["lstm_smoothed_look_back_states"] = (
+                    self.lstm_net.smooth_look_back_states
+                )
 
         return save_dict
 
@@ -791,10 +782,15 @@ class SKF:
         if norm_model.lstm_net:
             norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
             if norm_model.lstm_net.smooth:
+                # set smoothed look back
                 (
                     norm_model.lstm_output_history.mu,
                     norm_model.lstm_output_history.var,
                 ) = save_dict["lstm_smooth_output_history"]
+                # set smoothed look back states
+                norm_model.lstm_net.set_lstm_states(
+                    save_dict["lstm_smoothed_look_back_states"]
+                )
 
         # Create abnormal model
         ab_components = list(save_dict["abnorm_model"]["components"].values())
