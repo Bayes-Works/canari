@@ -852,6 +852,11 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
+        if "exp" in self.states_name:
+            self.mu_states, self.var_states = self._exponential_backward_update(
+                self.mu_states, self.var_states
+            )
+
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
@@ -863,6 +868,16 @@ class Model:
             var_lstm_pred,
             lstm_states_index,
         )
+
+        if (
+            var_states_prior[
+                self.get_states_index("exp level"), self.get_states_index("exp level")
+            ]
+            == self.var_states[
+                self.get_states_index("exp level"), self.get_states_index("exp level")
+            ]
+        ):
+            print("Pas bon")
 
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
@@ -924,12 +939,12 @@ class Model:
                 )
             )
 
-        if "exp" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self._exponential_backward_update(
-                    mu_states_posterior, var_states_posterior
-                )
-            )
+        # if "exp" in self.states_name:
+        #     mu_states_posterior, var_states_posterior = (
+        #         self._exponential_backward_update(
+        #             mu_states_posterior, var_states_posterior
+        #         )
+        #     )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
@@ -973,6 +988,15 @@ class Model:
             self.states.cov_states[time_step + 1],
             matrix_inversion_tol,
         )
+        if (
+            self.states.var_prior[time_step + 1][
+                self.get_states_index("exp"), self.get_states_index("exp")
+            ]
+            == self.states.var_posterior[time_step][
+                self.get_states_index("exp"), self.get_states_index("exp")
+            ]
+        ):
+            print("Pas bon")
 
     def non_linear_smoother(
         self,
@@ -1148,14 +1172,11 @@ class Model:
         """
 
         num_time_steps = len(self.states.mu_smooth)
-        print(num_time_steps)
         for time_step in reversed(range(0, num_time_steps - 1)):
             if "exp" in self.states_name:
                 self.non_linear_smoother(time_step)
             else:
                 self.rts_smoother(time_step)
-            if time_step >= num_time_steps - 5:
-                print(self.states.mu_smooth[time_step])
 
         return self.states
 

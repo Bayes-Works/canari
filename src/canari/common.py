@@ -401,25 +401,34 @@ def non_linear_smoother(
     Returns:
         Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.
     """
-    jcb_1 = (
-        var_states_posterior[:exp_index, :exp_index]
-        @ transition_matrix[:exp_index, :exp_index].T
-        @ np.linalg.pinv(
-            var_states_prior[:exp_index, :exp_index], rcond=matrix_inversion_tol
-        )
+    n = len(mu_states_prior)
+    exclude = {exp_index, expwithamp_index}
+    keep_idx = [i for i in range(n) if i not in exclude]
+
+    A_sub = transition_matrix[np.ix_(keep_idx, keep_idx)]
+    Sigma_post_sub = var_states_posterior[np.ix_(keep_idx, keep_idx)]
+    Sigma_prior_sub = var_states_prior[np.ix_(keep_idx, keep_idx)]
+    J_sub = (
+        Sigma_post_sub
+        @ A_sub.T
+        @ np.linalg.pinv(Sigma_prior_sub, rcond=matrix_inversion_tol)
     )
-    mu_states_smooth[:exp_index] = mu_states_posterior[:exp_index] + jcb_1 @ (
-        mu_states_smooth[:exp_index] - mu_states_prior[:exp_index]
+
+    mu_states_smooth[keep_idx] = mu_states_posterior[keep_idx] + J_sub @ (
+        mu_states_smooth[keep_idx] - mu_states_prior[keep_idx]
     )
-    var_states_smooth[:exp_index, :exp_index] = (
-        var_states_posterior[:exp_index, :exp_index]
-        + jcb_1
+    Sigma_smooth_block = (
+        var_states_posterior[np.ix_(keep_idx, keep_idx)]
+        + J_sub
         @ (
-            var_states_smooth[:exp_index, :exp_index]
-            - var_states_prior[:exp_index, :exp_index]
+            var_states_smooth[np.ix_(keep_idx, keep_idx)]
+            - var_states_prior[np.ix_(keep_idx, keep_idx)]
         )
-        @ jcb_1.T
+        @ J_sub.T
     )
+
+    var_states_smooth[np.ix_(keep_idx, keep_idx)] = Sigma_smooth_block
+
     mu_states_smooth[exp_index] = (
         np.exp(
             -mu_states_smooth[exp_level_index]
@@ -459,40 +468,32 @@ def non_linear_smoother(
         replace_index=expwithamp_index,
     ).get_results()
 
-    jcb_2 = (
-        var_states_prior[expwithamp_index + 1 :, expwithamp_index + 1 :]
-        @ (transition_matrix[expwithamp_index + 1 :, expwithamp_index + 1 :]).T
-        @ np.linalg.pinv(
-            var_states_posterior[expwithamp_index + 1 :, expwithamp_index + 1 :],
-            rcond=matrix_inversion_tol,
-        )
-    )
-    # jcb_2 = (
-    #     var_states_prior
-    #     @ (transition_matrix).T
-    #     @ np.linalg.pinv(
-    #         var_states_posterior,
-    #         rcond=matrix_inversion_tol,
-    #     )
-    # )[expwithamp_index + 1 :, expwithamp_index + 1 :]
-
-    mu_states_smooth[expwithamp_index + 1 :] = mu_states_posterior[
-        expwithamp_index + 1 :
-    ] + jcb_2 @ (
-        mu_states_smooth[expwithamp_index + 1 :]
-        - mu_states_prior[expwithamp_index + 1 :]
-    )
-    var_states_smooth[expwithamp_index + 1 :, expwithamp_index + 1 :] = (
-        var_states_posterior[expwithamp_index + 1 :, expwithamp_index + 1 :]
-        + jcb_2
-        @ (
-            var_states_smooth[expwithamp_index + 1 :, expwithamp_index + 1 :]
-            - var_states_prior[expwithamp_index + 1 :, expwithamp_index + 1 :]
-        )
-        @ jcb_2.T
-    )
-
     return (
         np.float32(mu_states_smooth),
         np.float32(var_states_smooth),
     )
+
+
+def move_indices_to_end(
+    mu: np.ndarray,
+    cov: np.ndarray,
+    A: np.ndarray,
+    exp_index: int,
+    expwithamp_index: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    n = len(mu)
+
+    # Construire permutation : garder tout sauf exp & expwithamp
+    remaining_indices = [i for i in range(n) if i not in {exp_index, expwithamp_index}]
+    # Ajouter les deux à la fin
+    new_order = remaining_indices + [exp_index, expwithamp_index]
+
+    # Construire matrice de permutation
+    P = np.eye(n)[new_order]  # shape (n, n)
+
+    # Appliquer permutation
+    mu_perm = P @ mu
+    cov_perm = P @ cov @ P.T
+    A_perm = P @ A @ P.T
+
+    return mu_perm, cov_perm, A_perm, new_order

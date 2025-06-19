@@ -20,8 +20,8 @@ from canari.component import Exponential, WhiteNoise, Periodic, LocalTrend
 df_raw = pd.read_csv(
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques7.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs7.CSV",
-    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend7.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend8.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend7.CSV",
+    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend8.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiod7.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques5.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avecerreurobs2.CSV",
@@ -53,20 +53,20 @@ data_processor = DataProcess(
 )
 train_data, validation_data, _, all_data = data_processor.get_splits()
 
-sigma_v = np.sqrt(0.75)
+sigma_v = np.sqrt(0.25)
 # sigma_v = np.sqrt(0.15)
-
-# exponential = Exponential(
-#     std_error=0.0,
-#     mu_states=[0, 0.001, 11.0, 0, 0],
-#     var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
-# )
 
 exponential = Exponential(
     std_error=0.0,
-    mu_states=[0, 0.0010, 11.0, 0, 0],
-    var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
+    mu_states=[0, 0.02, 11.0, 0, 0],
+    var_states=[0.2**2, 0.01**2, 1**2, 0, 0],
 )
+
+# exponential = Exponential(
+#     std_error=0.0,
+#     mu_states=[0, 0.0010, 11.0, 0, 0],
+#     var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
+# )
 noise = WhiteNoise(std_error=sigma_v)
 periodic = Periodic(
     period=365.24, mu_states=[1.4, 0], var_states=[1e-1, 1e-3], std_error=0
