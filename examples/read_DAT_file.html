@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Read .DAT data files &#8212; canari v.0.1.0 documentation</title>
+    <title>Read .csv data files &#8212; canari v.0.0.3 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../_static/documentation_options.js?v=9c904ad8"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -160,14 +160,13 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Read .DAT data files</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Read .csv data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,7 +293,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Read .DAT data files</h1>
+    <h1>Read .csv data files</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -308,16 +307,16 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Read-.DAT-data-files">
-<h1>Read .DAT data files<a class="headerlink" href="#Read-.DAT-data-files" title="Link to this heading">#</a></h1>
-<p>This example show show how Canari read raw <code class="docutils literal notranslate"><span class="pre">.DAT</span></code> datasets using the Pandas external library and stores it into a dataframe.</p>
+  <section id="Read-.csv-data-files">
+<h1>Read .csv data files<a class="headerlink" href="#Read-.csv-data-files" title="Link to this heading">#</a></h1>
+<p>This example show show how Canari read raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> datasets using the Pandas external library and stores it into a dataframe.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="n">data_file</span> <span class="o">=</span> <span class="o">.</span><span class="n">DAT</span>
+<span class="n">data_file</span> <span class="o">=</span> <span class="o">...</span>
 <span class="n">df_raw</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span>
                     <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">,</span>  <span class="c1"># Semicolon as delimiter</span>
                     <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span>
