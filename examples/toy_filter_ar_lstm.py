@@ -62,7 +62,6 @@ lstm = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    smoother=False,
     # manual_seed=1,
 )
 ar = Autoregression(
@@ -90,6 +89,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
     mu_validation_preds, std_validation_preds, states = model.lstm_train(
         train_data=train_data,
         validation_data=val_data,
+        data_processor=data_processor,
     )
 
     # Unstandardize the predictions
@@ -159,12 +159,14 @@ pretrained_model = Model(
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 if pretrained_model.lstm_net.smooth:
-    pretrained_model.lstm_output_history.mu = model_dict[
-        "smooth_lstm_look_back_mu"
-    ]
-    pretrained_model.lstm_output_history.var = model_dict[
-        "smooth_lstm_look_back_var"
-    ]
+    (
+        pretrained_model.lstm_output_history.mu,
+        pretrained_model.lstm_output_history.var,
+    ) = model_dict["lstm_smoothed_look_back"]
+    # set lstm states
+    pretrained_model.lstm_net.set_lstm_states(
+        model_dict["lstm_smoothed_look_back_states"]
+    )
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)

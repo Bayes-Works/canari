@@ -164,9 +164,13 @@ pretrained_model = Model(
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 if pretrained_model.lstm_net.smooth:
     (
-        pretrained_model.lstm_net.lstm_output_history.mu,
-        pretrained_model.lstm_net.lstm_output_history.var,
+        pretrained_model.lstm_output_history.mu,
+        pretrained_model.lstm_output_history.var,
     ) = model_dict["lstm_smoothed_look_back"]
+    # set lstm states
+    pretrained_model.lstm_net.set_lstm_states(
+        model_dict["lstm_smoothed_look_back_states"]
+    )
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)
