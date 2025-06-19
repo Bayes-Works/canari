@@ -1,35 +1,45 @@
+import fire
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from canari.component import LocalTrend, LstmNetwork, Autoregression
-from canari import (
-    DataProcess,
+import copy
+from src import (
+    LocalLevel,
+    LocalTrend,
+    LocalAcceleration,
+    LstmNetwork,
+    Periodic,
+    Autoregression,
+    WhiteNoise,
     Model,
     plot_data,
+    plot_prediction,
     plot_states,
-    common,
 )
 from src.hsl_detection import hsl_detection
+from examples import DataProcess
+from pytagi import exponential_scheduler
 import pytagi.metric as metric
+from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
+import src.common as common
 
 
-# # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_1_data_detrended.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(df_raw.iloc[:, 0])
-df_raw = df_raw.iloc[:, 1:]
-df_raw.index = time_series
-df_raw.index.name = "date_time"
-df_raw.columns = ["obs"]
+# # Read data
+data_file = "./data/benchmark_data/test_1_data.csv"
+df = pd.read_csv(data_file, skiprows=0, delimiter=",")
+date_time = pd.to_datetime(df["timestamp"])
+df = df.drop("timestamp", axis=1)
+df.index = date_time
+df.index.name = "date_time"
 
 # Data pre-processing
 output_col = [0]
-train_split=0.3
-validation_split=0.1
+train_split=0.2516
+validation_split=0.08494
 data_processor = DataProcess(
-    data=df_raw,
+    data=df,
     time_covariates=["week_of_year"],
     train_split=train_split,
     validation_split=validation_split,
@@ -43,31 +53,29 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts1_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts1_model.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=18,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
     )
 
-phi_index = model_dict["states_name"].index("phi")
-W2bar_index = model_dict["states_name"].index("W2bar")
-autoregression_index = model_dict["states_name"].index("autoregression")
+print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item())
+print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()))
 
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
+
 pretrained_model = Model(
-    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-    LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+    # LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=np.diag(model_dict['early_stop_init_var_states'][0:2, 0:2])),
+    LocalTrend(mu_states=model_dict['early_stop_init_mu_states'][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][model_dict['W2bar_index']].item()), 
+                   phi=model_dict['states_optimal'].mu_prior[-1][model_dict['phi_index']].item(), 
+                   mu_states=[model_dict['early_stop_init_mu_states'][model_dict['autoregression_index']].item()], 
+                   var_states=[model_dict['early_stop_init_var_states'][model_dict['autoregression_index'], model_dict['autoregression_index']].item()]),
 )
 
 pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -86,18 +94,14 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 3.071060070334914e-05
-hsl_tsad_agent.LTd_std = 4.5458944208557136e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
-# hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 2)
+hsl_tsad_agent.mu_LTd = -1.7273086622199474e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = 2.5856916490092674e-05)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path= 'data/hsl_tsad_training_samples/itv_learn_samples_real_ts1.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 0.0001349587, 0.0009116043, np.array([8.1795733e-04, 6.3600011e-02, 1.0436374e+02]), np.array([1.0912784e-02, 1.3082677e+00, 6.2689758e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts5_rebased.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts1.csv', 
+                                  load_model_path='saved_params/NN_detection_model_real_ts1.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 
 # #  Plot
 state_type = "prior"
@@ -115,37 +119,38 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
-time = data_processor.get_time(split="all")
+from src.data_visualization import determine_time
+time = determine_time(data_processor, len(normalized_data["y"]))
 plot_data(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     plot_column=output_col,
     validation_label="y",
     sub_plot=ax0,
 )
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     # states=pretrained_model.states,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['level'],
+    states_to_plot=['local level'],
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("HSL Detection & Intervention agent")
+ax0.set_title("Hidden states likelihood")
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
-    states_to_plot=['trend'],
+    states_to_plot=['local trend'],
     sub_plot=ax1,
 )
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['lstm'],
@@ -154,7 +159,7 @@ plot_states(
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.base_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
@@ -163,25 +168,25 @@ plot_states(
 ax3.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['level'],
+    states_to_plot=['local level'],
     sub_plot=ax4,
 )
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
-    states_to_plot=['trend'],
+    states_to_plot=['local trend'],
     sub_plot=ax5,
 )
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
-    standardization=True,
+    normalization=True,
     states=hsl_tsad_agent.drift_model.states,
     states_type=state_type,
     states_to_plot=['autoregression'],
