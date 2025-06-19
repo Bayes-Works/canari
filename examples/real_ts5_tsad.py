@@ -16,15 +16,6 @@ import pickle
 
 
 # # # Read data
-# data_file = "./data/benchmark_data/test_5_data.csv"
-# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# time_series = pd.to_datetime(df_raw.iloc[:, 0])
-# df_raw = df_raw.iloc[:, 1:]
-# df_raw.index = time_series
-# df_raw.index.name = "date_time"
-# df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
-# df_raw = df_raw.iloc[:, :-3]
-
 data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
@@ -35,8 +26,8 @@ df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
-train_split=0.289
-validation_split=0.0693
+train_split=0.3
+validation_split=0.1
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -56,7 +47,7 @@ with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=19,
+        look_back_len=16,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -94,18 +85,17 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.estimate_LTd_dist()
-# hsl_tsad_agent.mu_LTd = 6.432222189908136e-06
-# hsl_tsad_agent.LTd_std = 4.3852475084405016e-05
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
+# hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.mu_LTd = 3.312482141267754e-05
+hsl_tsad_agent.LTd_std = 3.881592825882659e-05
+# hsl_tsad_agent.tune(decay_factor=0.95)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 0.0001349587, 0.0009116043, np.array([8.1795733e-04, 6.3600011e-02, 1.0436374e+02]), np.array([1.0912784e-02, 1.3082677e+00, 6.2689758e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts5_rebased.pkl', max_training_epoch=50)
-# hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.8573749999999998)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
