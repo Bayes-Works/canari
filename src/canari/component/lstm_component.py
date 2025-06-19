@@ -216,7 +216,9 @@ class LstmNetwork(BaseComponent):
         elif self.device == "cuda":
             # TODO: remove this warning when SLSTM supports GPU
             if self.smoother:
-                print("Warning: pytagi SLSTM does not support GPU. Resetting to CPU.")
+                print(
+                    "Warning: pytagi SLSTM does not support GPU yet. Resetting to CPU."
+                )
                 lstm_network.set_threads(self.num_thread)
             else:
                 lstm_network.to_device("cuda")
@@ -226,6 +228,8 @@ class LstmNetwork(BaseComponent):
 
         if self.smoother:
             lstm_network.smooth = True
+
+            lstm_network.smooth_look_back_states = None
             if self.load_lstm_look_back is not None:
                 lstm_network.smooth_look_back_mu = np.array(
                     self.load_lstm_look_back[0], dtype=np.float32
