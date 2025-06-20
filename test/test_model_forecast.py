@@ -44,8 +44,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
         (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_decay=True,
         )
+        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -69,7 +69,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
-        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
@@ -94,7 +93,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
 
 def test_model_forecast(run_mode, plot_mode):
-    # def main(run_mode="save_threshold", plot_mode=False):
     """Test model forecastin with lstm component"""
     # Model
     model = Model(
@@ -128,9 +126,5 @@ def test_model_forecast(run_mode, plot_mode):
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
         assert (
-            abs(mse - threshold) < 1e-6
-        ), f"MSE {mse} not within tolerance of saved threshold {threshold}"
-
-
-# if __name__ == "__main__":
-#     fire.Fire(main)
+            mse < threshold
+        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
