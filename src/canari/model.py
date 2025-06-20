@@ -369,6 +369,80 @@ class Model:
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
 
+    def _exponential_forward_modification(
+        self, mu_states_prior, var_states_prior, mu_states, var_states
+    ):
+        exp_level_index = self.get_states_index("exp level")
+        exp_trend_index = self.get_states_index("exp trend")
+        exp_amplitude_index = self.get_states_index("exp amplitude")
+        exp_index = self.get_states_index("exp")
+        expwithamplitude_index = self.get_states_index("exp with amplitude")
+
+        mu_states_prior[exp_index] = (
+            np.exp(
+                -mu_states_prior[exp_level_index]
+                + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+            )
+            - 1
+        )
+        var_states_prior[exp_index, exp_index] = np.exp(
+            -2 * mu_states_prior[exp_level_index]
+            + var_states_prior[exp_level_index, exp_level_index]
+        ) * (np.exp(var_states_prior[exp_level_index, exp_level_index]) - 1)
+
+        var_states_prior[exp_level_index, exp_index] = -var_states_prior[
+            exp_level_index, exp_level_index
+        ] * np.exp(
+            -mu_states_prior[exp_level_index]
+            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+        )
+
+        var_states_prior[exp_index, exp_level_index] = var_states_prior[
+            exp_level_index, exp_index
+        ]
+
+        var_states_prior[exp_trend_index, exp_index] = -np.exp(
+            -mu_states_prior[exp_level_index]
+            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+        ) * (
+            var_states[exp_trend_index, exp_trend_index]
+            + var_states[exp_level_index, exp_trend_index]
+        )
+        var_states_prior[exp_index, exp_trend_index] = var_states_prior[
+            exp_trend_index, exp_index
+        ]
+
+        a = (
+            var_states_prior[exp_index, exp_level_index]
+            / var_states_prior[exp_level_index, exp_level_index]
+        )
+        skip_index = {exp_level_index, exp_trend_index, exp_index}
+        for i in range(len(mu_states_prior)):
+            if i in skip_index:
+                continue
+            cov_i = a * var_states_prior[exp_level_index, i]
+            var_states_prior[exp_index, i] = cov_i
+            var_states_prior[i, exp_index] = cov_i
+
+        mu_states_prior, var_states_prior = GMA(
+            mu_states_prior,
+            var_states_prior,
+            index1=exp_amplitude_index,
+            index2=exp_index,
+            replace_index=expwithamplitude_index,
+        ).get_results()
+
+        mu_obs_predict, var_obs_predict = common.calc_observation(
+            mu_states_prior, var_states_prior, self.observation_matrix
+        )
+
+        return (
+            mu_states_prior,
+            var_states_prior,
+            np.float32(mu_obs_predict),
+            np.float32(var_obs_predict),
+        )
+
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
         Apply forward path autoregressive (AR) moment transformations.
@@ -490,12 +564,10 @@ class Model:
             self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar.item()
 
         return mu_states_posterior, var_states_posterior
-    
+
     def _BAR_backward_modification(
-            self, 
-            mu_states_posterior, 
-            var_states_posterior
-        ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mu_states_posterior, var_states_posterior
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         BAR backward modification
         """
@@ -519,26 +591,56 @@ class Model:
         var_AR = var_states_posterior[ar_index, ar_index].item()
         cov_AR = var_states_posterior[ar_index, :]
 
-        bound = (self.components["bounded autoregression"].gamma * 
-                    np.sqrt(self.components["bounded autoregression"].std_error**2 / 
-                    (1 - self.components["bounded autoregression"].phi**2)))
-        
+        bound = self.components["bounded autoregression"].gamma * np.sqrt(
+            self.components["bounded autoregression"].std_error ** 2
+            / (1 - self.components["bounded autoregression"].phi ** 2)
+        )
+
         l_bar = mu_AR + bound
 
-        mu_L = l_bar * common.norm_cdf(l_bar/np.sqrt(var_AR)) + np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - bound
-        var_L = (l_bar**2 + var_AR) * common.norm_cdf(l_bar/np.sqrt(var_AR)) + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar/np.sqrt(var_AR)) - (mu_L + bound)**2
+        mu_L = (
+            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - bound
+        )
+        var_L = (
+            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - (mu_L + bound) ** 2
+        )
 
         u_bar = -mu_AR + bound
-        mu_U = -u_bar * common.norm_cdf(u_bar/np.sqrt(var_AR)) - np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) + bound
-        var_U = (u_bar**2 + var_AR) * common.norm_cdf(u_bar/np.sqrt(var_AR)) + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar/np.sqrt(var_AR)) - (-mu_U+bound)**2
+        mu_U = (
+            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            + bound
+        )
+        var_U = (
+            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            - (-mu_U + bound) ** 2
+        )
 
         mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (common.norm_cdf(l_bar/np.sqrt(var_AR)) + common.norm_cdf(u_bar/np.sqrt(var_AR)) - 1)
-        var_bar = (var_L + (mu_L - mu_AR)**2 + var_U + (mu_U - mu_AR)**2 - (mu_states_posterior[bar_index] - mu_AR)**2 - var_AR)
+        cov_bar = cov_AR * (
+            common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - 1
+        )
+        var_bar = (
+            var_L
+            + (mu_L - mu_AR) ** 2
+            + var_U
+            + (mu_U - mu_AR) ** 2
+            - (mu_states_posterior[bar_index] - mu_AR) ** 2
+            - var_AR
+        )
         var_states_posterior[bar_index, :] = cov_bar
         var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(var_bar, 1e-8).item() # For numerical stability
-        
+        var_states_posterior[bar_index, bar_index] = np.maximum(
+            var_bar, 1e-8
+        ).item()  # For numerical stability
+
         return np.float32(mu_states_posterior), np.float32(var_states_posterior)
 
     def _prepare_covariates_generation(
@@ -837,6 +939,13 @@ class Model:
             lstm_states_index,
         )
 
+        if "exp" in self.states_name:
+            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
+                self._exponential_forward_modification(
+                    mu_states_prior, var_states_prior, self.mu_states, self.var_states
+                )
+            )
+
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
@@ -944,6 +1053,11 @@ class Model:
             self.states.cov_states[time_step + 1],
             matrix_inversion_tol,
         )
+        # if (
+        #     self.states.mu_prior[time_step + 1][self.get_states_index("exp")]
+        #     == self.states.mu_posterior[time_step][self.get_states_index("exp")]
+        # ):
+        #     print("pas bon")
 
     def forecast(
         self, data: Dict[str, np.ndarray]
