@@ -20,15 +20,15 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters
-sigma_v_fix = 0.06107626430664278
-look_back_len_fix = 60
-SKF_std_transition_error_fix = 5.066668002029218e-05
-SKF_norm_to_abnorm_prob_fix = 1.514736559162257e-06
+sigma_v_fix = 0.07611100046925366
+look_back_len_fix = 54
+SKF_std_transition_error_fix = 7.082910365723074e-05
+SKF_norm_to_abnorm_prob_fix = 4.892477330860902e-05
 
 
 def main(
     num_trial_optimization: int = 50,
-    param_optimization: bool = True,
+    param_optimization: bool = False,
     param_grid_search: bool = False,
 ):
     # Read data
@@ -96,6 +96,7 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
             )
+            model.set_memory(states=states, time_step=0)
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
                 mu_validation_preds,
@@ -127,7 +128,6 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
-            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 
@@ -142,7 +142,7 @@ def main(
     if param_optimization or param_grid_search:
         if param_optimization:
             param_space = {
-                "look_back_len": [5, 76],
+                "look_back_len": [12, 76],
                 "sigma_v": [1e-3, 2e-1],
             }
         elif param_grid_search:
@@ -169,7 +169,6 @@ def main(
         }
 
     # Train best model
-    print("Model parameters used:", param)
     model_optim, states_optim, mu_validation_preds, std_validation_preds = (
         initialize_model(param, train_data, validation_data)
     )
@@ -284,12 +283,13 @@ def main(
             "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
         }
 
-    print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_param=model_optim_dict)
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(
+        matrix_inversion_tol=1e-3, tol_type="relative"
+    )
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
@@ -302,6 +302,9 @@ def main(
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
+
+    print("Model parameters used:", param)
+    print("SKF model parameters used:", skf_param)
 
 
 if __name__ == "__main__":

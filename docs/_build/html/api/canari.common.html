@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.common &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.common &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../_static/documentation_options.js?v=773eff52"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -137,8 +137,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -157,13 +157,14 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -321,7 +322,6 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.pad_matrix"><code class="docutils literal notranslate"><span class="pre">pad_matrix()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.prepare_lstm_input"><code class="docutils literal notranslate"><span class="pre">prepare_lstm_input()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.rts_smoother"><code class="docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.unstandardize_states"><code class="docutils literal notranslate"><span class="pre">unstandardize_states()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -437,7 +437,22 @@ the two variables referred by the two input indices.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Delta/Correction for hidden states’ mean and covariance matrix.</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt><strong>delta_mu_states</strong> (np.ndarray):</dt><dd><p>The delta or corrections for the hidden states means.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>delta_var_states</strong> (np.ndarray):</dt><dd><p>The delta or corrections for the hidden states covariance matrix.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple[np.ndarray, np.ndarray]</p>
@@ -501,7 +516,32 @@ the two variables referred by the two input indices.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Predicted observation mean/var and state prior mean/var.</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt><strong>mu_obs_predict</strong> (np.ndarray):</dt><dd><p>The mean for the forecast.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>std_obs_preds</strong> (np.ndarray):</dt><dd><p>The standard deviation for the forecast.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>mu_states_prior</strong> (np.ndarray):</dt><dd><p>The prior means for states.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>var_states_prior</strong> (np.ndarray):</dt><dd><p>The prior covariance matrix for states.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]</p>
@@ -609,7 +649,7 @@ the two variables referred by the two input indices.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="canari.common.rts_smoother">
-<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_states_prior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_prior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states_smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states_posterior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_posterior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_cov_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.rts_smoother" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_states_prior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_prior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states_smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_states_posterior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states_posterior</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_cov_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'relative'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.rts_smoother" title="Link to this definition">#</a></dt>
 <dd><p>Rauch-Tung-Striebel (RTS) smoother.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -625,32 +665,28 @@ the two variables referred by the two input indices.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Updated smoothed mean and covariance.</p>
+<dd class="field-even"><p><dl>
+<dt>Updated smoothed mean and covariance.</dt><dd><p>A tuple containing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt><strong>mu_states_smooth</strong> (np.ndarray):</dt><dd><p>Updated smoothed means.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>var_states_smooth</strong> (np.ndarray):</dt><dd><p>Updated smoothed covariance matrix.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple[np.ndarray, np.ndarray]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="canari.common.unstandardize_states">
-<span class="sig-prename descclassname"><span class="pre">canari.common.</span></span><span class="sig-name descname"><span class="pre">unstandardize_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_const_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_const_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/common.html#unstandardize_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.common.unstandardize_states" title="Link to this definition">#</a></dt>
-<dd><p>Unstandardize standardized mean and standard deviation of states.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>mu_norm</strong> (<em>dict</em>) – Standardized means by key.</p></li>
-<li><p><strong>std_norm</strong> (<em>dict</em>) – Standardized stds by key.</p></li>
-<li><p><strong>scale_const_mean</strong> (<em>float</em>) – Mean standardization constant.</p></li>
-<li><p><strong>scale_const_std</strong> (<em>float</em>) – Standard deviation standardization constant.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Unstandardized means and stds.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Tuple[dict, dict]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -721,7 +757,6 @@ the two variables referred by the two input indices.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.pad_matrix"><code class="docutils literal notranslate"><span class="pre">pad_matrix()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.prepare_lstm_input"><code class="docutils literal notranslate"><span class="pre">prepare_lstm_input()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.rts_smoother"><code class="docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.common.unstandardize_states"><code class="docutils literal notranslate"><span class="pre">unstandardize_states()</span></code></a></li>
 </ul>
   </nav></div>
 

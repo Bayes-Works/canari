@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.component.base_component &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.component.base_component &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../../../_static/documentation_options.js?v=773eff52"></script>
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -156,13 +156,14 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -372,35 +373,35 @@ document.write(`
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Transition matrix for the component. 2D array.</span>
+<span class="sd">        np.ndarray: Transition matrix for the component as an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">observation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Observation matrix for the component. 2D array.</span>
+<span class="sd">        np.ndarray: Observation matrix for the component as an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_observation_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">process_noise_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: Process noise covariance matrix. 2D array.</span>
+<span class="sd">        np.ndarray: Process noise covariance matrix as an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_noise_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">mu_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: mean values. 2D array.</span>
+<span class="sd">        np.ndarray: mean values as an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">var_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        np.ndarray: covariance matrix. 2D array.</span>
+<span class="sd">        np.ndarray: covariance matrix as an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span>
 
@@ -436,7 +437,7 @@ document.write(`
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_mu_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the mean of the hidden states. 2D np.ndarray.</span>
+<span class="sd">        Initialize the mean of the hidden states. Output an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -445,7 +446,7 @@ document.write(`
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_var_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the covariance matrix of the hidden states. 2D np.ndarray.</span>
+<span class="sd">        Initialize the covariance matrix of the hidden states. Output an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -454,7 +455,7 @@ document.write(`
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the transition matrix. 2D np.ndarray.</span>
+<span class="sd">        Initialize the transition matrix. Output an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -463,7 +464,7 @@ document.write(`
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_observation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the observation matrix. 2D np.ndarray.</span>
+<span class="sd">        Initialize the observation matrix. Output an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
@@ -472,7 +473,7 @@ document.write(`
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_process_noise_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the process noise covariance matrix. 2D np.ndarray.</span>
+<span class="sd">        Initialize the process noise covariance matrix. Output an 2D array.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 </div>
 
