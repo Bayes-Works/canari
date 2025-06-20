@@ -130,7 +130,7 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
-    matrix_inversion_tol=1e-3, tol_type="absolute"
+    matrix_inversion_tol=1e-2, tol_type="absolute"
 )
 
 # # Plot
