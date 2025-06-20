@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Anomaly detection using the swithing Kalman filter &#8212; canari v.0.0.2 documentation</title>
+    <title>Anomaly detection using the swithing Kalman filter &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../_static/documentation_options.js?v=773eff52"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -160,13 +160,14 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -328,7 +329,7 @@ document.write(`
                   
   <section id="Anomaly-detection-using-the-swithing-Kalman-filter">
 <h1>Anomaly detection using the swithing Kalman filter<a class="headerlink" href="#Anomaly-detection-using-the-swithing-Kalman-filter" title="Link to this heading">#</a></h1>
-<p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimate the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
+<p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimates the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
 <p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
 <p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
 <section id="Import-libraries">
@@ -351,7 +352,7 @@ document.write(`
 </section>
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
-<p>From Canari, we need to import the several class that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing model using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
+<p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baselines, we the SKF will build two competing models using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> component.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -482,8 +483,8 @@ document.write(`
 </section>
 <section id="Define-components">
 <h2>Define components<a class="headerlink" href="#Define-components" title="Link to this heading">#</a></h2>
-<p>We instantiatiate each component brom their base class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with
-a mean 0 and a user-defined standard deviation of 0.05.</p>
+<p>We instantiatiate each component from their corresponding class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white
+noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -505,7 +506,7 @@ a mean 0 and a user-defined standard deviation of 0.05.</p>
 </section>
 <section id="Define-the-normal-and-abnormal-models">
 <h2>Define the normal and abnormal models<a class="headerlink" href="#Define-the-normal-and-abnormal-models" title="Link to this heading">#</a></h2>
-<p>The SKF requires defining a normal and an abnormal model. Here, the normal one correspond to a local trend component with no acceleration, and the abnormal one correspond to a local acceleration component. The former represent a trend-stationnary regime and the later represent a transitory changepoint with non-zero acceleration. Note that both the normal and abnormal models share the same <code class="docutils literal notranslate"><span class="pre">pattern</span></code> and <code class="docutils literal notranslate"><span class="pre">residual</span></code> components.</p>
+<p>The SKF requires defining a normal and an abnormal model. Here, the normal one uses a local trend component with no acceleration, and the abnormal one uses a local acceleration component. The former represents a trend-stationnary regime, white the latter represents a transitory changepoint with non-zero acceleration. Note that both the normal and abnormal models share the same <code class="docutils literal notranslate"><span class="pre">pattern</span></code> and <code class="docutils literal notranslate"><span class="pre">residual</span></code> components.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
@@ -522,7 +523,7 @@ a mean 0 and a user-defined standard deviation of 0.05.</p>
 <section id="Define-the-Switching-Kalman-Filter-(SKF)-model">
 <h2>Define the Switching Kalman Filter (SKF) model<a class="headerlink" href="#Define-the-Switching-Kalman-Filter-(SKF)-model" title="Link to this heading">#</a></h2>
 <p>We instantiate and initialize the SKF model by providing 1) the standard deviation of the process error that is added when transiting from the normal to the abnormal model, and 2) the prior probability of having a regime switch fron normal to abnormal, here set to 0.0001.</p>
-<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialized the baseline hidden states based on the first three years of data.</p>
+<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialize the baseline hidden states based on the first day of data.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -533,7 +534,7 @@ a mean 0 and a user-defined standard deviation of 0.05.</p>
     <span class="n">std_transition_error</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
     <span class="n">norm_to_abnorm_prob</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">52</span> <span class="o">*</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">24</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -556,6 +557,7 @@ trend-stationnary.</p>
         <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
         <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">skf</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="c1"># Unstandardize the predictions</span>
     <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
@@ -583,7 +585,6 @@ trend-stationnary.</p>
         <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
 
-    <span class="n">skf</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">skf</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
         <span class="k">break</span>
 
@@ -598,7 +599,7 @@ trend-stationnary.</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Optimal epoch               : 49
-Validation Log-likelihood   :-1.4718
+Validation Log-likelihood   :-1.5481
 </pre></div></div>
 </div>
 </section>
@@ -617,7 +618,7 @@ Validation Log-likelihood   :-1.4718
 </section>
 <section id="Hidden-states-and-proability-of-anomalies">
 <h2>Hidden states and proability of anomalies<a class="headerlink" href="#Hidden-states-and-proability-of-anomalies" title="Link to this heading">#</a></h2>
-<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
+<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterized by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. Finaly, the probability of anomaly obtained from the SKF indicated the possible location of change point from
 a stationnary regime to a trend-stationnary one.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:

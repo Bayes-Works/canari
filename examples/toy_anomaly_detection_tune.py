@@ -19,17 +19,17 @@ from canari import (
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 # Fix parameters grid search
-# sigma_v_fix = 0.0019179647619756545
-# look_back_len_fix = 10
-# # SKF_std_transition_error_fix = 0.0020670653848689604
-# # SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
+sigma_v_fix = 0.0019179647619756545
+look_back_len_fix = 10
+SKF_std_transition_error_fix = 0.0020670653848689604
+SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
 # SKF_std_transition_error_fix = 1e-4
 # SKF_norm_to_abnorm_prob_fix = 1e-4
 
-sigma_v_fix = 0.015519087402266298
-look_back_len_fix = 11
-SKF_std_transition_error_fix = 0.0006733112773884772
-SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
+# sigma_v_fix = 0.015519087402266298
+# look_back_len_fix = 11
+# SKF_std_transition_error_fix = 0.0006733112773884772
+# SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 
 def main(
@@ -93,6 +93,7 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
             )
+            model.set_memory(states=states, time_step=0)
 
             # Unstandardize the predictions
             mu_validation_preds_unnorm = Normalizer.unstandardize(
@@ -125,7 +126,6 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
-            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 
@@ -274,14 +274,15 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    filter_marginal_abnorm_prob, states = skf_optim.smoother()
+    filter_marginal_abnorm_prob, states = skf_optim.smoother(
+        matrix_inversion_tol=1e-2, tol_type="absolute"
+    )
 
     # Plotting SKF results
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         states_type="smooth",
-        states_to_plot=["level", "trend", "lstm", "white noise"],
         model_prob=filter_marginal_abnorm_prob,
         standardization=False,
     )

@@ -103,6 +103,7 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -135,7 +136,6 @@ for epoch in range(num_epoch):
         std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
 
-    model.set_memory(states=states, time_step=0)
     if model.stop_training:
         break
 
@@ -159,9 +159,9 @@ with open("saved_params/toy_model_dict.pkl", "wb") as f:
 
 with open("saved_params/toy_model_dict.pkl", "rb") as f:
     pretrained_model_dict = pickle.load(f)
-phi_index = pretrained_model_dict["phi_index"]
-W2bar_index = pretrained_model_dict["W2bar_index"]
-autoregression_index = pretrained_model_dict["autoregression_index"]
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
 
 print(
     "phi_AR =", pretrained_model_dict["states_optimal"].mu_prior[-1][phi_index].item()

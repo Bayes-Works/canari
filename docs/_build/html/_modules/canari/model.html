@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.model &#8212; canari v.0.0.2 documentation</title>
+    <title>canari.model &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=276cc8c5"></script>
+    <script src="../../_static/documentation_options.js?v=773eff52"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.2 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.2 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -156,13 +156,14 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -413,9 +414,9 @@ document.write(`
 <span class="sd">        early_stop_lstm_param (Dict):</span>
 <span class="sd">            LSTM&#39;s weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.</span>
 <span class="sd">        early_stop_init_mu_states (np.ndarray):</span>
-<span class="sd">            Copy of `mu_states` at time step :math:`t=0` of the optimal epoch .</span>
+<span class="sd">            Copy of `mu_states` at time step `t=0` of the optimal epoch .</span>
 <span class="sd">        early_stop_init_var_states (np.ndarray):</span>
-<span class="sd">            Copy of `var_states` at time step :math:`t=0` of the optimal epoch .</span>
+<span class="sd">            Copy of `var_states` at time step `t=0` of the optimal epoch .</span>
 <span class="sd">        optimal_epoch (int):</span>
 <span class="sd">            Epoch at which the metric being monitored was best.</span>
 <span class="sd">        stop_training (bool):</span>
@@ -437,7 +438,8 @@ document.write(`
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_attributes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="n">component</span><span class="o">.</span><span class="n">component_name</span><span class="p">:</span> <span class="n">component</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">component</span><span class="o">.</span><span class="n">component_name</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">component</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">component</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
         <span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_model</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">StatesHistory</span><span class="p">()</span>
@@ -576,7 +578,7 @@ document.write(`
             <span class="p">(</span>
                 <span class="n">component</span>
                 <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span> <span class="o">==</span> <span class="s2">&quot;lstm&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;lstm&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
             <span class="p">),</span>
             <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
@@ -595,7 +597,7 @@ document.write(`
             <span class="p">(</span>
                 <span class="n">component</span>
                 <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span> <span class="o">==</span> <span class="s2">&quot;autoregression&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;autoregression&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
             <span class="p">),</span>
             <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
@@ -642,8 +644,18 @@ document.write(`
         <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="n">white_noise_max_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
             <span class="o">-</span><span class="n">white_noise_decay_factor</span> <span class="o">*</span> <span class="n">epoch</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">scheduled_sigma_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span><span class="p">:</span>
-            <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;white noise&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span>
+
+        <span class="n">white_noise_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">component</span>
+                <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="k">if</span> <span class="s2">&quot;white noise&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
+            <span class="p">),</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">scheduled_sigma_v</span> <span class="o">&lt;</span> <span class="n">white_noise_component</span><span class="o">.</span><span class="n">std_error</span><span class="p">:</span>
+            <span class="n">scheduled_sigma_v</span> <span class="o">=</span> <span class="n">white_noise_component</span><span class="o">.</span><span class="n">std_error</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">noise_index</span><span class="p">,</span> <span class="n">noise_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduled_sigma_v</span><span class="o">**</span><span class="mi">2</span></div>
 
 
@@ -801,16 +813,13 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
 
         <span class="k">return</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
-    
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_BAR_backward_modification</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span> 
-            <span class="n">mu_states_posterior</span><span class="p">,</span> 
-            <span class="n">var_states_posterior</span>
-        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        BAR backward modification</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        BAR backward modification.</span>
+
 <span class="sd">        Apply backward BAR moment updates during state-space filtering.</span>
 
 <span class="sd">        Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.</span>
@@ -830,26 +839,64 @@ document.write(`
         <span class="n">var_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span>
         <span class="n">cov_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="p">:]</span>
 
-        <span class="n">bound</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> 
-                    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> 
-                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">phi</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span>
-        
+        <span class="n">bar_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">component</span>
+                <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="k">if</span> <span class="s2">&quot;bounded autoregression&quot;</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">component_name</span>
+            <span class="p">),</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">bound</span> <span class="o">=</span> <span class="n">bar_component</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="n">bar_component</span><span class="o">.</span><span class="n">std_error</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">bar_component</span><span class="o">.</span><span class="n">phi</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="p">)</span>
+
         <span class="n">l_bar</span> <span class="o">=</span> <span class="n">mu_AR</span> <span class="o">+</span> <span class="n">bound</span>
 
-        <span class="n">mu_L</span> <span class="o">=</span> <span class="n">l_bar</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">l_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">-</span> <span class="n">bound</span>
-        <span class="n">var_L</span> <span class="o">=</span> <span class="p">(</span><span class="n">l_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">+</span> <span class="n">l_bar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">l_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="n">mu_L</span> <span class="o">+</span> <span class="n">bound</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">mu_L</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">l_bar</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">l_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">-</span> <span class="n">bound</span>
+        <span class="p">)</span>
+        <span class="n">var_L</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">l_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">l_bar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">l_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">-</span> <span class="p">(</span><span class="n">mu_L</span> <span class="o">+</span> <span class="n">bound</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span>
 
         <span class="n">u_bar</span> <span class="o">=</span> <span class="o">-</span><span class="n">mu_AR</span> <span class="o">+</span> <span class="n">bound</span>
-        <span class="n">mu_U</span> <span class="o">=</span> <span class="o">-</span><span class="n">u_bar</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">u_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">+</span> <span class="n">bound</span>
-        <span class="n">var_U</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">+</span> <span class="n">u_bar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">u_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="n">mu_U</span><span class="o">+</span><span class="n">bound</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">mu_U</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="o">-</span><span class="n">u_bar</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">u_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">bound</span>
+        <span class="p">)</span>
+        <span class="n">var_U</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">u_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">u_bar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">)</span> <span class="o">*</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_pdf</span><span class="p">(</span><span class="n">u_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="n">mu_U</span> <span class="o">+</span> <span class="n">bound</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span>
 
         <span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_L</span> <span class="o">+</span> <span class="n">mu_U</span> <span class="o">-</span> <span class="n">mu_AR</span>
-        <span class="n">cov_bar</span> <span class="o">=</span> <span class="n">cov_AR</span> <span class="o">*</span> <span class="p">(</span><span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">+</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">var_bar</span> <span class="o">=</span> <span class="p">(</span><span class="n">var_L</span> <span class="o">+</span> <span class="p">(</span><span class="n">mu_L</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">var_U</span> <span class="o">+</span> <span class="p">(</span><span class="n">mu_U</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">]</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">var_AR</span><span class="p">)</span>
+        <span class="n">cov_bar</span> <span class="o">=</span> <span class="n">cov_AR</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">l_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">common</span><span class="o">.</span><span class="n">norm_cdf</span><span class="p">(</span><span class="n">u_bar</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_AR</span><span class="p">))</span>
+            <span class="o">-</span> <span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="n">var_bar</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">var_L</span>
+            <span class="o">+</span> <span class="p">(</span><span class="n">mu_L</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="o">+</span> <span class="n">var_U</span>
+            <span class="o">+</span> <span class="p">(</span><span class="n">mu_U</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="o">-</span> <span class="p">(</span><span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">]</span> <span class="o">-</span> <span class="n">mu_AR</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="o">-</span> <span class="n">var_AR</span>
+        <span class="p">)</span>
         <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">cov_bar</span>
         <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_bar</span>
-        <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">,</span> <span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">var_bar</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">)</span> <span class="c1"># For numerical stability</span>
-        
+        <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">,</span> <span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
+            <span class="n">var_bar</span><span class="p">,</span> <span class="mf">1e-8</span>
+        <span class="p">)</span>  <span class="c1"># For numerical stability</span>
+
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">mu_states_posterior</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">var_states_posterior</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_covariates_generation</span><span class="p">(</span>
@@ -1259,6 +1306,7 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply RTS smoothing equations for a specity timestep. As a result of this function,</span>
@@ -1286,6 +1334,7 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">var_posterior</span><span class="p">[</span><span class="n">time_step</span><span class="p">],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">cov_states</span><span class="p">[</span><span class="n">time_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
             <span class="n">matrix_inversion_tol</span><span class="p">,</span>
+            <span class="n">tol_type</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -1429,13 +1478,21 @@ document.write(`
 
 <div class="viewcode-block" id="Model.smoother">
 <a class="viewcode-back" href="../../api/canari.model.html#canari.model.Model.smoother">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StatesHistory</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the Kalman smoother over an entire time series data, i.e., repeatly apply the</span>
 <span class="sd">        RTS smoothing equation over multiple time steps.</span>
 
 <span class="sd">        This function is used at the entire-dataset-level. Recall repeatedly the function</span>
 <span class="sd">        :meth:`rts_smoother` at one-time-step level from :class:`~canari.model.Model`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
+<span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-12.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            StatesHistory:</span>
@@ -1448,7 +1505,7 @@ document.write(`
 
         <span class="n">num_time_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rts_smoother</span><span class="p">(</span><span class="n">time_step</span><span class="p">,</span> <span class="n">matrix_inversion_tol</span><span class="p">,</span> <span class="n">tol_type</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span></div>
 
