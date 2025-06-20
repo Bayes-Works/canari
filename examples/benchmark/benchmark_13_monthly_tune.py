@@ -20,9 +20,9 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 # Fix parameters
 sigma_v_fix = 0.07835596785011355
-look_back_len_fix = 6
-SKF_std_transition_error_fix = 2.9874712252910025e-05
-SKF_norm_to_abnorm_prob_fix = 3.2834494053648664e-06
+look_back_len_fix = 12
+SKF_std_transition_error_fix = 2.9874712252910025e-04
+SKF_norm_to_abnorm_prob_fix = 3.2834494053648664e-05
 
 
 def main(
@@ -87,6 +87,7 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
             )
+            model.set_memory(states=states, time_step=0)
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
                 mu_validation_preds,
@@ -118,7 +119,6 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
-            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 
@@ -282,7 +282,7 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-2)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycanari"
-version = "0.0.3"
+version = "0.1.0"
 description = """
 Canari is an open-source library for online change point detection in univariate time series. 
 It has been developed in the context of long-term online monitoring where we aim for the early 
@@ -34,7 +34,7 @@ dependencies = [
   "optuna==4.2.0",
   "ray[tune]",
   "scikit-optimize",
-  "pytest==8.3.4"
+  "pytest==8.3.4",
 ]
 
 [tool.setuptools]
