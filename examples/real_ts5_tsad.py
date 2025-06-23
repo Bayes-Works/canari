@@ -46,6 +46,10 @@ data_processor = DataProcess(
     validation_split=validation_split,
     output_col=output_col,
 )
+# print(data_processor.scale_const_mean, data_processor.scale_const_std)
+# # Overwrite the scale constants to match the pretrained model
+# data_processor.scale_const_mean = np.array([-0.10716975, 25.48])
+# data_processor.scale_const_std = np.array([1.0377775, 14.925617])
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
@@ -145,7 +149,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
+# ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_title("HSL Detection & Intervention agent")
 plot_states(
     data_processor=data_processor,
