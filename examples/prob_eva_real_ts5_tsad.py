@@ -319,6 +319,6 @@ for k in tqdm(range(len(restored_data))):
     hsl_tsad_agent.current_time_step = copy.deepcopy(current_time_step_temp)
     hsl_tsad_agent.p_anm_all = copy.deepcopy(p_anm_all_temp)
 
-# Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/real_ts5_results_il.csv", index=False)
+# # Save the results to a CSV file
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "mape_LL", "mape_LT", "detection_time"])
+# results_df.to_csv("saved_results/prob_eva/real_ts5_results_il.csv", index=False)

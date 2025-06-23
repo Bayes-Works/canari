@@ -53,8 +53,10 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         anm_start_index = np.random.randint(0, len(test_data["y"]) - 52 * 3)
         anm_start_index_global = anm_start_index + len(df_raw) - len(test_data["y"])
 
+        sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
+        anm_mag *= sign
         anm_mag_unstandardize = anm_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
-        anm_mag_unstandardize = -anm_mag_unstandardize if np.random.rand() < 0.5 else anm_mag_unstandardize # Randomly assign positive and negative anomalies
+
         anm_baseline = np.arange(len(df_raw)) * anm_mag_unstandardize
         # Set the first 52*12 values in anm_baseline to be 0
         anm_baseline[anm_start_index_global:] -= anm_baseline[anm_start_index_global]
