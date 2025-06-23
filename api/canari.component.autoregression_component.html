@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.component.autoregression_component &#8212; canari v.0.0.3 documentation</title>
+    <title>canari.component.autoregression_component &#8212; canari v.0.1.0 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=9c904ad8"></script>
+    <script src="../_static/documentation_options.js?v=773eff52"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -137,8 +137,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.0.3 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.0.3 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -157,13 +157,14 @@
     <div class="bd-toc-item navbar-nav active">
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .csv data files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -390,7 +391,7 @@ Volume 37, Issue 11, pp. 2934-2962.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_mu_states">
 <span class="sig-name descname"><span class="pre">initialize_mu_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_mu_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_mu_states" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the mean of the hidden states. 2D np.ndarray.</p>
+<dd><p>Initialize the mean of the hidden states. Output an 2D array.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -402,13 +403,13 @@ Volume 37, Issue 11, pp. 2934-2962.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_observation_matrix">
 <span class="sig-name descname"><span class="pre">initialize_observation_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_observation_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_observation_matrix" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the observation matrix. 2D np.ndarray.</p>
+<dd><p>Initialize the observation matrix. Output an 2D array.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_process_noise_matrix">
 <span class="sig-name descname"><span class="pre">initialize_process_noise_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_process_noise_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_process_noise_matrix" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the process noise covariance matrix. 2D np.ndarray.</p>
+<dd><p>Initialize the process noise covariance matrix. Output an 2D array.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -420,13 +421,13 @@ Volume 37, Issue 11, pp. 2934-2962.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_transition_matrix">
 <span class="sig-name descname"><span class="pre">initialize_transition_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_transition_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_transition_matrix" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the transition matrix. 2D np.ndarray.</p>
+<dd><p>Initialize the transition matrix. Output an 2D array.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.component.autoregression_component.Autoregression.initialize_var_states">
 <span class="sig-name descname"><span class="pre">initialize_var_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/component/autoregression_component.html#Autoregression.initialize_var_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.component.autoregression_component.Autoregression.initialize_var_states" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the covariance matrix of the hidden states. 2D np.ndarray.</p>
+<dd><p>Initialize the covariance matrix of the hidden states. Output an 2D array.</p>
 </dd></dl>
 
 </dd></dl>
