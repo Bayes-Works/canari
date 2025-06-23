@@ -20,8 +20,8 @@ from canari.component import Exponential, WhiteNoise, Periodic, LocalTrend
 df_raw = pd.read_csv(
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques9.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs7.CSV",
-    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs9.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend9.CSV",
+    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs9.CSV",
+    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend9.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend7.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend8.CSV",
     # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiod7.CSV",
@@ -41,8 +41,13 @@ df_raw = pd.read_csv(
     index_col="temps",
 )
 df = df_raw[["exponential"]]
+X_EL = df_raw[["X_EL"]]
+X_ET = df_raw[["X_ET"]]
+X_A = df_raw[["X_A"]]
+X_local_level = df_raw[["X_local_level"]]
+X_local_trend = df_raw[["X_local_trend"]]
 df = df
-df = df.iloc[:]
+df = df.iloc[:10]
 
 # Split into train and test
 output_col = [0]
@@ -55,13 +60,13 @@ data_processor = DataProcess(
 )
 train_data, validation_data, _, all_data = data_processor.get_splits()
 
-sigma_v = np.sqrt(0.25)
+sigma_v = np.sqrt(0.3)
 # sigma_v = np.sqrt(0.15)
 
 exponential = Exponential(
     std_error=0.0,
-    mu_states=[-0.2, 0.2, 11.0, 0, 0],
-    var_states=[0.2**2, 0.05**2, 1**2, 0, 0],
+    mu_states=[-0.2, 0.31, 11, 0, 0],
+    var_states=[0.2**2, 0.1**2, 1**2, 0, 0],
 )
 
 # exponential = Exponential(
@@ -79,7 +84,7 @@ periodic = Periodic(
 localtrend = LocalTrend(
     mu_states=[1.95, -0.0], var_states=[0.1**2, 0.1**2], std_error=0
 )
-model = Model(exponential, noise)
+model = Model(exponential, noise, localtrend)
 
 model.filter(data=all_data)
 model.smoother()
@@ -87,6 +92,7 @@ print(model.states.get_mean("exp level", "prior"))
 print(model.states.get_std("exp", "prior"))
 print(model.states.get_mean("exp", "posterior"))
 print(model.states.get_std("exp", "posterior"))
+print(model.get_states_index("exp level"))
 
 # Plot
 fig, ax = plot_states(
@@ -102,6 +108,24 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
+ax[model.get_states_index("exp level")].plot(
+    df_raw.index, X_EL, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("exp trend")].plot(
+    df_raw.index, X_ET, color="black", linestyle="--"
+)
+ax[model.get_states_index("exp amplitude")].plot(
+    df_raw.index, X_A, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("level")].plot(
+    df_raw.index, X_local_level, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("trend")].plot(
+    df_raw.index, X_local_trend, color="black", linestyle="--"
+)
 
 fig, ax = plot_states(
     data_processor=data_processor, states=model.states, states_type="posterior"
@@ -114,6 +138,25 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
+ax[model.get_states_index("exp level")].plot(
+    df_raw.index, X_EL, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("exp trend")].plot(
+    df_raw.index, X_ET, color="black", linestyle="--"
+)
+ax[model.get_states_index("exp amplitude")].plot(
+    df_raw.index, X_A, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("level")].plot(
+    df_raw.index, X_local_level, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("trend")].plot(
+    df_raw.index, X_local_trend, color="black", linestyle="--"
+)
+
 
 fig, ax = plot_states(
     data_processor=data_processor,
@@ -127,6 +170,24 @@ plot_data(
     plot_test_data=False,
     validation_label="y",
     sub_plot=ax[4],
+)
+ax[model.get_states_index("exp level")].plot(
+    df_raw.index, X_EL, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("exp trend")].plot(
+    df_raw.index, X_ET, color="black", linestyle="--"
+)
+ax[model.get_states_index("exp amplitude")].plot(
+    df_raw.index, X_A, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("level")].plot(
+    df_raw.index, X_local_level, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("trend")].plot(
+    df_raw.index, X_local_trend, color="black", linestyle="--"
 )
 
 plt.show()
