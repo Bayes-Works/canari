@@ -319,6 +319,7 @@ document.write(`
                   
   <section id="installation">
 <span id="installation-guide"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h1>
+<p>This section presents how to install the Canari libraty using either PyPi, or through a local installation for developpement purposes. Note that prior to installing, you should first create a Miniconda environement in order to ensure the compatibility with the <a class="reference external" href="https://github.com/lhnguyen102/cuTAGI">pyTAGI</a> external library.</p>
 <section id="create-miniconda-environment">
 <h2>Create Miniconda Environment<a class="headerlink" href="#create-miniconda-environment" title="Link to this heading">#</a></h2>
 <ol class="arabic">
@@ -337,9 +338,23 @@ document.write(`
 </section>
 <section id="installing-from-pypi">
 <h2>Installing from PyPi<a class="headerlink" href="#installing-from-pypi" title="Link to this heading">#</a></h2>
+<ol class="arabic">
+<li><p>Install pycanari package</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pycanari
 </pre></div>
 </div>
+</li>
+<li><p>Install requirements</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</pre></div>
+</div>
+</li>
+<li><p>(Optional) If facing errors installing the <cite>pytagi</cite> library in the requirements, do the following:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>libstdcxx-ng
+</pre></div>
+</div>
+</li>
+</ol>
 </section>
 <section id="installing-locally">
 <h2>Installing locally<a class="headerlink" href="#installing-locally" title="Link to this heading">#</a></h2>
