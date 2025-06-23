@@ -77,8 +77,11 @@ def main(
                 look_back_len=param["look_back_len"],
                 num_features=2,
                 num_layer=1,
+                infer_len=24,
                 num_hidden_unit=50,
                 manual_seed=1,
+                device="cpu",
+                # smoother=False,
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )
@@ -92,6 +95,7 @@ def main(
             (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
+                data_processor=data_processor,
             )
             model.set_memory(states=states, time_step=0)
 

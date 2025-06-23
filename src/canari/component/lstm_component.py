@@ -73,6 +73,7 @@ class LstmNetwork(BaseComponent):
         num_layer: Optional[int] = 1,
         num_hidden_unit: Optional[int] = 50,
         look_back_len: Optional[int] = 1,
+        infer_len: Optional[int] = 1,
         num_features: Optional[int] = 1,
         num_output: Optional[int] = 1,
         device: Optional[str] = "cpu",
@@ -81,13 +82,16 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
+        load_lstm_look_back: Optional[tuple] = None,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
+        smoother: Optional[bool] = True,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
+        self.infer_len = infer_len
         self.num_features = num_features
         self.num_output = num_output
         self.device = device
@@ -96,8 +100,10 @@ class LstmNetwork(BaseComponent):
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
+        self.load_lstm_look_back = load_lstm_look_back
         self._mu_states = mu_states
         self._var_states = var_states
+        self.smoother = smoother
         super().__init__()
 
     def initialize_component_name(self):
@@ -155,34 +161,84 @@ class LstmNetwork(BaseComponent):
         layers = []
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
-        layers.append(
-            LSTM(
-                self.num_features + self.look_back_len - 1,
-                self.num_hidden_unit[0],
-                1,
-                gain_weight=self.gain_weight,
-                gain_bias=self.gain_bias,
+        if self.smoother:
+            layers.append(
+                SLSTM(
+                    self.num_features + self.look_back_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
             )
-        )
-        for i in range(1, self.num_layer):
-            layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
-        # Last layer
-        layers.append(
-            Linear(
-                self.num_hidden_unit[-1],
-                self.num_output,
-                1,
-                gain_weight=self.gain_weight,
-                gain_bias=self.gain_bias,
+            for i in range(1, self.num_layer):
+                layers.append(
+                    SLSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1)
+                )
+            # Last layer
+            layers.append(
+                SLinear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
             )
-        )
+        else:
+            layers.append(
+                LSTM(
+                    self.num_features + self.look_back_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+            for i in range(1, self.num_layer):
+                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
+            # Last layer
+            layers.append(
+                Linear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
+        lstm_network.lstm_infer_len = self.infer_len * 3  # for better smoothing
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
-            lstm_network.to_device("cuda")
+            # TODO: remove this warning when SLSTM supports GPU
+            if self.smoother:
+                print(
+                    "Warning: pytagi SLSTM does not support GPU yet. Resetting to CPU."
+                )
+                lstm_network.set_threads(self.num_thread)
+            else:
+                lstm_network.to_device("cuda")
+
+        lstm_network.smooth_look_back_mu = None
+        lstm_network.smooth_look_back_var = None
+        lstm_network.smooth_look_back_states = None
+
+        if self.smoother:
+            lstm_network.smooth = True
+
+            if self.load_lstm_look_back is not None:
+                lstm_network.smooth_look_back_mu = np.array(
+                    self.load_lstm_look_back[0], dtype=np.float32
+                )
+                lstm_network.smooth_look_back_var = np.array(
+                    self.load_lstm_look_back[1], dtype=np.float32
+                )
+        else:
+            lstm_network.smooth = False
 
         if self.load_lstm_net:
             lstm_network.load(filename=self.load_lstm_net)

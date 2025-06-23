@@ -51,9 +51,11 @@ lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
     num_layer=1,
+    infer_len=24,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -89,7 +91,7 @@ std_validation_preds_optim = None
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
-        train_data=train_data, validation_data=validation_data
+        train_data=train_data, validation_data=validation_data, data_processor=data_processor
     )
     skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
