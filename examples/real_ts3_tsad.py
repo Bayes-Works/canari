@@ -88,14 +88,15 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 # hsl_tsad_agent.estimate_LTd_dist()
 hsl_tsad_agent.mu_LTd = 4.926001682114636e-05
 hsl_tsad_agent.LTd_std = 7.467677082315905e-05
-# hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 4)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3_detrended.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 0.0001349587, 0.0009116043, np.array([8.1795733e-04, 6.3600011e-02, 1.0436374e+02]), np.array([1.0912784e-02, 1.3082677e+00, 6.2689758e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_rebased.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts5_rebased.pkl', max_training_epoch=50)
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 0.0001349587, 0.0009116043, np.array([8.1795733e-04, 6.3600011e-02, 1.0436374e+02]), np.array([1.0912784e-02, 1.3082677e+00, 6.2689758e+01])
+# hsl_tsad_agent.tune(decay_factor=0.95)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3_detrended.csv', 
+                                  save_model_path='saved_params/NN_detection_model_real_ts3_detrended.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
