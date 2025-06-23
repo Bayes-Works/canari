@@ -717,13 +717,13 @@ document.write(`
             <span class="c1"># Forward path to compute the moments of W</span>
             <span class="c1"># # W2bar</span>
             <span class="n">mu_states_prior</span><span class="p">[</span><span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
-            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">W2bar_index</span><span class="p">,</span> <span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span>
+            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">W2bar_index</span><span class="p">,</span> <span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
             <span class="c1"># # From W2bar to W2</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2_prior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">var_W2_prior</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span><span class="o">**</span><span class="mi">2</span>
             <span class="n">mu_states_prior</span><span class="p">[</span><span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2_prior</span>
-            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">W2_index</span><span class="p">,</span> <span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2_prior</span>
+            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">W2_index</span><span class="p">,</span> <span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2_prior</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
             <span class="c1"># # From W2 to W</span>
             <span class="n">mu_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -733,9 +733,9 @@ document.write(`
             <span class="n">var_states_prior</span><span class="p">[:,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
                 <span class="n">var_states_prior</span><span class="p">[:,</span> <span class="n">ar_error_index</span><span class="p">]</span>
             <span class="p">)</span>
-            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
-            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
-            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
+            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_error_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">var_states_prior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_error_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">mu_states_prior</span><span class="p">,</span> <span class="n">var_states_prior</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_online_AR_backward_modification</span><span class="p">(</span>
@@ -793,7 +793,7 @@ document.write(`
             <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
                 <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">W2_index</span><span class="p">]</span>
             <span class="p">)</span>
-            <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">W2_index</span><span class="p">,</span> <span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_W2_posterior</span>
+            <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">W2_index</span><span class="p">,</span> <span class="n">W2_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_W2_posterior</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
             <span class="c1"># # From W2 to W2bar</span>
             <span class="n">K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2_prior</span>
@@ -808,9 +808,9 @@ document.write(`
             <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
                 <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">W2bar_index</span><span class="p">]</span>
             <span class="p">)</span>
-            <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">W2bar_index</span><span class="p">,</span> <span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span>
+            <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">W2bar_index</span><span class="p">,</span> <span class="n">W2bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_noise_matrix</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_W2bar</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">var_states_posterior</span>
 
@@ -835,8 +835,8 @@ document.write(`
         <span class="n">ar_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;autoregression&quot;</span><span class="p">)</span>
         <span class="n">bar_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;bounded autoregression&quot;</span><span class="p">)</span>
 
-        <span class="n">mu_AR</span> <span class="o">=</span> <span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">]</span>
-        <span class="n">var_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span>
+        <span class="n">mu_AR</span> <span class="o">=</span> <span class="n">mu_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">var_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="n">ar_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
         <span class="n">cov_AR</span> <span class="o">=</span> <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">ar_index</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="n">bar_component</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
@@ -895,7 +895,7 @@ document.write(`
         <span class="n">var_states_posterior</span><span class="p">[:,</span> <span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_bar</span>
         <span class="n">var_states_posterior</span><span class="p">[</span><span class="n">bar_index</span><span class="p">,</span> <span class="n">bar_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
             <span class="n">var_bar</span><span class="p">,</span> <span class="mf">1e-8</span>
-        <span class="p">)</span>  <span class="c1"># For numerical stability</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>  <span class="c1"># For numerical stability</span>
 
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">mu_states_posterior</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">var_states_posterior</span><span class="p">)</span>
 
