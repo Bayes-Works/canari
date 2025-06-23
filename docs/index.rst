@@ -68,6 +68,11 @@ The major contributors to the library are:
 - Zhanwen Xin (Online AR, Bounded AR & several+++ bug fixes through PRs)
 - David Wardan (SLSTM component & several+++ bug fixes through PRs)
 
+Introduction video
+-------------
+
+`▶️ YouTube introduction <https://www.youtube.com/watch?v=WFJPuKmkyqg>`_
+
 Acknowledgements
 ----------------
 
