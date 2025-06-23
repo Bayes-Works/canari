@@ -22,10 +22,23 @@ Create Miniconda Environment
 
 Installing from PyPi
 ----------------
+1. Install pycanari package
 
-.. code-block:: sh
+   .. code-block:: sh
 
-    pip install pycanari
+      pip install pycanari
+
+2. Install requirements
+
+   .. code-block:: sh
+
+      pip install -r requirements.txt
+
+3. (Optional) If facing errors installing the `pytagi` library in the requirements, do the following:
+
+   .. code-block:: sh
+
+      conda install -c conda-forge libstdcxx-ng
 
 Installing locally
 ----------------
