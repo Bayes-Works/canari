@@ -94,9 +94,9 @@ for _, row in df.iterrows():
 
 results_all = []
 
-for k in tqdm(range(len(restored_data))):
-# for k in tqdm(range(10)):
-#     k += 180
+# for k in tqdm(range(len(restored_data))):
+for k in tqdm(range(10)):
+    k += 120
 
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
@@ -200,80 +200,80 @@ for k in tqdm(range(len(restored_data))):
     results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, detection_time])
 
 
-    # #  Plot
-    # state_type = "prior"
-    # #  Plot states from pretrained model
-    # fig = plt.figure(figsize=(10, 8))
-    # gs = gridspec.GridSpec(5, 1)
-    # ax0 = plt.subplot(gs[0])
-    # ax1 = plt.subplot(gs[1])
-    # ax2 = plt.subplot(gs[2])
-    # ax3 = plt.subplot(gs[3])
-    # ax4 = plt.subplot(gs[4])
+    #  Plot
+    state_type = "prior"
+    #  Plot states from pretrained model
+    fig = plt.figure(figsize=(10, 8))
+    gs = gridspec.GridSpec(5, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+    ax4 = plt.subplot(gs[4])
 
-    # plot_data(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     plot_column=output_col,
-    #     validation_label="y",
-    #     sub_plot=ax0,
-    # )
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     # states=pretrained_model.states,
-    #     states=states,
-    #     states_type=state_type,
-    #     states_to_plot=['level'],
-    #     sub_plot=ax0,
-    # )
-    # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
-    # ax0.set_xticklabels([])
-    # ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-    # ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
-    # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=states,
-    #     states_type=state_type,
-    #     states_to_plot=['trend'],
-    #     sub_plot=ax1,
-    # )
-    # ax1.set_xticklabels([])
-    # # ax1.set_ylim(-0.002, 0.005)
+    plot_data(
+        data_processor=data_processor_k,
+        standardization=True,
+        plot_column=output_col,
+        validation_label="y",
+        sub_plot=ax0,
+    )
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        # states=pretrained_model.states,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['level'],
+        sub_plot=ax0,
+    )
+    ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
+    ax0.set_xticklabels([])
+    ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
+    ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
+    ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['trend'],
+        sub_plot=ax1,
+    )
+    ax1.set_xticklabels([])
+    # ax1.set_ylim(-0.002, 0.005)
 
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=states,
-    #     states_type=state_type,
-    #     states_to_plot=['lstm'],
-    #     sub_plot=ax2,
-    # )
-    # ax2.set_xticklabels([])
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=states,
-    #     states_type=state_type,
-    #     states_to_plot=['autoregression'],
-    #     sub_plot=ax3,
-    # )
-    # ax3.set_xticklabels([])
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['lstm'],
+        sub_plot=ax2,
+    )
+    ax2.set_xticklabels([])
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=states,
+        states_type=state_type,
+        states_to_plot=['autoregression'],
+        sub_plot=ax3,
+    )
+    ax3.set_xticklabels([])
 
-    # ax4.plot(time, p_anm_all, color='b')
-    # ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
-    # ax4.set_xlim(ax0.get_xlim())
-    # # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
-    # ax4.set_ylim(-0.05, 1.05)
-    # ax4.set_yticks([0, 1])
-    # # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
-    # # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
-    # ax4.set_xlim(ax0.get_xlim())
+    ax4.plot(time, p_anm_all, color='b')
+    ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
+    ax4.set_xlim(ax0.get_xlim())
+    # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
+    ax4.set_ylim(-0.05, 1.05)
+    ax4.set_yticks([0, 1])
+    # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
+    # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
+    ax4.set_xlim(ax0.get_xlim())
 
-    # plt.show()
+    plt.show()
 
-# Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_optimal.csv", index=False)
+# # Save the results to a CSV file
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+# results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_optimal.csv", index=False)
