@@ -13,7 +13,8 @@ plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
 df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf.csv")
+# df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_optimal.csv")
 # df_prophet = pd.read_csv("saved_results/prob_eva/toy_simple_results_prophet_online_baseline.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
