@@ -80,7 +80,8 @@ model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 #  Abnormal model
 ab_model = Model(
-            LocalAcceleration(mu_states=[model_dict['early_stop_init_mu_states'][0].item(), model_dict['early_stop_init_mu_states'][1].item(), 0], var_states=[1e-12, 1e-12, 1e-4]),
+            LocalAcceleration(),
+            # LocalAcceleration(mu_states=[model_dict['early_stop_init_mu_states'][0].item(), model_dict['early_stop_init_mu_states'][1].item(), 0], var_states=[1e-12, 1e-12, 1e-4]),
             LSTM,
             Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
