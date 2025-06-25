@@ -113,10 +113,10 @@ model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/real_ts5_detrend_tsmodel.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
+# Save model_dict to local
+import pickle
+with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "wb") as f:
+    pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################

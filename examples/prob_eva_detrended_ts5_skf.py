@@ -106,9 +106,9 @@ for _, row in df.iterrows():
 
 results_all = []
 
-for k in tqdm(range(len(restored_data))):
-# for k in tqdm(range(10)):
-#     k += 130
+# for k in tqdm(range(len(restored_data))):
+for k in tqdm(range(10)):
+    k += 180
 
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
@@ -285,9 +285,11 @@ for k in tqdm(range(len(restored_data))):
     # # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
     # ax4.set_xlim(ax0.get_xlim())
     # ax4.axvline(x=time[anm_detected_index], color='r', linestyle='--', label='Anomaly start')
+    # # for n in np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist():
+    # #     ax4.axvline(x=time[n], color='r', linestyle='--', label='Anomaly start')
 
     # plt.show()
 
-# Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv", index=False)
+# # Save the results to a CSV file
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+# results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv", index=False)
