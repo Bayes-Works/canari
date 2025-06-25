@@ -29,7 +29,7 @@ df_raw.columns = ["obs"]
 # LT anomaly
 # anm_mag = 0.010416667/10
 anm_start_index = 52*8
-anm_mag = 0.2/52
+anm_mag = 0.1/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -49,7 +49,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Load model_dict from local
-with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
