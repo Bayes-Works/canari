@@ -177,6 +177,8 @@ for k in tqdm(range(len(restored_data))):
     std_trans_error_norm_to_abnorm_prob_comb = random.choice(std_trans_error_norm_to_abnorm_prob_combs)
     skf.std_transition_error = std_trans_error_norm_to_abnorm_prob_comb[0]
     skf.norm_to_abnorm_prob = std_trans_error_norm_to_abnorm_prob_comb[1]
+    skf._initialize_attributes()
+    skf._initialize_model(norm_model, abnorm_model)
 
     skf.filter_marginal_prob_history = skf._prob_history()
     skf._set_same_states_transition_models()

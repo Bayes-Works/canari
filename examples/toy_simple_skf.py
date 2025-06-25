@@ -136,7 +136,7 @@ skf._set_same_states_transition_models()
 skf.initialize_states_history()
 
 # Get true baseline
-norm_const_std = data_processor.std_const_std[data_processor.output_col]
+norm_const_std = data_processor.scale_const_std[data_processor.output_col]
 anm_mag_normed = anm_mag / norm_const_std
 LL_baseline_true = np.zeros_like(df_raw)
 LT_baseline_true = np.zeros_like(df_raw)
@@ -156,8 +156,8 @@ time = data_processor.get_time(split="all")
 p_anm_all = filter_marginal_abnorm_prob
 
 # Compute MSE for SKF baselines
-mu_LL_states = states.get_mean(states_type='prior', states_name=["level"])["level"]
-mu_LT_states = states.get_mean(states_type='prior', states_name=["trend"])["trend"]
+mu_LL_states = states.get_mean(states_type='prior', states_name="level")
+mu_LT_states = states.get_mean(states_type='prior', states_name="trend")
 mse_LL = metric.mse(
     mu_LL_states[anm_start_index:],
     LL_baseline_true[anm_start_index:],
