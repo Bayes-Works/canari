@@ -66,17 +66,29 @@ print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_inde
 
 
 # No detection: 3, 7
-std_trans_error_norm_to_abnorm_prob_combs = [[0.00017265262887754653, 7.171842166745157e-06],
-                                             [0.00016094645369552546, 2.4004806216088062e-06],
-                                             [0.0003520899194267602, 7.075851051622472e-06],
-                                             [0.000156932677318938, 1.1279097036244447e-06],
-                                             [0.0024577463423032454, 1.2558041530996182e-05],
-                                             [0.00021455099411416383, 1.0369083727313313e-06],
-                                             [0.0007879464759423212, 5.808960996500939e-06],
-                                             [0.00038652264725641864, 1.2312113507141674e-06],
-                                             [0.00021362912780289038, 2.081806450060021e-05],
-                                             [0.00010016366262849763, 1.1347484504777193e-06]
-                                            ]
+# std_trans_error_norm_to_abnorm_prob_combs = [[0.00017265262887754653, 7.171842166745157e-06],
+#                                              [0.00016094645369552546, 2.4004806216088062e-06],
+#                                              [0.0003520899194267602, 7.075851051622472e-06],
+#                                              [0.000156932677318938, 1.1279097036244447e-06],
+#                                              [0.0024577463423032454, 1.2558041530996182e-05],
+#                                              [0.00021455099411416383, 1.0369083727313313e-06],
+#                                              [0.0007879464759423212, 5.808960996500939e-06],
+#                                              [0.00038652264725641864, 1.2312113507141674e-06],
+#                                              [0.00021362912780289038, 2.081806450060021e-05],
+#                                              [0.00010016366262849763, 1.1347484504777193e-06]
+#                                             ]
+
+stdtrans_normtoab_probthred_combs = [[9.99643271607357e-05, 0.0003089234213422606, 0.034731039204814095],
+                                     [0.0006330769451965786, 5.671731882845063e-05, 0.012315675329608908],
+                                     [0.00010486733820090516, 0.0015109968040499442, 0.015231521173241617],
+                                     [0.00016565228263839052, 0.00018037434179664979, 0.015334300999750488],
+                                     [0.0001465743491266769, 2.1638577744663527e-06, 0.010133638533251842],
+                                     [0.000662536038674153, 2.7916500015601684e-06, 0.028737201722366882],
+                                     [0.0001275184634770284, 9.897339143846481e-05, 0.015149078740717177],
+                                     [0.00017638755383443493, 2.6440576541382313e-06, 0.07251962079749191],
+                                     [0.0004340345661101835, 8.758547232860275e-06, 0.03329658212070109],
+                                     [0.000496151622547603, 2.984134506345979e-06, 0.20386239769917525]
+                                     ]
 
 norm_const_std = data_processor.scale_const_std[data_processor.output_col]
 
@@ -94,9 +106,9 @@ for _, row in df.iterrows():
 
 results_all = []
 
-# for k in tqdm(range(len(restored_data))):
-for k in tqdm(range(10)):
-    k += 120
+for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(10)):
+#     k += 130
 
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
@@ -144,11 +156,12 @@ for k in tqdm(range(10)):
             norm_model_prior_prob=0.99,
         )
     # Random pick one of the std_transition_error_norm_to_abnorm_prob_combs
-    # std_trans_error_norm_to_abnorm_prob_comb = random.choice(std_trans_error_norm_to_abnorm_prob_combs)
-    # skf.std_transition_error = std_trans_error_norm_to_abnorm_prob_comb[0]
-    # skf.norm_to_abnorm_prob = std_trans_error_norm_to_abnorm_prob_comb[1]
-    skf.std_transition_error = std_trans_error_norm_to_abnorm_prob_combs[0][0]
-    skf.norm_to_abnorm_prob = std_trans_error_norm_to_abnorm_prob_combs[0][1]
+    stdtrans_normtoab_probthred_comb = random.choice(stdtrans_normtoab_probthred_combs)
+    skf.std_transition_error = stdtrans_normtoab_probthred_comb[0]
+    skf.norm_to_abnorm_prob = stdtrans_normtoab_probthred_comb[1]
+    prob_anm_threshold = stdtrans_normtoab_probthred_comb[2]
+    # skf.std_transition_error = std_trans_error_norm_to_abnorm_prob_combs[0][0]
+    # skf.norm_to_abnorm_prob = std_trans_error_norm_to_abnorm_prob_combs[0][1]
     skf._initialize_attributes()
     skf._initialize_model(norm_model, abnorm_model)
 
@@ -162,12 +175,12 @@ for k in tqdm(range(10)):
 
     p_anm_all = filter_marginal_abnorm_prob
 
-    all_detection_points = str(np.where(np.array(p_anm_all) > 0.5)[0].tolist())
+    all_detection_points = str(np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist())
 
-    if (np.array(p_anm_all) > 0.5).any():
-        anm_detected_index = np.where(np.array(p_anm_all) > 0.5)[0][0]
+    if (np.array(p_anm_all) > prob_anm_threshold).any():
+        anm_detected_index = np.where(np.array(p_anm_all) > prob_anm_threshold)[0][0]
     else:
-        anm_detected_index = len(p_anm_all)
+        anm_detected_index = len(p_anm_all) - 1
 
     # Get true baseline
     # anm_mag_normed = anm_mag / norm_const_std
@@ -200,80 +213,81 @@ for k in tqdm(range(10)):
     results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, detection_time])
 
 
-    #  Plot
-    state_type = "prior"
-    #  Plot states from pretrained model
-    fig = plt.figure(figsize=(10, 8))
-    gs = gridspec.GridSpec(5, 1)
-    ax0 = plt.subplot(gs[0])
-    ax1 = plt.subplot(gs[1])
-    ax2 = plt.subplot(gs[2])
-    ax3 = plt.subplot(gs[3])
-    ax4 = plt.subplot(gs[4])
+    # #  Plot
+    # state_type = "prior"
+    # #  Plot states from pretrained model
+    # fig = plt.figure(figsize=(10, 8))
+    # gs = gridspec.GridSpec(5, 1)
+    # ax0 = plt.subplot(gs[0])
+    # ax1 = plt.subplot(gs[1])
+    # ax2 = plt.subplot(gs[2])
+    # ax3 = plt.subplot(gs[3])
+    # ax4 = plt.subplot(gs[4])
 
-    plot_data(
-        data_processor=data_processor_k,
-        standardization=True,
-        plot_column=output_col,
-        validation_label="y",
-        sub_plot=ax0,
-    )
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        # states=pretrained_model.states,
-        states=states,
-        states_type=state_type,
-        states_to_plot=['level'],
-        sub_plot=ax0,
-    )
-    ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
-    ax0.set_xticklabels([])
-    ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-    ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
-    ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=states,
-        states_type=state_type,
-        states_to_plot=['trend'],
-        sub_plot=ax1,
-    )
-    ax1.set_xticklabels([])
-    # ax1.set_ylim(-0.002, 0.005)
+    # plot_data(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    #     sub_plot=ax0,
+    # )
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     # states=pretrained_model.states,
+    #     states=states,
+    #     states_type=state_type,
+    #     states_to_plot=['level'],
+    #     sub_plot=ax0,
+    # )
+    # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
+    # ax0.set_xticklabels([])
+    # ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
+    # ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
+    # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=states,
+    #     states_type=state_type,
+    #     states_to_plot=['trend'],
+    #     sub_plot=ax1,
+    # )
+    # ax1.set_xticklabels([])
+    # # ax1.set_ylim(-0.002, 0.005)
 
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=states,
-        states_type=state_type,
-        states_to_plot=['lstm'],
-        sub_plot=ax2,
-    )
-    ax2.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=states,
-        states_type=state_type,
-        states_to_plot=['autoregression'],
-        sub_plot=ax3,
-    )
-    ax3.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=states,
+    #     states_type=state_type,
+    #     states_to_plot=['lstm'],
+    #     sub_plot=ax2,
+    # )
+    # ax2.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=states,
+    #     states_type=state_type,
+    #     states_to_plot=['autoregression'],
+    #     sub_plot=ax3,
+    # )
+    # ax3.set_xticklabels([])
 
-    ax4.plot(time, p_anm_all, color='b')
-    ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
-    ax4.set_xlim(ax0.get_xlim())
-    # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
-    ax4.set_ylim(-0.05, 1.05)
-    ax4.set_yticks([0, 1])
-    # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
-    # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
-    ax4.set_xlim(ax0.get_xlim())
+    # ax4.plot(time, p_anm_all, color='b')
+    # ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
+    # ax4.set_xlim(ax0.get_xlim())
+    # # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
+    # ax4.set_ylim(-0.05, 1.05)
+    # ax4.set_yticks([0, 1])
+    # # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
+    # # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
+    # ax4.set_xlim(ax0.get_xlim())
+    # ax4.axvline(x=time[anm_detected_index], color='r', linestyle='--', label='Anomaly start')
 
-    plt.show()
+    # plt.show()
 
-# # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_optimal.csv", index=False)
+# Save the results to a CSV file
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv", index=False)
