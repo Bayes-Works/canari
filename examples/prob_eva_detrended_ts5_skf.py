@@ -46,7 +46,7 @@ test_start = df_raw.index[data_processor.test_start]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -78,16 +78,22 @@ print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_inde
 #                                              [0.00010016366262849763, 1.1347484504777193e-06]
 #                                             ]
 
-stdtrans_normtoab_probthred_combs = [[9.99643271607357e-05, 0.0003089234213422606, 0.034731039204814095],
-                                     [0.0006330769451965786, 5.671731882845063e-05, 0.012315675329608908],
-                                     [0.00010486733820090516, 0.0015109968040499442, 0.015231521173241617],
-                                     [0.00016565228263839052, 0.00018037434179664979, 0.015334300999750488],
-                                     [0.0001465743491266769, 2.1638577744663527e-06, 0.010133638533251842],
-                                     [0.000662536038674153, 2.7916500015601684e-06, 0.028737201722366882],
-                                     [0.0001275184634770284, 9.897339143846481e-05, 0.015149078740717177],
-                                     [0.00017638755383443493, 2.6440576541382313e-06, 0.07251962079749191],
-                                     [0.0004340345661101835, 8.758547232860275e-06, 0.03329658212070109],
-                                     [0.000496151622547603, 2.984134506345979e-06, 0.20386239769917525]
+# stdtrans_normtoab_probthred_combs = [[9.99643271607357e-05, 0.0003089234213422606, 0.034731039204814095],
+#                                      [0.0006330769451965786, 5.671731882845063e-05, 0.012315675329608908],
+#                                      [0.00010486733820090516, 0.0015109968040499442, 0.015231521173241617],
+#                                      [0.00016565228263839052, 0.00018037434179664979, 0.015334300999750488],
+#                                      [0.0001465743491266769, 2.1638577744663527e-06, 0.010133638533251842],
+#                                      [0.000662536038674153, 2.7916500015601684e-06, 0.028737201722366882],
+#                                      [0.0001275184634770284, 9.897339143846481e-05, 0.015149078740717177],
+#                                      [0.00017638755383443493, 2.6440576541382313e-06, 0.07251962079749191],
+#                                      [0.0004340345661101835, 8.758547232860275e-06, 0.03329658212070109],
+#                                      [0.000496151622547603, 2.984134506345979e-06, 0.20386239769917525]
+#                                      ]
+
+# Tuned models params for better model
+stdtrans_normtoab_probthred_combs = [[0.00023339656126145536, 3.705613810296851e-05, 0.01944423014032889],
+                                     [0.00011559975847875379, 3.3680733434277974e-05, 0.010182633021558266],
+                                     [0.0002634174902743065, 9.922253793029194e-06, 0.04417427865718894],
                                      ]
 
 norm_const_std = data_processor.scale_const_std[data_processor.output_col]
@@ -106,9 +112,9 @@ for _, row in df.iterrows():
 
 results_all = []
 
-# for k in tqdm(range(len(restored_data))):
-for k in tqdm(range(10)):
-    k += 180
+for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(10)):
+#     k += 180
 
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
@@ -290,6 +296,6 @@ for k in tqdm(range(10)):
 
     # plt.show()
 
-# # Save the results to a CSV file
-# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv", index=False)
+# Save the results to a CSV file
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
+results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ssm.csv", index=False)

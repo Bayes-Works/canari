@@ -50,7 +50,7 @@ def main(
     # anm_mag = 0.010416667/10
     time_anomaly = 52*8
     # anm_mag = 0.3/52
-    anm_mag = 1/52
+    anm_mag = 0.1/52
     # anm_mag = 0
     # anm_baseline = np.linspace(0, 3, num=len(df_raw))
     anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -76,7 +76,7 @@ def main(
     ########################################
 
 
-    with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
+    with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
@@ -145,7 +145,7 @@ def main(
 
     # Define parameter search space
     slope_upper_bound = 5e-2
-    slope_lower_bound = 1e-2
+    slope_lower_bound = 1e-3
 
     # Plot synthetic anomaly
     synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
