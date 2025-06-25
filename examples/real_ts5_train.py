@@ -93,7 +93,7 @@ for epoch in range(num_epoch):
     # Early-stopping
     # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
-                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 50)
+                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 100)
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -113,10 +113,10 @@ model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
-# Save model_dict to local
-import pickle
-with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
