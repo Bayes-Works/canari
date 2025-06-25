@@ -49,7 +49,8 @@ def main(
     # LT anomaly
     # anm_mag = 0.010416667/10
     time_anomaly = 52*8
-    anm_mag = 0.3/52
+    # anm_mag = 0.3/52
+    anm_mag = 1/52
     # anm_mag = 0
     # anm_baseline = np.linspace(0, 3, num=len(df_raw))
     anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -178,6 +179,7 @@ def main(
             "std_transition_error": [1e-6, 1e-2],
             "norm_to_abnorm_prob": [1e-6, 1e-2],
             "slope": [slope_lower_bound, slope_upper_bound],
+            "threshold_anm_prob": [1e-2, 1.],
         }
         # Define optimizer
         skf_optimizer = SKFOptimizer(
