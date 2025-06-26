@@ -1,280 +1,298 @@
+import fire
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-from canari.component import LocalTrend, LstmNetwork, Autoregression
+from pytagi import metric
+from pytagi import Normalizer
 from canari import (
     DataProcess,
     Model,
+    ModelOptimizer,
+    SKF,
+    SKFOptimizer,
     plot_data,
     plot_prediction,
+    plot_skf_states,
     plot_states,
 )
-import pytagi.metric as metric
-from pytagi import Normalizer as normalizer
-from matplotlib import gridspec
-import pickle
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+
+# Fix parameters grid search
+# sigma_v_fix = 0.0019179647619756545
+# look_back_len_fix = 10
+# # SKF_std_transition_error_fix = 0.0020670653848689604
+# # SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
+# SKF_std_transition_error_fix = 1e-4
+# SKF_norm_to_abnorm_prob_fix = 1e-4
+
+sigma_v_fix = 0.015519087402266298
+look_back_len_fix = 11
+SKF_std_transition_error_fix = 0.0006733112773884772
+SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
 
 
-# # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
-df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(df_raw.iloc[:, 0])
-df_raw = df_raw.iloc[:, 1:]
-df_raw.index = time_series
-df_raw.index.name = "date_time"
-df_raw.columns = ["obs"]
+def main(
+    num_trial_optimization: int = 20,
+    param_optimization: bool = False,
+):
+    # Read data
+    data_file = "./data/toy_time_series/sine.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(time_series[0])
+    df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["values"]
 
-# Data pre-processing
-output_col = [0]
-data_processor = DataProcess(
-    data=df_raw,
-    time_covariates=["week_of_year"],
-    train_split=0.3,
-    validation_split=0.1,
-    output_col=output_col,
-)
+    # Add synthetic anomaly to data
+    trend = np.linspace(0, 0, num=len(df_raw))
+    time_anomaly = 120
+    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
+    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
+    df_raw = df_raw.add(trend, axis=0)
 
-num_epoch = 200
+    # Data pre-processing
+    output_col = [0]
+    data_processor = DataProcess(
+        data=df_raw,
+        time_covariates=["hour_of_day"],
+        train_split=0.4,
+        validation_split=0.1,
+        output_col=output_col,
+    )
+    train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+    ########################################
+    ########################################
 
-# Define AR model
-AR_process_error_var_prior = 1e4
-var_W2bar_prior = 1e4
-AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
-LSTM = LstmNetwork(
-        look_back_len=16,
-        num_features=2,
-        num_layer=1,
-        num_hidden_unit=50,
-        device="cpu",
+    # Parameter optimization for model
+    num_epoch = 50
+
+    def initialize_model(param, train_data, validation_data):
+        model = Model(
+            LocalTrend(),
+            LstmNetwork(
+                look_back_len=param["look_back_len"],
+                num_features=2,
+                num_layer=1,
+                num_hidden_unit=50,
+                manual_seed=1,
+            ),
+            WhiteNoise(std_error=param["sigma_v"]),
+        )
+        model.auto_initialize_baseline_states(train_data["y"][0:24])
+
+        states_optim = None
+        mu_validation_preds_optim = None
+        std_validation_preds_optim = None
+        # Training
+        for epoch in range(num_epoch):
+            (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
+                train_data=train_data,
+                validation_data=validation_data,
+            )
+
+            # Unstandardize the predictions
+            mu_validation_preds_unnorm = Normalizer.unstandardize(
+                mu_validation_preds,
+                data_processor.scale_const_mean[data_processor.output_col],
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+
+            std_validation_preds_unnorm = Normalizer.unstandardize_std(
+                std_validation_preds,
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+
+            validation_obs = data_processor.get_data("validation").flatten()
+            validation_log_lik = metric.log_likelihood(
+                prediction=mu_validation_preds_unnorm,
+                observation=validation_obs,
+                std=std_validation_preds_unnorm,
+            )
+
+            model.early_stopping(
+                evaluate_metric=-validation_log_lik,
+                current_epoch=epoch,
+                max_epoch=num_epoch,
+            )
+            model.metric_optim = model.early_stop_metric
+
+            if epoch == model.optimal_epoch:
+                mu_validation_preds_optim = mu_validation_preds.copy()
+                std_validation_preds_optim = std_validation_preds.copy()
+                states_optim = copy.copy(states)
+
+            model.set_memory(states=states, time_step=0)
+            if model.stop_training:
+                break
+
+        return (
+            model,
+            states_optim,
+            mu_validation_preds_optim,
+            std_validation_preds_optim,
+        )
+
+    # Define parameter search space
+    if param_optimization:
+        param_space = {
+            "look_back_len": [10, 30],
+            "sigma_v": [1e-3, 2e-1],
+        }
+        # Define optimizer
+        model_optimizer = ModelOptimizer(
+            model=initialize_model,
+            param_space=param_space,
+            train_data=train_data,
+            validation_data=validation_data,
+            num_optimization_trial=num_trial_optimization,
+        )
+        model_optimizer.optimize()
+        # Get best model
+        param = model_optimizer.get_best_param()
+    else:
+        param = {
+            "look_back_len": look_back_len_fix,
+            "sigma_v": sigma_v_fix,
+        }
+
+    # Train best model
+    print("Model parameters used:", param)
+    model_optim, states_optim, mu_validation_preds, std_validation_preds = (
+        initialize_model(param, train_data, validation_data)
     )
 
-model = Model(
-    LocalTrend(mu_states=[0, 0], std_error=0),
-    LSTM,
-    AR,
-)
-model._mu_local_level = 0
-# model.auto_initialize_baseline_states(train_data["y"][0:104])
+    # Save best model for SKF analysis later
+    model_optim_dict = model_optim.get_dict()
 
-
-# Training
-for epoch in range(num_epoch):
-    mu_validation_preds, std_validation_preds, states = model.lstm_train(
-        train_data=train_data,
-        validation_data=validation_data,
+    # Plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plot_data(
+        data_processor=data_processor,
+        standardization=True,
+        plot_test_data=False,
+        plot_column=output_col,
+        test_label="y",
     )
-
-    # Unstandardize the predictions
-    mu_validation_preds_unnorm = normalizer.unstandardize(
-        mu_validation_preds,
-        data_processor.scale_const_mean[output_col],
-        data_processor.scale_const_std[output_col],
+    plot_prediction(
+        data_processor=data_processor,
+        mean_validation_pred=mu_validation_preds,
+        std_validation_pred=std_validation_preds,
+        validation_label=[r"$\mu$", f"$\pm\sigma$"],
     )
-    std_validation_preds_unnorm = normalizer.unstandardize_std(
-        std_validation_preds,
-        data_processor.scale_const_std[output_col],
+    plot_states(
+        data_processor=data_processor,
+        states=states_optim,
+        standardization=True,
+        states_to_plot=["level"],
+        sub_plot=ax,
     )
+    plt.legend()
+    plt.title("Validation predictions")
+    plt.show()
 
-    # Calculate the evaluation metric
-    validation_obs = data_processor.get_data("validation").flatten()
-    mse = metric.mse(
-        mu_validation_preds_unnorm, validation_obs
+    ########################################
+    ########################################
+
+    # Parameter optimization for SKF
+    def initialize_skf(skf_param_space, model_param: dict):
+        norm_model = Model.load_dict(model_param)
+        abnorm_model = Model(
+            LocalAcceleration(),
+            LstmNetwork(),
+            WhiteNoise(),
+        )
+        skf = SKF(
+            norm_model=norm_model,
+            abnorm_model=abnorm_model,
+            std_transition_error=skf_param_space["std_transition_error"],
+            norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
+        )
+        return skf
+
+    # Define parameter search space
+    slope_upper_bound = 5e-2
+    slope_lower_bound = 1e-3
+
+    # Plot synthetic anomaly
+    synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+        train_data,
+        num_samples=1,
+        slope=[slope_lower_bound, slope_upper_bound],
     )
-
-    validation_log_lik = metric.log_likelihood(
-        prediction=mu_validation_preds_unnorm,
-        observation=validation_obs,
-        std=std_validation_preds_unnorm,
+    plot_data(
+        data_processor=data_processor,
+        standardization=True,
+        plot_validation_data=False,
+        plot_test_data=False,
+        plot_column=output_col,
     )
+    train_time = data_processor.get_time("train")
+    for ts in synthetic_anomaly_data:
+        plt.plot(train_time, ts["y"])
+    plt.legend(
+        [
+            "data without anomaly",
+            "",
+            "smallest anomaly tested",
+            "largest anomaly tested",
+        ]
+    )
+    plt.title("Train data with added synthetic anomalies")
+    plt.show()
 
-    # Early-stopping
-    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
-    model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
-                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 100)
-    # model.early_stopping(evaluate_metric=mse, mode="min")
+    if param_optimization:
+        skf_param_space = {
+            "std_transition_error": [1e-6, 1e-2],
+            "norm_to_abnorm_prob": [1e-6, 1e-2],
+            "slope": [slope_lower_bound, slope_upper_bound],
+        }
+        # Define optimizer
+        skf_optimizer = SKFOptimizer(
+            initialize_skf=initialize_skf,
+            model_param=model_optim_dict,
+            param_space=skf_param_space,
+            data=train_data,
+            num_synthetic_anomaly=50,
+            num_optimization_trial=num_trial_optimization * 2,
+        )
+        skf_optimizer.optimize()
+
+        # Get parameters
+        skf_param = skf_optimizer.get_best_param()
+    else:
+        skf_param = {
+            "std_transition_error": SKF_std_transition_error_fix,
+            "norm_to_abnorm_prob": SKF_norm_to_abnorm_prob_fix,
+        }
+
+    print("SKF model parameters used:", skf_param)
+    skf_optim = initialize_skf(skf_param, model_optim_dict)
+
+    # Detect anomaly
+    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
+    filter_marginal_abnorm_prob, states = skf_optim.smoother()
+
+    # Plotting SKF results
+    fig, ax = plot_skf_states(
+        data_processor=data_processor,
+        states=states,
+        states_type="smooth",
+        states_to_plot=["level", "trend", "lstm", "white noise"],
+        model_prob=filter_marginal_abnorm_prob,
+        standardization=False,
+    )
+    ax[0].axvline(
+        x=data_processor.data.index[time_anomaly],
+        color="r",
+        linestyle="--",
+    )
+    fig.suptitle("SKF hidden states", fontsize=10, y=1)
+    plt.show()
 
 
-    if epoch == model.optimal_epoch:
-        mu_validation_preds_optim = mu_validation_preds.copy()
-        std_validation_preds_optim = std_validation_preds.copy()
-        states_optim = copy.copy(states)
-    if model.stop_training:
-        break
-
-print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
-
-
-model_dict = model.get_dict()
-model_dict['states_optimal'] = states_optim
-model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
-model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
-
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
-
-####################################################################
-######################### Pretrained model #########################
-####################################################################
-phi_index = model_dict["states_name"].index("phi")
-W2bar_index = model_dict["states_name"].index("W2bar")
-autoregression_index = model_dict["states_name"].index("autoregression")
-
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
-print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
-pretrained_model = Model(
-    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-    LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
-    LSTM,
-    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
-)
-
-pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
-
-pretrained_model.filter(normalized_data,train_lstm=False)
-pretrained_model.smoother()
-
-#  Plot
-state_type = "prior"
-#  Plot states from pretrained model
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(4, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
-plot_data(
-    data_processor=data_processor,
-    standardization=True,
-    plot_column=output_col,
-    validation_label="y",
-    sub_plot=ax0,
-)
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['level'],
-    sub_plot=ax0,
-)
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states estimated by the pre-trained model")
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['trend'],
-    sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['lstm'],
-    sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=pretrained_model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax3,
-)
-ax3.set_xticklabels([])
-# plt.show()
-
-state_type = "prior"
-# Plot states from AR learner
-fig = plt.figure(figsize=(10, 6))
-gs = gridspec.GridSpec(6, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
-ax4 = plt.subplot(gs[4])
-ax5 = plt.subplot(gs[5])
-plot_data(
-  data_processor=data_processor,
-  standardization=True,
-  plot_column=output_col,
-  validation_label="y",
-  sub_plot=ax0,
-)
-plot_prediction(
-  data_processor=data_processor,
-  mean_validation_pred=mu_validation_preds_optim,
-  std_validation_pred=std_validation_preds_optim,
-#   validation_label=[r"$\mu$", f"$\pm\sigma$"],
-  sub_plot=ax0,
-)
-plot_states(
-  data_processor=data_processor,
-  standardization=True,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['level'],
-  sub_plot=ax0,
-)
-ax0.set_xticklabels([])
-ax0.set_title("Hidden states at the optimal epoch in training")
-plot_states(
-  data_processor=data_processor,
-  standardization=True,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['trend'],
-  sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-  data_processor=data_processor,
-  standardization=True,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['lstm'],
-  sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-  data_processor=data_processor,
-  standardization=True,
-  states=states_optim,
-  states_type=state_type,
-  states_to_plot=['autoregression'],
-  sub_plot=ax3,
-)
-ax3.set_xticklabels([])
-if "phi" in model.states_name:
-  plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=states_optim,
-    states_type=state_type,
-    states_to_plot=['phi'],
-    sub_plot=ax4,
-  )
-  ax4.set_xticklabels([])
-if "W2bar" in model.states_name:
-  plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=states_optim,
-    states_type=state_type,
-    states_to_plot=['W2bar'],
-    sub_plot=ax5,
-  )
-plt.show()
+if __name__ == "__main__":
+    fire.Fire(main)
