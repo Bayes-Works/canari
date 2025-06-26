@@ -17,48 +17,45 @@ from canari import (
     plot_states,
 )
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+import pickle
 
-# Fix parameters grid search
-# sigma_v_fix = 0.0019179647619756545
-# look_back_len_fix = 10
-# # SKF_std_transition_error_fix = 0.0020670653848689604
-# # SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
-# SKF_std_transition_error_fix = 1e-4
-# SKF_norm_to_abnorm_prob_fix = 1e-4
-
-sigma_v_fix = 0.015519087402266298
-look_back_len_fix = 11
-SKF_std_transition_error_fix = 0.0006733112773884772
-SKF_norm_to_abnorm_prob_fix = 0.006047408738811242
+sigma_v_fix = None
+look_back_len_fix = None
+SKF_std_transition_error_fix = None
+SKF_norm_to_abnorm_prob_fix = None
 
 
 def main(
     num_trial_optimization: int = 20,
-    param_optimization: bool = False,
+    param_optimization: bool = True,
 ):
     # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
-    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(time_series[0])
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
     df_raw.columns = ["values"]
 
     # Add synthetic anomaly to data
-    trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 120
-    new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
-    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-    df_raw = df_raw.add(trend, axis=0)
+    # LT anomaly
+    # anm_mag = 0.010416667/10
+    anm_start_index = 52*8
+    anm_mag = 0.2/52
+    # anm_baseline = np.linspace(0, 3, num=len(df_raw))
+    anm_baseline = np.arange(len(df_raw)) * anm_mag
+    # Set the first 52*12 values in anm_baseline to be 0
+    anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
+    anm_baseline[:anm_start_index] = 0
+    df_raw = df_raw.add(anm_baseline, axis=0)
 
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
         data=df_raw,
-        time_covariates=["hour_of_day"],
-        train_split=0.4,
+        time_covariates=["week_of_year"],
+        train_split=0.3,
         validation_split=0.1,
         output_col=output_col,
     )
@@ -82,7 +79,8 @@ def main(
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )
-        model.auto_initialize_baseline_states(train_data["y"][0:24])
+        model._mu_local_level = 0
+        # model.auto_initialize_baseline_states(train_data["y"][0:24])
 
         states_optim = None
         mu_validation_preds_optim = None
@@ -249,6 +247,7 @@ def main(
             "std_transition_error": [1e-6, 1e-2],
             "norm_to_abnorm_prob": [1e-6, 1e-2],
             "slope": [slope_lower_bound, slope_upper_bound],
+            "threshold_anm_prob": [1e-2, 1.],
         }
         # Define optimizer
         skf_optimizer = SKFOptimizer(
@@ -272,6 +271,13 @@ def main(
     print("SKF model parameters used:", skf_param)
     skf_optim = initialize_skf(skf_param, model_optim_dict)
 
+    # Save the dictionaries
+    with open('saved_params/ts5_whitenoise_models/skf_param10.pkl', 'wb') as f:
+        pickle.dump(skf_param, f)
+
+    with open('saved_params/ts5_whitenoise_models/model_optim_dict10.pkl', 'wb') as f:
+        pickle.dump(model_optim_dict, f)
+
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
     filter_marginal_abnorm_prob, states = skf_optim.smoother()
@@ -286,7 +292,7 @@ def main(
         standardization=False,
     )
     ax[0].axvline(
-        x=data_processor.data.index[time_anomaly],
+        x=data_processor.data.index[anm_start_index],
         color="r",
         linestyle="--",
     )
