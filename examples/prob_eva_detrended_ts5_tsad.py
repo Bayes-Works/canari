@@ -69,7 +69,8 @@ for _, row in df.iterrows():
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
+# with open("saved_params/real_ts5_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts5_detrend_tsmodel_better.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -110,15 +111,19 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.mu_LTd = 3.312482141267754e-05
-hsl_tsad_agent.LTd_std = 3.881592825882659e-05
+# hsl_tsad_agent.mu_LTd = 3.312482141267754e-05
+# hsl_tsad_agent.LTd_std = 3.881592825882659e-05
+hsl_tsad_agent.mu_LTd = -1.1292506864266692e-05
+hsl_tsad_agent.LTd_std = 6.462098601531065e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -1.3397412e-05, 0.00061888463, np.array([-3.4437198e-04, -4.0980659e-02, 1.0753817e+02]), np.array([1.1108804e-02, 1.3843211e+00, 6.2692867e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_detrended.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts5_detrended.pkl', max_training_epoch=50)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6)
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -1.3397412e-05, 0.00061888463, np.array([-3.4437198e-04, -4.0980659e-02, 1.0753817e+02]), np.array([1.1108804e-02, 1.3843211e+00, 6.2692867e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 1.5701287e-05, 0.0015430708, np.array([2.65250510e-05, 7.54264649e-03, 1.03558205e+02]), np.array([1.0685091e-02, 1.2410772e+00, 6.1538734e+01])
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5better_detrended.csv', 
+                                  load_model_path='saved_params/NN_detection_model_real_ts5better_detrended.pkl', max_training_epoch=50)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.6)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.1)
 
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
@@ -214,72 +219,72 @@ for k in tqdm(range(len(restored_data))):
 
     results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, detection_time])
 
-    # #  Plot
-    # state_type = "prior"
-    # #  Plot states from pretrained model
-    # fig = plt.figure(figsize=(10, 8))
-    # gs = gridspec.GridSpec(5, 1)
-    # ax0 = plt.subplot(gs[0])
-    # ax1 = plt.subplot(gs[1])
-    # ax2 = plt.subplot(gs[2])
-    # ax3 = plt.subplot(gs[3])
-    # ax4 = plt.subplot(gs[4])
-    # time = data_processor_k.get_time(split="all")
-    # plot_data(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     plot_column=output_col,
-    #     validation_label="y",
-    #     sub_plot=ax0,
-    # )
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     # states=pretrained_model.states,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['level'],
-    #     sub_plot=ax0,
-    # )
-    # ax0.set_xticklabels([])
-    # ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
-    # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
-    # ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['trend'],
-    #     sub_plot=ax1,
-    # )
-    # ax1.set_xticklabels([])
-    # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['lstm'],
-    #     sub_plot=ax2,
-    # )
-    # ax2.set_xticklabels([])
-    # plot_states(
-    #     data_processor=data_processor_k,
-    #     standardization=True,
-    #     states=hsl_tsad_agent.base_model.states,
-    #     states_type=state_type,
-    #     states_to_plot=['autoregression'],
-    #     sub_plot=ax3,
-    # )
-    # ax3.set_xticklabels([])
+    #  Plot
+    state_type = "prior"
+    #  Plot states from pretrained model
+    fig = plt.figure(figsize=(10, 8))
+    gs = gridspec.GridSpec(5, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+    ax4 = plt.subplot(gs[4])
+    time = data_processor_k.get_time(split="all")
+    plot_data(
+        data_processor=data_processor_k,
+        standardization=True,
+        plot_column=output_col,
+        validation_label="y",
+        sub_plot=ax0,
+    )
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        # states=pretrained_model.states,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['level'],
+        sub_plot=ax0,
+    )
+    ax0.set_xticklabels([])
+    ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
+    ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
+    ax0.set_title(f"IL, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['trend'],
+        sub_plot=ax1,
+    )
+    ax1.set_xticklabels([])
+    ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['lstm'],
+        sub_plot=ax2,
+    )
+    ax2.set_xticklabels([])
+    plot_states(
+        data_processor=data_processor_k,
+        standardization=True,
+        states=hsl_tsad_agent.base_model.states,
+        states_type=state_type,
+        states_to_plot=['autoregression'],
+        sub_plot=ax3,
+    )
+    ax3.set_xticklabels([])
 
-    # ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
-    # ax4.set_ylabel("p_anm")
-    # ax4.set_xlim(ax0.get_xlim())
-    # ax4.set_ylim(-0.05, 1.05)
-    # _add_dynamic_grids(ax4, time)
-    # plt.show()
+    ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
+    ax4.set_ylabel("p_anm")
+    ax4.set_xlim(ax0.get_xlim())
+    ax4.set_ylim(-0.05, 1.05)
+    _add_dynamic_grids(ax4, time)
+    plt.show()
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
     hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -297,4 +302,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_il.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv", index=False)

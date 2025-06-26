@@ -12,9 +12,10 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_il.csv")
+# df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_il.csv")
+df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv")
+
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf.csv")
-# df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_optimal.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv")
 df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ssm.csv")
 
@@ -22,7 +23,7 @@ df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ss
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
-df_skf["anomaly_magnitude"] = df_skf["anomaly_magnitude"] * 52
+df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
 # df_prophet["anomaly_magnitude"] = df_prophet["anomaly_magnitude"] * 52
 
 # Compute detection_rate, for each anomaly magnitude, when df_il["detection_time"] == 260, it means that the anomaly is not detected
