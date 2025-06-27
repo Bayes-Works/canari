@@ -144,6 +144,8 @@ std_itv_all_temp = copy.deepcopy(hsl_tsad_agent.std_itv_all)
 results_all = []
 
 for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(10)):
+#     k += 20
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
     df_k.iloc[:, 0] = restored_data[k][0]
@@ -195,8 +197,6 @@ for k in tqdm(range(len(restored_data))):
     )
 
     detection_time = anm_detected_index - anm_start_index_global
-    results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, detection_time])
-
 
     # # Plot all the baselines, true and estimated
     # time = data_processor_k.get_time(split="all")
@@ -300,6 +300,6 @@ for k in tqdm(range(len(restored_data))):
     hsl_tsad_agent.mu_itv_all = copy.deepcopy(mu_itv_all_temp)
     hsl_tsad_agent.std_itv_all = copy.deepcopy(std_itv_all_temp)
 
-# Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv", index=False)
+# # Save the results to a CSV file
+# results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
+# results_df.to_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv", index=False)
