@@ -149,22 +149,21 @@ for ts_index in tqdm(range(len(restored_data))):
         LT_baseline_true[anm_start_index_global+1:],
     )
 
-    # # Plot all the baselines, true and estimated
-    # plt.figure()
-    # plt.plot(m.history['ds'], LL_baseline_true, label="True", color='blue')
-    # # plt.plot(m.history['ds'], LL_baseline_estimate, label="Offline", color='green')
-    # plt.plot(m.history['ds'][anm_start_index_global+1:], online_LL[anm_start_index_global+1:], label="Online", color='red')
-    # plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
-    # plt.legend()
-    # plt.ylabel('LL')
-
-    # plt.figure()
-    # plt.plot(m.history['ds'], LT_baseline_true, label="True", color='blue')
-    # # plt.plot(m.history['ds'], LT_baseline_estimate, label="Offline", color='green')
-    # plt.plot(m.history['ds'][anm_start_index_global+1:], online_LT[anm_start_index_global+1:], label="Online", color='red')
-    # plt.axvline(x=m.history['ds'][anm_start_index], color='k', linestyle='--')
-    # plt.legend()
-    # plt.ylabel('LT')
+    # # # Plot all the baselines, online_LL vs LL_baseline_true, online_LT vs LT_baseline_true
+    # fig, ax = plt.subplots(2, 1, figsize=(10, 6))
+    # ax[0].plot(df_k['ds'], online_LL, label='LL Online Estimate', color='blue')
+    # ax[0].plot(df_k['ds'], LL_baseline_true, label='LL True', color='orange')
+    # ax[0].set_title('LL Baseline Estimate vs True')
+    # ax[0].set_xlabel('Date')
+    # ax[0].set_ylabel('LL Value')
+    # ax[0].legend()  
+    # ax[1].plot(df_k['ds'], online_LT, label='LT Online Estimate', color='blue')
+    # ax[1].plot(df_k['ds'], LT_baseline_true, label='LT True', color='orange')
+    # ax[1].set_title('LT Baseline Estimate vs True')
+    # ax[1].set_xlabel('Date')
+    # ax[1].set_ylabel('LT Value')
+    # ax[1].legend()
+    # plt.tight_layout()
     # plt.show()
 
     # Check if anm_detect_points is empty
