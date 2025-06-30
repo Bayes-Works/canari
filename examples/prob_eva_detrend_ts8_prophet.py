@@ -7,11 +7,15 @@ import pytagi.metric as metric
 import ast
 from tqdm import tqdm
 import copy
+from canari import DataProcess
+from pytagi import Normalizer
 
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 
-data_file = "./data/benchmark_data/detrended_data/test_5_data_detrended.csv"
+################## Data processor for prophet ##################
+
+data_file = "./data/benchmark_data/detrended_data/test_8_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 # Set the first column name to "ds"
@@ -19,6 +23,7 @@ df_raw.columns = ['ds', 'y']
 
 train_split=0.3
 validation_split=0.1
+train_end = int(np.floor(train_split * len(df_raw)))
 
 # Get the train and validation set
 validation_start = int(np.floor(train_split * len(df_raw)))
@@ -27,7 +32,7 @@ test_start = validation_start + int(
 )
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts5_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts8_tsgen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -42,20 +47,33 @@ threshold = 0.5
 results_all = []
 
 for ts_index in tqdm(range(len(restored_data))):
-# for ts_index in tqdm(range(1)):
+# for ts_index in tqdm(range(2)):
 #     ts_index += 150
 
     df_k = copy.deepcopy(df_raw)
+    raw_data_k = restored_data[ts_index][0]
     # Replace the values in the dataframe with the restored_data[k][0]
-    df_k.iloc[:, 1] = restored_data[ts_index][0]
+    # Normalize data
+    scale_const_mean, scale_const_std = Normalizer.compute_mean_std(
+                raw_data_k[0 : train_end]
+            )
+    norm_data = Normalizer.standardize(
+                data=raw_data_k,
+                mu=scale_const_mean,
+                std=scale_const_std,
+            )
+    df_k.iloc[:, 1] = norm_data
 
     # generate_dates = restored_data[ts_index][0]
+    # scale_const_std = copy.deepcopy(data_processor.scale_const_std)
+    # anm_mag = restored_data[ts_index][1] * (scale_const_std[0] + 1e-10)
     anm_mag = restored_data[ts_index][1]
     anm_start_index = restored_data[ts_index][2]
     anm_start_index_global = anm_start_index + test_start
 
     # Get true baseline
     anm_mag_normed = anm_mag
+    print(anm_mag_normed)
     LL_baseline_true = np.zeros(len(df_raw))
     LT_baseline_true = np.zeros(len(df_raw))
     for i in range(1, len(df_raw)):
@@ -178,4 +196,4 @@ for ts_index in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts5_results_prophet_online.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts8_results_prophet_online.csv", index=False)
