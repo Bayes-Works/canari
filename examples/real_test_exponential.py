@@ -78,15 +78,15 @@ ar = Autoregression(
 
 noise = WhiteNoise(std_error=sigma_v)
 periodic = Periodic(period=12, mu_states=[0, 0], var_states=[2, 2], std_error=0)
-periodic2 = Periodic(period=6, mu_states=[0, 0], var_states=[0.1, 0.1], std_error=0)
+periodic2 = Periodic(period=6, mu_states=[0, 0], var_states=[0.5, 0.5], std_error=0)
 
 localtrend = LocalTrend(
     mu_states=[1, -0.003], var_states=[0.1**2, 0.0005**2], std_error=0
 )
-model = Model(exponential, ar, periodic, localtrend)
+model = Model(exponential, ar, periodic, periodic2, localtrend)
 
 model.filter(data=all_data)
-model.smoother(matrix_inversion_tol=1e-5)
+model.smoother(matrix_inversion_tol=0.001)
 
 # Plot
 fig, ax = plot_states(
@@ -105,7 +105,22 @@ plot_data(
 
 
 fig, ax = plot_states(
-    data_processor=data_processor, states=model.states, states_type="posterior"
+    data_processor=data_processor,
+    states=model.states,
+    states_type="posterior",
+    states_to_plot=(
+        # "latent level",
+        # "latent trend",
+        # "scale",
+        # "exp",
+        "scaled exp",
+        "periodic 1",
+        "autoregression",
+        "phi",
+        "W2bar",
+        "level",
+        "trend",
+    ),
 )
 # plot_data(
 #     data_processor=data_processor,
@@ -140,7 +155,7 @@ fig, ax = plot_states(
         "phi",
         "W2bar",
         "level",
-        # "trend",
+        "trend",
     ),
     states_type="smooth",
 )
@@ -175,6 +190,25 @@ plt.plot(
     + model.states.get_mean("periodic 1", "smooth"),
     color="purple",
 )
+plt.fill_between(
+    data_processor.get_time("all"),
+    model.states.get_mean("scaled exp", "smooth")
+    + model.states.get_mean("level", "smooth")
+    + model.states.get_mean("periodic 1", "smooth")
+    + model.states.get_std("scaled exp", "smooth")
+    + model.states.get_std("level", "smooth")
+    + model.states.get_std("periodic 1", "smooth"),
+    model.states.get_mean("scaled exp", "smooth")
+    + model.states.get_mean("level", "smooth")
+    + model.states.get_mean("periodic 1", "smooth")
+    - model.states.get_std("scaled exp", "smooth")
+    - model.states.get_std("level", "smooth")
+    - model.states.get_std("periodic 1", "smooth"),
+    color="purple",
+    alpha=0.2,
+)
+print(model.states.var_smooth[2])
+
 plt.scatter(
     data_processor.get_time("all"), data_processor.get_data("all"), color="red", s=2.5
 )
