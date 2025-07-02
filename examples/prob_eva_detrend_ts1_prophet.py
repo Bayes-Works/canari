@@ -12,7 +12,7 @@ from pytagi import Normalizer
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 
-data_file = "./data/benchmark_data/detrended_data/test_8_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_1_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 # Set the first column name to "ds"
@@ -29,7 +29,7 @@ test_start = validation_start + int(
 )
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts8_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts1_tsgen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -40,11 +40,11 @@ for _, row in df.iterrows():
     restored_data.append((values, anomaly_magnitude, anomaly_start_index))
 
 begin_idx = int(len(df_raw) * 0.4)
-threshold = 0.5
+threshold = 0.2
 results_all = []
 
 for ts_index in tqdm(range(len(restored_data))):
-# for ts_index in tqdm(range(2)):
+# for ts_index in tqdm(range(1)):
 #     ts_index += 150
 
     df_k = copy.deepcopy(df_raw)
@@ -68,7 +68,6 @@ for ts_index in tqdm(range(len(restored_data))):
 
     # Get true baseline
     anm_mag_normed = anm_mag
-    print(anm_mag_normed)
     LL_baseline_true = np.zeros(len(df_raw))
     LT_baseline_true = np.zeros(len(df_raw))
     for i in range(1, len(df_raw)):
@@ -191,4 +190,4 @@ for ts_index in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts8_results_prophet_online.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts1_results_prophet_online.csv", index=False)

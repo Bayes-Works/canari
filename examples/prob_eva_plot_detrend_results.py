@@ -12,15 +12,18 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/detrended_ts8_results_il.csv")
+df_il = pd.read_csv("saved_results/prob_eva/detrended_ts1_results_il.csv")
+# df_il = pd.read_csv("saved_results/prob_eva/detrended_ts8better_results_il.csv")
 # df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv")
 
-df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts8_results_skf.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts1_results_skf.csv")
+# df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts8_results_skf_better_ssm.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ssm.csv")
 # df_skf_whitenoise = pd.read_csv("saved_results/prob_eva/detrended_ts8_whitenoise_skf.csv")
 
 # df_prophet = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_prophet_online.csv")
+# df_prophet = pd.read_csv("saved_results/prob_eva/detrended_ts8_results_prophet_online.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52

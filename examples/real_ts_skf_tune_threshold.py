@@ -38,7 +38,7 @@ def main(
     param_optimization: bool = True,
 ):
     # Read data
-    data_file = "./data/benchmark_data/detrended_data/test_8_data_detrended.csv"
+    data_file = "./data/benchmark_data/detrended_data/test_1_data_detrended.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
@@ -76,11 +76,11 @@ def main(
     ########################################
 
 
-    with open("saved_params/real_ts8_detrend_tsmodel_better.pkl", "rb") as f:
+    with open("saved_params/real_ts1_detrend_tsmodel.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
-            look_back_len=22,
+            look_back_len=18,
             num_features=2,
             num_layer=1,
             num_hidden_unit=50,
