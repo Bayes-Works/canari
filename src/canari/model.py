@@ -674,10 +674,7 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-
     def _BAR_backward_modification(
-        self, mu_states_posterior, var_states_posterior
-    ) -> Tuple[np.ndarray, np.ndarray]:
         self, mu_states_posterior, var_states_posterior
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
