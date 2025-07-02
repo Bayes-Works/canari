@@ -7,13 +7,10 @@ import pytagi.metric as metric
 import ast
 from tqdm import tqdm
 import copy
-from canari import DataProcess
 from pytagi import Normalizer
 
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
-
-################## Data processor for prophet ##################
 
 data_file = "./data/benchmark_data/detrended_data/test_8_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
@@ -65,8 +62,6 @@ for ts_index in tqdm(range(len(restored_data))):
     df_k.iloc[:, 1] = norm_data
 
     # generate_dates = restored_data[ts_index][0]
-    # scale_const_std = copy.deepcopy(data_processor.scale_const_std)
-    # anm_mag = restored_data[ts_index][1] * (scale_const_std[0] + 1e-10)
     anm_mag = restored_data[ts_index][1]
     anm_start_index = restored_data[ts_index][2]
     anm_start_index_global = anm_start_index + test_start
