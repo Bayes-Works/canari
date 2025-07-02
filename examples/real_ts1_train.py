@@ -102,7 +102,7 @@ for epoch in range(num_epoch):
     # Early-stopping
     # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
-                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 50)
+                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
