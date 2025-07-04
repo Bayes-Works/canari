@@ -662,7 +662,8 @@ class Model:
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
         Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
         """
-        self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+
+        # self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
         device = self.lstm_net.device
 
         dummy_mu_obs = np.array([np.nan], dtype=np.float32)
@@ -900,11 +901,12 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
-        if self.lstm_net.smooth:
-            self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
-            self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
-            self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
-        elif self.lstm_net:
+        # if self.lstm_net.smooth:
+        #     self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
+        #     self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+        #     self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
+        # elif self.lstm_net:
+        if self.lstm_net:
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
             # reset LSTM states to zeros
             lstm_states = self.lstm_net.get_lstm_states()
@@ -1196,6 +1198,7 @@ class Model:
         self,
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
+        data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1228,6 +1231,21 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
+
+        if self.lstm_net.smooth:
+            if self.lstm_net.smooth:
+                self.lstm_net.num_samples = (
+                    self.lstm_net.lstm_infer_len - 1 + len(data["y"])
+                )
+            # self._store_initial_lookback()
+            if data_processor is not None and any(data_processor.covariates_col):
+                # Generate standardized look-back covariates
+                lookback_covariates = self._generate_look_back_covariates(
+                    data_processor
+                )
+                self._store_initial_lookback(lookback_covariates)
+            else:
+                self._store_initial_lookback()
 
         for x, y in zip(data["x"], data["y"]):
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
@@ -1297,20 +1315,22 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
-        # TODO: find a better condtion to check if smoothing is needed
+        # # TODO: find a better condtion to check if smoothing is needed
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
-            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
-            mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
-            var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
-            self.lstm_net.smooth_look_back_mu = mu_sequence
-            self.lstm_net.smooth_look_back_var = var_sequence
+        #     mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+        #     var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+        #     mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
+        #     var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
+        #     # TODO: Check: each new epoch, start with look_back_len (0,1)
+        #     self.lstm_net.smooth_look_back_mu = mu_sequence
+        #     self.lstm_net.smooth_look_back_var = var_sequence
 
-            # get smoothed LSTM states
-            self.lstm_net.smooth_look_back_states = (
-                self.lstm_net.get_lstm_states_smooth(self.lstm_net.lstm_infer_len - 2)
-            )
+        #     # TODO: what this function do?
+        #     # get smoothed LSTM states
+        #     self.lstm_net.smooth_look_back_states = (
+        #         self.lstm_net.get_lstm_states_smooth(self.lstm_net.lstm_infer_len - 2)
+        #     )
 
         return self.states
 
@@ -1360,37 +1380,52 @@ class Model:
         Examples:
             >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
-        # TODO check for a better intialzation that is not relient on epoch count
-        if self.lstm_net.smooth and self._current_epoch == 0:
-            self.lstm_net.num_samples = (
-                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
-            )
+        # # TODO check for a better intialzation that is not relient on epoch count
+        # if self.lstm_net.smooth and self._current_epoch == 0:
+        #     self.lstm_net.num_samples = (
+        #         self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+        #     )
+
+        # # Decaying observation's variance
+        # self.lstm_net.train()
+        # if white_noise_decay and self.get_states_index("white noise") is not None:
+        #     self.white_noise_decay(
+        #         self._current_epoch, white_noise_max_std, white_noise_decay_factor
+        #     )
+
+        # if self.lstm_net.smooth:
+        #     if data_processor is not None and any(data_processor.covariates_col):
+        #         # Generate standardized look-back covariates
+        #         lookback_covariates = self._generate_look_back_covariates(
+        #             data_processor
+        #         )
+        #         self._store_initial_lookback(lookback_covariates)
+        #     else:
+        #         self._store_initial_lookback()
+
+        # self.filter(train_data)
+
+        # self.lstm_net.eval()
+        # mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
+
+        # Aplly smoother on the training set
+        # self.smoother()
+
+        # self._current_epoch += 1
 
         # Decaying observation's variance
-        self.lstm_net.train()
         if white_noise_decay and self.get_states_index("white noise") is not None:
             self.white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
-
-        if self.lstm_net.smooth:
-            if data_processor is not None and any(data_processor.covariates_col):
-                # Generate standardized look-back covariates
-                lookback_covariates = self._generate_look_back_covariates(
-                    data_processor
-                )
-                self._store_initial_lookback(lookback_covariates)
-            else:
-                self._store_initial_lookback()
-
-        self.filter(train_data)
+        self.lstm_net.train()
+        self.filter(data=train_data, data_processor=data_processor)
 
         self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
 
-        # Aplly smoother on the training set
+        # TODO: why moving smoother() before forecast(val) gives different results
         self.smoother()
-
         self._current_epoch += 1
 
         return (

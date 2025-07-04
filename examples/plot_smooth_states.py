@@ -29,6 +29,7 @@ def main():
         print(len(values))
         plt.plot(time_steps, values, color=color, label=label)
         plt.fill_between(time_steps, values - std, values + std, color=color, alpha=0.3)
+        plt.axvline(x=71, color="r", linestyle="--", label="Vertical line at x=1")
 
     plt.xlabel("Time Step")
     plt.ylabel("Value")
