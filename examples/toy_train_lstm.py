@@ -69,9 +69,6 @@ for epoch in range(num_epoch):
     # set white noise decay
     model.white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
 
-    # filter on train data
-    model.lstm_net.train()
-
     # warm-up for infer_len steps
     if model.lstm_net.smooth:
         if data_processor is not None and data_processor.time_covariates:
@@ -84,7 +81,6 @@ for epoch in range(num_epoch):
     model.filter(train_data, train_lstm=True)
 
     # forecast on the validation set
-    model.lstm_net.eval()
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
 
     # Unstandardize the predictions
