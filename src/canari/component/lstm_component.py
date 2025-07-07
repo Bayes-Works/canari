@@ -210,7 +210,7 @@ class LstmNetwork(BaseComponent):
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
-        lstm_network.lstm_infer_len = self.infer_len * 3  # for better smoothing
+        lstm_network.lstm_infer_len = self.infer_len
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
