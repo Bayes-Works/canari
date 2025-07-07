@@ -34,7 +34,7 @@ SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
 
 def main(
     num_trial_optimization: int = 20,
-    param_optimization: bool = False,
+    param_optimization: bool = True,
 ):
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -149,6 +149,7 @@ def main(
             train_data=train_data,
             validation_data=validation_data,
             num_optimization_trial=num_trial_optimization,
+            # grid_search=True,
         )
         model_optimizer.optimize()
         # Get best model
