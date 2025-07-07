@@ -31,6 +31,7 @@ class hsl_detection:
             base_model: Model,
             data_processor: DataProcess,
             drift_model_process_error_std: Optional[float] = 1e-4,
+            y_std_scale: Optional[float] = 1.0
             ):
         self.base_model = base_model
         self.data_processor = data_processor
@@ -50,6 +51,7 @@ class hsl_detection:
         self.lstm_history = []
         self.lstm_cell_states = []
         self.mean_train, self.std_train, self.mean_target, self.std_target = None, None, None, None
+        self.y_std_scale = y_std_scale
 
     def _create_drift_model(self, baseline_process_error_std):
         self.ar_component = self.base_model.components["autoregression"]
@@ -571,7 +573,7 @@ class hsl_detection:
 
         mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(input_covariates = input_covariates)
 
-        y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred), obs)
+        y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred) * self.y_std_scale, obs)
 
         _, _, mu_d_states_prior, _ = drift_model_copy.forward()
         x_likelihood = state_dist(mu_d_states_prior[1].item())

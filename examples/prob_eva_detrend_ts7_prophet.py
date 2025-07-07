@@ -40,7 +40,7 @@ for _, row in df.iterrows():
     restored_data.append((values, anomaly_magnitude, anomaly_start_index))
 
 begin_idx = int(len(df_raw) * 0.4)
-threshold = 0.3
+threshold = 0.5
 results_all = []
 
 for ts_index in tqdm(range(len(restored_data))):
