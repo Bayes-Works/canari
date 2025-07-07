@@ -39,7 +39,7 @@ df_raw = df_raw.iloc[:int(len(df_raw) * 1)]
 begin_idx = int(len(df_raw) * 0.4)
 
 # changepoint_prior_scale = 0.01
-threshold = 0.3
+threshold = 0.5
 
 anm_detect_point = None
 
