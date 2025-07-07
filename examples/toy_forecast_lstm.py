@@ -46,10 +46,11 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
+        infer_len=24,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=235,
+        manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -61,6 +62,7 @@ for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        data_processor=data_processor,
     )
     model.set_memory(states=states, time_step=0)
 
@@ -98,7 +100,7 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
+model.load_dict(model_optim_dict, use_smoothed_look_back=False)
 model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(
     states=states_optim,
