@@ -793,13 +793,23 @@ class Model:
                 )
         return covariates_generation
 
-    def _store_initial_lookback(self, time_covariates=None):
+    def _store_initial_lookback(self, lookback_covariates=None):
         """
         Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
         Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
         """
+        # set lstm to training mode
+        self.lstm_net.train()
+
         self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+        # reset LSTM states to zeros
+        lstm_states = self.lstm_net.get_lstm_states()
+        for key in lstm_states:
+            old_tuple = lstm_states[key]
+            new_tuple = tuple(np.zeros_like(np.array(v)).tolist() for v in old_tuple)
+            lstm_states[key] = new_tuple
+        self.lstm_net.set_lstm_states(lstm_states)
         device = self.lstm_net.device
 
         dummy_mu_obs = np.array([np.nan], dtype=np.float32)
@@ -808,13 +818,13 @@ class Model:
         out_updater = OutputUpdater(device)
 
         for i in range(self.lstm_net.lstm_infer_len - 1):
-            if time_covariates is None:
+            if lookback_covariates is None:
                 dummy_covariates = []
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, dummy_covariates
                 )
             else:
-                dummy_covariates = time_covariates[i]
+                dummy_covariates = lookback_covariates[i]
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, dummy_covariates
                 )
@@ -1524,6 +1534,10 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
 
+        # set lstm to eval mode
+        if self.lstm_net:
+            self.lstm_net.eval()
+
         for x in data["x"]:
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -1581,6 +1595,10 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
+
+        # set lstm to train mode
+        if self.lstm_net and train_lstm:
+            self.lstm_net.train()
 
         for x, y in zip(data["x"], data["y"]):
             (
@@ -1735,7 +1753,6 @@ class Model:
                     break
         self.filter(train_data)
 
-        self.lstm_net.eval()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
 
         # Aplly smoother on the training set
