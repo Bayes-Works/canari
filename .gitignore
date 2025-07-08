@@ -9,7 +9,7 @@ saved_results/
 dist/
 data/demo_data
 data/benchmark_data/
-saved_params/
+# saved_params/
 
 # Docs
 docs/_build/*
