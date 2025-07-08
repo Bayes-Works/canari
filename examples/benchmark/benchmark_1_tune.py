@@ -1,6 +1,5 @@
 import copy
 import fire
-import time
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -281,13 +280,10 @@ def main(
     # print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(matrix_inversion_tol=1e-3)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        # states_to_plot=["level", "trend", "acceleration"],
-        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
@@ -295,7 +291,4 @@ def main(
 
 
 if __name__ == "__main__":
-    start_time = time.time()
     fire.Fire(main)
-    end_time = time.time()
-    print(f"Elapsed time: {end_time-start_time:.2f} seconds")
