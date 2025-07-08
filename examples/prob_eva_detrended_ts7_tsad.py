@@ -69,7 +69,7 @@ for _, row in df.iterrows():
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts7_detrend_tsmodel.pkl", "rb") as f:
+with open("saved_params/real_ts7_detrend_tsmodel_stdlow.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -99,7 +99,8 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 ltd_error = 1e-5
 
-hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
+# hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error, y_std_scale = 2.1)
 
 # Get flexible drift model from the beginning
 hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
@@ -110,15 +111,21 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.mu_LTd = 2.749807459338725e-05
-hsl_tsad_agent.LTd_std = 4.341470992711042e-05
+# hsl_tsad_agent.mu_LTd = 2.749807459338725e-05
+# hsl_tsad_agent.LTd_std = 4.341470992711042e-05
+hsl_tsad_agent.mu_LTd = -6.21978024501181e-06
+hsl_tsad_agent.LTd_std = 8.458438569582344e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 1.5412095e-05, 0.00075016904, np.array([1.0944896e-04, 1.0335010e-02, 1.0756809e+02]), np.array([1.1159893e-02, 1.3892649e+00, 6.2676159e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts7_detrended.pkl', max_training_epoch=50)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.5)
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 1.5412095e-05, 0.00075016904, np.array([1.0944896e-04, 1.0335010e-02, 1.0756809e+02]), np.array([1.1159893e-02, 1.3892649e+00, 6.2676159e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -1.3635044e-05, 0.0016195157, np.array([-7.69375038e-05, -6.62773754e-03, 1.07737206e+02]), np.array([1.1166928e-02, 1.3950408e+00, 6.2856415e+01])
+# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended.csv', 
+#                                   load_model_path='saved_params/NN_detection_model_real_ts7_detrended.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended_stdlow.csv', 
+                                  load_model_path='saved_params/NN_detection_model_real_ts7_detrended_stdlow.pkl', max_training_epoch=50)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.5)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
@@ -297,4 +304,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts7_results_il.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts7_results_il_stdlow.csv", index=False)
