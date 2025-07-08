@@ -1,41 +1,52 @@
-import signal
-import logging
-import itertools
-from typing import Callable, Optional
+"""
+This module automates the search for optimal hyperparameters of a
+:class:`~canari.skf.SKF` instance by leveraging the Optuna
+external library.
+"""
 
-import optuna
+from typing import Callable, Dict, Optional
+
 import numpy as np
+import optuna
 
-# Suppress segmentation faults (optional)
-signal.signal(signal.SIGSEGV, lambda signum, frame: None)
-
-# Silence Optuna's default logger
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 class SKFOptimizer:
     """
-    Optimize hyperparameters for :class:`~canari.skf.SKF` using Optuna.
+    Optimize hyperparameters for :class:`~canari.skf.SKF` using the Optuna external library.
 
     Args:
-        initialize_skf (Callable): Function that returns an SKF instance given a configuration.
-        model_param (dict): Serializable dict from `Model.get_dict()`.
-        param_space (dict): For grid search, pass list of values; for random search, use [min, max].
-        data (dict): Input data for injecting synthetic anomalies.
-        detection_threshold (float): Minimum required detection rate. Defaults to 0.5.
-        false_rate_threshold (float): Maximum allowed false detection rate. Defaults to 0.0.
-        max_timestep_to_detect (int, optional): Max timesteps to detect. Defaults to full series.
-        num_synthetic_anomaly (int): How many synthetic anomalies to inject. Defaults to 50.
-        num_optimization_trial (int): Number of trials (ignored for grid search). Defaults to 50.
-        grid_search (bool): Whether to perform grid search. Defaults to False.
-        algorithm (str): Ignored in Optuna version.
+        initialize_skf (Callable): Function that returns an SKF instance given a set of parameter.
+        model_param (dict): Serializable dictionary for :class:`~canari.model.Model` obtained from
+                            :meth:`~canari.model.Model.get_dict`.
+        param_space (dict): Parameter search space: two-value lists [min, max] for defining the
+                            bounds of the optimization.
+        data (dict): Input data for adding synthetic anomalies.
+        detection_threshold (float, optional): Threshold for the target maximal anomaly detection rate.
+                                                Defaults to 0.5.
+        false_rate_threshold (float, optional): Threshold for the maximal false detection rate.
+                                                Defaults to 0.0.
+        max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.
+                                                Defaults to None (to the end of time series).
+        num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as
+                            many time series, because one time series contains only one
+                            anomaly. Defaults to 50.
+        num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
+        grid_search (bool, optional): If True, perform grid search. Defaults to False.
+
+    Attributes:
+        skf_optim: Best SKF instance after optimization.
+        param_optim (dict): Best hyperparameter configuration.
+        detection_threshold: Threshold for detection rate for anomaly detection.
+        false_rate_threshold: Threshold for false rate.
     """
 
     def __init__(
         self,
         initialize_skf: Callable,
         model_param: dict,
-        param_space: dict,
+        param_space: Dict[str, list],
         data: dict,
         detection_threshold: Optional[float] = 0.5,
         false_rate_threshold: Optional[float] = 0.0,
@@ -43,8 +54,11 @@ class SKFOptimizer:
         num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
-        algorithm: Optional[str] = "default",
     ):
+        """
+        Initializes the SKFOptimizer.
+        """
+
         self._initialize_skf = initialize_skf
         self._model_param = model_param
         self._param_space = param_space
@@ -55,39 +69,56 @@ class SKFOptimizer:
         self._num_synthetic_anomaly = num_synthetic_anomaly
         self._num_optimization_trial = num_optimization_trial
         self._grid_search = grid_search
-        self._algorithm = algorithm
-
         self.skf_optim = None
         self.param_optim = None
         self._trial_count = 0
-        self._total_trials = 0
 
-    def _optuna_objective(self, trial: optuna.Trial):
+    def _log_trial(self, study: optuna.Study, trial: optuna.Trial):
+        """
+        Custom logging of trial progress.
+        """
+
+        self._trial_count += 1
+        trial_id = f"{self._trial_count}/{self._num_optimization_trial}".rjust(
+            len(f"{self._num_optimization_trial}/{self._num_optimization_trial}")
+        )
+
+        detection_rate = trial.user_attrs["detection_rate"]
+        false_rate = trial.user_attrs["false_rate"]
+        false_alarm = trial.user_attrs["false_alarm"]
+
+        print(
+            f"# {trial_id} - Metric: {trial.value:.3f} - Detection rate: {detection_rate:.2f} - "
+            f"False rate: {false_rate:.2f} - False alarm in training data: {false_alarm} - Param: {trial.params}"
+        )
+
+        if trial.number == study.best_trial.number:
+            print(
+                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.3f}"
+            )
+
+    def _objective(self, trial: optuna.Trial):
+        """
+        Objective function
+        """
+
+        param = {}
         if self._grid_search:
-            config = trial.params
+            for name, values in self._param_space.items():
+                param[name] = trial.suggest_categorical(name, values)
         else:
-            config = {}
             for name, bounds in self._param_space.items():
-                if isinstance(bounds, list) and len(bounds) == 2:
-                    low, high = bounds
-                    if isinstance(low, int) and isinstance(high, int):
-                        config[name] = trial.suggest_int(name, low, high)
-                    elif isinstance(low, float) and isinstance(high, float):
-                        if low < 0 or high < 0:
-                            config[name] = trial.suggest_float(name, low, high)
-                        else:
-                            config[name] = trial.suggest_float(
-                                name, low, high, log=True
-                            )
-                    else:
-                        raise ValueError(f"Invalid param type for {name}: {bounds}")
+                low, high = bounds
+                if all(isinstance(x, int) for x in bounds):
+                    param[name] = trial.suggest_int(name, low, high)
                 else:
-                    raise ValueError(f"{name} must be [min, max] for random search")
+                    log_uniform = low > 0 and high > 0
+                    param[name] = trial.suggest_float(name, low, high, log=log_uniform)
 
-        skf = self._initialize_skf(config, self._model_param)
-        slope = config.get("slope", 1.0)
+        skf = self._initialize_skf(param, self._model_param)
+        slope = param.get("slope")
 
-        detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
+        detection_rate, false_rate, false_alarm = skf.detect_synthetic_anomaly(
             data=self._data,
             num_anomaly=self._num_synthetic_anomaly,
             slope_anomaly=slope,
@@ -97,67 +128,69 @@ class SKFOptimizer:
         if (
             detection_rate < self.detection_threshold
             or false_rate > self.false_rate_threshold
-            or false_alarm_train == "Yes"
+            or false_alarm == "Yes"
         ):
             metric = 2 + 5 * slope
         else:
             metric = detection_rate + 5 * abs(slope)
 
-        # Custom logging
-        self._trial_count += 1
-        trial_id = f"{self._trial_count}/{self._total_trials}".rjust(
-            len(f"{self._total_trials}/{self._total_trials}")
-        )
-        print(
-            f"# {trial_id} - Metric: {metric:.3f} - Detection rate: {detection_rate:.2f} - "
-            f"False rate: {false_rate:.2f} - False alarm in train: {false_alarm_train} - "
-            f"Parameter: {config}"
-        )
+        # Save extra info for callback
+        trial.set_user_attr("detection_rate", detection_rate)
+        trial.set_user_attr("false_rate", false_rate)
+        trial.set_user_attr("false_alarm", false_alarm)
 
         return metric
 
     def optimize(self):
-        """Run the optimization process using Optuna."""
-        study = optuna.create_study(direction="minimize")
+        """
+        Run hyperparameter optimization over the defined search space.
+        """
 
         if self._grid_search:
-            keys = list(self._param_space.keys())
-            values = [self._param_space[k] for k in keys]
-            combos = list(itertools.product(*values))
-            self._total_trials = len(combos)
-
-            print(f"Running grid search over {self._total_trials} combinations...")
-
-            for combo in combos:
-                study.enqueue_trial(dict(zip(keys, combo)))
-
-            study.optimize(
-                self._optuna_objective,
-                n_trials=self._total_trials,
+            sampler = optuna.samplers.GridSampler(self._param_space)
+            self._num_optimization_trial = int(
+                np.prod([len(v) for v in self._param_space.values()])
             )
         else:
-            self._total_trials = self._num_optimization_trial
-            print(f"Running random search over {self._total_trials} trials...")
+            sampler = optuna.samplers.TPESampler(seed=42)
+            self._num_optimization_trial = self._num_optimization_trial
 
-            study.optimize(
-                self._optuna_objective,
-                n_trials=self._num_optimization_trial,
-            )
+        print("-----")
+        print("SKF optimization starts")
+        study = optuna.create_study(direction="minimize", sampler=sampler)
+
+        study.optimize(
+            self._objective,
+            n_trials=self._num_optimization_trial,
+            callbacks=[self._log_trial],
+        )
 
         self.param_optim = study.best_params
         self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
 
         print("-----")
         print(
-            f"Optimal parameters at trial #{study.best_trial.number}: {self.param_optim}"
+            f"Optimal parameters at trial #{study.best_trial.number + 1}: "
+            f"{self.param_optim}"
         )
-        print(f"Best metric value: {study.best_value:.4f}")
+        print(f"Best metric value: {study.best_value:.3f}")
         print("-----")
 
     def get_best_model(self):
-        """Return the optimized SKF instance."""
+        """
+        Retrieves the SKF instance initialized with the best parameters.
+
+        Returns:
+            Any: SKF instance corresponding to the optimal configuration.
+        """
         return self.skf_optim
 
     def get_best_param(self):
-        """Return the best hyperparameter configuration found."""
+        """
+        Retrieve the optimized parameters after running optimization.
+
+        Returns:
+            dict: Best hyperparameter values.
+
+        """
         return self.param_optim

@@ -13,10 +13,11 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 class ModelOptimizer:
     """
-    Optimize hyperparameters for :class:`~canari.model.Model` using Optuna.
+    Optimize hyperparameters for :class:`~canari.model.Model` using Optuna based on
+    the metric saved in :attr:`~canari.model.Model.metric_optim`.
 
     Args:
-        model (Callable): Function that returns a model instance given a config.
+        model (Callable): Function that returns a model instance given a set of parameter.
         param_space (Dict[str, list]): For random search, use [low, high]. For grid search, use full list of values.
         train_data (Dict[str, np.ndarray], optional): Training data.
         validation_data (Dict[str, np.ndarray], optional): Validation data.
@@ -48,30 +49,9 @@ class ModelOptimizer:
         self._mode = mode
         self.model_optim = None
         self.param_optim = None
+        self._trial_count = 0
 
-    def _objective(self, trial: optuna.Trial):
-        """
-        Objective function
-        """
-        config = {}
-
-        if self._grid_search:  # GridSampler – use suggest_categorical
-            for name, values in self._param_space.items():
-                config[name] = trial.suggest_categorical(name, values)
-        else:  # Random/TPE – use bounds
-            for name, bounds in self._param_space.items():
-                low, high = bounds
-                if all(isinstance(x, int) for x in bounds):
-                    config[name] = trial.suggest_int(name, low, high)
-                else:
-                    config[name] = trial.suggest_float(name, low, high)
-
-        trained_model, *_ = self.model_objective(
-            config, self._train_data, self._validation_data
-        )
-        return trained_model.metric_optim
-
-    def _log_trial_result(self, study: optuna.Study, trial: optuna.Trial):
+    def _log_trial(self, study: optuna.Study, trial: optuna.Trial):
         """
         Custom logging of trial progress.
         """
@@ -84,10 +64,31 @@ class ModelOptimizer:
 
         if trial.number == study.best_trial.number:
             print(
-                f" -> New best trial #{trial.number + 1} with value: {trial.value:.4f}"
+                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.4f}"
             )
 
-    # ------------------------------------------------------------------ #
+    def _objective(self, trial: optuna.Trial):
+        """
+        Objective function
+        """
+
+        param = {}
+        if self._grid_search:
+            for name, values in self._param_space.items():
+                param[name] = trial.suggest_categorical(name, values)
+        else:
+            for name, bounds in self._param_space.items():
+                low, high = bounds
+                if all(isinstance(x, int) for x in bounds):
+                    param[name] = trial.suggest_int(name, low, high)
+                else:
+                    param[name] = trial.suggest_float(name, low, high)
+
+        trained_model, *_ = self.model_objective(
+            param, self._train_data, self._validation_data
+        )
+        return trained_model.metric_optim
+
     def optimize(self):
         """
         Run hyperparameter optimization over the defined search space.
@@ -103,14 +104,14 @@ class ModelOptimizer:
         else:
             sampler = optuna.samplers.TPESampler(seed=42)
 
-        print("Optimization starts")
+        print("-----")
+        print("Model optimization starts")
         study = optuna.create_study(direction=direction, sampler=sampler)
 
-        self._trial_count = 0
         study.optimize(
             self._objective,
             n_trials=self._num_optimization_trial,
-            callbacks=[self._log_trial_result],
+            callbacks=[self._log_trial],
         )
 
         self.param_optim = study.best_params
