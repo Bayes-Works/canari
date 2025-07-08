@@ -21,7 +21,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_7_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_9_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -43,7 +43,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts7_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts9_tsgen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -69,11 +69,11 @@ for _, row in df.iterrows():
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts7_detrend_tsmodel_stdlow.pkl", "rb") as f:
+with open("saved_params/real_ts9_detrend_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=24,
+        look_back_len=27,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -99,8 +99,7 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 ltd_error = 1e-5
 
-# hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
-hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error, y_std_scale = 2.1)
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 
 # Get flexible drift model from the beginning
 hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)
@@ -111,21 +110,16 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-# hsl_tsad_agent.mu_LTd = 2.749807459338725e-05
-# hsl_tsad_agent.LTd_std = 4.341470992711042e-05
-hsl_tsad_agent.mu_LTd = -6.21978024501181e-06
-hsl_tsad_agent.LTd_std = 8.458438569582344e-05
+hsl_tsad_agent.mu_LTd = -6.678827492112425e-07 
+hsl_tsad_agent.LTd_std = 1.2735682435562757e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
-# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 1.5412095e-05, 0.00075016904, np.array([1.0944896e-04, 1.0335010e-02, 1.0756809e+02]), np.array([1.1159893e-02, 1.3892649e+00, 6.2676159e+01])
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -1.3635044e-05, 0.0016195157, np.array([-7.69375038e-05, -6.62773754e-03, 1.07737206e+02]), np.array([1.1166928e-02, 1.3950408e+00, 6.2856415e+01])
-# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended.csv', 
-#                                   load_model_path='saved_params/NN_detection_model_real_ts7_detrended.pkl', max_training_epoch=50)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended_stdlow.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts7_detrended_stdlow.pkl', max_training_epoch=50)
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.5)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 2.7565884e-05, 0.00017863291, np.array([-9.4444945e-04, -1.8183775e-01, 1.0145352e+02]), np.array([1.0678247e-02, 1.2106943e+00, 6.2057835e+01])
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_detrended.csv', 
+                                  load_model_path='saved_params/NN_detection_model_real_ts9_detrended.pkl', max_training_epoch=50)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 3)
+
 
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
@@ -147,7 +141,7 @@ results_all = []
 
 for k in tqdm(range(len(restored_data))):
 # for k in tqdm(range(2)):
-#     k += 60
+#     k += 150
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
     df_k.iloc[:, 0] = restored_data[k][0]
@@ -304,4 +298,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts7_results_il_stdlow.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts9_results_il.csv", index=False)

@@ -12,11 +12,11 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/detrended_ts7_results_il.csv")
+df_il = pd.read_csv("saved_results/prob_eva/detrended_ts7_results_il_stdlow.csv")
 # df_il = pd.read_csv("saved_results/prob_eva/detrended_ts8better_results_il.csv")
 # df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv")
 
-df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts7_results_skf.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts7_results_skf_stdlow.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts8_results_skf_better_ssm.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_tuned_threshold.csv")
 # df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ssm.csv")
