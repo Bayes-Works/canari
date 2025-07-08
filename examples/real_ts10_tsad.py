@@ -24,17 +24,17 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-# anm_mag = 0.010416667/10
-# anm_start_index = 52*8
-anm_start_index = 52*6
-anm_mag = 0.2/52
-# anm_baseline = np.linspace(0, 3, num=len(df_raw))
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
-anm_baseline[:anm_start_index] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LT anomaly
+# # anm_mag = 0.010416667/10
+# # anm_start_index = 52*8
+# anm_start_index = 52*6
+# anm_mag = 0.2/52
+# # anm_baseline = np.linspace(0, 3, num=len(df_raw))
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
+# anm_baseline[:anm_start_index] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # Data pre-processing
 output_col = [0]
@@ -97,16 +97,16 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -4.832881127026331e-05
-hsl_tsad_agent.LTd_std = 4.717624147675897e-05
+# hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.mu_LTd = -5.593280503955571e-05
+hsl_tsad_agent.LTd_std = 0.00012339913815156286
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts10_detrended.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -1.5125752e-05, 0.00014660582, np.array([9.7120428e-05, 1.0827318e-02, 1.0712353e+02]), np.array([1.1067549e-02, 1.3774976e+00, 6.2491776e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 6.9299094e-05, 0.0014117149, np.array([4.8765054e-05, 1.2287429e-03, 1.0733566e+02]), np.array([1.1149378e-02, 1.3833835e+00, 6.2613037e+01])
 # hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.3)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.5)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts10_detrended.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts10_detrended.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
@@ -144,7 +144,7 @@ plot_states(
     states_to_plot=['level'],
     sub_plot=ax0,
 )
-ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
+# ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
 ax0.set_title("HSL Detection & Intervention agent")
 plot_states(

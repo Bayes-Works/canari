@@ -76,7 +76,7 @@ def main(
     ########################################
 
 
-    with open("saved_params/real_ts7_detrend_tsmodel.pkl", "rb") as f:
+    with open("saved_params/real_ts7_detrend_tsmodel_stdlow.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
