@@ -91,9 +91,10 @@ std_validation_preds_optim = None
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
-        train_data=train_data, validation_data=validation_data, data_processor=data_processor
+        train_data=train_data,
+        validation_data=validation_data,
+        data_processor=data_processor,
     )
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -122,7 +123,9 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+        lstm_states_optim = copy.copy(skf.model["norm_norm"].lstm_states_history)
 
+    skf.model["norm_norm"].set_memory(states=states, time_step=0)
     if skf.stop_training:
         break
 
@@ -130,6 +133,7 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
+skf.model["norm_norm"].lstm_net.set_lstm_states(lstm_states_optim[0])
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
     matrix_inversion_tol=1e-2, tol_type="absolute"
