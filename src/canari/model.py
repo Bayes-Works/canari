@@ -186,6 +186,7 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_states_history = []
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -1538,7 +1539,14 @@ class Model:
         if self.lstm_net:
             self.lstm_net.eval()
 
-        for x in data["x"]:
+        for index, x in enumerate(data["x"]):
+            if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
+
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
@@ -1595,18 +1603,21 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
+        self.lstm_states_history = []
 
         # set lstm to train mode
         if self.lstm_net and train_lstm:
             self.lstm_net.train()
 
-        for x, y in zip(data["x"], data["y"]):
-            (
-                mu_obs_pred,
-                var_obs_pred,
-                *_,
-            ) = self.forward(x)
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+            if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
 
+            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
                 delta_mu_states,
                 delta_var_states,
