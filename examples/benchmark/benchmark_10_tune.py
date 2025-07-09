@@ -76,7 +76,6 @@ def main(
             mu_validation_preds, std_validation_preds, states = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
-                data_processor=data_processor,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
