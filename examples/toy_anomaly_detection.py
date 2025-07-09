@@ -93,7 +93,6 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
-        data_processor=data_processor,
     )
 
     # # Unstandardize the predictions
