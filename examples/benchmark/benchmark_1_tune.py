@@ -81,16 +81,16 @@ def main(
             # )
             # plt.show()
 
-        model.auto_initialize_baseline_states(train_data["y"][0 : 52 * 3])
-        states_optim = None
-        mu_validation_preds_optim = None
-        std_validation_preds_optim = None
-        num_epoch = 50
-        for epoch in range(num_epoch):
-            mu_validation_preds, std_validation_preds, states = model.lstm_train(
-                train_data=train_data,
-                validation_data=validation_data,
-            )
+            model.auto_initialize_baseline_states(train_data["y"][0 : 52 * 3])
+            states_optim = None
+            mu_validation_preds_optim = None
+            std_validation_preds_optim = None
+            num_epoch = 50
+            for epoch in range(num_epoch):
+                mu_validation_preds, std_validation_preds, states = model.lstm_train(
+                    train_data=train_data,
+                    validation_data=validation_data,
+                )
 
                 mu_validation_preds_unnorm = normalizer.unstandardize(
                     mu_validation_preds,
