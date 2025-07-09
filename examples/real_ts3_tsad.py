@@ -47,7 +47,7 @@ with open("saved_params/real_ts3_detrend_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=16,
+        look_back_len=13,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -86,17 +86,17 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 4.926001682114636e-05
-hsl_tsad_agent.LTd_std = 7.467677082315905e-05
+hsl_tsad_agent.mu_LTd = 3.628427259087756e-05
+hsl_tsad_agent.LTd_std = 6.146554546427861e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3_detrended.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3_detrended.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 0.0001349587, 0.0009116043, np.array([8.1795733e-04, 6.3600011e-02, 1.0436374e+02]), np.array([1.0912784e-02, 1.3082677e+00, 6.2689758e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -5.5054563e-05, 0.0008308872, np.array([-4.5358794e-04, -4.7564507e-02, 1.0735622e+02]), np.array([1.1107921e-02, 1.3812933e+00, 6.2564785e+01])
 # hsl_tsad_agent.tune(decay_factor=0.95)
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 3.7)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts3_detrended.csv', 
-                                  save_model_path='saved_params/NN_detection_model_real_ts3_detrended.pkl', max_training_epoch=50)
+                                  load_model_path='saved_params/NN_detection_model_real_ts3_detrended.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
