@@ -7,6 +7,7 @@ from canari import (
     Model,
     plot_data,
     plot_states,
+    plot_prediction,
     common,
 )
 from src.hsl_detection import hsl_detection
@@ -24,16 +25,16 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-# anm_mag = 0.010416667/10
-anm_start_index = 52*8
-anm_mag = 0.2/52
-# anm_baseline = np.linspace(0, 3, num=len(df_raw))
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
-anm_baseline[:anm_start_index] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LT anomaly
+# # anm_mag = 0.010416667/10
+# anm_start_index = 52*8
+# anm_mag = 0.2/52
+# # anm_baseline = np.linspace(0, 3, num=len(df_raw))
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[anm_start_index:] -= anm_baseline[anm_start_index]
+# anm_baseline[:anm_start_index] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # Data pre-processing
 output_col = [0]
@@ -55,6 +56,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ####################################################################
 # Load model_dict from local
 with open("saved_params/real_ts7_detrend_tsmodel_stdlow.pkl", "rb") as f:
+# with open("saved_params/real_ts7_detrend_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -85,6 +87,7 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 ltd_error = 1e-5
 
+# hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error)
 hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error, y_std_scale = 2.1)
 
 # Get flexible drift model from the beginning
@@ -93,9 +96,13 @@ hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
-
+mu_obs_preds_all, std_obs_preds_all = [], []
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
+mu_obs_preds_all = np.concatenate((mu_obs_preds_all, mu_obs_preds.flatten()), axis=0)
+std_obs_preds_all = np.concatenate((std_obs_preds_all, std_obs_preds.flatten()), axis=0)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
+mu_obs_preds_all = np.concatenate((mu_obs_preds_all, mu_obs_preds.flatten()), axis=0)
+std_obs_preds_all = np.concatenate((std_obs_preds_all, std_obs_preds.flatten()), axis=0)
 # hsl_tsad_agent.estimate_LTd_dist()
 # hsl_tsad_agent.mu_LTd = 2.749807459338725e-05
 # hsl_tsad_agent.LTd_std = 4.341470992711042e-05
@@ -115,6 +122,8 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts7_detrended_stdlow.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts7_detrended_stdlow.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+mu_obs_preds_all = np.concatenate((mu_obs_preds_all, mu_obs_preds.flatten()), axis=0)
+std_obs_preds_all = np.concatenate((std_obs_preds_all, std_obs_preds.flatten()), axis=0)
 
 # #  Plot
 state_type = "prior"
@@ -149,6 +158,8 @@ plot_states(
     states_to_plot=['level'],
     sub_plot=ax0,
 )
+ax0.plot(time, mu_obs_preds_all)
+ax0.fill_between(time, mu_obs_preds_all - std_obs_preds_all, mu_obs_preds_all + std_obs_preds_all, alpha=0.5)
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
 ax0.set_title("HSL Detection & Intervention agent")
