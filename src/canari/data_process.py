@@ -222,6 +222,11 @@ class DataProcess:
             {
                 "x": data[self.train_start : self.train_end, self.covariates_col],
                 "y": data[self.train_start : self.train_end, self.output_col],
+                "start_date": self.train_start,
+                "cov_names": self.data.columns[self.covariates_col].tolist(),
+                "time_covariates": self.time_covariates,
+                "scale_const_mean": self.scale_const_mean,
+                "scale_const_std": self.scale_const_std,
             },
             # Validation split
             {
@@ -229,16 +234,19 @@ class DataProcess:
                     self.validation_start : self.validation_end, self.covariates_col
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
+                "start_date": self.validation_start,
             },
             # Test split
             {
                 "x": data[self.test_start : self.test_end, self.covariates_col],
                 "y": data[self.test_start : self.test_end, self.output_col],
+                "start_date": self.test_start,
             },
             # All data
             {
                 "x": data[: self.test_end, self.covariates_col],
                 "y": data[: self.test_end, self.output_col],
+                "start_date": self.train_start,
             },
         )
 

@@ -818,7 +818,6 @@ class SKF:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
-        data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component
@@ -862,7 +861,6 @@ class SKF:
             white_noise_decay,
             white_noise_max_std,
             white_noise_decay_factor,
-            data_processor=data_processor,
         )
 
     def early_stopping(
