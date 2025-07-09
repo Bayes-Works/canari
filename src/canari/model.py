@@ -710,38 +710,42 @@ class Model:
 
             self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
 
-    def _generate_look_back_covariates(self, data_processor):
+    def _generate_look_back_covariates(self, train_data):
         """
         Generate standardized look-back covariates for the LSTM by re-using
         Model._prepare_covariates_generation.
         Supports both time covariates and lagged features, including periods before the first observation.
         """
         # Get indices and look-back length
-        train_idx, _, _ = data_processor.get_split_indices()
+        train_idx = 0
         inferred_len = self.lstm_net.lstm_infer_len
 
         # Gather covariate column names and count
-        cov_names = list(data_processor.data.columns[data_processor.covariates_col])
+        cov_names = train_data["cov_names"]
         n_cov = len(cov_names)
+
+        # Gather scaling constants
+        scale_const_mean = train_data["scale_const_mean"]
+        scale_const_std = train_data["scale_const_std"]
 
         # Initialize dummy array with NaNs
         dummy = np.full((inferred_len, n_cov), np.nan, dtype=np.float32)
 
         # Handle time covariates
-        time_covs = data_processor.time_covariates or []
+        time_covs = train_data["time_covariates"] or []
         for tc in time_covs:
             if tc not in cov_names:
                 continue
             col_idx = cov_names.index(tc)
-            init_val = data_processor.data[tc].iloc[train_idx[0]]
+            init_val = train_data["x"][train_idx][col_idx]
+            mu = scale_const_mean[col_idx + 1]
+            std = scale_const_std[col_idx + 1]
+            init_val = normalizer.unstandardize(init_val, mu, std)
             raw = self._prepare_covariates_generation(
                 init_val.reshape(1),
                 num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
-            data_col_idx = data_processor.data.columns.get_loc(tc)
-            mu = data_processor.scale_const_mean[data_col_idx]
-            std = data_processor.scale_const_std[data_col_idx]
             normed = normalizer.standardize(raw, mu, std)
             dummy[:, col_idx] = normed[:, 0]
 
@@ -1355,7 +1359,6 @@ class Model:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
-        data_processor: Optional[DataProcess] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1407,11 +1410,9 @@ class Model:
             )
 
         if self.lstm_net.smooth:
-            if data_processor is not None and any(data_processor.covariates_col):
+            if train_data is not None and train_data["cov_names"] is not None:
                 # Generate standardized look-back covariates
-                lookback_covariates = self._generate_look_back_covariates(
-                    data_processor
-                )
+                lookback_covariates = self._generate_look_back_covariates(train_data)
                 self._store_initial_lookback(lookback_covariates)
             else:
                 self._store_initial_lookback()
