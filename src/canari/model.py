@@ -1326,8 +1326,8 @@ class Model:
             self.lstm_net.smooth_look_back_var = var_sequence
 
             # get smoothed LSTM states
-            self.lstm_net.smooth_look_back_states = (
-                self.lstm_net.get_lstm_states_smooth(self.lstm_net.lstm_infer_len - 2)
+            self.lstm_net.smooth_look_back_states = self.lstm_net.get_lstm_states(
+                self.lstm_net.lstm_infer_len - 2
             )
 
         return self.states
