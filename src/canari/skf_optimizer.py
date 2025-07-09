@@ -36,8 +36,6 @@ class SKFOptimizer:
         grid_search (bool, optional): If True, perform grid search. Defaults to False.
 
     Attributes:
-        skf_optim: Best SKF instance after optimization.
-        param_optim (dict): Best hyperparameter configuration.
         detection_threshold: Threshold for detection rate for anomaly detection.
         false_rate_threshold: Threshold for false rate.
     """
@@ -88,13 +86,13 @@ class SKFOptimizer:
         false_alarm = trial.user_attrs["false_alarm"]
 
         print(
-            f"# {trial_id} - Metric: {trial.value:.3f} - Detection rate: {detection_rate:.2f} - "
+            f"# {trial_id} - Metric: {trial.value:.5f} - Detection rate: {detection_rate:.2f} - "
             f"False rate: {false_rate:.2f} - False alarm in training data: {false_alarm} - Param: {trial.params}"
         )
 
         if trial.number == study.best_trial.number:
             print(
-                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.3f}"
+                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.5f}"
             )
 
     def _objective(self, trial: optuna.Trial):
@@ -130,9 +128,9 @@ class SKFOptimizer:
             or false_rate > self.false_rate_threshold
             or false_alarm == "Yes"
         ):
-            metric = 2 + 5 * slope
+            metric = np.abs(self._param_space["slope"][1])  # upper bound of slope
         else:
-            metric = detection_rate + 5 * abs(slope)
+            metric = np.abs(slope)
 
         # Save extra info for callback
         trial.set_user_attr("detection_rate", detection_rate)
@@ -173,7 +171,7 @@ class SKFOptimizer:
             f"Optimal parameters at trial #{study.best_trial.number + 1}: "
             f"{self.param_optim}"
         )
-        print(f"Best metric value: {study.best_value:.3f}")
+        print(f"Best metric value: {study.best_value:.5f}")
         print("-----")
 
     def get_best_model(self):
