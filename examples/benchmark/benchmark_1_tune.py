@@ -276,8 +276,8 @@ def main(
 
     ########################################
     # Detect anomaly
-    # print("Model parameters used:", skf_optim_dict["model_param"])
-    # print("SKF model parameters used:", skf_optim_dict["skf_param"])
+    print("Model parameters used:", skf_optim_dict["model_param"])
+    print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
 
