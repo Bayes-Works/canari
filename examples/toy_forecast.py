@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction
+from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
@@ -25,8 +25,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 50
-
+num_epoch = 5
 data_processor = DataProcess(
     data=df,
     train_split=0.8,
@@ -47,8 +46,9 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
+        model_noise=True,
     ),
-    WhiteNoise(std_error=sigma_v),
+    WhiteNoise(),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
@@ -76,7 +76,9 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
+    model.early_stopping(
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
+    )
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -91,18 +93,22 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 #  Plot
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_data(
-    data_processor=data_processor,
-    standardization=False,
-    plot_column=output_col,
-    validation_label="y",
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
-plt.legend()
+# fig, ax = plt.subplots(figsize=(10, 6))
+# plot_data(
+#     data_processor=data_processor,
+#     standardization=False,
+#     plot_column=output_col,
+#     validation_label="y",
+# )
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds,
+#     std_validation_pred=std_validation_preds,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+# )
+# plt.legend()
+# plt.show()
+
+
+plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
 plt.show()
