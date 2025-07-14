@@ -36,7 +36,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.0032322250444898116
+sigma_v = 0.003
 model = Model(
     LocalTrend(),
     LstmNetwork(
@@ -46,8 +46,8 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        model_noise=True,
     ),
+    WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
@@ -75,6 +75,9 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
+    model.early_stopping(
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
+    )
     model.early_stopping(
         evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
     )
@@ -107,7 +110,3 @@ plot_prediction(
 )
 plt.legend()
 plt.show()
-
-
-# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
-# plt.show()
