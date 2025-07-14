@@ -46,7 +46,7 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
-        infer_len=24 * 3,  # corresponds to one period
+        infer_len=24,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
@@ -107,13 +107,15 @@ for epoch in range(num_epoch):
             model.states
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
-        lstm_optim_states = model.lstm_net.get_lstm_states()
+        lstm_optim_states = copy.copy(model.lstm_states_history)
 
     # smooth on train data
     model.smoother()
 
     # reset the memory to smoothed states
-    model.set_memory(states=model.states, time_step=0)
+    model.set_memory(
+        states=model.states, time_step=0, lstm_states=model.lstm_states_history
+    )
     if model.stop_training:
         break
 
@@ -121,11 +123,11 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict, use_smoothed_look_back=False)
-model.lstm_net.set_lstm_states(lstm_optim_states)
+model.load_dict(model_optim_dict)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
+    lstm_states=model.lstm_states_history,
 )
 
 # forecat on the test set
