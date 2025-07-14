@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
 import pytagi
-from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear, EvenExp
+from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
 from canari.component.base_component import BaseComponent
 
 
