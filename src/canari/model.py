@@ -884,12 +884,21 @@ class Model:
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
         if self.lstm_net:
-            self.lstm_net.set_lstm_states(self.lstm_states_history[0])
             if self.lstm_net.smooth:
                 self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
                 self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+                self.lstm_net.set_lstm_states(self.lstm_states_history[0])
+
             else:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+                # reset LSTM states to zeros
+                lstm_states = self.lstm_net.get_lstm_states()
+                for key in lstm_states:
+                    old_tuple = lstm_states[key]
+                    new_tuple = tuple(np.zeros_like(np.array(v)).tolist() for v in old_tuple)
+                    lstm_states[key] = new_tuple
+                self.lstm_net.set_lstm_states(lstm_states)
+
 
     def initialize_states_history(self):
         """

@@ -6,7 +6,6 @@ from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 from canari import DataProcess, Model, plot_data, plot_prediction
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-import fire
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -45,7 +44,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -69,6 +67,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
+        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
@@ -92,7 +91,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
     return mse
 
 
-def test_model_forecast(run_mode, plot_mode):
+def test_model_forecast_lstm(run_mode, plot_mode):
     """Test model forecastin with lstm component"""
     # Model
     model = Model(
@@ -105,7 +104,7 @@ def test_model_forecast(run_mode, plot_mode):
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
-            smoother=False,
+            smoother=True,
         ),
         WhiteNoise(std_error=0.0032322250444898116),
     )
@@ -123,6 +122,54 @@ def test_model_forecast(run_mode, plot_mode):
         if os.path.exists(path_metric):
             df = pd.read_csv(path_metric)
             threshold = float(df["mse"].iloc[0])
+
+        assert (
+            threshold is not None
+        ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
+        assert (
+            mse < threshold
+        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
+
+
+def test_model_forecast_slstm(run_mode, plot_mode):
+    """Test model forecastin with lstm component"""
+    # Model
+    model = Model(
+        LocalTrend(),
+        LstmNetwork(
+            look_back_len=19,
+            num_features=1,
+            num_layer=1,
+            infer_len=2 * 24,
+            num_hidden_unit=50,
+            device="cpu",
+            manual_seed=1,
+            smoother=True,
+        ),
+        WhiteNoise(std_error=0.0032322250444898116),
+    )
+    mse = model_test_runner(model, plot=plot_mode)
+
+    path_metric = os.path.join(
+        BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
+    )
+    if run_mode == "save_threshold":
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+            if len(df) == 1:
+                df.loc[1] = [mse]
+            else:
+                df.loc[1, "mse"] = mse
+            df.to_csv(path_metric, index=False)
+        else:
+            pd.DataFrame({"mse": [np.nan, mse]}).to_csv(path_metric, index=False)
+        print(f"Saved MSE to {path_metric}: {mse}")
+    else:
+        # load threshold
+        threshold = None
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+            threshold = float(df["mse"].iloc[1])
 
         assert (
             threshold is not None
