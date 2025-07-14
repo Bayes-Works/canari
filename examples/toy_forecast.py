@@ -25,7 +25,7 @@ df = df_raw.resample("H").mean()
 
 # Define parameters
 output_col = [0]
-num_epoch = 5
+num_epoch = 50
 data_processor = DataProcess(
     data=df,
     train_split=0.8,
@@ -93,22 +93,22 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 #  Plot
-# fig, ax = plt.subplots(figsize=(10, 6))
-# plot_data(
-#     data_processor=data_processor,
-#     standardization=False,
-#     plot_column=output_col,
-#     validation_label="y",
-# )
-# plot_prediction(
-#     data_processor=data_processor,
-#     mean_validation_pred=mu_validation_preds,
-#     std_validation_pred=std_validation_preds,
-#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
-# )
-# plt.legend()
-# plt.show()
-
-
-plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
+fig, ax = plt.subplots(figsize=(10, 6))
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=output_col,
+    validation_label="y",
+)
+plot_prediction(
+    data_processor=data_processor,
+    mean_validation_pred=mu_validation_preds,
+    std_validation_pred=std_validation_preds,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
+)
+plt.legend()
 plt.show()
+
+
+# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
+# plt.show()
