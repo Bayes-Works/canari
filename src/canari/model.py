@@ -30,7 +30,6 @@ import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
-from pytagi import Normalizer as normalizer
 
 
 class Model:
@@ -1163,8 +1162,8 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred,
-            var_lstm_pred,
+            mu_lstm_pred[0],
+            var_lstm_pred[0],
             lstm_states_index,
         )
 
@@ -1227,19 +1226,6 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
-        # for estimate delta_mu_lstm
-        # noise_index = self.get_states_index("heteroscedastic noise")
-        # lstm_index = self.get_states_index("lstm")
-        # _delta_mu_states, _delta_var_states = common.backward(
-        #     obs,
-        #     self.mu_obs_predict,
-        #     self.var_obs_predict
-        #     - self.process_noise_matrix[noise_index, noise_index]
-        #     + 1e-8,
-        #     self.var_states_prior,
-        #     self.observation_matrix,
-        # )
-        # delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
 
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
