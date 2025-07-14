@@ -195,7 +195,7 @@ def main(
         def initialize_skf(
         skf_param_space,
         model_param: dict,
-        lstm_smoothed_states: dict = None,
+        lstm_states: list = None,
         lstm_smoothed_look_back: tuple = None,
     ):
             norm_model = Model.load_dict(model_param)
@@ -206,8 +206,8 @@ def main(
             norm_model.lstm_output_history.set(
                 lstm_smoothed_look_back[0], lstm_smoothed_look_back[1]
             )
-            norm_model.lstm_net.lstm_smooth_look_back_mu = lstm_smoothed_look_back[0]
-            norm_model.lstm_net.lstm_smooth_look_back_var = lstm_smoothed_look_back[1]
+            norm_model.lstm_net.smooth_look_back_mu = lstm_smoothed_look_back[0]
+            norm_model.lstm_net.smooth_look_back_var = lstm_smoothed_look_back[1]
 
             abnorm_model = Model(
                 LocalAcceleration(),
