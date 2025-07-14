@@ -22,9 +22,11 @@ class WhiteNoise(BaseComponent):
 
     def __init__(
         self,
+        noise_type: Optional[str] = "heteroscedastic",
         std_error: Optional[float] = 0.05,
     ):
         self.std_error = std_error
+        self.noise_type = noise_type
         super().__init__()
 
     def initialize_component_name(self):
