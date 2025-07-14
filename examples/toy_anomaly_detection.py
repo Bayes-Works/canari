@@ -124,7 +124,9 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         states_optim = copy.copy(states)
         lstm_states_optim = copy.copy(skf.model["norm_norm"].lstm_states_history)
 
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
+    skf.model["norm_norm"].set_memory(
+        states=states, time_step=0, lstm_states=model.lstm_states_history
+    )
     if skf.stop_training:
         break
 
@@ -132,7 +134,7 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.model["norm_norm"].lstm_net.set_lstm_states(lstm_states_optim[0])
+skf.set_memory(states=states_optim, time_step=0, lstm_states=lstm_states_optim)
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
     matrix_inversion_tol=1e-2, tol_type="absolute"
