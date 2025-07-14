@@ -178,9 +178,6 @@ class LstmNetwork(BaseComponent):
                 gain_bias=self.gain_bias,
             )
         )
-        # Exponential activation for even output: for modeling heteroscedastic noise
-        if self.model_noise:
-            layers.append(EvenExp())
 
         # Initialize lstm network
         lstm_network = Sequential(*layers)
