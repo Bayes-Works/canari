@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
 import pytagi
-from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
+from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear, EvenExp
 from canari.component.base_component import BaseComponent
 
 
@@ -81,6 +81,7 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
+        model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
     ):
@@ -89,15 +90,16 @@ class LstmNetwork(BaseComponent):
         self.num_hidden_unit = num_hidden_unit
         self.look_back_len = look_back_len
         self.num_features = num_features
-        self.num_output = num_output
         self.device = device
         self.num_thread = num_thread
         self.manual_seed = manual_seed
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
+        self.model_noise = model_noise
         self._mu_states = mu_states
         self._var_states = var_states
+        self.num_output = 2 if self.model_noise else 1
         super().__init__()
 
     def initialize_component_name(self):
@@ -176,9 +178,14 @@ class LstmNetwork(BaseComponent):
                 gain_bias=self.gain_bias,
             )
         )
+        # Exponential activation for even output: for modeling heteroscedastic noise
+        if self.model_noise:
+            layers.append(EvenExp())
+
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
+        lstm_network.model_noise = self.model_noise
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
