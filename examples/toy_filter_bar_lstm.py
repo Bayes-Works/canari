@@ -118,6 +118,11 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         optimal_mu_val_preds = mu_validation_preds.copy()
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
+        lstm_optim_states = copy.copy(model.lstm_states_history)
+        lstm_optimal_smoothed_look_back = (
+            model.lstm_net.smooth_look_back_mu,
+            model.lstm_net.smooth_look_back_var,
+        )
 
     if model.stop_training:
         break
@@ -125,6 +130,11 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
 # save model
 model_dict = model.get_dict()
 model_dict["mu_states_optimal"] = states_optim.mu_prior[-1]
+
+# get smoothed lstm states
+if model.lstm_net.smooth:
+    (smoothed_look_back_mu, smoothed_look_back_var) = lstm_optimal_smoothed_look_back
+    smoothed_lstm_states = lstm_optim_states[0]
 
 print(f"Optimal epoch: {model.optimal_epoch}")
 print(f"Validation MSE: {model.early_stop_metric:.4f}")
@@ -164,14 +174,8 @@ pretrained_model = Model(
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 if pretrained_model.lstm_net.smooth:
-    (
-        pretrained_model.lstm_output_history.mu,
-        pretrained_model.lstm_output_history.var,
-    ) = model_dict["lstm_smoothed_look_back"]
-    # set lstm states
-    pretrained_model.lstm_net.set_lstm_states(
-        model_dict["lstm_smoothed_look_back_states"]
-    )
+    model.lstm_output_history.set(smoothed_look_back_mu, smoothed_look_back_var)
+    pretrained_model.lstm_net.set_lstm_states(smoothed_lstm_states)
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)

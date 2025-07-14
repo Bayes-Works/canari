@@ -772,26 +772,16 @@ class Model:
         save_dict["states_name"] = self.states_name
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-            if self.lstm_net.smooth:
-                save_dict["lstm_smoothed_look_back"] = (
-                    self.lstm_net.smooth_look_back_mu,
-                    self.lstm_net.smooth_look_back_var,
-                )
-                save_dict["lstm_smoothed_look_back_states"] = (
-                    self.lstm_net.smooth_look_back_states
-                )
 
         return save_dict
 
     @staticmethod
-    def load_dict(save_dict: dict, use_smoothed_look_back: bool = True):
+    def load_dict(save_dict: dict):
         """
         Reconstruct a model instance from a saved dictionary.
 
         Args:
             save_dict (dict): Dictionary containing saved model structure and parameters.
-            use_smoothed_look_back (bool, optional): If True, uses the smoothed look-back
-                sequences from the saved dictionary. Defaults to False.
 
         Returns:
             Model: An instance of :class:`~canari.model.Model` generated from the input dictionary.
@@ -806,28 +796,6 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            if model.lstm_net.smooth and use_smoothed_look_back:
-                # set smoothed look back length
-                (
-                    model.lstm_net.smooth_look_back_mu,
-                    model.lstm_net.smooth_look_back_var,
-                ) = save_dict["lstm_smoothed_look_back"]
-                if (
-                    model.lstm_net.smooth_look_back_mu is not None
-                    and model.lstm_net.smooth_look_back_var is not None
-                ):
-                    model.lstm_output_history.set(
-                        mu=model.lstm_net.smooth_look_back_mu,
-                        var=model.lstm_net.smooth_look_back_var,
-                    )
-                # set smoothed cell and hidden states
-                model.lstm_net.smooth_look_back_states = save_dict[
-                    "lstm_smoothed_look_back_states"
-                ]
-                if model.lstm_net.smooth_look_back_states is not None:
-                    model.lstm_net.set_lstm_states(
-                        model.lstm_net.smooth_look_back_states
-                    )
 
         return model
 
@@ -915,21 +883,13 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
-        if self.lstm_net.smooth:
-            self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
-            self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
-            self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
-        elif self.lstm_net:
-            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            # reset LSTM states to zeros
-            lstm_states = self.lstm_net.get_lstm_states()
-            for key in lstm_states:
-                old_tuple = lstm_states[key]
-                new_tuple = tuple(
-                    np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                )
-                lstm_states[key] = new_tuple
-            self.lstm_net.set_lstm_states(lstm_states)
+        if self.lstm_net:
+            self.lstm_net.set_lstm_states(self.lstm_states_history[0])
+            if self.lstm_net.smooth:
+                self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
+                self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+            else:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def initialize_states_history(self):
         """
@@ -939,7 +899,9 @@ class Model:
 
         self.states.initialize(self.states_name)
 
-    def set_memory(self, states: StatesHistory, time_step: int):
+    def set_memory(
+        self, states: StatesHistory, time_step: int, lstm_states: Optional[List] = None
+    ):
         """
         Set :attr:`~canari.model.Model.mu_states`, :attr:`~canari.model.Model.var_states`, and
         :attr:`~canari.model.Model.lstm_output_history` with smoothed estimates from a specific
@@ -961,6 +923,8 @@ class Model:
             >>> # If the next analysis starts from t = 200
             >>> model.set_memory(states=model.states, time_step=200))
         """
+        if lstm_states:
+            self.lstm_states_history = lstm_states
 
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
@@ -983,6 +947,8 @@ class Model:
                 ]
                 self.lstm_output_history.mu = mu_lstm_to_set
                 self.lstm_output_history.var = std_lstm_to_set**2
+
+                self.lstm_net.set_lstm_states(self.lstm_states_history[time_step - 1])
 
     def forward(
         self,
@@ -1189,6 +1155,10 @@ class Model:
             self.lstm_net.eval()
 
         for index, x in enumerate(data["x"]):
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
+                x
+            )
+
             if self.lstm_net:
                 if index == 0 or index == (len(data["y"]) - 1):
                     _lstm_states = self.lstm_net.get_lstm_states()
@@ -1196,11 +1166,6 @@ class Model:
                 else:
                     self.lstm_states_history.append(None)
 
-            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
-                x
-            )
-
-            if self.lstm_net:
                 lstm_index = self.get_states_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_prior[lstm_index],
@@ -1261,12 +1226,6 @@ class Model:
             self.lstm_net.train()
 
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
-            if self.lstm_net:
-                if index == 0 or index == (len(data["y"]) - 1):
-                    _lstm_states = self.lstm_net.get_lstm_states()
-                    self.lstm_states_history.append(_lstm_states)
-                else:
-                    self.lstm_states_history.append(None)
 
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
@@ -1277,6 +1236,12 @@ class Model:
             ) = self.backward(y)
 
             if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
+
                 lstm_index = self.get_states_index("lstm")
                 delta_mu_lstm = np.array(
                     delta_mu_states[lstm_index]
@@ -1335,7 +1300,6 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
-        # TODO: find a better condtion to check if smoothing is needed
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
@@ -1345,8 +1309,8 @@ class Model:
             self.lstm_net.smooth_look_back_mu = mu_sequence
             self.lstm_net.smooth_look_back_var = var_sequence
 
-            # get smoothed LSTM states
-            self.lstm_net.smooth_look_back_states = self.lstm_net.get_lstm_states(
+            # set the smoothed lstm_states at the first time step
+            self.lstm_states_history[0] = self.lstm_net.get_lstm_states(
                 self.lstm_net.lstm_infer_len - 2
             )
 

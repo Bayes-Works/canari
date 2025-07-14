@@ -76,7 +76,7 @@ LSTM = LstmNetwork(
     infer_len=52,
     num_hidden_unit=50,
     device="cpu",
-    # smoother=False,  # smoother=False for faster training
+    # smoother=False,
 )
 
 # Define AR model
@@ -137,6 +137,11 @@ for epoch in range(num_epoch):
         mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
         std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
+        lstm_optim_states = copy.copy(model.lstm_states_history)
+        lstm_optimal_smoothed_look_back = (
+            model.lstm_net.smooth_look_back_mu,
+            model.lstm_net.smooth_look_back_var,
+        )
 
     if model.stop_training:
         break
@@ -146,6 +151,11 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 model_dict = model.get_dict()
 model_dict["states_optimal"] = states_optim
+
+# get smoothed lstm states
+if model.lstm_net.smooth:
+    (smoothed_look_back_mu, smoothed_look_back_var) = lstm_optimal_smoothed_look_back
+    smoothed_lstm_states = lstm_optim_states[0]
 
 # Save model_dict to local
 import pickle
@@ -197,6 +207,11 @@ pretrained_model = Model(
     ),
 )
 pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_params"])
+if pretrained_model.lstm_net.smooth:
+    pretrained_model.lstm_output_history.set(
+        smoothed_look_back_mu, smoothed_look_back_var
+    )
+    pretrained_model.lstm_net.set_lstm_states(smoothed_lstm_states)
 
 # Generate data
 pretrained_model.filter(train_data, train_lstm=False)
