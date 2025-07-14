@@ -871,6 +871,28 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
+        # Heteroscedastic noise
+        mu_v2bar = None
+        var_v2bar = None
+        if self.lstm_net:
+            if self.lstm_net.model_noise:
+                if self.get_states_index("white noise") is not None:
+                    noise_index = self.get_states_index("white noise")
+                    # mu_v2bar = mu_lstm_pred[-1]
+                    # var_v2bar = var_lstm_pred[-1]
+                    # self.process_noise_matrix[noise_index, noise_index] = mu_v2bar
+                    if self._current_epoch < 5:
+                        mu_v2bar = self.process_noise_matrix[noise_index, noise_index]
+                        var_v2bar = 1e-20
+                    else:
+                        mu_v2bar = mu_lstm_pred[-1]
+                        var_v2bar = var_lstm_pred[-1]
+                        self.process_noise_matrix[noise_index, noise_index] = mu_v2bar
+                else:
+                    raise ValueError(
+                        "Need to define a white noise component in the model."
+                    )
+
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
@@ -878,8 +900,8 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred,
-            var_lstm_pred,
+            mu_lstm_pred[0],
+            var_lstm_pred[0],
             lstm_states_index,
         )
 
@@ -894,7 +916,14 @@ class Model:
         self.mu_obs_predict = mu_obs_pred
         self.var_obs_predict = var_obs_pred
 
-        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
+        return (
+            mu_obs_pred,
+            var_obs_pred,
+            mu_states_prior,
+            var_states_prior,
+            mu_v2bar,
+            var_v2bar,
+        )
 
     def backward(
         self,
@@ -930,6 +959,7 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
+        # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
         mu_states_posterior = self.mu_states_prior + delta_mu_states
@@ -1027,8 +1057,8 @@ class Model:
         std_obs_preds = []
 
         for x in data["x"]:
-            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
-                x
+            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior, *_) = (
+                self.forward(x)
             )
 
             if self.lstm_net:
@@ -1087,7 +1117,14 @@ class Model:
         self.initialize_states_history()
 
         for x, y in zip(data["x"], data["y"]):
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+            (
+                mu_obs_pred,
+                var_obs_pred,
+                _,
+                var_states_prior,
+                mu_v2bar_prior,
+                var_v2bar_prior,
+            ) = self.forward(x)
             (
                 delta_mu_states,
                 delta_var_states,
@@ -1105,6 +1142,34 @@ class Model:
                     delta_var_states[lstm_index, lstm_index]
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
+
+                if self.lstm_net.model_noise:
+                    noise_index = self.get_states_index("white noise")
+
+                    mu_noise_posterior = mu_states_posterior[noise_index]
+                    var_noise_posterior = var_states_posterior[noise_index, noise_index]
+
+                    mu_v2_posterior = mu_noise_posterior**2 + var_noise_posterior
+                    var_v2_posterior = (
+                        2 * var_noise_posterior**2
+                        + 4 * var_noise_posterior * mu_noise_posterior**2
+                    )
+
+                    mu_v2_prior = mu_v2bar_prior
+                    var_v2_prior = 3 * var_v2bar_prior + 2 * mu_v2bar_prior**2
+
+                    k = var_v2bar_prior / var_v2_prior
+
+                    delta_mu_v2bar = (
+                        k * (mu_v2_posterior - mu_v2_prior) / var_v2bar_prior
+                    )
+                    delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
+
+                    delta_var_v2bar = (
+                        k**2 * (var_v2_posterior - var_v2_prior) / var_v2bar_prior**2
+                    )
+                    delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+
                 if train_lstm:
                     self.lstm_net.update_param(
                         np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
