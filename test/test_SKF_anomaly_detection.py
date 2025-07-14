@@ -76,9 +76,7 @@ def SKF_anomaly_detection_runner(
         (mu_validation_preds, std_validation_preds, states) = test_model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            data_processor=data_processor,
         )
-        skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -105,6 +103,7 @@ def SKF_anomaly_detection_runner(
             max_epoch=num_epoch,
         )
 
+        skf.model["norm_norm"].set_memory(states=states, time_step=0)
         if skf.stop_training:
             break
 
