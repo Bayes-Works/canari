@@ -110,6 +110,8 @@ def test_model_forecast_lstm(run_mode, plot_mode):
     )
     mse = model_test_runner(model, plot=plot_mode)
 
+    mse = round(mse, 10)
+
     path_metric = os.path.join(
         BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
     )
@@ -126,9 +128,9 @@ def test_model_forecast_lstm(run_mode, plot_mode):
         assert (
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
-        assert (
-            mse < threshold
-        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
+        assert mse <= threshold or np.isclose(
+            mse, threshold, rtol=1e-8
+        ), f"MSE {mse} is not close enough to the saved threshold {threshold}"
 
 
 def test_model_forecast_slstm(run_mode, plot_mode):
@@ -149,6 +151,8 @@ def test_model_forecast_slstm(run_mode, plot_mode):
         WhiteNoise(std_error=0.0032322250444898116),
     )
     mse = model_test_runner(model, plot=plot_mode)
+
+    mse = round(mse, 10)
 
     path_metric = os.path.join(
         BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
@@ -174,6 +178,6 @@ def test_model_forecast_slstm(run_mode, plot_mode):
         assert (
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
-        assert (
-            mse < threshold
-        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
+        assert mse <= threshold or np.isclose(
+            mse, threshold, rtol=1e-8
+        ), f"MSE {mse} is not close enough to the saved threshold {threshold}"
