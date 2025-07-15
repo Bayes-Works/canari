@@ -14,31 +14,35 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
-from pytagi import Normalizer
 
 
-# # # Read data
-data_file = "./data/benchmark_data/test_5_data.csv"
+# # Read data
+# data_file = "./data/benchmark_data/test_5_data.csv"
+# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+# time_series = pd.to_datetime(df_raw.iloc[:, 0])
+# df_raw = df_raw.iloc[:, 1:]
+# df_raw.index = time_series
+# df_raw.index.name = "date_time"
+# df_raw.columns = ["displacement_y", "water_level", "temp_min", "temp_max"]
+# df_raw = df_raw.iloc[:, :-3]
+
+data_file = "./data/benchmark_data/test_1_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.28,
-    validation_split=0.07,
+    train_split=0.3,
+    validation_split=0.1,
     output_col=output_col,
 )
-data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
-                data_processor.data.iloc[0 : 52].values
-            )
 
 num_epoch = 200
 
@@ -49,7 +53,7 @@ AR_process_error_var_prior = 1e4
 var_W2bar_prior = 1e4
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=16,
+        look_back_len=18,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -57,12 +61,12 @@ LSTM = LstmNetwork(
     )
 
 model = Model(
-    LocalTrend(),
+    LocalTrend(mu_states=[0, 0], std_error=0),
     LSTM,
     AR,
 )
-# model._mu_local_level = 0
-model.auto_initialize_baseline_states(train_data["y"][0:52*4])
+model._mu_local_level = 0
+# model.auto_initialize_baseline_states(train_data["y"][0:104])
 
 
 # Training
@@ -97,10 +101,10 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
+    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
                         #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
-                         current_epoch=epoch, max_epoch=num_epoch)
-    
+                        current_epoch=epoch, max_epoch=num_epoch)
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -122,7 +126,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # # Save model_dict to local
 # import pickle
-# with open("saved_params/real_ts5_tsmodel_raw.pkl", "wb") as f:
+# with open("saved_params/real_ts1_tsmodel_raw.pkl", "wb") as f:
 #     pickle.dump(model_dict, f)
 
 ####################################################################
@@ -136,7 +140,7 @@ print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-    LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+    LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
