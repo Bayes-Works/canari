@@ -150,7 +150,7 @@ class SKFOptimizer:
                 np.prod([len(v) for v in self._param_space.values()])
             )
         else:
-            sampler = optuna.samplers.TPESampler(seed=42)
+            sampler = optuna.samplers.TPESampler()
             self._num_optimization_trial = self._num_optimization_trial
 
         print("-----")
