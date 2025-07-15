@@ -439,6 +439,7 @@ class SKF:
             dict[str, float]: Likelihood for each transition key.
         """
 
+        epsilon = 1e-30
         transition_likelihood = self._transition()
         if np.isnan(obs):
             for transit in transition_likelihood:
@@ -466,12 +467,15 @@ class SKF:
                     )
             else:
                 for transit in transition_likelihood:
-                    transition_likelihood[transit] = np.exp(
-                        metric.log_likelihood(
-                            mu_pred_transit[transit],
-                            obs,
-                            var_pred_transit[transit] ** 0.5,
-                        )
+                    transition_likelihood[transit] = np.maximum(
+                        np.exp(
+                            metric.log_likelihood(
+                                mu_pred_transit[transit],
+                                obs,
+                                var_pred_transit[transit] ** 0.5,
+                            )
+                        ),
+                        epsilon,
                     )
         return transition_likelihood
 
