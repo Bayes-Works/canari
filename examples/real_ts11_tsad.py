@@ -27,7 +27,7 @@ df_raw.columns = ["obs"]
 # # LT anomaly
 # # anm_mag = 0.010416667/10
 # # anm_start_index = 52*8
-# anm_start_index = 52*6
+# anm_start_index = 52*10
 # anm_mag = 0.2/52
 # # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 # anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -86,7 +86,7 @@ pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
 
 ltd_error = 1e-5
 
-hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error, y_std_scale = 2.0)
+hsl_tsad_agent = hsl_detection(base_model=pretrained_model, data_processor=data_processor, drift_model_process_error_std=ltd_error, y_std_scale = 2)
 
 # Get flexible drift model from the beginning
 hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrained_model.get_dict()), data_processor=data_processor, drift_model_process_error_std=ltd_error)

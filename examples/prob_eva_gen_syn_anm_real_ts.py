@@ -17,7 +17,7 @@ from pytagi import Normalizer as normalizer
 
 
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_3_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_11_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -95,4 +95,4 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 # Save to CSV
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index"])
-df_time_series_all.to_csv("data/prob_eva_syn_time_series/detrended_ts3_tsgen.csv", index=False)
+df_time_series_all.to_csv("data/prob_eva_syn_time_series/detrended_ts11_tsgen.csv", index=False)
