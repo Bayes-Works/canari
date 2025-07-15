@@ -17,7 +17,7 @@ from src.matrix_profile_functions import past_only_matrix_profile
 
 ########################### Calibrate anomaly score ###########################
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_10_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_11_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -64,7 +64,7 @@ threshold = np.max(mp[np.isfinite(mp)]) * 1.1
 print(f"Threshold for anomaly detection: {threshold}")
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts10_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrended_ts11_tsgen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -137,4 +137,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/detrended_ts10_results_mp.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrended_ts11_results_mp.csv", index=False)

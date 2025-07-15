@@ -254,8 +254,8 @@ class hsl_detection:
         covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.std_const_mean[covariate_col], 
-                                'std': self.data_processor.std_const_std[covariate_col]}
+                                'mu': self.data_processor.scale_const_mean[covariate_col], 
+                                'std': self.data_processor.scale_const_std[covariate_col]}
         generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,

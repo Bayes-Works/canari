@@ -18,21 +18,22 @@ from pytagi import Normalizer
 
 
 # # # Read data
-data_file = "./data/benchmark_data/test_11_data.csv"
+data_file = "./data/benchmark_data/test_7_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["obs"]
+df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
+df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.25,
-    validation_split=0.1,
+    train_split=0.28,
+    validation_split=0.07,
     output_col=output_col,
 )
 data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
@@ -62,6 +63,7 @@ model = Model(
 )
 # model._mu_local_level = 0
 model.auto_initialize_baseline_states(train_data["y"][0:52*4])
+
 
 # Training
 for epoch in range(num_epoch):
@@ -95,10 +97,10 @@ for epoch in range(num_epoch):
     )
 
     # Early-stopping
-    # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
                         #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
-                        current_epoch=epoch, max_epoch=num_epoch)
+                         current_epoch=epoch, max_epoch=num_epoch)
+    
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -120,7 +122,8 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # Save model_dict to local
 import pickle
-with open("saved_params/real_ts11_tsmodel_raw2.pkl", "wb") as f:
+# with open("saved_params/real_ts7_tsmodel_raw_overtrained.pkl", "wb") as f:
+with open("saved_params/real_ts7_tsmodel_raw2.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
 ####################################################################
@@ -143,6 +146,7 @@ pretrained_model = Model(
 )
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+
 pretrained_model.filter(normalized_data,train_lstm=False)
 pretrained_model.smoother()
 

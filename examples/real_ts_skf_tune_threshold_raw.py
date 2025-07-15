@@ -19,16 +19,6 @@ from canari import (
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise, Autoregression
 import pickle
 
-# Fix parameters grid search
-# sigma_v_fix = 0.0019179647619756545
-# look_back_len_fix = 10
-# # SKF_std_transition_error_fix = 0.0020670653848689604
-# # SKF_norm_to_abnorm_prob_fix = 5.897190105418042e-06
-# SKF_std_transition_error_fix = 1e-4
-# SKF_norm_to_abnorm_prob_fix = 1e-4
-
-# sigma_v_fix = 0.015519087402266298
-# look_back_len_fix = 11
 SKF_std_transition_error_fix = None
 SKF_norm_to_abnorm_prob_fix = None
 
@@ -38,7 +28,7 @@ def main(
     param_optimization: bool = True,
 ):
     # Read data
-    data_file = "./data/benchmark_data/detrended_data/test_11_data_detrended.csv"
+    data_file = "./data/benchmark_data/test_11_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
@@ -46,37 +36,25 @@ def main(
     df_raw.index.name = "date_time"
     df_raw.columns = ["obs"]
 
-    # LT anomaly
-    # anm_mag = 0.010416667/10
-    time_anomaly = 52*8
-    # anm_mag = 0.3/52
-    anm_mag = 0.3/52
-    # anm_mag = 0
-    # anm_baseline = np.linspace(0, 3, num=len(df_raw))
-    anm_baseline = np.arange(len(df_raw)) * anm_mag
-    # Set the first 52*12 values in anm_baseline to be 0
-    anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-    anm_baseline[:time_anomaly] = 0
-    df_raw = df_raw.add(anm_baseline, axis=0)
-
     # Data pre-processing
     output_col = [0]
-    train_split=0.3
-    validation_split=0.1
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["week_of_year"],
-        train_split=train_split,
-        validation_split=validation_split,
+        train_split=0.25,
+        validation_split=0.1,
         output_col=output_col,
     )
+    data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
+                    data_processor.data.iloc[0 : 52].values
+                )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     ########################################
     ########################################
 
-
-    with open("saved_params/real_ts11_detrend_tsmodel.pkl", "rb") as f:
+    # Load model_dict from local
+    with open("saved_params/real_ts11_tsmodel_raw.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
@@ -96,7 +74,7 @@ def main(
 
     def initialize_model(param, train_data, validation_data):
         model = Model(
-            LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+            LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
             LSTM,
             Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
@@ -215,11 +193,6 @@ def main(
         states_to_plot=["level", "trend", "lstm", "autoregression"],
         model_prob=filter_marginal_abnorm_prob,
         standardization=False,
-    )
-    ax[0].axvline(
-        x=data_processor.data.index[time_anomaly],
-        color="r",
-        linestyle="--",
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.show()
