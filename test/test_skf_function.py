@@ -128,7 +128,6 @@ def test_skf_filter():
     assert skf.marginal_prob["norm"] == skf.norm_model_prior_prob
     assert skf.marginal_prob["abnorm"] == 1 - skf.norm_model_prior_prob
 
-# TODO: add unit test to test the case of the SLSTM with making sure re-intialization works
 
 def test_detect_synthetic_anomaly():
     """Test detect_synthetic_anomaly function"""
