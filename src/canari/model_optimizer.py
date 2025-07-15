@@ -102,7 +102,7 @@ class ModelOptimizer:
                 np.prod([len(v) for v in self._param_space.values()])
             )
         else:
-            sampler = optuna.samplers.TPESampler(seed=42)
+            sampler = optuna.samplers.TPESampler()
 
         print("-----")
         print("Model optimization starts")
