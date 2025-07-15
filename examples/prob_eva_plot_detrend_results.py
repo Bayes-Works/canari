@@ -12,10 +12,10 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/detrended_ts5better_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_skf_better_ssm.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/detrended_ts5_results_prophet_online.csv")
+df_il = pd.read_csv("saved_results/prob_eva/detrended_ts11_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_ts11_results_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/detrended_ts11_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/detrended_ts11_results_prophet_online.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52

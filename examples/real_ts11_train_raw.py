@@ -14,6 +14,7 @@ import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
+from pytagi import Normalizer
 
 
 # # # Read data
@@ -30,10 +31,13 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.3,
+    train_split=0.25,
     validation_split=0.1,
     output_col=output_col,
 )
+data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
+                data_processor.data.iloc[0 : 52].values
+            )
 
 num_epoch = 200
 
@@ -57,22 +61,15 @@ model = Model(
     AR,
 )
 # model._mu_local_level = 0
-model.auto_initialize_baseline_states(train_data["y"][0:52*5])
-level_temp = copy.deepcopy(model.mu_states[0].item())
-trend_temp = copy.deepcopy(model.mu_states[1].item())
-level_var_temp = copy.deepcopy(model.var_states[0, 0].item())
-trend_var_temp = copy.deepcopy(model.var_states[1, 1].item())
+model.auto_initialize_baseline_states(train_data["y"][0:52*4])
 
 # Training
 for epoch in range(num_epoch):
-    model.mu_states[0] = level_temp
-    model.mu_states[1] = trend_temp
-    # model.var_states[0, 0] = level_var_temp
-    # model.var_states[1, 1] = trend_var_temp
     mu_validation_preds, std_validation_preds, states = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
+    model.set_memory(states=model.states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -100,7 +97,8 @@ for epoch in range(num_epoch):
     # Early-stopping
     # model.early_stopping(evaluate_metric=-validation_log_lik, mode="min", skip_epoch=50)
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
-                         current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
+                        #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
+                        current_epoch=epoch, max_epoch=num_epoch)
     # model.early_stopping(evaluate_metric=mse, mode="min")
 
 
@@ -122,87 +120,86 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # Save model_dict to local
 import pickle
-with open("saved_params/real_ts11_detrend_tsmodel_raw.pkl", "wb") as f:
+with open("saved_params/real_ts11_tsmodel_raw2.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
-# ####################################################################
-# ######################### Pretrained model #########################
-# ####################################################################
-# phi_index = model_dict["states_name"].index("phi")
-# W2bar_index = model_dict["states_name"].index("W2bar")
-# autoregression_index = model_dict["states_name"].index("autoregression")
+####################################################################
+######################### Pretrained model #########################
+####################################################################
+phi_index = model_dict["states_name"].index("phi")
+W2bar_index = model_dict["states_name"].index("W2bar")
+autoregression_index = model_dict["states_name"].index("autoregression")
 
-# print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
-# print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
-# pretrained_model = Model(
-#     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
-#     LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
-#     LSTM,
-#     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-#                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-#                    mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-#                    var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
-# )
+print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
+pretrained_model = Model(
+    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
+    LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+    LSTM,
+    Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
+                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+)
 
-# pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+pretrained_model.filter(normalized_data,train_lstm=False)
+pretrained_model.smoother()
 
-# pretrained_model.filter(normalized_data,train_lstm=False)
-# pretrained_model.smoother()
-
-# #  Plot
-# state_type = "prior"
-# #  Plot states from pretrained model
-# fig = plt.figure(figsize=(10, 6))
-# gs = gridspec.GridSpec(4, 1)
-# ax0 = plt.subplot(gs[0])
-# ax1 = plt.subplot(gs[1])
-# ax2 = plt.subplot(gs[2])
-# ax3 = plt.subplot(gs[3])
-# plot_data(
-#     data_processor=data_processor,
-#     standardization=True,
-#     plot_column=output_col,
-#     validation_label="y",
-#     sub_plot=ax0,
-# )
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=pretrained_model.states,
-#     states_type=state_type,
-#     states_to_plot=['level'],
-#     sub_plot=ax0,
-# )
-# ax0.set_xticklabels([])
-# ax0.set_title("Hidden states estimated by the pre-trained model")
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=pretrained_model.states,
-#     states_type=state_type,
-#     states_to_plot=['trend'],
-#     sub_plot=ax1,
-# )
-# ax1.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=pretrained_model.states,
-#     states_type=state_type,
-#     states_to_plot=['lstm'],
-#     sub_plot=ax2,
-# )
-# ax2.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=pretrained_model.states,
-#     states_type=state_type,
-#     states_to_plot=['autoregression'],
-#     sub_plot=ax3,
-# )
-# ax3.set_xticklabels([])
-# # plt.show()
+#  Plot
+state_type = "prior"
+#  Plot states from pretrained model
+fig = plt.figure(figsize=(10, 6))
+gs = gridspec.GridSpec(4, 1)
+ax0 = plt.subplot(gs[0])
+ax1 = plt.subplot(gs[1])
+ax2 = plt.subplot(gs[2])
+ax3 = plt.subplot(gs[3])
+plot_data(
+    data_processor=data_processor,
+    standardization=True,
+    plot_column=output_col,
+    validation_label="y",
+    sub_plot=ax0,
+)
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=pretrained_model.states,
+    states_type=state_type,
+    states_to_plot=['level'],
+    sub_plot=ax0,
+)
+ax0.set_xticklabels([])
+ax0.set_title("Hidden states estimated by the pre-trained model")
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=pretrained_model.states,
+    states_type=state_type,
+    states_to_plot=['trend'],
+    sub_plot=ax1,
+)
+ax1.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=pretrained_model.states,
+    states_type=state_type,
+    states_to_plot=['lstm'],
+    sub_plot=ax2,
+)
+ax2.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=pretrained_model.states,
+    states_type=state_type,
+    states_to_plot=['autoregression'],
+    sub_plot=ax3,
+)
+ax3.set_xticklabels([])
+# plt.show()
 
 state_type = "prior"
 # Plot states from AR learner
