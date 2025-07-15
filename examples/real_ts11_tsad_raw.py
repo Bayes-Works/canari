@@ -116,7 +116,8 @@ hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -9.527394e-05, 0.0012068272, np.array([3.2612818e-04, 3.7436999e-02, 1.0699159e+02]), np.array([1.1166443e-02, 1.3861408e+00, 6.2413509e+01])# hsl_tsad_agent.tune(decay_factor=0.95)
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 1.068443e-06, 0.0010107603, np.array([-3.5196307e-04, -4.0578559e-02, 1.0706567e+02]), np.array([1.1044644e-02, 1.3675848e+00, 6.2402916e+01])# hsl_tsad_agent.tune(decay_factor=0.95)
 # hsl_tsad_agent.tune()
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.81)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.81)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts11_detrended_raw.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts11_detrended_raw.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
