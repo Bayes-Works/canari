@@ -53,7 +53,7 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    model_noise=True,
+    model_white_noise=True,
 )
 noise = WhiteNoise()
 
