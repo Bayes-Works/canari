@@ -45,8 +45,8 @@ model = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        manual_seed=3,
-        model_noise=True,
+        manual_seed=1,
+        model_white_noise=True,
     ),
     WhiteNoise(),
 )
