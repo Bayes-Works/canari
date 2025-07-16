@@ -196,6 +196,12 @@ class Model:
         self._var_v2bar_tilde = None
         self._cov_v2bar_tilde = None
 
+        # Heteroscedastic noise related attribute
+        self._var_v2bar_prior = None
+        self._mu_v2bar_tilde = None
+        self._var_v2bar_tilde = None
+        self._cov_v2bar_tilde = None
+
         # Early stopping attributes
         self.early_stop_metric = None
         self.early_stop_metric_history = []
@@ -1162,8 +1168,8 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred[0],
-            var_lstm_pred[0],
+            mu_lstm_pred,
+            var_lstm_pred,
             lstm_states_index,
         )
 
