@@ -54,7 +54,9 @@ lstm_network = LstmNetwork(
     device="cpu",
     manual_seed=1,
     model_noise=True,
+    model_noise=True,
 )
+noise = WhiteNoise()
 
 # Normal model
 model = Model(
