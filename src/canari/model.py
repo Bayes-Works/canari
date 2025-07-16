@@ -188,6 +188,12 @@ class Model:
         self.mu_W2_prior = None
         self.var_W2_prior = None
 
+        # Heteroscedastic noise related attribute
+        self._var_v2bar_prior = None
+        self._mu_v2bar_tilde = None
+        self._var_v2bar_tilde = None
+        self._cov_v2bar_tilde = None
+
         # Early stopping attributes
         self.early_stop_metric = None
         self.early_stop_metric_history = []
@@ -834,6 +840,61 @@ class Model:
                 ) % 4 + 1
         return covariates_generation
 
+    def _estim_hete_noise(
+        self,
+        mu_v2bar_prior: np.ndarray,
+        var_v2bar_prior: np.ndarray,
+    ):
+        """
+        Estimate variance for the white noise hidden states using LSTM with AGVI
+        """
+
+        if self.get_states_index("white noise") is not None:
+            noise_index = self.get_states_index("white noise")
+            self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
+            self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
+                np.exp(var_v2bar_prior) - 1
+            )
+            self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+            self._var_v2bar_prior = var_v2bar_prior
+            if self._current_epoch >= 4:
+                self.process_noise_matrix[noise_index, noise_index] = (
+                    self._mu_v2bar_tilde
+                )
+        else:
+            raise ValueError(
+                "Need to define a white noise component in the model because "
+                "the LSTM network is used to model heteroscedastic white noise."
+            )
+
+    def _delta_hete_noise(self):
+        """
+        Estimate delta for v2bar which is the second output of the LSTM network
+        """
+
+        noise_index = self.get_states_index("white noise")
+        mu_noise_posterior = self.mu_states_posterior[noise_index]
+        var_noise_posterior = self.var_states_posterior[noise_index, noise_index]
+
+        mu_v2_posterior = mu_noise_posterior**2 + var_noise_posterior
+        var_v2_posterior = (
+            2 * var_noise_posterior**2 + 4 * var_noise_posterior * mu_noise_posterior**2
+        )
+
+        mu_v2_prior = self._mu_v2bar_tilde
+        var_v2_prior = 3 * self._var_v2bar_tilde + 2 * self._mu_v2bar_tilde**2
+
+        k = self._var_v2bar_tilde / var_v2_prior
+
+        delta_mu_v2bar_tilde = k * (mu_v2_posterior - mu_v2_prior)
+        delta_var_v2bar_tilde = k**2 * (var_v2_posterior - var_v2_prior)
+
+        jcb = self._cov_v2bar_tilde / self._var_v2bar_tilde
+        delta_mu_v2bar = jcb * delta_mu_v2bar_tilde / self._var_v2bar_prior
+        delta_var_v2bar = jcb * delta_var_v2bar_tilde * jcb / self._var_v2bar_prior**2
+
+        return delta_mu_v2bar, delta_var_v2bar
+
     def get_dict(self) -> dict:
         """
         Export model attributes into a serializable dictionary.
@@ -1072,30 +1133,13 @@ class Model:
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
-        # Heteroscedastic noise
-        mu_v2bar_tilde = None
-        var_v2bar_tilde = None
-        cov_v2bar_v2barTilde = None
-        var_v2bar = None
-        if self.lstm_net:
-            if self.lstm_net.model_noise:
-                if self.get_states_index("white noise") is not None:
-                    noise_index = self.get_states_index("white noise")
-                    mu_v2bar = mu_lstm_pred[-1]
-                    var_v2bar = var_lstm_pred[-1]
-                    mu_v2bar_tilde = np.exp(mu_v2bar + 0.5 * var_v2bar)
-                    var_v2bar_tilde = np.exp(2 * mu_v2bar + var_v2bar) * (
-                        np.exp(var_v2bar) - 1
-                    )
-                    cov_v2bar_v2barTilde = var_v2bar * mu_v2bar_tilde
-                    if self._current_epoch >= 4:
-                        self.process_noise_matrix[noise_index, noise_index] = (
-                            mu_v2bar_tilde
-                        )
-                else:
-                    raise ValueError(
-                        "Need to define a white noise component in the model."
-                    )
+            # Heteroscedastic noise
+            if self.lstm_net.model_white_noise:
+                mu_v2bar_prior = mu_lstm_pred[1::2]
+                var_v2bar_prior = var_lstm_pred[1::2]
+                mu_lstm_pred = mu_lstm_pred[0::2]
+                var_lstm_pred = var_lstm_pred[0::2]
+                self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1104,8 +1148,8 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred[0],
-            var_lstm_pred[0],
+            mu_lstm_pred,
+            var_lstm_pred,
             lstm_states_index,
         )
 
@@ -1132,10 +1176,6 @@ class Model:
             var_obs_pred,
             mu_states_prior,
             var_states_prior,
-            mu_v2bar_tilde,
-            var_v2bar_tilde,
-            cov_v2bar_v2barTilde,
-            var_v2bar,
         )
 
     def backward(
@@ -1173,19 +1213,18 @@ class Model:
             self.observation_matrix,
         )
         # for estimate delta_mu_lstm
-        noise_index = self.get_states_index("white noise")
-        lstm_index = self.get_states_index("lstm")
-        _delta_mu_states, _delta_var_states = common.backward(
-            obs,
-            self.mu_obs_predict,
-            self.var_obs_predict
-            - self.process_noise_matrix[noise_index, noise_index]
-            + 1e-8,
-            self.var_states_prior,
-            self.observation_matrix,
-        )
-        # delta_mu_states[lstm_index, :] = _delta_mu_states[lstm_index].item()
-        delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
+        # noise_index = self.get_states_index("white noise")
+        # lstm_index = self.get_states_index("lstm")
+        # _delta_mu_states, _delta_var_states = common.backward(
+        #     obs,
+        #     self.mu_obs_predict,
+        #     self.var_obs_predict
+        #     - self.process_noise_matrix[noise_index, noise_index]
+        #     + 1e-8,
+        #     self.var_states_prior,
+        #     self.observation_matrix,
+        # )
+        # delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
 
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
@@ -1305,7 +1344,7 @@ class Model:
         std_obs_preds = []
 
         for x in data["x"]:
-            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior, *_) = (
+            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior) = (
                 self.forward(x)
             )
 
@@ -1370,11 +1409,8 @@ class Model:
                 var_obs_pred,
                 _,
                 var_states_prior,
-                mu_v2barTilde_prior,
-                var_v2barTilde_prior,
-                cov_v2bar_v2barTilde,
-                var_v2bar_prior,
             ) = self.forward(x)
+
             (
                 delta_mu_states,
                 delta_var_states,
@@ -1393,32 +1429,8 @@ class Model:
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
 
-                if self.lstm_net.model_noise:
-                    noise_index = self.get_states_index("white noise")
-
-                    mu_noise_posterior = mu_states_posterior[noise_index]
-                    var_noise_posterior = var_states_posterior[noise_index, noise_index]
-
-                    mu_v2_posterior = mu_noise_posterior**2 + var_noise_posterior
-                    var_v2_posterior = (
-                        2 * var_noise_posterior**2
-                        + 4 * var_noise_posterior * mu_noise_posterior**2
-                    )
-
-                    mu_v2_prior = mu_v2barTilde_prior
-                    var_v2_prior = 3 * var_v2barTilde_prior + 2 * mu_v2barTilde_prior**2
-
-                    k = var_v2barTilde_prior / var_v2_prior
-
-                    delta_mu_v2barTilde = k * (mu_v2_posterior - mu_v2_prior)
-                    delta_var_v2barTilde = k**2 * (var_v2_posterior - var_v2_prior)
-
-                    jcb = cov_v2bar_v2barTilde / var_v2barTilde_prior
-                    delta_mu_v2bar = jcb * delta_mu_v2barTilde / var_v2bar_prior
-                    delta_var_v2bar = (
-                        jcb * delta_var_v2barTilde * jcb / var_v2bar_prior**2
-                    )
-
+                if self.lstm_net.model_white_noise:
+                    delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
                     delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
                     delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
 
