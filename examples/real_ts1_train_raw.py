@@ -39,8 +39,8 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.3,
-    validation_split=0.1,
+    train_split=0.25,
+    validation_split=0.07,
     output_col=output_col,
 )
 
