@@ -346,6 +346,7 @@ class Model:
         if scheduled_sigma_v < white_noise_component.std_error:
             scheduled_sigma_v = white_noise_component.std_error
         self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+        self._current_epoch += 1
 
     def _save_states_history(self):
         """
@@ -1075,27 +1076,19 @@ class Model:
         mu_v2bar_tilde = None
         var_v2bar_tilde = None
         cov_v2bar_v2barTilde = None
+        var_v2bar = None
         if self.lstm_net:
             if self.lstm_net.model_noise:
                 if self.get_states_index("white noise") is not None:
                     noise_index = self.get_states_index("white noise")
-                    # mu_v2bar = mu_lstm_pred[-1]
-                    # var_v2bar = var_lstm_pred[-1]
-                    # self.process_noise_matrix[noise_index, noise_index] = mu_v2bar
-                    if self._current_epoch < 5:
-                        mu_v2bar_tilde = self.process_noise_matrix[
-                            noise_index, noise_index
-                        ]
-                        var_v2bar_tilde = 1e-20
-                        cov_v2bar_v2barTilde = 1e-20
-                    else:
-                        mu_v2bar = mu_lstm_pred[-1]
-                        var_v2bar = var_lstm_pred[-1]
-                        mu_v2bar_tilde = np.exp(mu_v2bar + 0.5 * var_v2bar)
-                        var_v2bar_tilde = np.exp(2 * mu_v2bar + var_v2bar) * (
-                            np.exp(var_v2bar) - 1
-                        )
-                        cov_v2bar_v2barTilde = var_v2bar * mu_v2bar_tilde
+                    mu_v2bar = mu_lstm_pred[-1]
+                    var_v2bar = var_lstm_pred[-1]
+                    mu_v2bar_tilde = np.exp(mu_v2bar + 0.5 * var_v2bar)
+                    var_v2bar_tilde = np.exp(2 * mu_v2bar + var_v2bar) * (
+                        np.exp(var_v2bar) - 1
+                    )
+                    cov_v2bar_v2barTilde = var_v2bar * mu_v2bar_tilde
+                    if self._current_epoch >= 4:
                         self.process_noise_matrix[noise_index, noise_index] = (
                             mu_v2bar_tilde
                         )
@@ -1179,6 +1172,21 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
+        # for estimate delta_mu_lstm
+        noise_index = self.get_states_index("white noise")
+        lstm_index = self.get_states_index("lstm")
+        _delta_mu_states, _delta_var_states = common.backward(
+            obs,
+            self.mu_obs_predict,
+            self.var_obs_predict
+            - self.process_noise_matrix[noise_index, noise_index]
+            + 1e-8,
+            self.var_states_prior,
+            self.observation_matrix,
+        )
+        # delta_mu_states[lstm_index, :] = _delta_mu_states[lstm_index].item()
+        delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
+
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
@@ -1365,6 +1373,7 @@ class Model:
                 mu_v2barTilde_prior,
                 var_v2barTilde_prior,
                 cov_v2bar_v2barTilde,
+                var_v2bar_prior,
             ) = self.forward(x)
             (
                 delta_mu_states,
@@ -1405,8 +1414,10 @@ class Model:
                     delta_var_v2barTilde = k**2 * (var_v2_posterior - var_v2_prior)
 
                     jcb = cov_v2bar_v2barTilde / var_v2barTilde_prior
-                    delta_mu_v2bar = jcb * delta_mu_v2barTilde
-                    delta_var_v2bar = jcb * delta_var_v2barTilde * jcb
+                    delta_mu_v2bar = jcb * delta_mu_v2barTilde / var_v2bar_prior
+                    delta_var_v2bar = (
+                        jcb * delta_var_v2barTilde * jcb / var_v2bar_prior**2
+                    )
 
                     delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
                     delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
@@ -1517,8 +1528,7 @@ class Model:
         self.smoother()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
         # self.set_memory(states=self.states, time_step=0)
-
-        self._current_epoch += 1
+        # self._current_epoch += 1
 
         return (
             np.array(mu_validation_preds).flatten(),
