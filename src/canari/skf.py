@@ -943,6 +943,16 @@ class SKF:
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
+
+            # Heteroscedastic noise
+            if self.lstm_net.model_white_noise:
+                mu_v2bar_prior = mu_lstm_pred[1::2]
+                var_v2bar_prior = var_lstm_pred[1::2]
+                mu_lstm_pred = mu_lstm_pred[0::2]
+                var_lstm_pred = var_lstm_pred[0::2]
+                self.model["norm_norm"]._estim_hete_noise(
+                    mu_v2bar_prior, var_v2bar_prior
+                )
         else:
             mu_lstm_pred = None
             var_lstm_pred = None
@@ -953,7 +963,6 @@ class SKF:
                 var_pred_transit[transit],
                 mu_states_transit[transit],
                 var_states_transit[transit],
-                *_,
             ) = transition_model.forward(
                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
