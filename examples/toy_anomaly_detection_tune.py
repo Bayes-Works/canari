@@ -68,8 +68,9 @@ def main(
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
+                    model_noise=True,
                 ),
-                WhiteNoise(std_error=param["sigma_v"]),
+                WhiteNoise(),
             )
 
             model.auto_initialize_baseline_states(train_data["y"][0:24])
@@ -126,15 +127,9 @@ def main(
 
         # Define parameter search space
         if param_optimization:
-            param_space = {
-                "look_back_len": [10, 30],
-                "sigma_v": [1e-3, 2e-1],
-            }
+            param_space = {"look_back_len": [10, 30]}
         elif param_grid_search:
-            param_space = {
-                "look_back_len": [10, 15, 24],
-                "sigma_v": [5e-2, 1e-1, 2e-1],
-            }
+            param_space = {"look_back_len": [10, 15, 24]}
         # Define optimizer
         model_optimizer = ModelOptimizer(
             model=initialize_model,
