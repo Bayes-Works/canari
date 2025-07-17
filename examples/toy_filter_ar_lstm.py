@@ -114,7 +114,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         optimal_std_val_preds = std_validation_preds.copy()
         states_optim = copy.copy(states)
         lstm_optim_states = copy.copy(model.lstm_states_history)
-        lstm_optimal_smoothed_look_back = (
+        optimal_look_back = (
             model.lstm_net.smooth_look_back_mu,
             model.lstm_net.smooth_look_back_var,
         )
@@ -128,7 +128,7 @@ model_dict["mu_states_optimal"] = states_optim.mu_prior[-1]
 
 # get smoothed lstm states
 if model.lstm_net.smooth:
-    (smoothed_look_back_mu, smoothed_look_back_var) = lstm_optimal_smoothed_look_back
+    (smoothed_look_back_mu, smoothed_look_back_var) = optimal_look_back
     smoothed_lstm_states = lstm_optim_states[0]
 
 print(f"Optimal epoch: {model.optimal_epoch}")
