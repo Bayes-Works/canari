@@ -53,22 +53,19 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    model_white_noise=True,
+    model_noise=True,
 )
-noise = WhiteNoise()
 
 # Normal model
 model = Model(
     local_trend,
     lstm_network,
-    noise,
 )
 
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
     lstm_network,
-    noise,
 )
 
 # Switching Kalman filter
