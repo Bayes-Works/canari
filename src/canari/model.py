@@ -335,23 +335,32 @@ class Model:
             white_noise_decay_factor (float): Factor controlling decay rate.
         """
 
-        noise_index = self.get_states_index("white noise")
         scheduled_sigma_v = white_noise_max_std * np.exp(
             -white_noise_decay_factor * epoch
         )
 
-        white_noise_component = next(
-            (
-                component
-                for component in self.components.values()
-                if "white noise" in component.component_name
-            ),
-            None,
-        )
+        if self.get_states_index("white noise") is not None:
+            noise_index = self.get_states_index("white noise")
+            white_noise_component = next(
+                (
+                    component
+                    for component in self.components.values()
+                    if "white noise" in component.component_name
+                ),
+                None,
+            )
+            min_noise_std = white_noise_component.std_error
+        elif self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
+            min_noise_std = 0
+        else:
+            noise_index = None
 
-        if scheduled_sigma_v < white_noise_component.std_error:
-            scheduled_sigma_v = white_noise_component.std_error
-        self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+        if noise_index is not None:
+            if scheduled_sigma_v < min_noise_std:
+                scheduled_sigma_v = min_noise_std
+            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
         self._current_epoch += 1
 
     def _save_states_history(self):
@@ -649,8 +658,8 @@ class Model:
         Estimate variance for the white noise hidden states using LSTM with AGVI
         """
 
-        if self.get_states_index("white noise") is not None:
-            noise_index = self.get_states_index("white noise")
+        if self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
             self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
             self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
                 np.exp(var_v2bar_prior) - 1
@@ -662,17 +671,14 @@ class Model:
                     self._mu_v2bar_tilde
                 )
         else:
-            raise ValueError(
-                "Need to define a white noise component in the model because "
-                "the LSTM network is used to model heteroscedastic white noise."
-            )
+            raise ValueError("In the LSTM component, model_noise should be True. ")
 
     def _delta_hete_noise(self):
         """
         Estimate delta for v2bar which is the second output of the LSTM network
         """
 
-        noise_index = self.get_states_index("white noise")
+        noise_index = self.get_states_index("heteroscedastic noise")
         mu_noise_posterior = self.mu_states_posterior[noise_index]
         var_noise_posterior = self.var_states_posterior[noise_index, noise_index]
 
@@ -934,7 +940,7 @@ class Model:
             )
 
             # Heteroscedastic noise
-            if self.lstm_net.model_white_noise:
+            if self.lstm_net.model_noise:
                 mu_v2bar_prior = mu_lstm_pred[1::2]
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
@@ -1202,7 +1208,7 @@ class Model:
                     / var_states_prior[lstm_index, lstm_index] ** 2
                 )
 
-                if self.lstm_net.model_white_noise:
+                if self.lstm_net.model_noise:
                     delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
                     delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
                     delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
@@ -1305,7 +1311,10 @@ class Model:
         """
 
         # Decaying observation's variance
-        if white_noise_decay and self.get_states_index("white noise") is not None:
+        if white_noise_decay and (
+            self.get_states_index("white noise") is not None
+            or self.get_states_index("heteroscedastic noise") is not None
+        ):
             self.white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
