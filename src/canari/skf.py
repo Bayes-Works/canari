@@ -945,7 +945,7 @@ class SKF:
             )
 
             # Heteroscedastic noise
-            if self.lstm_net.model_white_noise:
+            if self.lstm_net.model_noise:
                 mu_v2bar_prior = mu_lstm_pred[1::2]
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
