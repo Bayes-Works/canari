@@ -123,6 +123,10 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
         lstm_states_optim = copy.copy(skf.model["norm_norm"].lstm_states_history)
+        optimal_look_back = (
+            skf.model["norm_norm"].lstm_net.smooth_look_back_mu,
+            skf.model["norm_norm"].lstm_net.smooth_look_back_var,
+        )
 
     skf.model["norm_norm"].set_memory(
         states=states, time_step=0, lstm_states=model.lstm_states_history
@@ -134,6 +138,7 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
+skf.lstm_net.smooth_look_back_mu, skf.lstm_net.smooth_look_back_var = optimal_look_back
 skf.set_memory(states=states_optim, time_step=0, lstm_states=lstm_states_optim)
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
