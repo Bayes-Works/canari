@@ -1571,7 +1571,7 @@ class Model:
                     )
                     break
         self.filter(train_data)
-        self.smoother()
+        # self.smoother()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
         # self.set_memory(states=self.states, time_step=0)
         # self._current_epoch += 1
