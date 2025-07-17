@@ -81,7 +81,7 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
-        model_white_noise: Optional[bool] = False,
+        model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
     ):
@@ -96,7 +96,7 @@ class LstmNetwork(BaseComponent):
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
-        self.model_white_noise = model_white_noise
+        self.model_noise = model_noise
         self._mu_states = mu_states
         self._var_states = var_states
         self.num_output = 2 * num_output if self.model_noise else num_output
@@ -194,7 +194,7 @@ class LstmNetwork(BaseComponent):
         # Initialize lstm network
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
-        lstm_network.model_white_noise = self.model_white_noise
+        lstm_network.model_noise = self.model_noise
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
