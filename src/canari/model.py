@@ -369,6 +369,28 @@ class Model:
                 scheduled_sigma_v = min_noise_std
             self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
+        if self.get_states_index("white noise") is not None:
+            noise_index = self.get_states_index("white noise")
+            white_noise_component = next(
+                (
+                    component
+                    for component in self.components.values()
+                    if "white noise" in component.component_name
+                ),
+                None,
+            )
+            min_noise_std = white_noise_component.std_error
+        elif self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
+            min_noise_std = 0
+        else:
+            noise_index = None
+
+        if noise_index is not None:
+            if scheduled_sigma_v < min_noise_std:
+                scheduled_sigma_v = min_noise_std
+            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
         self._current_epoch += 1
 
     def _save_states_history(self):
