@@ -1,42 +1,9 @@
 import numpy.testing as npt
+import pytest
 from canari import Model
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
-# Components
 lstm_look_back_len = 10
-lstm_network_1 = LstmNetwork(
-    look_back_len=lstm_look_back_len,
-    num_features=2,
-    num_layer=1,
-    infer_len=24,
-    num_hidden_unit=50,
-    device="cpu",
-    manual_seed=1,
-    # smoother=False,
-)
-lstm_network_2 = LstmNetwork(
-    look_back_len=lstm_look_back_len,
-    num_features=2,
-    num_layer=1,
-    infer_len=24,
-    num_hidden_unit=50,
-    device="cpu",
-    manual_seed=2,
-    # smoother=False,
-)
-
-# Model
-model1 = Model(
-    LocalTrend(),
-    lstm_network_1,
-    WhiteNoise(),
-)
-
-model2 = Model(
-    LocalTrend(),
-    lstm_network_2,
-    WhiteNoise(),
-)
 
 
 def compare_model_dict(model_1_dict, model_2_dict):
@@ -74,8 +41,34 @@ def compare_lstm_dict(model_1_dict, model_2_dict):
     )
 
 
-def test_model_save_load():
+@pytest.mark.parametrize("smoother", [False, True], ids=["LSTM", "SLSTM"])
+def test_model_save_load(smoother):
     """Test save/load for model.py"""
+
+    lstm_network_1 = LstmNetwork(
+        look_back_len=lstm_look_back_len,
+        num_features=2,
+        num_layer=1,
+        infer_len=24,
+        num_hidden_unit=50,
+        device="cpu",
+        manual_seed=1,
+        smoother=smoother,
+    )
+    lstm_network_2 = LstmNetwork(
+        look_back_len=lstm_look_back_len,
+        num_features=2,
+        num_layer=1,
+        infer_len=24,
+        num_hidden_unit=50,
+        device="cpu",
+        manual_seed=2,
+        smoother=smoother,
+    )
+
+    model1 = Model(LocalTrend(), lstm_network_1, WhiteNoise())
+    model2 = Model(LocalTrend(), lstm_network_2, WhiteNoise())
+
     model1_dict = model1.get_dict()
     model1_loaded = Model.load_dict(model1_dict)
     model1_loaded_dict = model1_loaded.get_dict()

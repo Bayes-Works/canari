@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-from canari import Model, common
+from canari import Model
 from canari.component import (
     LocalTrend,
     LocalLevel,
@@ -13,7 +13,6 @@ from canari.component import (
     Periodic,
     BaseComponent,
 )
-import fire
 
 
 def compute_observation_and_state_updates(
@@ -293,9 +292,9 @@ def test_online_AR():
         var_states_posterior,
     ) = model.backward(0.1)
 
-    mu_obs_true = np.array([[0.]])
-    var_obs_true = np.array([[3.]])
-    mu_states_prior_true = np.array([[0., 0.8, 0., 0., 3., 3.]]).T
+    mu_obs_true = np.array([[0.0]])
+    var_obs_true = np.array([[3.0]])
+    mu_states_prior_true = np.array([[0.0, 0.8, 0.0, 0.0, 3.0, 3.0]]).T
     var_states_prior_true = np.array(
         [
             [3.0, 0.0, 0.0, 3.0, 0.0, 0.0],
@@ -334,9 +333,7 @@ def test_online_AR():
     npt.assert_allclose(mu_states_prior, mu_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(var_states_prior, var_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(delta_mu_states, delta_mu_states_true, rtol=1e-6, atol=1e-8)
-    npt.assert_allclose(
-        delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8
-    )
+    npt.assert_allclose(delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(
         mu_states_posterior, mu_states_posterior_true, rtol=1e-6, atol=1e-8
     )
@@ -344,20 +341,19 @@ def test_online_AR():
         var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-8
     )
 
+
 def test_BAR():
     """Test function model._BAR_backward_modification"""
 
     bar = BoundedAutoregression(
-        std_error=5, 
+        std_error=5,
         phi=0.9,
         mu_states=[-0.5, -0.5],
         var_states=[1e-2, 1e-2],
         gamma=0.01,
     )
 
-    model = Model(
-        LocalLevel(mu_states=[0.0], var_states=[1e-4], std_error=0),
-        bar)
+    model = Model(LocalLevel(mu_states=[0.0], var_states=[1e-4], std_error=0), bar)
 
     mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = model.forward()
     (
@@ -369,29 +365,27 @@ def test_BAR():
 
     mu_obs_true = np.array([[-0.45]])
     var_obs_true = np.array([[25.0082]])
-    mu_states_prior_true = np.array([[0., -0.45, 0.]]).T
+    mu_states_prior_true = np.array([[0.0, -0.45, 0.0]]).T
     var_states_prior_true = np.array(
-        [
-            [1e-04, 0.0, 0.0],
-            [0.0, 2.50081e+01, 0.0],
-            [0.0, 0.0, 0.0]
-        ]
+        [[1e-04, 0.0, 0.0], [0.0, 2.50081e01, 0.0], [0.0, 0.0, 0.0]]
     )
 
     delta_mu_states_true = np.array([[2.5991474e-06, 6.4999741e-01, 0.0]]).T
     delta_var_states_true = np.array(
         [
             [-3.9986883e-10, -9.9999597e-05, 0.0],
-            [-9.9999597e-05, -2.5008001e+01, 0.0],
+            [-9.9999597e-05, -2.5008001e01, 0.0],
             [0.0, 0.0, 0.0],
         ]
     )
-    mu_states_posterior_true = np.array([[2.5991474e-06, 1.99997425e-01, 1.14707865e-01]]).T
+    mu_states_posterior_true = np.array(
+        [[2.5991474e-06, 1.99997425e-01, 1.14707865e-01]]
+    ).T
     var_states_posterior_true = np.array(
         [
-            [9.999960e-05, -9.999960e-05, -0.000000e+00],
-            [-9.999960e-05, 9.918213e-05, 0.000000e+00],
-            [-0.000000e+00, 0.000000e+00, 1.000000e-08],
+            [9.999960e-05, -9.999960e-05, -0.000000e00],
+            [-9.999960e-05, 9.918213e-05, 0.000000e00],
+            [-0.000000e00, 0.000000e00, 1.000000e-08],
         ]
     )
     npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
@@ -399,9 +393,7 @@ def test_BAR():
     npt.assert_allclose(mu_states_prior, mu_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(var_states_prior, var_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(delta_mu_states, delta_mu_states_true, rtol=1e-6, atol=1e-8)
-    npt.assert_allclose(
-        delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8
-    )
+    npt.assert_allclose(delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(
         mu_states_posterior, mu_states_posterior_true, rtol=1e-6, atol=1e-8
     )
