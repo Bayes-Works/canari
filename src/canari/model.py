@@ -1012,7 +1012,7 @@ class Model:
             self.observation_matrix,
         )
         # for estimate delta_mu_lstm
-        # noise_index = self.get_states_index("white noise")
+        # noise_index = self.get_states_index("heteroscedastic noise")
         # lstm_index = self.get_states_index("lstm")
         # _delta_mu_states, _delta_var_states = common.backward(
         #     obs,
