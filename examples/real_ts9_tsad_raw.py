@@ -28,8 +28,10 @@ df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
-train_split=0.28
-validation_split=0.07
+# train_split=0.28
+# validation_split=0.07
+train_split=0.35354
+validation_split=0.087542
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -49,7 +51,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts9_tsmodel_raw.pkl", "rb") as f:
+with open("saved_params/real_ts9_tsmodel_raw_ut.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -92,8 +94,8 @@ hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_state
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -1.6632523544953974e-06
-hsl_tsad_agent.LTd_std = 2.9068328673424882e-05
+# hsl_tsad_agent.mu_LTd = -1.6632523544953974e-06
+# hsl_tsad_agent.LTd_std = 2.9068328673424882e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_detrended_raw.csv')
@@ -103,7 +105,7 @@ hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target,
 # hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.7290000000000001)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_detrended_raw.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts9_detrended_raw.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 
 # #  Plot
 state_type = "prior"

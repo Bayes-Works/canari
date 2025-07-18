@@ -32,21 +32,23 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.28,
-    validation_split=0.07,
+    # train_split=0.28,
+    # validation_split=0.07,
+    train_split=0.35354,
+    validation_split=0.087542,
     output_col=output_col,
 )
 data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
                 data_processor.data.iloc[0 : 52].values
             )
 
-num_epoch = 200
+num_epoch = 300
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Define AR model
-AR_process_error_var_prior = 1e4
-var_W2bar_prior = 1e4
+AR_process_error_var_prior = 1
+var_W2bar_prior = 1
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
         look_back_len=27,
@@ -96,9 +98,14 @@ for epoch in range(num_epoch):
         std=std_validation_preds_unnorm,
     )
 
+    phi_ar = model.states.mu_prior[-1][model.states_name.index("phi")].item()
+    print(phi_ar)
+
     # Early-stopping
     model.early_stopping(evaluate_metric=-validation_log_lik, mode="min",
-                        #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 150)
+    # model.early_stopping(evaluate_metric=mse, mode="min", patience=100,
+    # model.early_stopping(evaluate_metric=phi_ar, mode="min",
+                        #  current_epoch=epoch, max_epoch=num_epoch, skip_epoch = 100)
                          current_epoch=epoch, max_epoch=num_epoch)
     
     # model.early_stopping(evaluate_metric=mse, mode="min")
@@ -120,10 +127,10 @@ model_dict['states_optimal'] = states_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
-# # Save model_dict to local
-# import pickle
-# with open("saved_params/real_ts9_tsmodel_raw.pkl", "wb") as f:
-#     pickle.dump(model_dict, f)
+# Save model_dict to local
+import pickle
+with open("saved_params/real_ts9_tsmodel_raw_expl.pkl", "wb") as f:
+    pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
@@ -146,7 +153,7 @@ pretrained_model = Model(
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
 
-pretrained_model.filter(normalized_data,train_lstm=False)
+mu_y_preds, std_y_preds,_ = pretrained_model.filter(normalized_data,train_lstm=False)
 pretrained_model.smoother()
 
 #  Plot
@@ -165,6 +172,12 @@ plot_data(
     validation_label="y",
     sub_plot=ax0,
 )
+time = data_processor.get_time(split="all")
+ax0.plot(time, mu_y_preds, color='tab:blue', label='Predicted mean')
+ax0.fill_between(time, 
+                 mu_y_preds - std_y_preds, 
+                 mu_y_preds + std_y_preds, 
+                 color='tab:blue', alpha=0.2, label='Predicted std')
 plot_states(
     data_processor=data_processor,
     standardization=True,
