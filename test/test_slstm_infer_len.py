@@ -5,8 +5,7 @@ import copy
 import pytagi.metric as metric
 from canari import DataProcess, Model
 from canari.component import LstmNetwork, WhiteNoise
-from canari.data_visualization import plot_data, plot_states
-import matplotlib.pyplot as plt
+import pytest
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -27,20 +26,13 @@ def create_slstm_model(look_back_len: int) -> Model:
     )
 
 
-def test_slstm_infer_len_parametrized():
+@pytest.mark.parametrize(
+    "look_back_len,start_offset", [(l, s) for l in [11, 19, 23] for s in [0, 6, 12]]
+)
+def test_slstm_infer_len_parametrized(look_back_len, start_offset):
     """
     Run training and forecasting for time-series forecasting model for multiple inference lengths.
     """
-    look_back_lens = [11, 19, 23]  # different input sequence lengths
-    start_offsets = [0, 6, 12]  # creates offsets in cycles
-
-    # create combinations of look_back_len and start_offset
-    infer_params = [
-        (look_back_len, start_offset)
-        for look_back_len in look_back_lens
-        for start_offset in start_offsets
-    ]
-
     output_col = [0]
 
     # Read and prepare data
@@ -52,57 +44,53 @@ def test_slstm_infer_len_parametrized():
         data_file_time, skiprows=1, delimiter=",", header=None
     )
 
-    for look_back_len, start_offset in infer_params:
+    df_raw = copy.copy(df_raw_orig)
+    time_series = pd.to_datetime(time_series_orig[0])
+    df_raw.index = time_series
+    df_raw = df_raw[start_offset:]
 
-        df_raw = copy.copy(df_raw_orig)
+    # Data processing
+    data_processor = DataProcess(
+        data=df_raw,
+        train_split=0.8,
+        validation_split=0.2,
+        time_covariates=["hour_of_day"],
+        output_col=output_col,
+    )
+    train_data, validation_data, _, _ = data_processor.get_splits()
 
-        time_series = pd.to_datetime(time_series_orig[0])
-        df_raw.index = time_series
+    # Initialize model
+    model = create_slstm_model(look_back_len=look_back_len)
 
-        df_raw = df_raw[start_offset:]
-
-        # Data processing
-        data_processor = DataProcess(
-            data=df_raw,
-            train_split=0.8,
-            validation_split=0.2,
-            time_covariates=["hour_of_day"],
-            output_col=output_col,
+    # Train model
+    for epoch in range(num_epoch := 50):
+        (mu_validation_preds, _, states) = model.lstm_train(
+            train_data=train_data,
+            validation_data=validation_data,
         )
-        train_data, validation_data, _, _ = data_processor.get_splits()
 
-        # Initialize model
-        model = create_slstm_model(look_back_len=look_back_len)
+        # Calculate the log-likelihood metric
+        validation_obs = data_processor.get_data("validation").flatten()
+        mse = metric.mse(mu_validation_preds, validation_obs)
 
-        # Train model
-        for epoch in range(num_epoch := 50):
-            (mu_validation_preds, _, states) = model.lstm_train(
-                train_data=train_data,
-                validation_data=validation_data,
-            )
-
-            # Calculate the log-likelihood metric
-            validation_obs = data_processor.get_data("validation").flatten()
-            mse = metric.mse(mu_validation_preds, validation_obs)
-
-            # Early-stopping
-            model.early_stopping(
-                evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
-            )
-            if epoch == model.optimal_epoch:
-                states_optim = copy.copy(states)
-
-            model.set_memory(states=states, time_step=0)
-            if model.stop_training:
-                break
-
-        # Get first state and observation
-        first_state = states.get_mean("lstm", "prior", True)[0]
-        first_observation = train_data["y"][0]
-
-        npt.assert_allclose(
-            first_state,
-            first_observation,
-            atol=0.2,
-            err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
+        # Early-stopping
+        model.early_stopping(
+            evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
         )
+        if epoch == model.optimal_epoch:
+            states_optim = copy.copy(states)
+
+        model.set_memory(states=states, time_step=0)
+        if model.stop_training:
+            break
+
+    # Get first state and observation
+    first_state = states.get_mean("lstm", "prior", True)[0]
+    first_observation = train_data["y"][0]
+
+    npt.assert_allclose(
+        first_state,
+        first_observation,
+        atol=0.2,
+        err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
+    )

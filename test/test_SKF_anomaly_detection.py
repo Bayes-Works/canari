@@ -21,18 +21,32 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    # smoother=False,
+    smoother=False,
+)
+slstm_network = LstmNetwork(
+    look_back_len=10,
+    num_features=2,
+    num_layer=1,
+    infer_len=24,
+    num_hidden_unit=50,
+    device="cpu",
+    smoother=True,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
 # Switching Kalman filter
-skf = SKF(
+skf_lstm = SKF(
     norm_model=Model(local_trend, lstm_network, noise),
     abnorm_model=Model(local_acceleration, lstm_network, noise),
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
 )
-
+skf_slstm = SKF(
+    norm_model=Model(local_trend, slstm_network, noise),
+    abnorm_model=Model(local_acceleration, slstm_network, noise),
+    std_transition_error=1e-4,
+    norm_to_abnorm_prob=1e-4,
+)
 
 def SKF_anomaly_detection_runner(
     test_model: SKF,
@@ -97,19 +111,19 @@ def SKF_anomaly_detection_runner(
         )
 
         # Early-stopping
-        skf.early_stopping(
+        test_model.early_stopping(
             evaluate_metric=-validation_log_lik,
             current_epoch=epoch,
             max_epoch=num_epoch,
         )
 
-        skf.model["norm_norm"].set_memory(states=states, time_step=0)
-        if skf.stop_training:
+        test_model.model["norm_norm"].set_memory(states=states, time_step=0)
+        if test_model.stop_training:
             break
 
     # Anomaly detection
-    filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf.smoother()
+    filter_marginal_abnorm_prob, _ = test_model.filter(data=all_data)
+    smooth_marginal_abnorm_prob, states = test_model.smoother()
 
     # Check anomalies
     condition1 = np.any(
@@ -134,13 +148,14 @@ def SKF_anomaly_detection_runner(
 
 
 def test_anomaly_detection(plot_mode):
-    """Test anomaly detection with lstm component"""
+    """Test anomaly detection with lstm and slstm components"""
 
-    detection = SKF_anomaly_detection_runner(
-        skf,
-        time_step_anomaly=120,
-        slope_anomaly=1,
-        anomaly_threshold=0.5,
-        plot=plot_mode,
-    )
-    assert detection == True, "Anomaly not detected."
+    for skf, name in zip([skf_lstm, skf_slstm], ["LSTM", "SLSTM"]):
+        detection = SKF_anomaly_detection_runner(
+            skf,
+            time_step_anomaly=120,
+            slope_anomaly=1,
+            anomaly_threshold=0.5,
+            plot=plot_mode,
+        )
+        assert detection == True, f"Anomaly not detected with {name}."
