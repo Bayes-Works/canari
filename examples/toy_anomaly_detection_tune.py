@@ -65,7 +65,6 @@ def main(
                     look_back_len=param["look_back_len"],
                     num_features=2,
                     num_layer=1,
-                    inefer_len=24,
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
@@ -110,15 +109,6 @@ def main(
                 )
                 model.metric_optim = model.early_stop_metric
 
-            if epoch == model.optimal_epoch:
-                mu_validation_preds_optim = mu_validation_preds.copy()
-                std_validation_preds_optim = std_validation_preds.copy()
-                states_optim = copy.copy(states)
-                lstm_optimal_states = model.lstm_states_history
-                lstm_optimal_smoothed_look_back = (
-                    model.lstm_net.smooth_look_back_mu,
-                    model.lstm_net.smooth_look_back_var,
-                )
                 if epoch == model.optimal_epoch:
                     mu_validation_preds_optim = mu_validation_preds.copy()
                     std_validation_preds_optim = std_validation_preds.copy()
@@ -191,24 +181,8 @@ def main(
 
         ##################
         # Optimize for skf
-    # TODO: intialize LSTM with optimal states from model optimization
-        def initialize_skf(
-        skf_param_space,
-        model_param: dict,
-        lstm_states: list = None,
-        lstm_smoothed_look_back: tuple = None,
-    ):
+        def initialize_skf(skf_param_space, model_param: dict):
             norm_model = Model.load_dict(model_param)
-        if lstm_smoothed_states is not None:
-            norm_model.lstm_states_history = lstm_smoothed_states
-            norm_model.lstm_net.set_lstm_states(lstm_smoothed_states[0])
-        if lstm_smoothed_look_back is not None:
-            norm_model.lstm_output_history.set(
-                lstm_smoothed_look_back[0], lstm_smoothed_look_back[1]
-            )
-            norm_model.lstm_net.smooth_look_back_mu = lstm_smoothed_look_back[0]
-            norm_model.lstm_net.smooth_look_back_var = lstm_smoothed_look_back[1]
-
             abnorm_model = Model(
                 LocalAcceleration(),
                 LstmNetwork(),
@@ -220,7 +194,6 @@ def main(
                 std_transition_error=skf_param_space["std_transition_error"],
                 norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
             )
-
             skf.save_initial_states()
             return skf
 
