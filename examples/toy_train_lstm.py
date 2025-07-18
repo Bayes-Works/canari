@@ -46,7 +46,7 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
-        infer_len=24,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
@@ -73,10 +73,10 @@ for epoch in range(num_epoch):
     if model.lstm_net.smooth:
         if train_data is not None and train_data["cov_names"] is not None:
             # Generate standardized look-back covariates
-            lookback_covariates = model._generate_look_back_covariates(train_data)
-            model._store_initial_lookback(lookback_covariates)
+            lookback_covariates = model.generate_look_back_covariates(train_data)
+            model.store_initial_lookback(lookback_covariates)
         else:
-            model._store_initial_lookback()
+            model.store_initial_lookback()
 
     model.filter(train_data, train_lstm=True)
 

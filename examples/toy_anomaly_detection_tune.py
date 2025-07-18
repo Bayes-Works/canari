@@ -65,9 +65,11 @@ def main(
                     look_back_len=param["look_back_len"],
                     num_features=2,
                     num_layer=1,
+                    infer_len=24 * 3,
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
+                    smoother=True,
                 ),
                 WhiteNoise(std_error=param["sigma_v"]),
             )
@@ -113,6 +115,11 @@ def main(
                     mu_validation_preds_optim = mu_validation_preds.copy()
                     std_validation_preds_optim = std_validation_preds.copy()
                     states_optim = copy.copy(states)
+                    lstm_optim_states = copy.copy(model.lstm_states_history)
+                    optimal_look_back = (
+                        model.lstm_net.smooth_look_back_mu,
+                        model.lstm_net.smooth_look_back_var,
+                    )
 
                 if model.stop_training:
                     break
@@ -122,6 +129,8 @@ def main(
                 states_optim,
                 mu_validation_preds_optim,
                 std_validation_preds_optim,
+                lstm_optim_states,
+                optimal_look_back,
             )
 
         # Define parameter search space
@@ -148,9 +157,14 @@ def main(
         # Get best model
         param = model_optimizer.get_best_param()
         # Train best model
-        model_optim, states_optim, mu_validation_preds, std_validation_preds = (
-            initialize_model(param, train_data, validation_data)
-        )
+        (
+            model_optim,
+            states_optim,
+            mu_validation_preds,
+            std_validation_preds,
+            lstm_optim_states,
+            optimal_look_back,
+        ) = initialize_model(param, train_data, validation_data)
         # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
         plot_data(
@@ -181,8 +195,20 @@ def main(
 
         ##################
         # Optimize for skf
-        def initialize_skf(skf_param_space, model_param: dict):
+        def initialize_skf(
+            skf_param_space, model_param: dict, lstm_states=None, lstm_look_back=None
+        ):
             norm_model = Model.load_dict(model_param)
+
+            if lstm_states is not None:
+                norm_model.lstm_states_history = lstm_states
+                norm_model.lstm_net.set_lstm_states(lstm_states[0])
+
+            if lstm_look_back is not None:
+                norm_model.lstm_output_history.set(lstm_look_back[0], lstm_look_back[1])
+                norm_model.lstm_net.smooth_look_back_mu = lstm_look_back[0]
+                norm_model.lstm_net.smooth_look_back_var = lstm_look_back[1]
+
             abnorm_model = Model(
                 LocalAcceleration(),
                 LstmNetwork(),
@@ -249,22 +275,44 @@ def main(
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=param_grid_search,
+            lstm_states=lstm_optim_states if lstm_optim_states is not None else None,
+            lstm_look_back=optimal_look_back if optimal_look_back is not None else None,
         )
         skf_optimizer.optimize()
         # Get parameters
         skf_param = skf_optimizer.get_best_param()
-        skf_optim = initialize_skf(skf_param, model_optim_dict)
+        skf_optim = initialize_skf(
+            skf_param,
+            model_optim_dict,
+            lstm_states=lstm_optim_states if not None else None,
+            lstm_look_back=optimal_look_back if not None else None,
+        )
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
+        if skf_optim.lstm_net.smooth:
+            skf_optim_dict["lstm_states"] = lstm_optim_states
+            skf_optim_dict["lstm_look_back"] = optimal_look_back
         with open("saved_params/toy_anomaly_detection_tune.pkl", "wb") as f:
             pickle.dump(skf_optim_dict, f)
+
     else:
         ########################################
         # Load saved skf model
         with open("saved_params/toy_anomaly_detection_tune.pkl", "rb") as f:
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
+        if skf_optim.lstm_net.smooth:
+            skf_optim.lstm_output_history.set(
+                skf_optim_dict["lstm_look_back"][0],
+                skf_optim_dict["lstm_look_back"][1],
+            )
+            skf_optim.model["norm_norm"].lstm_states_history = skf_optim_dict[
+                "lstm_states"
+            ]
+            skf_optim.model["norm_norm"].lstm_net.set_lstm_states(
+                skf_optim_dict["lstm_states"][0]
+            )
 
     ########################################
     # Detect anomaly

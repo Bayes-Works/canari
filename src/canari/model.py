@@ -657,7 +657,7 @@ class Model:
                 )
         return covariates_generation
 
-    def _store_initial_lookback(self, lookback_covariates=None):
+    def store_initial_lookback(self, lookback_covariates=None):
         """
         Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
@@ -710,7 +710,7 @@ class Model:
 
             self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
 
-    def _generate_look_back_covariates(self, train_data):
+    def generate_look_back_covariates(self, train_data):
         """
         Generate standardized look-back covariates for the LSTM by re-using
         Model._prepare_covariates_generation.
@@ -740,13 +740,13 @@ class Model:
             init_val = train_data["x"][train_idx][col_idx]
             mu = scale_const_mean[col_idx + 1]
             std = scale_const_std[col_idx + 1]
-            init_val = normalizer.unstandardize(init_val, mu, std)
+            init_val = init_val * std + mu
             raw = self._prepare_covariates_generation(
                 init_val.reshape(1),
                 num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
-            normed = normalizer.standardize(raw, mu, std)
+            normed = (raw - mu) / (std + 1e-10)
             dummy[:, col_idx] = normed[:, 0]
 
         # --- Handle lagged features ---
@@ -895,10 +895,11 @@ class Model:
                 lstm_states = self.lstm_net.get_lstm_states()
                 for key in lstm_states:
                     old_tuple = lstm_states[key]
-                    new_tuple = tuple(np.zeros_like(np.array(v)).tolist() for v in old_tuple)
+                    new_tuple = tuple(
+                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                    )
                     lstm_states[key] = new_tuple
                 self.lstm_net.set_lstm_states(lstm_states)
-
 
     def initialize_states_history(self):
         """
@@ -1385,10 +1386,10 @@ class Model:
         if self.lstm_net.smooth:
             if train_data is not None and train_data["cov_names"] is not None:
                 # Generate standardized look-back covariates
-                lookback_covariates = self._generate_look_back_covariates(train_data)
-                self._store_initial_lookback(lookback_covariates)
+                lookback_covariates = self.generate_look_back_covariates(train_data)
+                self.store_initial_lookback(lookback_covariates)
             else:
-                self._store_initial_lookback()
+                self.store_initial_lookback()
 
         self.filter(train_data)
 
