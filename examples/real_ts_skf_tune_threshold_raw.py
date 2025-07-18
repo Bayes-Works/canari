@@ -28,21 +28,22 @@ def main(
     param_optimization: bool = True,
 ):
     # Read data
-    data_file = "./data/benchmark_data/test_11_data.csv"
+    data_file = "./data/benchmark_data/test_9_data.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(df_raw.iloc[:, 0])
     df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["obs"]
+    df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
+    df_raw = df_raw.iloc[:, :-3]
 
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
         data=df_raw,
         time_covariates=["week_of_year"],
-        train_split=0.25,
-        validation_split=0.1,
+        train_split=0.35354,
+        validation_split=0.087542,
         output_col=output_col,
     )
     data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
@@ -54,11 +55,11 @@ def main(
     ########################################
 
     # Load model_dict from local
-    with open("saved_params/real_ts11_tsmodel_raw.pkl", "rb") as f:
+    with open("saved_params/real_ts9_tsmodel_raw_expl.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
-            look_back_len=24,
+            look_back_len=27,
             num_features=2,
             num_layer=1,
             num_hidden_unit=50,
@@ -183,7 +184,7 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    filter_marginal_abnorm_prob, states = skf_optim.smoother()
+    # filter_marginal_abnorm_prob, states = skf_optim.smoother()
 
     # Plotting SKF results
     fig, ax = plot_skf_states(
