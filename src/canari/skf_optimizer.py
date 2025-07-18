@@ -52,6 +52,8 @@ class SKFOptimizer:
         num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
+        lstm_states: Optional[list] = None,
+        lstm_look_back: Optional[tuple] = None,
     ):
         """
         Initializes the SKFOptimizer.
@@ -70,6 +72,8 @@ class SKFOptimizer:
         self.skf_optim = None
         self.param_optim = None
         self._trial_count = 0
+        self.lstm_states = lstm_states
+        self.lstm_look_back = lstm_look_back
 
     def _log_trial(self, study: optuna.Study, trial: optuna.Trial):
         """
@@ -113,7 +117,12 @@ class SKFOptimizer:
                     log_uniform = low > 0 and high > 0
                     param[name] = trial.suggest_float(name, low, high, log=log_uniform)
 
-        skf = self._initialize_skf(param, self._model_param)
+        skf = self._initialize_skf(
+            param,
+            self._model_param,
+            lstm_states=self.lstm_states,
+            lstm_look_back=self.lstm_look_back,
+        )
         slope = param.get("slope")
 
         detection_rate, false_rate, false_alarm = skf.detect_synthetic_anomaly(
@@ -164,7 +173,12 @@ class SKFOptimizer:
         )
 
         self.param_optim = study.best_params
-        self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
+        self.skf_optim = self._initialize_skf(
+            self.param_optim,
+            self._model_param,
+            lstm_states=self.lstm_states,
+            lstm_look_back=self.lstm_look_back,
+        )
 
         print("-----")
         print(
