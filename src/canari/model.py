@@ -444,6 +444,8 @@ class Model:
                 index2=self.get_states_index("autoregression"),
                 replace_index=self.get_states_index("phi_autoregression"),
             ).get_results()
+            phi_index = self.get_states_index("phi")
+            mu_states_posterior[phi_index] = np.maximum(mu_states_posterior[phi_index], 0).item()
 
         if "AR_error" in self.states_name:
             ar_index = self.get_states_index("autoregression")
