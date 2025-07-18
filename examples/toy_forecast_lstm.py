@@ -46,7 +46,7 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
-        infer_len=24,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
