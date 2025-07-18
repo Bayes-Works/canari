@@ -41,36 +41,40 @@ if platform.system() == "Windows":
             false_rate_threshold: Threshold for false rate.
         """
 
-        def __init__(
-            self,
-            initialize_skf: Callable,
-            model_param: dict,
-            param_space: Dict[str, list],
-            data: dict,
-            detection_threshold: Optional[float] = 0.5,
-            false_rate_threshold: Optional[float] = 0.0,
-            max_timestep_to_detect: Optional[int] = None,
-            num_synthetic_anomaly: Optional[int] = 50,
-            num_optimization_trial: Optional[int] = 50,
-            grid_search: Optional[bool] = False,
-        ):
-            """
-            Initializes the SKFOptimizer.
-            """
+    def __init__(
+        self,
+        initialize_skf: Callable,
+        model_param: dict,
+        param_space: Dict[str, list],
+        data: dict,
+        detection_threshold: Optional[float] = 0.5,
+        false_rate_threshold: Optional[float] = 0.0,
+        max_timestep_to_detect: Optional[int] = None,
+        num_synthetic_anomaly: Optional[int] = 50,
+        num_optimization_trial: Optional[int] = 50,
+        grid_search: Optional[bool] = False,
+        lstm_states: Optional[list] = None,
+        lstm_look_back: Optional[tuple] = None,
+    ):
+        """
+        Initializes the SKFOptimizer.
+        """
 
-            self._initialize_skf = initialize_skf
-            self._model_param = model_param
-            self._param_space = param_space
-            self._data = data
-            self.detection_threshold = detection_threshold
-            self.false_rate_threshold = false_rate_threshold
-            self._max_timestep_to_detect = max_timestep_to_detect
-            self._num_synthetic_anomaly = num_synthetic_anomaly
-            self._num_optimization_trial = num_optimization_trial
-            self._grid_search = grid_search
-            self.skf_optim = None
-            self.param_optim = None
-            self._trial_count = 0
+        self._initialize_skf = initialize_skf
+        self._model_param = model_param
+        self._param_space = param_space
+        self._data = data
+        self.detection_threshold = detection_threshold
+        self.false_rate_threshold = false_rate_threshold
+        self._max_timestep_to_detect = max_timestep_to_detect
+        self._num_synthetic_anomaly = num_synthetic_anomaly
+        self._num_optimization_trial = num_optimization_trial
+        self._grid_search = grid_search
+        self.skf_optim = None
+        self.param_optim = None
+        self._trial_count = 0
+        self.lstm_states = lstm_states
+        self.lstm_look_back = lstm_look_back
 
         def _log_trial(self, study: optuna.Study, trial: optuna.Trial):
             """
@@ -116,8 +120,13 @@ if platform.system() == "Windows":
                             name, low, high, log=log_uniform
                         )
 
-            skf = self._initialize_skf(param, self._model_param)
-            slope = param.get("slope")
+        skf = self._initialize_skf(
+            param,
+            self._model_param,
+            lstm_states=self.lstm_states,
+            lstm_look_back=self.lstm_look_back,
+        )
+        slope = param.get("slope")
 
             detection_rate, false_rate, false_alarm_train = (
                 skf.detect_synthetic_anomaly(
@@ -168,8 +177,13 @@ if platform.system() == "Windows":
                 callbacks=[self._log_trial],
             )
 
-            self.param_optim = study.best_params
-            self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
+        self.param_optim = study.best_params
+        self.skf_optim = self._initialize_skf(
+            self.param_optim,
+            self._model_param,
+            lstm_states=self.lstm_states,
+            lstm_look_back=self.lstm_look_back,
+        )
 
             print("-----")
             print(
