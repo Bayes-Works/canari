@@ -30,6 +30,7 @@ import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from pytagi.nn import OutputUpdater
 from pytagi import Normalizer as normalizer
 
 
@@ -181,6 +182,7 @@ class Model:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
+        self.lstm_states_history = []
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -276,7 +278,22 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_net.update_param = self._update_lstm_param
-            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if (
+                self.lstm_net.smooth_look_back_mu is not None
+                and self.lstm_net.smooth_look_back_var is not None
+            ):
+                self.lstm_output_history.set(
+                    mu=self.lstm_net.smooth_look_back_mu,
+                    var=self.lstm_net.smooth_look_back_var,
+                )
+            else:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if self.lstm_net.smooth_look_back_states is not None:
+                self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
+            # TODO: check for better intialization
+            self.lstm_net.num_samples = (
+                1  # dummy intialization until otherwise specified
+            )
 
     def _initialize_autoregression(self):
         """
@@ -605,33 +622,137 @@ class Model:
             np.ndarray: Encoded covariate matrix of shape (num_generated_samples, 1).
         """
 
-        covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
+        step = 1 if num_generated_samples >= 0 else -1
+        covariates_generation = np.arange(0, num_generated_samples, step).reshape(-1, 1)
+        if num_generated_samples < 0:
+            covariates_generation = covariates_generation[::-1]
+
+        def safe_mod(x, base):
+            return (x % base + base) % base
+
         for time_cov in time_covariates:
             if time_cov == "hour_of_day":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 24 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 24
+                )
             elif time_cov == "day_of_week":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 7 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 7
+                )
             elif time_cov == "day_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 365 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 365
+                )
             elif time_cov == "week_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 52 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 52
+                )
             elif time_cov == "month_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 12 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 12
+                )
             elif time_cov == "quarter_of_year":
-                covariates_generation = (
-                    initial_covariate + covariates_generation
-                ) % 4 + 1
+                covariates_generation = safe_mod(
+                    initial_covariate + covariates_generation, 4
+                )
         return covariates_generation
+
+    def store_initial_lookback(self, lookback_covariates=None):
+        """
+        Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
+        `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
+        Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
+        """
+        # set lstm to training mode
+        self.lstm_net.train()
+
+        self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+        # reset LSTM states to zeros
+        lstm_states = self.lstm_net.get_lstm_states()
+        for key in lstm_states:
+            old_tuple = lstm_states[key]
+            new_tuple = tuple(np.zeros_like(np.array(v)).tolist() for v in old_tuple)
+            lstm_states[key] = new_tuple
+        self.lstm_net.set_lstm_states(lstm_states)
+        device = self.lstm_net.device
+
+        dummy_mu_obs = np.array([np.nan], dtype=np.float32)
+        dummy_var_obs = np.array([0.0], dtype=np.float32)
+
+        out_updater = OutputUpdater(device)
+
+        for i in range(self.lstm_net.lstm_infer_len - 1):
+            if lookback_covariates is None:
+                dummy_covariates = []
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, dummy_covariates
+                )
+            else:
+                dummy_covariates = lookback_covariates[i]
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, dummy_covariates
+                )
+
+            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                mu_x=mu_lstm_input.astype(np.float32),
+                var_x=var_lstm_input.astype(np.float32),
+            )
+
+            out_updater.update(
+                output_states=self.lstm_net.output_z_buffer,
+                mu_obs=dummy_mu_obs,
+                var_obs=dummy_var_obs,
+                delta_states=self.lstm_net.input_delta_z_buffer,
+            )
+
+            self.lstm_net.backward()
+            self.lstm_net.step()
+
+            self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
+
+    def generate_look_back_covariates(self, train_data):
+        """
+        Generate standardized look-back covariates for the LSTM by re-using
+        Model._prepare_covariates_generation.
+        Supports both time covariates and lagged features, including periods before the first observation.
+        """
+        # Get indices and look-back length
+        train_idx = 0
+        inferred_len = self.lstm_net.lstm_infer_len
+
+        # Gather covariate column names and count
+        cov_names = train_data["cov_names"]
+        n_cov = len(cov_names)
+
+        # Gather scaling constants
+        scale_const_mean = train_data["scale_const_mean"]
+        scale_const_std = train_data["scale_const_std"]
+
+        # Initialize dummy array with NaNs
+        dummy = np.full((inferred_len, n_cov), np.nan, dtype=np.float32)
+
+        # Handle time covariates
+        time_covs = train_data["time_covariates"] or []
+        for tc in time_covs:
+            if tc not in cov_names:
+                continue
+            col_idx = cov_names.index(tc)
+            init_val = train_data["x"][train_idx][col_idx]
+            mu = scale_const_mean[col_idx + 1]
+            std = scale_const_std[col_idx + 1]
+            init_val = init_val * std + mu
+            raw = self._prepare_covariates_generation(
+                init_val.reshape(1),
+                num_generated_samples=-inferred_len,
+                time_covariates=[tc],
+            )
+            normed = (raw - mu) / (std + 1e-10)
+            dummy[:, col_idx] = normed[:, 0]
+
+        # --- Handle lagged features ---
+        # TODO: how to handle laggs
+
+        return dummy
 
     def get_dict(self) -> dict:
         """
@@ -762,6 +883,23 @@ class Model:
         if "level" in self.states_name and hasattr(self, "_mu_local_level"):
             local_level_index = self.get_states_index("level")
             self.mu_states[local_level_index] = self._mu_local_level
+        if self.lstm_net:
+            if self.lstm_net.smooth:
+                self.lstm_output_history.mu = self.lstm_net.smooth_look_back_mu
+                self.lstm_output_history.var = self.lstm_net.smooth_look_back_var
+                self.lstm_net.set_lstm_states(self.lstm_states_history[0])
+
+            else:
+                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+                # reset LSTM states to zeros
+                lstm_states = self.lstm_net.get_lstm_states()
+                for key in lstm_states:
+                    old_tuple = lstm_states[key]
+                    new_tuple = tuple(
+                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
+                    )
+                    lstm_states[key] = new_tuple
+                self.lstm_net.set_lstm_states(lstm_states)
 
     def initialize_states_history(self):
         """
@@ -771,7 +909,9 @@ class Model:
 
         self.states.initialize(self.states_name)
 
-    def set_memory(self, states: StatesHistory, time_step: int):
+    def set_memory(
+        self, states: StatesHistory, time_step: int, lstm_states: Optional[List] = None
+    ):
         """
         Set :attr:`~canari.model.Model.mu_states`, :attr:`~canari.model.Model.var_states`, and
         :attr:`~canari.model.Model.lstm_output_history` with smoothed estimates from a specific
@@ -793,19 +933,11 @@ class Model:
             >>> # If the next analysis starts from t = 200
             >>> model.set_memory(states=model.states, time_step=200))
         """
+        if lstm_states:
+            self.lstm_states_history = lstm_states
 
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
-            if self.lstm_net:
-                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-                lstm_states = self.lstm_net.get_lstm_states()
-                for key in lstm_states:
-                    old_tuple = lstm_states[key]
-                    new_tuple = tuple(
-                        np.zeros_like(np.array(v)).tolist() for v in old_tuple
-                    )
-                    lstm_states[key] = new_tuple
-                self.lstm_net.set_lstm_states(lstm_states)
         else:
             mu_states_to_set = states.mu_smooth[time_step - 1]
             var_states_to_set = states.var_smooth[time_step - 1]
@@ -825,6 +957,8 @@ class Model:
                 ]
                 self.lstm_output_history.mu = mu_lstm_to_set
                 self.lstm_output_history.var = std_lstm_to_set**2
+
+                self.lstm_net.set_lstm_states(self.lstm_states_history[time_step - 1])
 
     def forward(
         self,
@@ -1026,12 +1160,22 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
 
-        for x in data["x"]:
+        # set lstm to eval mode
+        if self.lstm_net:
+            self.lstm_net.eval()
+
+        for index, x in enumerate(data["x"]):
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
 
             if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
+
                 lstm_index = self.get_states_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_prior[lstm_index],
@@ -1085,8 +1229,14 @@ class Model:
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
+        self.lstm_states_history = []
 
-        for x, y in zip(data["x"], data["y"]):
+        # set lstm to train mode
+        if self.lstm_net and train_lstm:
+            self.lstm_net.train()
+
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+
             mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
             (
                 delta_mu_states,
@@ -1096,6 +1246,12 @@ class Model:
             ) = self.backward(y)
 
             if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
+
                 lstm_index = self.get_states_index("lstm")
                 delta_mu_lstm = np.array(
                     delta_mu_states[lstm_index]
@@ -1154,6 +1310,20 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
+        if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
+            mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
+            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+            mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
+            var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
+            self.lstm_net.smooth_look_back_mu = mu_sequence
+            self.lstm_net.smooth_look_back_var = var_sequence
+
+            # set the smoothed lstm_states at the first time step
+            self.lstm_states_history[0] = self.lstm_net.get_lstm_states(
+                self.lstm_net.lstm_infer_len - 2
+            )
+
         return self.states
 
     def lstm_train(
@@ -1201,16 +1371,32 @@ class Model:
         Examples:
             >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
+        # TODO check for a better intialzation that is not relient on epoch count
+        if self.lstm_net.smooth and self._current_epoch == 0:
+            self.lstm_net.num_samples = (
+                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+            )
 
         # Decaying observation's variance
         if white_noise_decay and self.get_states_index("white noise") is not None:
             self.white_noise_decay(
                 self._current_epoch, white_noise_max_std, white_noise_decay_factor
             )
+
+        if self.lstm_net.smooth:
+            if train_data is not None and train_data["cov_names"] is not None:
+                # Generate standardized look-back covariates
+                lookback_covariates = self.generate_look_back_covariates(train_data)
+                self.store_initial_lookback(lookback_covariates)
+            else:
+                self.store_initial_lookback()
+
         self.filter(train_data)
-        self.smoother()
+
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        # self.set_memory(states=self.states, time_step=0)
+
+        # Aplly smoother on the training set
+        self.smoother()
 
         self._current_epoch += 1
 

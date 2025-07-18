@@ -708,7 +708,9 @@ class SKF:
                 transition_model.var_states_posterior,
             )
 
-    def set_memory(self, states: StatesHistory, time_step: int):
+    def set_memory(
+        self, states: StatesHistory, time_step: int, lstm_states: Optional[list] = None
+    ):
         """
         Apply :meth:`~canari.model.Model.set_memory` for the transition model 'norm_norm' stored in :attr:`.model`.
         If `time_step=0`, reset :attr:`.marginal_prob` using :attr:`.norm_model_prior_prob`.
@@ -723,8 +725,9 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
-
-        self.model["norm_norm"].set_memory(states=states, time_step=0)
+        self.model["norm_norm"].set_memory(
+            states=states, time_step=0, lstm_states=lstm_states
+        )
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
@@ -1193,7 +1196,11 @@ class SKF:
                 self.marginal_prob["abnorm"]
             )
 
-        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
+        self.set_memory(
+            states=self.model["norm_norm"].states,
+            time_step=0,
+            lstm_states=self.model["norm_norm"].lstm_states_history,
+        )
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,

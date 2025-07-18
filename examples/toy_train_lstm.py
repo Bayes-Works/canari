@@ -46,15 +46,22 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=235,
+        manual_seed=1,
+        # smoother=False,
     ),
     WhiteNoise(std_error=sigma_v),
 )
 
 model.auto_initialize_baseline_states(train_data["y"][0:24])
+
+if model.lstm_net.smooth:
+    model.lstm_net.num_samples = (
+        model.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+    )
 
 # Training
 for epoch in range(num_epoch):
@@ -62,11 +69,16 @@ for epoch in range(num_epoch):
     # set white noise decay
     model.white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
 
-    # filter on train data
-    model.filter(train_data, train_lstm=True)
+    # warm-up for infer_len steps
+    if model.lstm_net.smooth:
+        if train_data is not None and train_data["cov_names"] is not None:
+            # Generate standardized look-back covariates
+            lookback_covariates = model.generate_look_back_covariates(train_data)
+            model.store_initial_lookback(lookback_covariates)
+        else:
+            model.store_initial_lookback()
 
-    # smooth on train data
-    model.smoother()
+    model.filter(train_data, train_lstm=True)
 
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
@@ -95,9 +107,19 @@ for epoch in range(num_epoch):
             model.states
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
-        lstm_optim_states = model.lstm_net.get_lstm_states()
+        lstm_optim_states = copy.copy(model.lstm_states_history)
+        optimal_look_back = (
+            model.lstm_net.smooth_look_back_mu,
+            model.lstm_net.smooth_look_back_var,
+        )
 
-    model.set_memory(states=model.states, time_step=0)
+    # smooth on train data
+    model.smoother()
+
+    # reset the memory to smoothed states
+    model.set_memory(
+        states=model.states, time_step=0, lstm_states=model.lstm_states_history
+    )
     if model.stop_training:
         break
 
@@ -106,10 +128,13 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
-model.lstm_net.set_lstm_states(lstm_optim_states)
+(model.lstm_net.smooth_look_back_mu, model.lstm_net.smooth_look_back_var) = (
+    optimal_look_back
+)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
+    lstm_states=model.lstm_states_history,
 )
 
 # forecat on the test set

@@ -46,10 +46,12 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=235,
+        manual_seed=1,
+        # smoother=False,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -62,7 +64,7 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
+    model.set_memory(states=states, time_step=0, lstm_states=model.lstm_states_history)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -88,7 +90,11 @@ for epoch in range(num_epoch):
             states
         )  # If we want to plot the states, plot those from optimal epoch
         model_optim_dict = model.get_dict()
-        lstm_optim_states = model.lstm_net.get_lstm_states()
+        lstm_optim_states = copy.copy(model.lstm_states_history)
+        optimal_look_back = (
+            model.lstm_net.smooth_look_back_mu,
+            model.lstm_net.smooth_look_back_var,
+        )
 
     if model.stop_training:
         break
@@ -99,10 +105,13 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
 model.load_dict(model_optim_dict)
-model.lstm_net.set_lstm_states(lstm_optim_states)
+(model.lstm_net.smooth_look_back_mu, model.lstm_net.smooth_look_back_var) = (
+    optimal_look_back
+)
 model.set_memory(
     states=states_optim,
     time_step=data_processor.test_start,
+    lstm_states=lstm_optim_states,
 )
 
 # forecat on the test set

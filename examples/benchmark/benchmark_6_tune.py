@@ -63,6 +63,7 @@ def main(
                 num_hidden_unit=50,
                 device="cpu",
                 manual_seed=1,
+                smoother=False, 
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )

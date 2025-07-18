@@ -51,9 +51,11 @@ lstm_network = LstmNetwork(
     look_back_len=10,
     num_features=2,
     num_layer=1,
+    infer_len=24 * 3,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
+    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -89,9 +91,9 @@ std_validation_preds_optim = None
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
-        train_data=train_data, validation_data=validation_data
+        train_data=train_data,
+        validation_data=validation_data,
     )
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
 
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -120,7 +122,15 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
+        lstm_states_optim = copy.copy(skf.model["norm_norm"].lstm_states_history)
+        optimal_look_back = (
+            skf.model["norm_norm"].lstm_net.smooth_look_back_mu,
+            skf.model["norm_norm"].lstm_net.smooth_look_back_var,
+        )
 
+    skf.model["norm_norm"].set_memory(
+        states=states, time_step=0, lstm_states=model.lstm_states_history
+    )
     if skf.stop_training:
         break
 
@@ -128,6 +138,8 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
+skf.lstm_net.smooth_look_back_mu, skf.lstm_net.smooth_look_back_var = optimal_look_back
+skf.set_memory(states=states_optim, time_step=0, lstm_states=lstm_states_optim)
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
     matrix_inversion_tol=1e-2, tol_type="absolute"

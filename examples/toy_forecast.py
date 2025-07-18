@@ -43,6 +43,7 @@ model = Model(
     LstmNetwork(
         look_back_len=19,
         num_features=1,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -83,6 +84,7 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
+        lstm_states_optim = copy.copy(model.lstm_states_history)
 
     if model.stop_training:
         break
