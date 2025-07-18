@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 # # Read data
 data_file = "./data/traffic.npy"
 df = np.load(data_file)
-ts = 1
-cut_off = 4169
+ts = 2
+cut_off = 24 * 7 * 5
 df = pd.DataFrame(df[:cut_off, ts])
 start_date = "2008-01-01 00:00:00"
 time_idx = pd.date_range(start=start_date, periods=len(df), freq="H")
@@ -25,7 +25,7 @@ output_col = [0]
 num_epoch = 50
 data_processor = DataProcess(
     data=df,
-    time_covariates=["hour_of_day"],
+    time_covariates=["hour_of_day", "day_of_week"],
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -36,8 +36,8 @@ train_data, validation_data, test_data, standardized_data = data_processor.get_s
 # Model
 model = Model(
     LstmNetwork(
-        look_back_len=7 * 24,
-        num_features=2,
+        look_back_len=24,
+        num_features=3,
         num_layer=2,
         num_hidden_unit=50,
         device="cpu",
@@ -55,32 +55,53 @@ for epoch in range(num_epoch):
     )
     model.set_memory(states=states, time_step=0)
 
-    # # Unstandardize the predictions
+    # # # Unstandardize the predictions
+    # mu_validation_preds = normalizer.unstandardize(
+    #     mu_validation_preds,
+    #     data_processor.scale_const_mean[data_processor.output_col],
+    #     data_processor.scale_const_std[data_processor.output_col],
+    # )
+
+    # std_validation_preds = normalizer.unstandardize_std(
+    #     std_validation_preds,
+    #     data_processor.scale_const_std[data_processor.output_col],
+    # )
+
+    # validation_obs = data_processor.get_data("validation").flatten()
+    # validation_log_lik = metric.log_likelihood(
+    #     prediction=mu_validation_preds,
+    #     observation=validation_obs,
+    #     std=std_validation_preds,
+    # )
+
+    # # Early-stopping
+    # model.early_stopping(
+    #     evaluate_metric=-validation_log_lik,
+    #     current_epoch=epoch,
+    #     max_epoch=num_epoch,
+    #     skip_epoch=5,
+    # )
+
+    # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.scale_const_mean[data_processor.output_col],
-        data_processor.scale_const_std[data_processor.output_col],
+        data_processor.scale_const_mean[output_col],
+        data_processor.scale_const_std[output_col],
     )
-
     std_validation_preds = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.scale_const_std[data_processor.output_col],
+        data_processor.scale_const_std[output_col],
     )
 
+    # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
-    validation_log_lik = metric.log_likelihood(
-        prediction=mu_validation_preds,
-        observation=validation_obs,
-        std=std_validation_preds,
-    )
+    mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
     model.early_stopping(
-        evaluate_metric=-validation_log_lik,
-        current_epoch=epoch,
-        max_epoch=num_epoch,
-        skip_epoch=5,
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=5
     )
+
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -99,6 +120,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     standardization=False,
+    plot_train_data=False,
     plot_column=output_col,
     validation_label="y",
 )
