@@ -24,7 +24,7 @@ SKF_norm_to_abnorm_prob_fix = None
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 50,
     param_optimization: bool = True,
 ):
     # Read data
@@ -35,7 +35,9 @@ def main(
     df_raw.index = time_series
     df_raw.index.name = "date_time"
     df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
-    df_raw = df_raw.iloc[:, :-3]
+    # df_raw = df_raw.iloc[:, :-3]
+    lags = [0, 4, 4, 4]
+    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
     # Data pre-processing
     output_col = [0]
@@ -47,8 +49,8 @@ def main(
         output_col=output_col,
     )
     data_processor.scale_const_mean, data_processor.scale_const_std = Normalizer.compute_mean_std(
-                    data_processor.data.iloc[0 : 52].values
-                )
+                data_processor.data.iloc[0 : 52].values
+            )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     ########################################
@@ -59,28 +61,31 @@ def main(
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
-            look_back_len=27,
-            num_features=2,
+            look_back_len=33,
+            num_features=17,
             num_layer=1,
             num_hidden_unit=50,
             device="cpu",
         )
     
-    phi_index = model_dict["states_name"].index("phi")
-    W2bar_index = model_dict["states_name"].index("W2bar")
-    autoregression_index = model_dict["states_name"].index("autoregression")
+    # phi_index = model_dict["states_name"].index("phi")
+    # W2bar_index = model_dict["states_name"].index("W2bar")
+    # autoregression_index = model_dict["states_name"].index("autoregression")
 
-    print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
-    print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
+    # print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+    # print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 
     def initialize_model(param, train_data, validation_data):
         model = Model(
-            LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+            # LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
+            LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[model_dict['states_optimal'].var_prior[0][0,0].item(), model_dict['states_optimal'].var_prior[0][1,1].item()]),
             LSTM,
-            Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                        phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+            # Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+            #             # phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(),
+            #             phi=0,
+            #             mu_states=[model_dict["mu_states"][autoregression_index].item()], 
+            #             var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+            WhiteNoise(std_error=0.02222769157019269),
         )
 
         model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -89,8 +94,6 @@ def main(
 
     param = {}
 
-    # Train best model
-    print("Model parameters used:", param)
     model_optim = initialize_model(param, train_data, validation_data)
 
     # Save best model for SKF analysis later
@@ -105,11 +108,13 @@ def main(
         abnorm_model = Model(
             # LocalAcceleration(mu_states=[model_dict["mu_states"][0].item(), model_dict["mu_states"][1].item(), 0], var_states=[1e-12, 1e-12, 1e-4]),
             LocalAcceleration(),
-            LSTM,
-            Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                        phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+            LstmNetwork(),
+            # Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+            #             # phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+            #             phi=0,
+            #             mu_states=[model_dict["mu_states"][autoregression_index].item()], 
+            #             var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+            WhiteNoise(),
         )
         norm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
         abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -120,6 +125,7 @@ def main(
             std_transition_error=skf_param_space["std_transition_error"],
             norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
         )
+        skf.save_initial_states()
         return skf
 
     # Define parameter search space
@@ -155,8 +161,8 @@ def main(
 
     if param_optimization:
         skf_param_space = {
-            "std_transition_error": [1e-6, 1e-2],
-            "norm_to_abnorm_prob": [1e-6, 1e-2],
+            "std_transition_error": [1e-6, 1e-3],
+            "norm_to_abnorm_prob": [1e-6, 1e-3],
             "slope": [slope_lower_bound, slope_upper_bound],
             "threshold_anm_prob": [1e-2, 1.],
         }
@@ -184,14 +190,14 @@ def main(
 
     # Detect anomaly
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    # filter_marginal_abnorm_prob, states = skf_optim.smoother()
+    # smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     # Plotting SKF results
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
         states_type="prior",
-        states_to_plot=["level", "trend", "lstm", "autoregression"],
+        # states_to_plot=["level", "trend", "lstm", "autoregression"],
         model_prob=filter_marginal_abnorm_prob,
         standardization=False,
     )
