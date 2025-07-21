@@ -51,7 +51,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts9_tsmodel_raw_ut.pkl", "rb") as f:
+with open("saved_params/real_ts9_tsmodel_raw_expl.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
@@ -62,18 +62,19 @@ LSTM = LstmNetwork(
         device="cpu",
     )
 
-phi_index = model_dict["states_name"].index("phi")
+# phi_index = model_dict["states_name"].index("phi")
 W2bar_index = model_dict["states_name"].index("W2bar")
 autoregression_index = model_dict["states_name"].index("autoregression")
 
-print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
+# print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
-                   phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+                #    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
+                   phi=0,
                    mu_states=[model_dict["mu_states"][autoregression_index].item()], 
                    var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
 )
