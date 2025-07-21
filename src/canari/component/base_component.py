@@ -25,6 +25,7 @@ class BaseComponent(ABC):
         self._transition_matrix = None
         self._observation_matrix = None
         self._process_noise_matrix = None
+        self.output_col = [0]
 
         if not hasattr(self, "_mu_states"):
             self._mu_states = None
