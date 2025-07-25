@@ -7,3 +7,5 @@ fire==0.5.0
 statsmodels==0.14.4
 pytest==8.3.4
 optuna==4.2.0
+ray[tune]
+scikit-optimize
