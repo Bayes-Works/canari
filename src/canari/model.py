@@ -380,6 +380,80 @@ class Model:
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
 
+    def _exponential_forward_modification(
+        self, mu_states_prior, var_states_prior, mu_states, var_states
+    ):
+        exp_level_index = self.get_states_index("exp level")
+        exp_trend_index = self.get_states_index("exp trend")
+        exp_amplitude_index = self.get_states_index("exp amplitude")
+        exp_index = self.get_states_index("exp")
+        expwithamplitude_index = self.get_states_index("exp with amplitude")
+
+        mu_states_prior[exp_index] = (
+            np.exp(
+                -mu_states_prior[exp_level_index]
+                + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+            )
+            - 1
+        )
+        var_states_prior[exp_index, exp_index] = np.exp(
+            -2 * mu_states_prior[exp_level_index]
+            + var_states_prior[exp_level_index, exp_level_index]
+        ) * (np.exp(var_states_prior[exp_level_index, exp_level_index]) - 1)
+
+        var_states_prior[exp_level_index, exp_index] = -var_states_prior[
+            exp_level_index, exp_level_index
+        ] * np.exp(
+            -mu_states_prior[exp_level_index]
+            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+        )
+
+        var_states_prior[exp_index, exp_level_index] = var_states_prior[
+            exp_level_index, exp_index
+        ]
+
+        var_states_prior[exp_trend_index, exp_index] = -np.exp(
+            -mu_states_prior[exp_level_index]
+            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+        ) * (
+            var_states[exp_trend_index, exp_trend_index]
+            + var_states[exp_level_index, exp_trend_index]
+        )
+        var_states_prior[exp_index, exp_trend_index] = var_states_prior[
+            exp_trend_index, exp_index
+        ]
+
+        a = (
+            var_states_prior[exp_index, exp_level_index]
+            / var_states_prior[exp_level_index, exp_level_index]
+        )
+        skip_index = {exp_level_index, exp_trend_index, exp_index}
+        for i in range(len(mu_states_prior)):
+            if i in skip_index:
+                continue
+            cov_i = a * var_states_prior[exp_level_index, i]
+            var_states_prior[exp_index, i] = cov_i
+            var_states_prior[i, exp_index] = cov_i
+
+        mu_states_prior, var_states_prior = GMA(
+            mu_states_prior,
+            var_states_prior,
+            index1=exp_amplitude_index,
+            index2=exp_index,
+            replace_index=expwithamplitude_index,
+        ).get_results()
+
+        mu_obs_predict, var_obs_predict = common.calc_observation(
+            mu_states_prior, var_states_prior, self.observation_matrix
+        )
+
+        return (
+            mu_states_prior,
+            var_states_prior,
+            np.float32(mu_obs_predict),
+            np.float32(var_obs_predict),
+        )
+
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
         Apply forward path autoregressive (AR) moment transformations.
@@ -502,7 +576,10 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
+
     def _BAR_backward_modification(
+        self, mu_states_posterior, var_states_posterior
+    ) -> Tuple[np.ndarray, np.ndarray]:
         self, mu_states_posterior, var_states_posterior
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -883,6 +960,13 @@ class Model:
             lstm_states_index,
         )
 
+        if "exp" in self.states_name:
+            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
+                self._exponential_forward_modification(
+                    mu_states_prior, var_states_prior, self.mu_states, self.var_states
+                )
+            )
+
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
@@ -992,6 +1076,11 @@ class Model:
             matrix_inversion_tol,
             tol_type,
         )
+        # if (
+        #     self.states.mu_prior[time_step + 1][self.get_states_index("exp")]
+        #     == self.states.mu_posterior[time_step][self.get_states_index("exp")]
+        # ):
+        #     print("pas bon")
 
     def forecast(
         self, data: Dict[str, np.ndarray]
