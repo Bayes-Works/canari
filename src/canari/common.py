@@ -107,10 +107,10 @@ def forward(
         mu_states_prior, var_states_prior, observation_matrix
     )
     return (
-        np.float32(mu_obs_predict),
-        np.float32(var_obs_predict),
-        np.float32(mu_states_prior),
-        np.float32(var_states_prior),
+        np.float64(mu_obs_predict),
+        np.float64(var_obs_predict),
+        np.float64(mu_states_prior),
+        np.float64(var_states_prior),
     )
 
 
@@ -144,8 +144,8 @@ def backward(
     delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
     delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
     return (
-        np.float32(delta_mu_states),
-        np.float32(delta_var_states),
+        np.float64(delta_mu_states.reshape(-1, 1)),
+        np.float64(delta_var_states),
     )
 
 
@@ -207,8 +207,8 @@ def rts_smoother(
     )
 
     return (
-        np.float32(mu_states_smooth),
-        np.float32(var_states_smooth),
+        np.float64(mu_states_smooth),
+        np.float64(var_states_smooth),
     )
 
 
@@ -228,9 +228,9 @@ def prepare_lstm_input(
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
     var_lstm_input = np.concatenate(
-        (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float32))
+        (lstm_output_history.var, np.zeros(len(input_covariates), dtype=np.float64))
     )
-    return np.float32(mu_lstm_input), np.float32(var_lstm_input)
+    return np.float64(mu_lstm_input), np.float64(var_lstm_input)
 
 
 def pad_matrix(
@@ -288,7 +288,7 @@ def gaussian_mixture(
     m1 = mu1 - mu_mixture
     m2 = mu2 - mu_mixture
     var_mixture = coef1 * (var1 + m1 @ m1.T) + coef2 * (var2 + m2 @ m2.T)
-    return np.float32(mu_mixture), np.float32(var_mixture)
+    return np.float64(mu_mixture), np.float64(var_mixture)
 
 
 class GMA(object):

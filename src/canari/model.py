@@ -367,6 +367,12 @@ class Model:
                 self.mu_states_posterior,
                 self.var_states_posterior,
             )
+            # exp_index = self.get_states_index("exp")
+            # scaled_exp_index = self.get_states_index("scaled exp")
+            # cov_states[exp_index, :] = 0
+            # cov_states[:, exp_index] = 0
+            # cov_states[scaled_exp_index, :] = 0
+            # cov_states[:, scaled_exp_index] = 0
         if "simp exp" in self.states_name:
             cov_states = self._exp_simp_cov_states(
                 cov_states,
@@ -603,8 +609,8 @@ class Model:
         return (
             mu_states_prior,
             var_states_prior,
-            np.float32(mu_obs_predict),
-            np.float32(var_obs_predict),
+            np.float64(mu_obs_predict),
+            np.float64(var_obs_predict),
         )
 
     def _exp_simp_forward_modification(
@@ -671,8 +677,8 @@ class Model:
         return (
             mu_states_prior,
             var_states_prior,
-            np.float32(mu_obs_predict),
-            np.float32(var_obs_predict),
+            np.float64(mu_obs_predict),
+            np.float64(var_obs_predict),
         )
 
     def _exponential_backward_modification(
@@ -1002,7 +1008,7 @@ class Model:
             var_bar, 1e-8
         ).item()  # For numerical stability
 
-        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
+        return np.float64(mu_states_posterior), np.float64(var_states_posterior)
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
@@ -1422,7 +1428,21 @@ class Model:
             matrix_inversion_tol (float): Numerical stability threshold for matrix
                                             pseudoinversion (pinv). Defaults to 1E-12.
         """
-
+        # if "exp" not in self.states_name:
+        #     (
+        #         self.states.mu_smooth[time_step],
+        #         self.states.var_smooth[time_step],
+        #     ) = common.rts_smoother(
+        #         self.states.mu_prior[time_step + 1],
+        #         self.states.var_prior[time_step + 1],
+        #         self.states.mu_smooth[time_step + 1],
+        #         self.states.var_smooth[time_step + 1],
+        #         self.states.mu_posterior[time_step],
+        #         self.states.var_posterior[time_step],
+        #         self.states.cov_states[time_step + 1],
+        #         matrix_inversion_tol,
+        #         tol_type,
+        #     )
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
@@ -1439,6 +1459,40 @@ class Model:
         )
 
         if "exp" in self.states_name:
+            # exp_index = self.get_states_index("exp")
+            # scaled_exp_index = self.get_states_index("scaled exp")
+            # var_prior = self.states.var_prior[time_step + 1]
+            # var_prior[exp_index, :] = 0
+            # var_prior[:, exp_index] = 0
+            # var_prior[scaled_exp_index, :] = 0
+            # var_prior[:, scaled_exp_index] = 0
+            # var_posterior = self.states.var_posterior[time_step]
+            # var_posterior[exp_index, :] = 0
+            # var_posterior[:, exp_index] = 0
+            # var_posterior[scaled_exp_index, :] = 0
+            # var_posterior[:, scaled_exp_index] = 0
+            # mu_prior = self.states.mu_prior[time_step + 1]
+            # mu_prior[exp_index] = 0
+            # mu_prior[scaled_exp_index] = 0
+            # mu_posterior = self.states.mu_posterior[time_step]
+            # mu_posterior[exp_index] = 0
+            # mu_posterior[scaled_exp_index] = 0
+
+            # (
+            #     self.states.mu_smooth[time_step],
+            #     self.states.var_smooth[time_step],
+            # ) = common.rts_smoother(
+            #     mu_prior,
+            #     var_prior,
+            #     self.states.mu_smooth[time_step + 1],
+            #     self.states.var_smooth[time_step + 1],
+            #     mu_posterior,
+            #     var_posterior,
+            #     self.states.cov_states[time_step + 1],
+            #     matrix_inversion_tol,
+            #     tol_type,
+            # )
+
             (
                 self.states.mu_smooth[time_step],
                 self.states.var_smooth[time_step],
@@ -1495,7 +1549,7 @@ class Model:
             replace_index=scaled_exp_index,
         ).get_results()
 
-        return (np.float32(mu_states_smooth), np.float32(var_states_smooth))
+        return (np.float64(mu_states_smooth), np.float64(var_states_smooth))
 
     def forecast(
         self, data: Dict[str, np.ndarray]
