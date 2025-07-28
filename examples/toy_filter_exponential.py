@@ -18,7 +18,7 @@ from canari import (
 from canari.component import Exponential, WhiteNoise, Periodic, LocalTrend
 
 df_raw = pd.read_csv(
-    "./data/toy_time_series/synthetic_exponential_periodic_localtrend.csv",
+    "./data/toy_time_series/synthetic_exponential_localtrend.csv",
     sep=";",  # Semicolon as delimiter
     quotechar='"',  # Double quotes as text qualifier
     engine="python",  # Python engine for complex cases
