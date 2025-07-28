@@ -129,20 +129,17 @@ ar_model = Model(
 white_noise_mu = op_model.states.get_mean(
                 states_type="posterior", states_name="white noise", standardization=True
             )
-std_states = op_model.states.get_std(
+white_noise_std = op_model.states.get_std(
     states_type="posterior", states_name="white noise", standardization=True
 )
 
-print(white_noise_mu)
-print(white_noise_mu.shape)
-print(type(white_noise_mu))
 # Plot the white noise states
 fig, ax = plt.subplots(figsize=(10, 6))
 ax.plot(white_noise_mu, label="White noise mean")
 ax.fill_between(
     np.arange(len(white_noise_mu)),
-    white_noise_mu - std_states,
-    white_noise_mu + std_states,
+    white_noise_mu - white_noise_std,
+    white_noise_mu + white_noise_std,
     alpha=0.2,
     label="White noise std",
 )
@@ -151,9 +148,15 @@ ax.fill_between(
 white_noise_obs = copy.deepcopy(train_data)
 # Replayce white_noise_obs['y'] with white noise mu
 white_noise_obs['y'] = white_noise_mu.reshape(-1, 1)
+white_noise_obs['y_var'] = white_noise_std.reshape(-1, 1) ** 2
 
 # Run ar_model on the white noise states using filter
 ar_model.filter(white_noise_obs)
+
+# Print the phi and sigma_ar
+print("The phi is:", ar_model.states.get_mean(states_type="prior", states_name="phi")[-1])
+print("The sigma_ar is:", np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1]))
+
 
 # Plot states in ar_model
 state_type = "posterior"
@@ -172,7 +175,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("Hidden states estimated by the AR learner")
+ax0.set_title("Posterior")
 plot_states(
     data_processor=data_processor,
     standardization=True,
@@ -217,7 +220,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("Hidden states estimated by the AR learner")
+ax0.set_title("Prior")
 plot_states(
     data_processor=data_processor,
     standardization=True,
