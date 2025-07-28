@@ -7,9 +7,9 @@ import numpy as np
 from canari.component.base_component import BaseComponent
 
 
-class Exponential(BaseComponent):
+class ExpSimp(BaseComponent):
     """
-    `Exponential` class, inheriting from Canari's `BaseComponent`.
+    `ExpSimp` class, inheriting from Canari's `BaseComponent`.
     It models exponential growth with a locally constant speed over time (linear level), which simulates the abscissa scale,
     and a constant amplitude, which simulates the ordinate scale.
 
@@ -58,39 +58,33 @@ class Exponential(BaseComponent):
         self._component_name = "exp"
 
     def initialize_num_states(self):
-        self._num_states = 5
+        self._num_states = 3
 
     def initialize_states_name(self):
         self._states_name = [
-            "latent level",  # latent level
-            "latent trend",  # latent trend
-            "scale",  # scale
-            "exp",
-            "scaled exp",  # scaled exp
+            "simp latent level",  # latent level
+            "simp latent trend",  # latent trend
+            "simp exp",
         ]
 
     def initialize_transition_matrix(self):
         self._transition_matrix = np.array(
             [
-                [1, 1, 0, 0, 0],
-                [0, 1, 0, 0, 0],
-                [0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
             ]
         )
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[0, 0, 0, 0, 1]])
+        self._observation_matrix = np.array([[0, 0, 1]])
 
     def initialize_process_noise_matrix(self):
         self._process_noise_matrix = self.std_error**2 * np.array(
             [
-                [1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0],
-                [0, 0, 1, 0, 0],
-                [0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 1],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
             ]
         )
 
