@@ -381,66 +381,90 @@ class Model:
         self.var_states_posterior = new_var_states.copy()
 
     def _exponential_forward_modification(
-        self, mu_states_prior, var_states_prior, mu_states, var_states
+        self, mu_states_prior, var_states_prior, var_states
     ):
-        exp_level_index = self.get_states_index("exp level")
-        exp_trend_index = self.get_states_index("exp trend")
-        exp_amplitude_index = self.get_states_index("exp amplitude")
+        """
+        Apply forward path exponential moment transformations.
+
+        Updates prior state means and variances based on the exponential model.
+        The modification is applied after that `latent level`, `latent trend` and `scale` are updated by the transition matrix.
+        After that,the closed form solutions to compute the prior distribution of `exp` from `latent level` and `latent trend`.
+        GMA is also applied to `scale` and `exp` to get the prior distribution of `scaled exp`.
+        These are used during the forward pass when exponential components are present.
+
+        Args:
+            mu_states_prior (np.ndarray): Prior mean vector of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
+            var_states (np.ndarray): Variance-covariance matrix before the linear update of the states
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).
+        """
+        latent_level_index = self.get_states_index("latent level")
+        latent_trend_index = self.get_states_index("latent trend")
+        scale_index = self.get_states_index("scale")
         exp_index = self.get_states_index("exp")
-        expwithamplitude_index = self.get_states_index("exp with amplitude")
+        scaled_exp_index = self.get_states_index("scaled exp")
 
         mu_states_prior[exp_index] = (
             np.exp(
-                -mu_states_prior[exp_level_index]
-                + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+                -mu_states_prior[latent_level_index]
+                + 0.5 * var_states_prior[latent_level_index, latent_level_index]
             )
             - 1
         )
         var_states_prior[exp_index, exp_index] = np.exp(
-            -2 * mu_states_prior[exp_level_index]
-            + var_states_prior[exp_level_index, exp_level_index]
-        ) * (np.exp(var_states_prior[exp_level_index, exp_level_index]) - 1)
+            -2 * mu_states_prior[latent_level_index]
+            + var_states_prior[latent_level_index, latent_level_index]
+        ) * (np.exp(var_states_prior[latent_level_index, latent_level_index]) - 1)
 
-        var_states_prior[exp_level_index, exp_index] = -var_states_prior[
-            exp_level_index, exp_level_index
+        var_states_prior[latent_level_index, exp_index] = -var_states_prior[
+            latent_level_index, latent_level_index
         ] * np.exp(
-            -mu_states_prior[exp_level_index]
-            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+            -mu_states_prior[latent_level_index]
+            + 0.5 * var_states_prior[latent_level_index, latent_level_index]
         )
 
-        var_states_prior[exp_index, exp_level_index] = var_states_prior[
-            exp_level_index, exp_index
+        var_states_prior[exp_index, latent_level_index] = var_states_prior[
+            latent_level_index, exp_index
         ]
 
-        var_states_prior[exp_trend_index, exp_index] = -np.exp(
-            -mu_states_prior[exp_level_index]
-            + 0.5 * var_states_prior[exp_level_index, exp_level_index]
+        var_states_prior[latent_trend_index, exp_index] = -np.exp(
+            -mu_states_prior[latent_level_index]
+            + 0.5 * var_states_prior[latent_level_index, latent_level_index]
         ) * (
-            var_states[exp_trend_index, exp_trend_index]
-            + var_states[exp_level_index, exp_trend_index]
+            var_states[latent_trend_index, latent_trend_index]
+            + var_states[latent_level_index, latent_trend_index]
         )
-        var_states_prior[exp_index, exp_trend_index] = var_states_prior[
-            exp_trend_index, exp_index
+        var_states_prior[exp_index, latent_trend_index] = var_states_prior[
+            latent_trend_index, exp_index
         ]
 
-        a = (
-            var_states_prior[exp_index, exp_level_index]
-            / var_states_prior[exp_level_index, exp_level_index]
+        magnitud_normal_space_exponential_space = (
+            var_states_prior[exp_index, latent_level_index]
+            / var_states_prior[latent_level_index, latent_level_index]
         )
-        skip_index = {exp_level_index, exp_trend_index, exp_index}
-        for i in range(len(mu_states_prior)):
-            if i in skip_index:
+        skip_index = {latent_level_index, latent_trend_index, exp_index}
+        for other_component_index in range(len(mu_states_prior)):
+            if other_component_index in skip_index:
                 continue
-            cov_i = a * var_states_prior[exp_level_index, i]
-            var_states_prior[exp_index, i] = cov_i
-            var_states_prior[i, exp_index] = cov_i
+            cov_other_component_index = (
+                magnitud_normal_space_exponential_space
+                * var_states_prior[latent_level_index, other_component_index]
+            )
+            var_states_prior[exp_index, other_component_index] = (
+                cov_other_component_index
+            )
+            var_states_prior[other_component_index, exp_index] = (
+                cov_other_component_index
+            )
 
         mu_states_prior, var_states_prior = GMA(
             mu_states_prior,
             var_states_prior,
-            index1=exp_amplitude_index,
+            index1=scale_index,
             index2=exp_index,
-            replace_index=expwithamplitude_index,
+            replace_index=scaled_exp_index,
         ).get_results()
 
         mu_obs_predict, var_obs_predict = common.calc_observation(
@@ -453,6 +477,80 @@ class Model:
             np.float32(mu_obs_predict),
             np.float32(var_obs_predict),
         )
+
+    def _exponential_backward_modification(
+        self, mu_states_posterior, var_states_posterior
+    ):
+        """
+        Apply backward exponential moment updates during state-space filtering.
+
+        The update is applied to `latent level`, `latent trend` and `scale`
+        After that, the function applies the closed form solutions to compute the posterior distribution of `exp` from `latent level` and `latent trend`.
+        It also applies GMA transformations to compute the posterior distribution of `scaled exp` from `exp amplitude` and `scale`.
+
+        Args:
+            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
+        """
+
+        latent_level_index = self.get_states_index("latent level")
+        scale_index = self.get_states_index("scale")
+        exp_index = self.get_states_index("exp")
+        scaled_exp_index = self.get_states_index("scaled exp")
+        mu_states_posterior[exp_index] = (
+            np.exp(
+                -mu_states_posterior[latent_level_index]
+                + 0.5 * var_states_posterior[latent_level_index, latent_level_index]
+            )
+            - 1
+        )
+        var_states_posterior[exp_index, exp_index] = np.exp(
+            -2 * mu_states_posterior[latent_level_index]
+            + var_states_posterior[latent_level_index, latent_level_index]
+        ) * (np.exp(var_states_posterior[latent_level_index, latent_level_index]) - 1)
+
+        var_states_posterior[latent_level_index, exp_index] = -var_states_posterior[
+            latent_level_index, latent_level_index
+        ] * np.exp(
+            -mu_states_posterior[latent_level_index]
+            + 0.5 * var_states_posterior[latent_level_index, latent_level_index]
+        )
+
+        var_states_posterior[exp_index, latent_level_index] = var_states_posterior[
+            latent_level_index, exp_index
+        ]
+
+        magnitud_normal_space_exponential_space = (
+            var_states_posterior[exp_index, latent_level_index]
+            / var_states_posterior[latent_level_index, latent_level_index]
+        )
+        skip_index = {latent_level_index, exp_index}
+        for other_component_index in range(len(mu_states_posterior)):
+            if other_component_index in skip_index:
+                continue
+            cov_other_component_index = (
+                magnitud_normal_space_exponential_space
+                * var_states_posterior[latent_level_index, other_component_index]
+            )
+            var_states_posterior[exp_index, other_component_index] = (
+                cov_other_component_index
+            )
+            var_states_posterior[other_component_index, exp_index] = (
+                cov_other_component_index
+            )
+
+        mu_states_posterior, var_states_posterior = GMA(
+            mu_states_posterior,
+            var_states_posterior,
+            index1=scale_index,
+            index2=exp_index,
+            replace_index=scaled_exp_index,
+        ).get_results()
+
+        return (mu_states_posterior, var_states_posterior)
 
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
@@ -963,7 +1061,7 @@ class Model:
         if "exp" in self.states_name:
             mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
                 self._exponential_forward_modification(
-                    mu_states_prior, var_states_prior, self.mu_states, self.var_states
+                    mu_states_prior, var_states_prior, self.var_states
                 )
             )
 
@@ -1032,6 +1130,13 @@ class Model:
                 mu_states_posterior, var_states_posterior
             )
 
+        if "exp" in self.states_name:
+            mu_states_posterior, var_states_posterior = (
+                self._exponential_backward_modification(
+                    mu_states_posterior, var_states_posterior
+                )
+            )
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -1076,11 +1181,6 @@ class Model:
             matrix_inversion_tol,
             tol_type,
         )
-        # if (
-        #     self.states.mu_prior[time_step + 1][self.get_states_index("exp")]
-        #     == self.states.mu_posterior[time_step][self.get_states_index("exp")]
-        # ):
-        #     print("pas bon")
 
     def forecast(
         self, data: Dict[str, np.ndarray]

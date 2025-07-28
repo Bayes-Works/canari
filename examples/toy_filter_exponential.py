@@ -18,19 +18,7 @@ from canari import (
 from canari.component import Exponential, WhiteNoise, Periodic, LocalTrend
 
 df_raw = pd.read_csv(
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques9.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs7.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobs9.CSV",
-    "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend9.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend7.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsettrend8.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiod7.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques5.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avecerreurobs2.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avecperiodiqueeterreurobs.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiod6.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiques_avectrendperiodiqueeterreurobs4.CSV",
-    # "/Users/michelwu/Desktop/Exponential component/donnees_synthetiquesavecobsetperiodtrend6.CSV",
+    "./data/toy_time_series/synthetic_exponential_periodic_localtrend.csv",
     sep=";",  # Semicolon as delimiter
     quotechar='"',  # Double quotes as text qualifier
     engine="python",  # Python engine for complex cases
@@ -47,7 +35,7 @@ X_A = df_raw[["X_A"]]
 X_local_level = df_raw[["X_local_level"]]
 X_local_trend = df_raw[["X_local_trend"]]
 df = df
-df = df.iloc[:10]
+df = df.iloc[:]
 
 # Split into train and test
 output_col = [0]
@@ -60,40 +48,23 @@ data_processor = DataProcess(
 )
 train_data, validation_data, _, all_data = data_processor.get_splits()
 
-sigma_v = np.sqrt(0.3)
-# sigma_v = np.sqrt(0.15)
+sigma_v = np.sqrt(0.25)
 
 exponential = Exponential(
-    std_error=0.0,
-    mu_states=[-0.2, 0.31, 11, 0, 0],
+    mu_states=[0, 0.33, 11.0, 0, 0],
     var_states=[0.2**2, 0.1**2, 1**2, 0, 0],
 )
-
-# exponential = Exponential(
-#     std_error=0.0,
-#     mu_states=[0, 0.0010, 11.0, 0, 0],
-#     var_states=[0.2**2, 0.0005**2, 1**2, 0, 0],
-# )
 noise = WhiteNoise(std_error=sigma_v)
 periodic = Periodic(
     period=365.24, mu_states=[1.4, 0], var_states=[1e-1, 1e-3], std_error=0
 )
-# localtrend = LocalTrend(mu_states=[1.95, -0.0], var_states=[0.1, 1e-4], std_error=0)
-# model = Model(exponential, noise)
-
 localtrend = LocalTrend(
     mu_states=[1.95, -0.0], var_states=[0.1**2, 0.1**2], std_error=0
 )
 model = Model(exponential, noise, localtrend)
 
 model.filter(data=all_data)
-model.smoother()
-print(model.states.get_mean("exp level", "prior"))
-print(model.states.get_std("exp", "prior"))
-print(model.states.get_mean("exp", "posterior"))
-print(model.states.get_std("exp", "posterior"))
-print(model.get_states_index("exp level"))
-
+model.smoother(matrix_inversion_tol=0.5)
 # Plot
 fig, ax = plot_states(
     data_processor=data_processor,
@@ -108,14 +79,14 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
-ax[model.get_states_index("exp level")].plot(
+ax[model.get_states_index("latent level")].plot(
     df_raw.index, X_EL, color="black", linestyle="--"
 )
 
-ax[model.get_states_index("exp trend")].plot(
+ax[model.get_states_index("latent trend")].plot(
     df_raw.index, X_ET, color="black", linestyle="--"
 )
-ax[model.get_states_index("exp amplitude")].plot(
+ax[model.get_states_index("scale")].plot(
     df_raw.index, X_A, color="black", linestyle="--"
 )
 
@@ -138,15 +109,22 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
-ax[model.get_states_index("exp level")].plot(
+ax[model.get_states_index("latent level")].plot(
     df_raw.index, X_EL, color="black", linestyle="--"
 )
 
-ax[model.get_states_index("exp trend")].plot(
+ax[model.get_states_index("latent trend")].plot(
     df_raw.index, X_ET, color="black", linestyle="--"
 )
-ax[model.get_states_index("exp amplitude")].plot(
+ax[model.get_states_index("scale")].plot(
     df_raw.index, X_A, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("scaled exp")].plot(
+    df_raw.index,
+    model.states.get_mean("scaled exp", "posterior")
+    + model.states.get_mean("level", "posterior"),
+    color="purple",
 )
 
 ax[model.get_states_index("level")].plot(
@@ -163,6 +141,8 @@ fig, ax = plot_states(
     states=model.states,
     states_type="smooth",
 )
+stored_ylims = [a.get_ylim() for a in ax.flatten()]
+
 plot_data(
     data_processor=data_processor,
     plot_column=output_col,
@@ -171,15 +151,22 @@ plot_data(
     validation_label="y",
     sub_plot=ax[4],
 )
-ax[model.get_states_index("exp level")].plot(
+ax[model.get_states_index("latent level")].plot(
     df_raw.index, X_EL, color="black", linestyle="--"
 )
 
-ax[model.get_states_index("exp trend")].plot(
+ax[model.get_states_index("latent trend")].plot(
     df_raw.index, X_ET, color="black", linestyle="--"
 )
-ax[model.get_states_index("exp amplitude")].plot(
+ax[model.get_states_index("scale")].plot(
     df_raw.index, X_A, color="black", linestyle="--"
+)
+
+ax[model.get_states_index("scaled exp")].plot(
+    df_raw.index,
+    model.states.get_mean("scaled exp", "smooth")
+    + model.states.get_mean("level", "smooth"),
+    color="purple",
 )
 
 ax[model.get_states_index("level")].plot(
@@ -189,5 +176,4 @@ ax[model.get_states_index("level")].plot(
 ax[model.get_states_index("trend")].plot(
     df_raw.index, X_local_trend, color="black", linestyle="--"
 )
-
 plt.show()
