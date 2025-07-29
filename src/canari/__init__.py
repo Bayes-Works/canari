@@ -9,6 +9,7 @@ from canari.data_visualization import (
     plot_with_uncertainty,
 )
 from canari.model import Model
+from canari.model_ensemble import ModelEnsemble
 from canari.skf import SKF
 from canari.skf_optimizer import SKFOptimizer
 from canari.model_optimizer import ModelOptimizer
