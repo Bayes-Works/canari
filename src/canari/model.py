@@ -181,8 +181,8 @@ class Model:
         self.observation_matrix = None
 
         # LSTM-related attributes
-        self.lstm_net = []
-        self.lstm_output_history: List[str, LstmOutputHistory] = []
+        self.lstm_net = None
+        self.lstm_output_history = LstmOutputHistory()
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -245,19 +245,12 @@ class Model:
             *(component.process_noise_matrix for component in self.components.values())
         )
 
-        # TODO: Assemble observation matrices
+        # Assemble observation matrices
         global_observation_matrix = np.array([])
         for component in self.components.values():
-            if component.output_col == [1]:
-                global_observation_matrix = common.create_block_diag(
-                    np.atleast_2d(global_observation_matrix),
-                    component.observation_matrix,
-                )
-            else:
-                global_observation_matrix = np.concatenate(
-                    (global_observation_matrix, component.observation_matrix[0, :]),
-                    axis=0,
-                )
+            global_observation_matrix = np.concatenate(
+                (global_observation_matrix, component.observation_matrix[0, :]), axis=0
+            )
         self.observation_matrix = np.atleast_2d(global_observation_matrix)
 
     def _assemble_states(self):
@@ -286,16 +279,18 @@ class Model:
         Initialize and configure an LSTM network if there is a LstmNetwork component is used.
         """
 
-        for comp_name, component in self.components.items():
-            if "lstm" in comp_name:
-                net = component.initialize_lstm_network()
-                net.update_param = self._update_lstm_param
-                self.lstm_net.append(net)
-
-                # give each its own history buffer
-                history = LstmOutputHistory()
-                history.initialize(net.lstm_look_back_len)
-                self.lstm_output_history.append(history)
+        lstm_component = next(
+            (
+                component
+                for component in self.components.values()
+                if "lstm" in component.component_name
+            ),
+            None,
+        )
+        if lstm_component:
+            self.lstm_net = lstm_component.initialize_lstm_network()
+            self.lstm_net.update_param = self._update_lstm_param
+            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
         """
@@ -329,10 +324,9 @@ class Model:
             delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
         """
 
-        for lstm_net in self.lstm_net:
-            lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
-            lstm_net.backward()
-            lstm_net.step()
+        self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
+        self.lstm_net.backward()
+        self.lstm_net.step()
 
     def white_noise_decay(
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
@@ -987,7 +981,7 @@ class Model:
         Retrieve index of a state in the state vector.
 
         Args:
-            states_name (str): The comp_name of the state.
+            states_name (str): The name of the state.
 
         Returns:
             int or None: Index of the state, or None if not found.
@@ -1260,6 +1254,19 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
+        # for estimate delta_mu_lstm
+        # noise_index = self.get_states_index("heteroscedastic noise")
+        # lstm_index = self.get_states_index("lstm")
+        # _delta_mu_states, _delta_var_states = common.backward(
+        #     obs,
+        #     self.mu_obs_predict,
+        #     self.var_obs_predict
+        #     - self.process_noise_matrix[noise_index, noise_index]
+        #     + 1e-3,
+        #     self.var_states_prior,
+        #     self.observation_matrix,
+        # )
+        # delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
 
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
