@@ -84,7 +84,6 @@ class LstmNetwork(BaseComponent):
         model_noise: Optional[bool] = False,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
-        output_col: Optional[int] = [0],
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -102,7 +101,6 @@ class LstmNetwork(BaseComponent):
         self._var_states = var_states
         self.num_output = 2 * num_output if self.model_noise else num_output
         super().__init__()
-        self.output_col = output_col
 
     def initialize_component_name(self):
         self._component_name = "lstm"
