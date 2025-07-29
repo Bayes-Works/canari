@@ -933,7 +933,6 @@ class Model:
                 self.observation_matrix,
             )
         else:
-            print("Using observation variance in backward step.")
             delta_mu_states, delta_var_states = common.distribution_update(
                 obs,
                 obs_var,

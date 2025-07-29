@@ -120,7 +120,7 @@ op_model.filter(train_data,train_lstm=False)
 
 AR_process_error_var_prior = op_model_dict["sigma_v_optimal"]**2
 var_W2bar_prior = 1
-AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
+AR = Autoregression(mu_states=[0, 0.5, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.25, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 ar_model = Model(
     AR,
 )
@@ -249,7 +249,6 @@ plot_states(
 )
 ax3.set_xticklabels([])
 plt.show()
-1/0
 
 ###################### Save the parameters for two models ######################
 model_dict = model.get_dict()
@@ -258,17 +257,21 @@ model_dict['states_optimal'] = states_optim
 model_dict['sigma_v_optimal'] = sigma_v_optim
 model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
 model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
+model_dict['phi_ar'] = ar_model.states.get_mean(states_type="prior", states_name="phi")[-1]
+model_dict['sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
-# Save model_dict to local
-import pickle
-with open("saved_params/real_ts9_wn_ssm.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+print("statationary_ar_error_var =", np.sqrt(model_dict['sigma_ar']**2/(1 - model_dict['phi_ar']**2)))
+
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/real_ts9_wn_ssm_dist_update.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
 pretrained_model = Model(
-    LocalTrend(mu_states=op_model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=np.diag(op_model_dict['states_optimal'].var_prior[0][0:2, 0:2])),
+    LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=np.diag(model_dict['states_optimal'].var_prior[0][0:2, 0:2])),
     LSTM,
     WhiteNoise(std_error=model_dict["sigma_v_optimal"]),
 )

@@ -21,7 +21,7 @@ from matplotlib import gridspec
 import torch
 
 
-class hsl_detection:
+class hsl_generator:
     """
     Anomaly detection based on hidden-states likelihood
     """
@@ -42,7 +42,7 @@ class hsl_detection:
         self._create_drift_model(drift_model_process_error_std)
         self.base_model.initialize_states_history()
         self.drift_model.initialize_states_history()
-        self.white_noise_index = base_model.states_name.index("white noise")
+        self.ar_index = base_model.states_name.index("autoregression")
         self.LTd_buffer = []
         self.p_anm_all = []
         self.mu_obs_preds, self.std_obs_preds = [], []
@@ -102,8 +102,8 @@ class hsl_detection:
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
-                obs=self.base_model.mu_states_posterior[self.white_noise_index], 
-                obs_var=self.base_model.var_states_posterior[self.white_noise_index, self.white_noise_index])
+                obs=self.base_model.mu_states_posterior[self.ar_index], 
+                obs_var=self.base_model.var_states_posterior[self.ar_index, self.ar_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
@@ -171,8 +171,8 @@ class hsl_detection:
 
                 mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                    obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                    obs=base_model_copy.mu_states_prior[self.ar_index], 
+                    obs_var=base_model_copy.var_states_prior[self.ar_index, self.ar_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
@@ -326,8 +326,8 @@ class hsl_detection:
 
                     mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                     _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                        obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                        obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                        obs=base_model_copy.mu_states_prior[self.ar_index], 
+                        obs_var=base_model_copy.var_states_prior[self.ar_index, self.ar_index])
                     drift_model_copy._save_states_history()
                     drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                     mu_ar_preds.append(mu_ar_pred)
@@ -532,8 +532,8 @@ class hsl_detection:
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
-                obs=self.base_model.mu_states_prior[self.white_noise_index], 
-                obs_var=self.base_model.var_states_prior[self.white_noise_index, self.white_noise_index])
+                obs=self.base_model.mu_states_prior[self.ar_index], 
+                obs_var=self.base_model.var_states_prior[self.ar_index, self.ar_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             self.mu_ar_preds.append(mu_ar_pred)
@@ -627,7 +627,7 @@ class hsl_detection:
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=False, anomaly_mag_range=anm_mag_range, 
-                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=True)
+                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
@@ -714,7 +714,7 @@ class hsl_detection:
                 #     LT_index = base_model_copy.states_name.index("local trend")
                 #     base_model_copy.mu_states[LT_index] += anm_mag_list[k]
                 #     base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
-                #     base_model_copy.mu_states[self.white_noise_index] = drift_model_copy.mu_states[2]
+                #     base_model_copy.mu_states[self.ar_index] = drift_model_copy.mu_states[2]
                 #     drift_model_copy.mu_states[0] = 0
                 #     drift_model_copy.mu_states[1] = self.mu_LTd
 
@@ -738,8 +738,8 @@ class hsl_detection:
 
                 mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                    obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                    obs=base_model_copy.mu_states_prior[self.ar_index], 
+                    obs_var=base_model_copy.var_states_prior[self.ar_index, self.ar_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 mu_ar_preds.append(mu_ar_pred)
