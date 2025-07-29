@@ -276,7 +276,8 @@ class DataProcess:
         if split == "train":
             return data[train_index, data_column]
         elif split == "validation":
-            return data[val_index, data_column]
+            # return data[val_index, data_column]
+            return data[val_index][:, data_column]
         elif split == "test":
             return data[test_index, data_column]
         elif split == "all":
