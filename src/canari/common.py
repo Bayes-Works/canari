@@ -141,8 +141,11 @@ def backward(
                     The delta or corrections for the hidden states covariance matrix.
     """
     cov_obs_states = observation_matrix @ var_states_prior
-    delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
-    delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
+    # delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
+    # delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
+    jcb = cov_obs_states.T @ np.linalg.pinv(var_obs_predict, rcond=1e-12)
+    delta_mu_states = jcb @ (obs - mu_obs_predict)
+    delta_var_states = -jcb @ cov_obs_states
     return (
         delta_mu_states.reshape(-1, 1),
         delta_var_states,
@@ -213,7 +216,9 @@ def rts_smoother(
 
 
 def prepare_lstm_input(
-    lstm_output_history: LstmOutputHistory, input_covariates: np.ndarray
+    lstm_output_history: LstmOutputHistory,
+    input_covariates: np.ndarray,
+    var_input_covariates: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Prepare LSTM input by concatenating past LSTM outputs with current input covariates.
@@ -227,9 +232,12 @@ def prepare_lstm_input(
     """
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
-    var_lstm_input = np.concatenate(
-        (lstm_output_history.var, np.zeros(len(input_covariates)))
-    )
+    if var_input_covariates is not None:
+        var_lstm_input = np.concatenate((lstm_output_history.var, var_input_covariates))
+    else:
+        var_lstm_input = np.concatenate(
+            (lstm_output_history.var, np.zeros(len(input_covariates)))
+        )
     return mu_lstm_input, var_lstm_input
 
 
