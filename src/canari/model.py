@@ -497,6 +497,118 @@ class Model:
         )
         return cov_states
 
+    def _exp_simp_cov_states(
+        self,
+        cov_states,
+        mu_states,
+        var_states,
+        mu_states_prior,
+        var_states_prior,
+    ):
+        latent_level_index = self.get_states_index("simp latent level")
+        exp_index = self.get_states_index("simp exp")
+
+        magnitud_normal_space_exponential_space_prior = (
+            var_states_prior[exp_index, latent_level_index]
+            / var_states_prior[latent_level_index, latent_level_index]
+        )
+        magnitud_normal_space_exponential_space_transition = (
+            var_states[exp_index, latent_level_index]
+            / var_states[latent_level_index, latent_level_index]
+        )
+        skip_index1 = {exp_index}
+        for other_component_index in range(len(mu_states_prior)):
+            if other_component_index in skip_index1:
+                continue
+            cov_states[exp_index, other_component_index] = (
+                magnitud_normal_space_exponential_space_prior
+                * cov_states[latent_level_index, other_component_index]
+            )
+            cov_states[other_component_index, exp_index] = (
+                magnitud_normal_space_exponential_space_transition
+                * cov_states[other_component_index, latent_level_index]
+            )
+
+        cov_states[exp_index, exp_index] = (
+            magnitud_normal_space_exponential_space_prior
+            * magnitud_normal_space_exponential_space_transition
+            * cov_states[latent_level_index, latent_level_index]
+        )
+        return cov_states
+
+    def _exponential_cov_states(
+        self,
+        cov_states,
+        mu_states,
+        var_states,
+        mu_states_prior,
+        var_states_prior,
+    ):
+        latent_level_index = self.get_states_index("latent level")
+        exp_index = self.get_states_index("exp")
+        scale_index = self.get_states_index("scale")
+        scaled_exp_index = self.get_states_index("scaled exp")
+
+        magnitud_normal_space_exponential_space_prior = (
+            var_states_prior[exp_index, latent_level_index]
+            / var_states_prior[latent_level_index, latent_level_index]
+        )
+        magnitud_normal_space_exponential_space_transition = (
+            var_states[exp_index, latent_level_index]
+            / var_states[latent_level_index, latent_level_index]
+        )
+        skip_index1 = {exp_index, scaled_exp_index}
+        for other_component_index in range(len(mu_states_prior)):
+            if other_component_index in skip_index1:
+                continue
+            cov_states[exp_index, other_component_index] = (
+                magnitud_normal_space_exponential_space_prior
+                * cov_states[latent_level_index, other_component_index]
+            )
+            cov_states[other_component_index, exp_index] = (
+                magnitud_normal_space_exponential_space_transition
+                * cov_states[other_component_index, latent_level_index]
+            )
+
+        cov_states[exp_index, exp_index] = (
+            magnitud_normal_space_exponential_space_prior
+            * magnitud_normal_space_exponential_space_transition
+            * cov_states[latent_level_index, latent_level_index]
+        )
+
+        skip_index2 = {scaled_exp_index}
+        for other_component_index in range(len(mu_states_prior)):
+            if other_component_index in skip_index2:
+                continue
+            cov_states[scaled_exp_index, other_component_index] = (
+                cov_states[scale_index, other_component_index]
+                * mu_states_prior[exp_index]
+                + cov_states[exp_index, other_component_index]
+                * mu_states_prior[scale_index]
+            )
+            cov_states[other_component_index, scaled_exp_index] = (
+                cov_states[other_component_index, scale_index] * mu_states[exp_index]
+                + cov_states[other_component_index, exp_index] * mu_states[scale_index]
+            )
+
+        cov_states[scaled_exp_index, scaled_exp_index] = (
+            cov_states[scale_index, scale_index] * cov_states[exp_index, exp_index]
+            + cov_states[scale_index, exp_index] * cov_states[exp_index, scale_index]
+            + cov_states[scale_index, scale_index]
+            * mu_states_prior[exp_index]
+            * mu_states[exp_index]
+            + cov_states[scale_index, exp_index]
+            * mu_states_prior[exp_index]
+            * mu_states[scale_index]
+            + cov_states[exp_index, scale_index]
+            * mu_states_prior[scale_index]
+            * mu_states[exp_index]
+            + cov_states[exp_index, exp_index]
+            * mu_states_prior[scale_index]
+            * mu_states[scale_index]
+        )
+        return cov_states
+
     def _set_posterior_states(
         self,
         new_mu_states: np.ndarray,
@@ -1383,6 +1495,20 @@ class Model:
         if "bounded autoregression" in self.states_name:
             mu_states_posterior, var_states_posterior = self._BAR_backward_modification(
                 mu_states_posterior, var_states_posterior
+            )
+
+        if "exp" in self.states_name:
+            mu_states_posterior, var_states_posterior = (
+                self._exponential_backward_modification(
+                    mu_states_posterior, var_states_posterior
+                )
+            )
+
+        if "simp exp" in self.states_name:
+            mu_states_posterior, var_states_posterior = (
+                self._exp_simp_backward_modification(
+                    mu_states_posterior, var_states_posterior
+                )
             )
 
         if "exp" in self.states_name:
