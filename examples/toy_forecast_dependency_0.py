@@ -23,7 +23,7 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
 # Data pre-processing
-output_col = [0]
+output_col = [0, 1]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -34,23 +34,24 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Independent model
-model_target = Model(
+model_indep = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=17,
+        look_back_len=10,
         num_features=5,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
     ),
-    WhiteNoise(std_error=0.028761848586134717),
+    WhiteNoise(std_error=1),
 )
-model_target.model_type = "target"
-model_target.auto_initialize_baseline_states(train_data["y"][0:24])
+model_indep.output_col = [0]
+model_indep.input_col = [0, 1, 2]
+model_indep.auto_initialize_baseline_states(train_data["y"][0:24, 0])
 
 # Dependent model
-model_covar = Model(
+model_depend = Model(
     LstmNetwork(
         look_back_len=19,
         num_features=2,
@@ -59,13 +60,12 @@ model_covar = Model(
         device="cpu",
         manual_seed=1,
     ),
-    WhiteNoise(std_error=1e-2),
+    WhiteNoise(std_error=1),
 )
-model_covar.model_type = "covariate"
-model_covar.output_col = [0]
-model_covar.input_col = [3]
+model_depend.output_col = [1]
+model_depend.input_col = [2]
 # Ensemble Model
-model = ModelEnsemble(model_target, model_covar)
+model = ModelEnsemble(main_model=model_indep, dependent_model=model_depend)
 
 
 # Training
@@ -75,9 +75,12 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(time_step=0)
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
+    # mu_validation_preds = np.concatenate(mu_validation_preds, axis=1).T
+    mu_validation_preds = mu_validation_preds[:, :, 0]
+    std_validation_preds = std_validation_preds[:, [0, 1], [0, 1]]
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
         data_processor.scale_const_mean[output_col],
@@ -110,13 +113,13 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     standardization=False,
-    plot_column=output_col,
+    plot_column=[1],
     validation_label="y",
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
+    mean_validation_pred=mu_validation_preds[:, 1],
+    std_validation_pred=std_validation_preds[:, 1],
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
