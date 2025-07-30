@@ -166,6 +166,7 @@ class Model:
         self.states_name = []
         self.output_col = []
         self.input_col = []
+        self.model_type = "target"
 
         # State-space model matrices
         self.mu_states = None
@@ -899,6 +900,7 @@ class Model:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
+        var_input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -934,9 +936,14 @@ class Model:
         # LSTM prediction:
         lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
-            )
+            if var_input_covariates is not None:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates, var_input_covariates
+                )
+            else:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
