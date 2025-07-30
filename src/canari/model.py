@@ -1547,13 +1547,15 @@ class Model:
         """
 
         # Decaying observation's variance
-        if white_noise_decay and (
-            self.get_states_index("white noise") is not None
-            or self.get_states_index("heteroscedastic noise") is not None
-        ):
-            self.white_noise_decay(
-                self._current_epoch, white_noise_max_std, white_noise_decay_factor
-            )
+        if white_noise_decay:
+            for noise_type in ("white noise", "heteroscedastic noise"):
+                if self.get_states_index(noise_type) is not None:
+                    self.white_noise_decay(
+                        self._current_epoch,
+                        white_noise_max_std,
+                        white_noise_decay_factor,
+                    )
+                    break
         self.filter(train_data)
         self.smoother()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
