@@ -222,6 +222,7 @@ class DataProcess:
             {
                 "x": data[self.train_start : self.train_end, self.covariates_col],
                 "y": data[self.train_start : self.train_end, self.output_col],
+                "covariates_col": self.covariates_col,
             },
             # Validation split
             {
@@ -229,16 +230,19 @@ class DataProcess:
                     self.validation_start : self.validation_end, self.covariates_col
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
+                "covariates_col": self.covariates_col,
             },
             # Test split
             {
                 "x": data[self.test_start : self.test_end, self.covariates_col],
                 "y": data[self.test_start : self.test_end, self.output_col],
+                "covariates_col": self.covariates_col,
             },
             # All data
             {
                 "x": data[: self.test_end, self.covariates_col],
                 "y": data[: self.test_end, self.output_col],
+                "covariates_col": self.covariates_col,
             },
         )
 
