@@ -165,6 +165,7 @@ class Model:
         self.states_name = []
         self.output_col = []
         self.input_col = []
+        self.model_type = "target"
 
         # State-space model matrices
         self.mu_states = None
