@@ -585,7 +585,7 @@ class Model:
             var_bar, 1e-8
         ).item()  # For numerical stability
 
-        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
+        return mu_states_posterior, var_states_posterior
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
