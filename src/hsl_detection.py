@@ -171,8 +171,8 @@ class hsl_detection:
 
                 mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                    obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                    obs=base_model_copy.mu_states_posterior[self.white_noise_index], 
+                    obs_var=base_model_copy.var_states_posterior[self.white_noise_index, self.white_noise_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
@@ -326,8 +326,8 @@ class hsl_detection:
 
                     mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                     _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                        obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                        obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                        obs=base_model_copy.mu_states_posterior[self.white_noise_index], 
+                        obs_var=base_model_copy.var_states_posterior[self.white_noise_index, self.white_noise_index])
                     drift_model_copy._save_states_history()
                     drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                     mu_ar_preds.append(mu_ar_pred)
@@ -490,7 +490,7 @@ class hsl_detection:
                         # Apply intervention on base_model hidden states
                         LL_index = self.base_model.states_name.index("level")
                         LT_index = self.base_model.states_name.index("trend")
-                        AR_index = self.base_model.states_name.index("autoregression")
+                        white_noise_index = self.base_model.states_name.index("white noise")
                         self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
                         self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
                         self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
@@ -532,8 +532,8 @@ class hsl_detection:
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
-                obs=self.base_model.mu_states_prior[self.white_noise_index], 
-                obs_var=self.base_model.var_states_prior[self.white_noise_index, self.white_noise_index])
+                obs=self.base_model.mu_states_posterior[self.white_noise_index], 
+                obs_var=self.base_model.var_states_posterior[self.white_noise_index, self.white_noise_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             self.mu_ar_preds.append(mu_ar_pred)
@@ -597,37 +597,33 @@ class hsl_detection:
 
         LL_index = base_model.states_name.index("level")
         LT_index = base_model.states_name.index("trend")
-        AR_index = base_model.states_name.index("autoregression")
+        white_noise_index = base_model.states_name.index("white noise")
         base_model_prior['mu'][LL_index] += drift_model_prior['mu'][0]
         base_model_prior['mu'][LT_index] += drift_model_prior['mu'][1]
-        base_model_prior['mu'][AR_index] = drift_model_prior['mu'][2]
+        base_model_prior['mu'][white_noise_index] = drift_model_prior['mu'][2]
         base_model_prior['var'][LL_index, LL_index] += drift_model_prior['var'][0, 0]
         base_model_prior['var'][LT_index, LT_index] += drift_model_prior['var'][1, 1]
-        base_model_prior['var'][AR_index, AR_index] = drift_model_prior['var'][2, 2]
+        base_model_prior['var'][white_noise_index, white_noise_index] = drift_model_prior['var'][2, 2]
         drift_model_prior['mu'][0] = 0
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
     
-    def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
+    def collect_synthetic_samples(self, time_series_path, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
         samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
 
-        # Anomly feature range define
-        ts_len = 52*6
-        anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
+        # Read CSV
+        df = pd.read_csv(time_series_path)
+        time_covariate_str = df.loc[0, "time_covariate"]
+        time_covariate = np.array(list(map(float, time_covariate_str.split(";")))).reshape(-1, 1)
+        generated_ts = np.vstack([
+            np.fromstring(ts_str, sep=",") for ts_str in df["generated_ts"]
+        ])
+        anm_mag_list = df["anm_mag"].tolist()
+        anm_begin_list = df["anm_begin"].tolist()
 
-        # # Generate synthetic time series
-        covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
-        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                'std': self.data_processor.scale_const_std[covariate_col]}
-        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=False, anomaly_mag_range=anm_mag_range, 
-                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=True)
+
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
@@ -738,8 +734,8 @@ class hsl_detection:
 
                 mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.white_noise_index], 
-                    obs_var=base_model_copy.var_states_prior[self.white_noise_index, self.white_noise_index])
+                    obs=base_model_copy.mu_states_posterior[self.white_noise_index], 
+                    obs_var=base_model_copy.var_states_posterior[self.white_noise_index, self.white_noise_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 mu_ar_preds.append(mu_ar_pred)

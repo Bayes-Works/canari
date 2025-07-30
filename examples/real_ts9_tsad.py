@@ -96,11 +96,140 @@ hsl_tsad_generator = hsl_generator(base_model=ar_model, data_processor=data_proc
 # hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
 
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_generator.filter(train_data, buffer_LTd=True)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_generator.filter(validation_data, buffer_LTd=True)
+_,_,_,_ = hsl_tsad_generator.filter(train_data, buffer_LTd=True)
+_,_,_,_ = hsl_tsad_generator.filter(validation_data, buffer_LTd=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 # hsl_tsad_agent.estimate_LTd_dist()
-# # hsl_tsad_agent.mu_LTd = -1.6632523544953974e-06
-# # hsl_tsad_agent.LTd_std = 2.9068328673424882e-05
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.mu_LTd = -2.15424163601883e-06
+hsl_tsad_agent.LTd_std = 1.6379914143411762e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
-hsl_tsad_generator.collect_synthetic_samples(num_time_series=1, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_wn.csv')
+time_series_path = 'data/hsl_tsad_training_samples/itv_syn_ts_real_ts9_wn.csv'
+# hsl_tsad_generator.generate_time_series(num_time_series=1000, save_to_path=time_series_path)
+# hsl_tsad_agent.collect_synthetic_samples(time_series_path=time_series_path, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_wn.csv')
+
+hsl_tsad_agent.nn_train_with = 'tagiv'
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 2.1702526e-05, 0.00013837114, np.array([-1.2030476e-03, -1.9585995e-01, 1.0167182e+02]), np.array([1.05877295e-02, 1.22270167e+00, 6.26368828e+01])
+# hsl_tsad_agent.tune(begin_std_LTd=2)
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.1809800000000004)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 2)
+
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_wn.csv', 
+                                  load_model_path='saved_params/NN_detection_model_real_ts9_wn.pkl', max_training_epoch=50)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
+
+
+# #  Plot
+state_type = "posterior"
+#  Plot states from pretrained model
+fig = plt.figure(figsize=(10, 8))
+gs = gridspec.GridSpec(11, 1)
+ax0 = plt.subplot(gs[0])
+ax1 = plt.subplot(gs[1])
+ax2 = plt.subplot(gs[2])
+ax3 = plt.subplot(gs[3])
+ax4 = plt.subplot(gs[4])
+ax5 = plt.subplot(gs[5])
+ax6 = plt.subplot(gs[6])
+ax7 = plt.subplot(gs[7])
+ax8 = plt.subplot(gs[8])
+ax9 = plt.subplot(gs[9])
+ax10 = plt.subplot(gs[10])
+time = data_processor.get_time(split="all")
+plot_data(
+    data_processor=data_processor,
+    standardization=True,
+    plot_column=output_col,
+    validation_label="y",
+    sub_plot=ax0,
+)
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    # states=pretrained_model.states,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['level'],
+    sub_plot=ax0,
+)
+# ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
+ax0.set_xticklabels([])
+ax0.set_title("HSL Detection & Intervention agent")
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['trend'],
+    sub_plot=ax1,
+)
+ax1.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['lstm'],
+    sub_plot=ax2,
+)
+ax2.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['white noise'],
+    sub_plot=ax3,
+)
+ax3.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model.states,
+    states_type=state_type,
+    states_to_plot=['level'],
+    sub_plot=ax4,
+)
+ax4.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model.states,
+    states_type=state_type,
+    states_to_plot=['trend'],
+    sub_plot=ax5,
+)
+ax5.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model.states,
+    states_type=state_type,
+    states_to_plot=['autoregression'],
+    sub_plot=ax6,
+)
+ax6.set_xticklabels([])
+ax7.plot(time, hsl_tsad_agent.p_anm_all)
+ax7.set_ylabel("p_anm")
+ax7.set_xlim(ax0.get_xlim())
+ax7.set_ylim(-0.05, 1.05)
+
+mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
+std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
+
+ax8.plot(time, mu_itv_all[:, 0])
+ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
+ax8.set_ylabel("itv_LT")
+ax8.set_xlim(ax0.get_xlim())
+
+ax9.plot(time, mu_itv_all[:, 1])
+ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
+ax9.set_ylabel("itv_LL")
+ax9.set_xlim(ax0.get_xlim())
+
+ax10.plot(time, mu_itv_all[:, 2])
+ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
+ax10.set_ylabel("itv_time")
+ax10.set_xlim(ax0.get_xlim())
+plt.show()
