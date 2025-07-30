@@ -23,13 +23,13 @@ class ModelEnsemble:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
-        mu_lstm_pred: Optional[np.ndarray] = None,
-        var_lstm_pred: Optional[np.ndarray] = None,
+        covariates_col: Optional[np.ndarray] = None,
     ):
         """ """
 
         mu_pred = []
         var_pred = []
+        noise_var = 0
         # Covariate model
         mu_input_covariates = input_covariates
         var_input_covariates = np.zeros_like(input_covariates)
@@ -37,8 +37,13 @@ class ModelEnsemble:
             if model.model_type == "covariate":
                 x = mu_input_covariates[model.input_col]
                 mu_pred_covar, var_pred_covar, *_ = model.forward(x)
+                for noise_type in ("white noise", "heteroscedastic noise"):
+                    noise_index = model.get_states_index(noise_type)
+                    if noise_index is not None:
+                        noise_var = model.process_noise_matrix[noise_index, noise_index]
+                        break
                 mu_input_covariates[model.output_col] = mu_pred_covar
-                var_input_covariates[model.output_col] = var_pred_covar
+                var_input_covariates[model.output_col] = var_pred_covar - noise_var
 
         # Target model
         for model in self.model:
@@ -129,6 +134,7 @@ class ModelEnsemble:
         mu_obs_preds = []
         std_obs_preds = []
         states = []
+        covariates_col = data["covariates_col"]
         for model in self.model:
             model.initialize_states_history()
 
@@ -136,7 +142,7 @@ class ModelEnsemble:
             (
                 mu_obs_pred,
                 var_obs_pred,
-            ) = self.forward(x)
+            ) = self.forward(x, covariates_col)
 
             self.backward(y, x)
 
@@ -179,14 +185,16 @@ class ModelEnsemble:
         Train LSTM
         """
 
-        for model in self.model:
-            if white_noise_decay and (
-                model.get_states_index("white noise") is not None
-                or model.get_states_index("heteroscedastic noise") is not None
-            ):
-                model.white_noise_decay(
-                    model._current_epoch, white_noise_max_std, white_noise_decay_factor
-                )
+        if white_noise_decay:
+            for model in self.model:
+                for noise_type in ("white noise", "heteroscedastic noise"):
+                    if model.get_states_index(noise_type) is not None:
+                        model.white_noise_decay(
+                            model._current_epoch,
+                            white_noise_max_std,
+                            white_noise_decay_factor,
+                        )
+                        break
         self.filter(train_data)
         self.smoother()
         mu_validation_preds, std_validation_preds, states = self.forecast(
