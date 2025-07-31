@@ -141,11 +141,6 @@ def backward(
                     The delta or corrections for the hidden states covariance matrix.
     """
     cov_obs_states = observation_matrix @ var_states_prior
-    # # delta_mu_states = cov_obs_states.T / var_obs_predict @ (obs - mu_obs_predict)
-    # # delta_var_states = -cov_obs_states.T / var_obs_predict @ cov_obs_states
-    jcb = cov_obs_states.T @ np.linalg.pinv(var_obs_predict, rcond=1e-12)
-    delta_mu_states = jcb @ (obs - mu_obs_predict)
-    delta_var_states = -jcb @ cov_obs_states
     jcb = cov_obs_states.T @ np.linalg.pinv(var_obs_predict, rcond=1e-12)
     delta_mu_states = jcb @ (obs - mu_obs_predict)
     delta_var_states = -jcb @ cov_obs_states
