@@ -94,7 +94,6 @@ class DataProcess:
         self.time_covariates = time_covariates
         self.output_col = output_col
 
-        # data = data.astype("float32")
         self.data = data.copy()
         self.scale_const_mean, self.scale_const_std = None, None
 
