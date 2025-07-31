@@ -22,8 +22,8 @@ df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
-# lags = [0, 2, 2, 0]
-# df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+lags = [0, 4, 4, 4]
+df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 # Data pre-processing
 output_col = [0]
 data_processor = DataProcess(
@@ -39,14 +39,14 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 model_target = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=10,
-        num_features=5,
+        look_back_len=26,
+        num_features=17,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
     ),
-    WhiteNoise(std_error=1e-2),
+    WhiteNoise(std_error=3e-2),
 )
 model_target.model_type = "target"
 model_target.auto_initialize_baseline_states(train_data["y"][0:24])
@@ -54,21 +54,22 @@ model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 # Dependent model
 model_covar = Model(
     LstmNetwork(
-        look_back_len=19,
+        look_back_len=10,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
     ),
-    WhiteNoise(std_error=1e-2),
+    WhiteNoise(std_error=1e-3),
 )
 model_covar.model_type = "covariate"
 model_covar.output_col = [1]
-model_covar.input_col = [4]
+model_covar.output_lag_col = [2, 3, 4, 5]
+model_covar.input_col = [16]
 # Ensemble Model
 model = ModelEnsemble(model_target, model_covar)
-
+model.recal_covariates_col(data_processor.covariates_col)
 
 # Training
 num_epoch = 50

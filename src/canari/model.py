@@ -166,6 +166,7 @@ class Model:
         self.states_name = []
         self.output_col = []
         self.input_col = []
+        self.output_lag_col = []
         self.model_type = "target"
 
         # State-space model matrices
