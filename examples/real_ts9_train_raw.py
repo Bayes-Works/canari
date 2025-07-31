@@ -129,7 +129,7 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 # Save model_dict to local
 import pickle
-with open("saved_params/real_ts9_tsmodel_raw_expl.pkl", "wb") as f:
+with open("saved_params/real_ts9_tsmodel_raw.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
 ####################################################################
