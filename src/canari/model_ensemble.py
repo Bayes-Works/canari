@@ -23,7 +23,6 @@ class ModelEnsemble:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
-        covariates_col: Optional[np.ndarray] = None,
     ):
         """ """
 
@@ -35,15 +34,30 @@ class ModelEnsemble:
         var_input_covariates = np.zeros_like(input_covariates)
         for model in self.model:
             if model.model_type == "covariate":
+                # get model input
                 x = mu_input_covariates[model.input_col]
                 mu_pred_covar, var_pred_covar, *_ = model.forward(x)
+
+                # Obtain white noise variance
                 for noise_type in ("white noise", "heteroscedastic noise"):
                     noise_index = model.get_states_index(noise_type)
                     if noise_index is not None:
                         noise_var = model.process_noise_matrix[noise_index, noise_index]
                         break
+
+                # Replace in target model's input
                 mu_input_covariates[model.output_col] = mu_pred_covar
                 var_input_covariates[model.output_col] = var_pred_covar - noise_var
+
+                # Replace lags TODO: model.mu_pred, not lstm.mu_pred
+                mu_output_lag = model.lstm_output_history.mu[
+                    -len(model.output_lag_col) :
+                ]
+                var_output_lag = model.lstm_output_history.var[
+                    -len(model.output_lag_col) :
+                ]
+                mu_input_covariates[model.output_lag_col] = mu_output_lag
+                var_input_covariates[model.output_lag_col] = var_output_lag
 
         # Target model
         for model in self.model:
@@ -134,7 +148,7 @@ class ModelEnsemble:
         mu_obs_preds = []
         std_obs_preds = []
         states = []
-        covariates_col = data["covariates_col"]
+
         for model in self.model:
             model.initialize_states_history()
 
@@ -142,7 +156,7 @@ class ModelEnsemble:
             (
                 mu_obs_pred,
                 var_obs_pred,
-            ) = self.forward(x, covariates_col)
+            ) = self.forward(x)
 
             self.backward(y, x)
 
@@ -212,3 +226,22 @@ class ModelEnsemble:
         if time_step == 0:
             for model in self.model:
                 model.set_memory(states=model.states, time_step=time_step)
+
+    def recal_covariates_col(self, covariates_col: np.ndarray):
+        """
+        Re-estimate model.input_col, model.output_col, and model.output_lag_col
+        following data["x"].
+        """
+
+        for model in self.model:
+            if model.model_type == "covariate":
+                covariates_index = np.flatnonzero(covariates_col)
+                model.input_col = [
+                    np.where(covariates_index == i)[0][0] for i in model.input_col
+                ]
+                model.output_col = [
+                    np.where(covariates_index == i)[0][0] for i in model.output_col
+                ]
+                model.output_lag_col = [
+                    np.where(covariates_index == i)[0][0] for i in model.output_lag_col
+                ]
