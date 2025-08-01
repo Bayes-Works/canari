@@ -104,8 +104,8 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
