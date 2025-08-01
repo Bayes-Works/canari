@@ -198,3 +198,29 @@ class StatesHistory:
             )
 
         return standard_deviation
+
+
+@dataclass
+class OutputHistory:
+    """
+    Save output history mean and variance
+    """
+
+    mu: List[float] = field(init=False)
+    var: List[float] = field(init=False)
+
+    def initialize(self):
+        """
+        Initialize `mu` and `var`  as empty lists.
+        """
+
+        self.mu = []
+        self.var = []
+
+    def save_output_history(self, mu: float, var: float):
+        """
+        Add `mu` and `var` to the saved history
+        """
+
+        self.mu.append(mu.item())
+        self.var.append(var.item())
