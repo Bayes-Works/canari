@@ -30,7 +30,7 @@ class ModelEnsemble:
         var_pred = []
         noise_var = 0
         # Covariate model
-        mu_input_covariates = input_covariates
+        mu_input_covariates = input_covariates.copy()
         var_input_covariates = np.zeros_like(input_covariates)
         for model in self.model:
             if model.model_type == "covariate":
@@ -50,14 +50,15 @@ class ModelEnsemble:
                 var_input_covariates[model.output_col] = var_pred_covar - noise_var
 
                 # Replace lags TODO: model.mu_pred, not lstm.mu_pred
-                mu_output_lag = model.lstm_output_history.mu[
-                    -len(model.output_lag_col) :
-                ]
-                var_output_lag = model.lstm_output_history.var[
-                    -len(model.output_lag_col) :
-                ]
-                mu_input_covariates[model.output_lag_col] = mu_output_lag
-                var_input_covariates[model.output_lag_col] = var_output_lag
+                if len(model.output_lag_col) > 0:
+                    mu_output_lag = model.lstm_output_history.mu[
+                        -len(model.output_lag_col) :
+                    ]
+                    var_output_lag = model.lstm_output_history.var[
+                        -len(model.output_lag_col) :
+                    ]
+                    mu_input_covariates[model.output_lag_col] = mu_output_lag
+                    var_input_covariates[model.output_lag_col] = var_output_lag
 
         # Target model
         for model in self.model:
@@ -66,6 +67,7 @@ class ModelEnsemble:
                     mu_input_covariates, var_input_covariates
                 )
         return mu_pred, var_pred
+        # return mu_pred_covar, var_pred_covar
 
     def backward(
         self,
@@ -76,9 +78,9 @@ class ModelEnsemble:
 
         for model in self.model:
             if model.model_type == "covariate":
-                obs_temp = covariates[model.output_col]
+                obs_temp = covariates[model.output_col].copy()
             else:
-                obs_temp = obs
+                obs_temp = obs.copy()
 
             (
                 delta_mu_states,
@@ -99,10 +101,6 @@ class ModelEnsemble:
                 model.lstm_net.update_param(
                     np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
                 )
-                model.lstm_output_history.update(
-                    model.mu_states_posterior[lstm_index],
-                    model.var_states_posterior[lstm_index, lstm_index],
-                )
 
     def forecast(
         self, data: Dict[str, np.ndarray]
@@ -119,6 +117,13 @@ class ModelEnsemble:
             ) = self.forward(x)
 
             for model in self.model:
+                if model.lstm_net:
+                    lstm_index = model.get_states_index("lstm")
+                    model.lstm_output_history.update(
+                        model.mu_states_prior[lstm_index],
+                        model.var_states_prior[lstm_index, lstm_index],
+                    )
+
                 model._set_posterior_states(
                     model.mu_states_prior, model.var_states_prior
                 )
@@ -141,7 +146,6 @@ class ModelEnsemble:
     def filter(
         self,
         data: Dict[str, np.ndarray],
-        train_lstm: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """ """
 
@@ -161,6 +165,12 @@ class ModelEnsemble:
             self.backward(y, x)
 
             for model in self.model:
+                if model.lstm_net:
+                    lstm_index = model.get_states_index("lstm")
+                    model.lstm_output_history.update(
+                        model.mu_states_posterior[lstm_index],
+                        model.var_states_posterior[lstm_index, lstm_index],
+                    )
                 model._save_states_history()
                 model.set_states(model.mu_states_posterior, model.var_states_posterior)
 
@@ -236,12 +246,15 @@ class ModelEnsemble:
         for model in self.model:
             if model.model_type == "covariate":
                 covariates_index = np.flatnonzero(covariates_col)
-                model.input_col = [
-                    np.where(covariates_index == i)[0][0] for i in model.input_col
-                ]
+                if len(model.input_col) > 0:
+                    model.input_col = [
+                        np.where(covariates_index == i)[0][0] for i in model.input_col
+                    ]
                 model.output_col = [
                     np.where(covariates_index == i)[0][0] for i in model.output_col
                 ]
-                model.output_lag_col = [
-                    np.where(covariates_index == i)[0][0] for i in model.output_lag_col
-                ]
+                if len(model.output_lag_col) > 0:
+                    model.output_lag_col = [
+                        np.where(covariates_index == i)[0][0]
+                        for i in model.output_lag_col
+                    ]
