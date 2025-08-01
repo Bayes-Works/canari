@@ -125,19 +125,20 @@ class hsl_detection:
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
-    def estimate_LTd_dist(self):
+    def estimate_LTd_dist(self, generated_ts: Optional[np.ndarray] = None, time_covariate: Optional[np.ndarray] = None):
         print('mean and std before roll out synthetic data', np.mean(self.LTd_buffer), np.std(self.LTd_buffer))
-        # Roll out ten synthetic time series
-        # # Generate synthetic time series
-        covariate_col = self.data_processor.covariates_col
-        train_index, val_index, test_index = self.data_processor.get_split_indices()
-        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                'std': self.data_processor.scale_const_std[covariate_col]}
-        generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=1, num_time_steps=52*10, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=False, sample_from_lstm_pred=False)
+        if generated_ts is None or time_covariate is None:
+            # # Generate synthetic time series
+            covariate_col = self.data_processor.covariates_col
+            train_index, val_index, test_index = self.data_processor.get_split_indices()
+            time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+                                    'mu': self.data_processor.scale_const_mean[covariate_col], 
+                                    'std': self.data_processor.scale_const_std[covariate_col]}
+            generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=1, num_time_steps=52*10, 
+                                                                    time_covariates=self.data_processor.time_covariates, 
+                                                                    time_covariate_info=time_covariate_info,
+                                                                    add_anomaly=False, sample_from_lstm_pred=False)
+        
         # # Run the current model on the synthetic time series
         if "lstm" in self.base_model.states_name:
             lstm_index = self.base_model.get_states_index("lstm")
@@ -617,29 +618,24 @@ class hsl_detection:
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
     
-    def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
+    def collect_synthetic_samples(self, time_series_path, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
         samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
 
-        # Anomly feature range define
-        ts_len = 52*6
-        stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
-        # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
-        anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
-        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
+        # Read CSV
+        df = pd.read_csv(time_series_path)
+        time_covariate_str = df.loc[0, "time_covariate"]
+        time_covariate = np.array(list(map(float, time_covariate_str.split(";")))).reshape(-1, 1)
+        generated_ts = np.vstack([
+            np.fromstring(ts_str, sep=",") for ts_str in df["generated_ts"]
+        ])
+        anm_mag_list = df["anm_mag"].tolist()
+        anm_begin_list = df["anm_begin"].tolist()
 
-        # # Generate synthetic time series
-        covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
-        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                'std': self.data_processor.scale_const_std[covariate_col]}
-        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=True, anomaly_mag_range=anm_mag_range, 
-                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
+
+        self.estimate_LTd_dist(generated_ts=np.array([generated_ts[0]]), time_covariate=time_covariate)
+
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
