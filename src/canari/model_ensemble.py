@@ -67,7 +67,6 @@ class ModelEnsemble:
                     mu_input_covariates, var_input_covariates
                 )
         return mu_pred, var_pred
-        # return mu_pred_covar, var_pred_covar
 
     def backward(
         self,
