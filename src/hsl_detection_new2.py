@@ -33,14 +33,17 @@ class hsl_detection:
     def __init__(
             self, 
             base_model: Model,
+            generate_model: Model,
             data_processor: DataProcess,
             drift_model_process_error_std: Optional[float] = 1e-4,
             y_std_scale: Optional[float] = 1.0
             ):
         self.base_model = base_model
+        self.generate_model = generate_model
         self.data_processor = data_processor
         self._create_drift_model(drift_model_process_error_std)
         self.base_model.initialize_states_history()
+        self.generate_model.initialize_states_history()
         self.drift_model.initialize_states_history()
         self.AR_index = base_model.states_name.index("autoregression")
         self.LTd_buffer = []
@@ -76,6 +79,7 @@ class hsl_detection:
     def filter(self, data, buffer_LTd: Optional[bool] = False):
 
         lstm_index = self.base_model.get_states_index("lstm")
+        lstm_index_gen = self.generate_model.get_states_index("lstm")
         mu_obs_preds, std_obs_preds = [], []
         mu_ar_preds, std_ar_preds = [], []
         mu_lstm_pred, var_lstm_pred = None, None
@@ -108,6 +112,28 @@ class hsl_detection:
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
                 obs=self.base_model.mu_states_prior[self.AR_index] + lstm_mu_diff,
                 obs_var=self.base_model.var_states_prior[self.AR_index, self.AR_index])
+            
+            #################################### Repeat with generate_model ###################################
+            # Base model filter process, same as in model.py
+            _,_,_,_ = self.generate_model.forward(x,
+                                                    mu_lstm_pred=mu_lstm_pred,
+                                                    var_lstm_pred=var_lstm_pred,)
+            (
+                _, _,
+                mu_states_posterior_gen,
+                var_states_posterior_gen,
+            ) = self.generate_model.backward(y)
+
+            if self.generate_model.lstm_net:
+                self.generate_model.lstm_output_history.update(
+                    mu_states_posterior_gen[lstm_index_gen],
+                    var_states_posterior_gen[lstm_index_gen, lstm_index_gen],
+                )
+
+            self.generate_model._save_states_history()
+            self.generate_model.set_states(mu_states_posterior, var_states_posterior)
+            #########################################################################################################
+
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
@@ -125,19 +151,19 @@ class hsl_detection:
 
         return np.array(mu_obs_preds).flatten(), np.array(std_obs_preds).flatten(), np.array(mu_ar_preds).flatten(), np.array(std_ar_preds).flatten()
     
-    def estimate_LTd_dist(self, generated_ts: Optional[np.ndarray] = None, time_covariate: Optional[np.ndarray] = None):
+    def estimate_LTd_dist(self):
         print('mean and std before roll out synthetic data', np.mean(self.LTd_buffer), np.std(self.LTd_buffer))
-        if generated_ts is None or time_covariate is None:
-            # # Generate synthetic time series
-            covariate_col = self.data_processor.covariates_col
-            train_index, val_index, test_index = self.data_processor.get_split_indices()
-            time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                    'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                    'std': self.data_processor.scale_const_std[covariate_col]}
-            generated_ts, time_covariate, _, _ = self.base_model.generate_time_series(num_time_series=1, num_time_steps=52*10, 
-                                                                    time_covariates=self.data_processor.time_covariates, 
-                                                                    time_covariate_info=time_covariate_info,
-                                                                    add_anomaly=False, sample_from_lstm_pred=False)
+
+        # # Generate synthetic time series
+        covariate_col = self.data_processor.covariates_col
+        train_index, val_index, test_index = self.data_processor.get_split_indices()
+        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+                                'mu': self.data_processor.scale_const_mean[covariate_col], 
+                                'std': self.data_processor.scale_const_std[covariate_col]}
+        generated_ts, time_covariate, _, _ = self.generate_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
+                                                                time_covariates=self.data_processor.time_covariates, 
+                                                                time_covariate_info=time_covariate_info,
+                                                                add_anomaly=False, sample_from_lstm_pred=False)
         
         # # Run the current model on the synthetic time series
         if "lstm" in self.base_model.states_name:
@@ -264,7 +290,7 @@ class hsl_detection:
         time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
                                 'mu': self.data_processor.scale_const_mean[covariate_col], 
                                 'std': self.data_processor.scale_const_std[covariate_col]}
-        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.base_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
+        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.generate_model.generate_time_series(num_time_series=10, num_time_steps=52*10, 
                                                                 time_covariates=self.data_processor.time_covariates, 
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=False)
@@ -342,10 +368,10 @@ class hsl_detection:
                     mu_ar_preds.append(mu_ar_pred)
                     std_ar_preds.append(var_ar_pred**0.5)
 
-                # states_mu_prior = np.array(base_model_copy.states.mu_prior)
-                # states_var_prior = np.array(base_model_copy.states.var_prior)
-                # states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
-                # states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
+                states_mu_prior = np.array(base_model_copy.states.mu_prior)
+                states_var_prior = np.array(base_model_copy.states.var_prior)
+                states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
+                states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
 
                 # fig = plt.figure(figsize=(10, 9))
                 # gs = gridspec.GridSpec(8, 1)
@@ -453,6 +479,7 @@ class hsl_detection:
                 p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
                 # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
+                
                 self.p_anm_all.append(p_a_I_Yt)
 
                 # Track what NN learns
@@ -618,24 +645,29 @@ class hsl_detection:
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
     
-    def collect_synthetic_samples(self, time_series_path, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
+    def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
         samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
 
-        # Read CSV
-        df = pd.read_csv(time_series_path)
-        time_covariate_str = df.loc[0, "time_covariate"]
-        time_covariate = np.array(list(map(float, time_covariate_str.split(";")))).reshape(-1, 1)
-        generated_ts = np.vstack([
-            np.fromstring(ts_str, sep=",") for ts_str in df["generated_ts"]
-        ])
-        anm_mag_list = df["anm_mag"].tolist()
-        anm_begin_list = df["anm_begin"].tolist()
+        # Anomly feature range define
+        ts_len = 52*6
+        stationary_ar_std = self.ar_component.std_error/(1-self.ar_component.phi**2)**0.5
+        # anm_mag_range = [stationary_ar_std/80, stationary_ar_std/80]      # Same anm mag
+        anm_mag_range = [-1/52, 1/52]       # LT anm mag
+        # anm_mag_range = [-10*stationary_ar_std, 10*stationary_ar_std]       # LL anm mag
+        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
 
+        # # Generate synthetic time series
+        covariate_col = self.data_processor.covariates_col
         train_index, val_index, test_index = self.data_processor.get_split_indices()
-
-        self.estimate_LTd_dist(generated_ts=np.array([generated_ts[0]]), time_covariate=time_covariate)
-
+        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+                                'mu': self.data_processor.scale_const_mean[covariate_col], 
+                                'std': self.data_processor.scale_const_std[covariate_col]}
+        generated_ts, time_covariate, anm_mag_list, anm_begin_list = self.generate_model.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
+                                                                time_covariates=self.data_processor.time_covariates, 
+                                                                time_covariate_info=time_covariate_info,
+                                                                add_anomaly=True, anomaly_mag_range=anm_mag_range, 
+                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)

@@ -1051,43 +1051,78 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        # print(type(data["x"]))
-        # print(data["x"].shape)
-        # print(type(data["x"][0]))
-        # print(len(data["x"][0]))
+        # Determine if y_var is provided in the data
+        if "y_var" not in data:
+            y_var_provided = False
+        else:
+            y_var_provided = True
 
-        for x, y in zip(data["x"], data["y"]):
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
-            (
-                delta_mu_states,
-                delta_var_states,
-                mu_states_posterior,
-                var_states_posterior,
-            ) = self.backward(y)
+        if y_var_provided:
+            for x, y, y_var in zip(data["x"], data["y"], data["y_var"]):
+                mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+                (
+                    delta_mu_states,
+                    delta_var_states,
+                    mu_states_posterior,
+                    var_states_posterior,
+                ) = self.backward(y, y_var)
 
-            if self.lstm_net:
-                lstm_index = self.get_states_index("lstm")
-                delta_mu_lstm = np.array(
-                    delta_mu_states[lstm_index]
-                    / var_states_prior[lstm_index, lstm_index]
-                )
-                delta_var_lstm = np.array(
-                    delta_var_states[lstm_index, lstm_index]
-                    / var_states_prior[lstm_index, lstm_index] ** 2
-                )
-                if train_lstm:
-                    self.lstm_net.update_param(
-                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                if self.lstm_net:
+                    lstm_index = self.get_states_index("lstm")
+                    delta_mu_lstm = np.array(
+                        delta_mu_states[lstm_index]
+                        / var_states_prior[lstm_index, lstm_index]
                     )
-                self.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[lstm_index, lstm_index],
-                )
+                    delta_var_lstm = np.array(
+                        delta_var_states[lstm_index, lstm_index]
+                        / var_states_prior[lstm_index, lstm_index] ** 2
+                    )
+                    if train_lstm:
+                        self.lstm_net.update_param(
+                            np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                        )
+                    self.lstm_output_history.update(
+                        mu_states_posterior[lstm_index],
+                        var_states_posterior[lstm_index, lstm_index],
+                    )
 
-            self._save_states_history()
-            self.set_states(mu_states_posterior, var_states_posterior)
-            mu_obs_preds.append(mu_obs_pred)
-            std_obs_preds.append(var_obs_pred**0.5)
+                self._save_states_history()
+                self.set_states(mu_states_posterior, var_states_posterior)
+                mu_obs_preds.append(mu_obs_pred)
+                std_obs_preds.append(var_obs_pred**0.5)
+        else:
+            for x, y in zip(data["x"], data["y"]):
+                mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+                (
+                    delta_mu_states,
+                    delta_var_states,
+                    mu_states_posterior,
+                    var_states_posterior,
+                ) = self.backward(y)
+
+                if self.lstm_net:
+                    lstm_index = self.get_states_index("lstm")
+                    delta_mu_lstm = np.array(
+                        delta_mu_states[lstm_index]
+                        / var_states_prior[lstm_index, lstm_index]
+                    )
+                    delta_var_lstm = np.array(
+                        delta_var_states[lstm_index, lstm_index]
+                        / var_states_prior[lstm_index, lstm_index] ** 2
+                    )
+                    if train_lstm:
+                        self.lstm_net.update_param(
+                            np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                        )
+                    self.lstm_output_history.update(
+                        mu_states_posterior[lstm_index],
+                        var_states_posterior[lstm_index, lstm_index],
+                    )
+
+                self._save_states_history()
+                self.set_states(mu_states_posterior, var_states_posterior)
+                mu_obs_preds.append(mu_obs_pred)
+                std_obs_preds.append(var_obs_pred**0.5)
 
         return (
             np.array(mu_obs_preds).flatten(),
