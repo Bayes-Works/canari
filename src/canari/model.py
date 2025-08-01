@@ -27,7 +27,7 @@ import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 import canari.common as common
-from canari.data_struct import LstmOutputHistory, StatesHistory
+from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 
@@ -133,6 +133,7 @@ class Model:
         }
         self._initialize_model()
         self.states = StatesHistory()
+        self.output_history = OutputHistory()
 
     def __deepcopy__(self, memo):
         """
@@ -191,13 +192,15 @@ class Model:
         self.mu_W2_prior = None
         self.var_W2_prior = None
 
-        # Heteroscedastic noise related attribute
+        # Noise related attribute
+        self.sched_sigma_v = None
         self._var_v2bar_prior = None
         self._mu_v2bar_tilde = None
         self._var_v2bar_tilde = None
         self._cov_v2bar_tilde = None
 
-        # Heteroscedastic noise related attribute
+        # Noise related attribute
+        self.sched_sigma_v = None
         self._var_v2bar_prior = None
         self._mu_v2bar_tilde = None
         self._var_v2bar_tilde = None
@@ -392,6 +395,7 @@ class Model:
                 scheduled_sigma_v = min_noise_std
             self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
+        self.sched_sigma_v = scheduled_sigma_v
         self._current_epoch += 1
 
     def _save_states_history(self):
