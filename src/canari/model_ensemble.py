@@ -5,8 +5,7 @@ Emsemble of model
 import numpy as np
 from typing import Optional, List, Tuple, Dict
 from canari.model import Model
-from canari.data_struct import StatesHistory
-import canari.common as common
+from canari.data_struct import StatesHistory, OutputHistory
 
 
 class ModelEnsemble:
@@ -24,11 +23,12 @@ class ModelEnsemble:
         self,
         input_covariates: Optional[np.ndarray] = None,
     ):
-        """ """
+        """
+        Forward
+        """
 
         mu_pred = []
         var_pred = []
-        noise_var = 0
         # Covariate model
         mu_input_covariates = input_covariates.copy()
         var_input_covariates = np.zeros_like(input_covariates)
@@ -38,25 +38,36 @@ class ModelEnsemble:
                 x = mu_input_covariates[model.input_col]
                 mu_pred_covar, var_pred_covar, *_ = model.forward(x)
 
-                # Obtain white noise variance
-                for noise_type in ("white noise", "heteroscedastic noise"):
-                    noise_index = model.get_states_index(noise_type)
-                    if noise_index is not None:
-                        noise_var = model.process_noise_matrix[noise_index, noise_index]
-                        break
+                # save output history
+                var_pred_covar_wo_noise = var_pred_covar - model.sched_sigma_v**2
+                model.output_history.save_output_history(
+                    mu_pred_covar, var_pred_covar_wo_noise
+                )
 
                 # Replace in target model's input
                 mu_input_covariates[model.output_col] = mu_pred_covar
-                var_input_covariates[model.output_col] = var_pred_covar - noise_var
+                var_input_covariates[model.output_col] = var_pred_covar_wo_noise
 
-                # Replace lags TODO: model.mu_pred, not lstm.mu_pred
+                # Replace lags
                 if len(model.output_lag_col) > 0:
-                    mu_output_lag = model.lstm_output_history.mu[
+                    mu_output_lag = model.output_history.mu[
                         -len(model.output_lag_col) :
                     ]
-                    var_output_lag = model.lstm_output_history.var[
+                    mu_output_lag = np.concatenate(
+                        (
+                            np.flip(mu_output_lag),
+                            np.zeros(len(model.output_lag_col) - len(mu_output_lag)),
+                        )
+                    )
+                    var_output_lag = model.output_history.var[
                         -len(model.output_lag_col) :
                     ]
+                    var_output_lag = np.concatenate(
+                        (
+                            np.flip(var_output_lag),
+                            np.zeros(len(model.output_lag_col) - len(var_output_lag)),
+                        )
+                    )
                     mu_input_covariates[model.output_lag_col] = mu_output_lag
                     var_input_covariates[model.output_lag_col] = var_output_lag
 
@@ -66,6 +77,8 @@ class ModelEnsemble:
                 mu_pred, var_pred, *_ = model.forward(
                     mu_input_covariates, var_input_covariates
                 )
+                model.output_history.save_output_history(mu_pred, var_pred)
+
         return mu_pred, var_pred
 
     def backward(
@@ -97,13 +110,17 @@ class ModelEnsemble:
                     delta_var_states[lstm_index, lstm_index]
                     / model.var_states_prior[lstm_index, lstm_index] ** 2
                 )
+
+                if model.lstm_net.model_noise:
+                    delta_mu_v2bar, delta_var_v2bar = model._delta_hete_noise()
+                    delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
+                    delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+
                 model.lstm_net.update_param(
                     np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
                 )
 
-    def forecast(
-        self, data: Dict[str, np.ndarray]
-    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
+    def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """ """
 
         mu_obs_preds = []
@@ -132,28 +149,23 @@ class ModelEnsemble:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        for model in self.model:
-            if model.model_type == "target":
-                states = model.states
-
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
-            states,
         )
 
     def filter(
         self,
         data: Dict[str, np.ndarray],
-    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """ """
 
         mu_obs_preds = []
         std_obs_preds = []
-        states = []
 
         for model in self.model:
             model.initialize_states_history()
+            model.output_history.initialize()
 
         for x, y in zip(data["x"], data["y"]):
             (
@@ -176,14 +188,9 @@ class ModelEnsemble:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        for model in self.model:
-            if model.model_type == "target":
-                states = model.states
-
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
-            states,
         )
 
     def smoother(
@@ -203,7 +210,7 @@ class ModelEnsemble:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
-    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Train LSTM
         """
@@ -220,14 +227,11 @@ class ModelEnsemble:
                         break
         self.filter(train_data)
         self.smoother()
-        mu_validation_preds, std_validation_preds, states = self.forecast(
-            validation_data
-        )
+        mu_validation_preds, std_validation_preds = self.forecast(validation_data)
 
         return (
             np.array(mu_validation_preds),
             np.array(std_validation_preds),
-            states,
         )
 
     def set_memory(self, time_step: int):
