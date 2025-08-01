@@ -18,8 +18,8 @@ from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 data_file = "./data/toy_time_series/toy_time_series_dependency.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
-# lags = [0, 9]
-# df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+lags = [0, 9]
+df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -42,8 +42,8 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 model_target = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=12,
-        num_features=3,
+        look_back_len=1,
+        num_features=12,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -59,7 +59,7 @@ model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 model_covar = Model(
     LstmNetwork(
         look_back_len=10,
-        num_features=1,
+        num_features=2,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -69,9 +69,10 @@ model_covar = Model(
 )
 model_covar.model_type = "covariate"
 model_covar.output_col = [1]
-# model_covar.output_lag_col = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-model_covar.output_lag_col = []
 # model_covar.input_col = [2]
+model_covar.output_lag_col = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+model_covar.input_col = [11]
+
 # Ensemble Model
 model = ModelEnsemble(model_target, model_covar)
 model.recal_covariates_col(data_processor.covariates_col)
@@ -91,27 +92,31 @@ for epoch in range(num_epoch):
         data_processor.scale_const_mean[output_col],
         data_processor.scale_const_std[output_col],
     )
+    std_validation_preds = normalizer.unstandardize_std(
+        std_validation_preds,
+        data_processor.scale_const_std[output_col],
+    )
 
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation")
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # # Early-stopping
-    # model.early_stopping(
-    #     evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
-    # )
-    # if epoch == model.optimal_epoch:
-    #     mu_validation_preds_optim = mu_validation_preds
-    #     std_validation_preds_optim = std_validation_preds
-    #     states_optim = copy.copy(
-    #         states
-    #     )  # If we want to plot the states, plot those from optimal epoch
+    model_target.early_stopping(
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
+    )
+    if epoch == model_target.optimal_epoch:
+        mu_validation_preds_optim = mu_validation_preds
+        std_validation_preds_optim = std_validation_preds
+        states_optim = copy.copy(
+            states
+        )  # If we want to plot the states, plot those from optimal epoch
 
-    # if model.stop_training:
-    #     break
+    if model_target.stop_training:
+        break
 
-# print(f"Optimal epoch       : {model.optimal_epoch}")
-# print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
+print(f"Optimal epoch       : {model_target.optimal_epoch}")
+print(f"Validation MSE      :{model_target.early_stop_metric: 0.4f}")
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -123,15 +128,12 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
 plt.show()
 
-
-plot_states(
-    data_processor=data_processor, states=model_covar.states, states_type="posterior"
-)
+plt.plot(model_target.early_stop_metric_history)
 plt.show()
