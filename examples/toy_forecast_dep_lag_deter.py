@@ -18,8 +18,8 @@ from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 data_file = "./data/toy_time_series/toy_time_series_dependency.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
-# lags = [0, 9]
-# df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+lags = [0, 9]
+df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -32,18 +32,18 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["hour_of_day"],
-    train_split=0.8,
+    train_split=0.6,
     validation_split=0.2,
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Independent model
-model_target = Model(
+model = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=12,
-        num_features=3,
+        num_features=12,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -51,30 +51,8 @@ model_target = Model(
     ),
     WhiteNoise(std_error=1e-1),
 )
-
-model_target.model_type = "target"
-model_target.auto_initialize_baseline_states(train_data["y"][0:24])
-
-# Dependent model
-model_covar = Model(
-    LstmNetwork(
-        look_back_len=10,
-        num_features=1,
-        num_layer=1,
-        num_hidden_unit=50,
-        device="cpu",
-        manual_seed=1,
-    ),
-    WhiteNoise(std_error=0.0032322250444898116),
-)
-model_covar.model_type = "covariate"
-model_covar.output_col = [1]
-# model_covar.output_lag_col = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-model_covar.output_lag_col = []
-# model_covar.input_col = [2]
-# Ensemble Model
-model = ModelEnsemble(model_target, model_covar)
-model.recal_covariates_col(data_processor.covariates_col)
+# model.model_type = "target"
+model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 num_epoch = 50
@@ -83,7 +61,7 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(time_step=0)
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -131,7 +109,5 @@ plt.legend()
 plt.show()
 
 
-plot_states(
-    data_processor=data_processor, states=model_covar.states, states_type="posterior"
-)
-plt.show()
+# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
+# plt.show()
