@@ -19,9 +19,10 @@ noise = np.random.normal(loc=0.0, scale=0.05, size=len(df_raw))
 noise_1 = np.random.normal(loc=0.0, scale=0.05, size=len(df_raw))
 data_exp_sine = exp_sine.flatten() + linear_space + noise
 data_sine = sine.flatten() + noise_1
-
+rand_ints = np.random.randint(0, len(data_sine), size=int(len(data_sine) / 6))
+data_sine[rand_ints] = np.nan
 df = pd.DataFrame({"data_exp_sine": data_exp_sine, "data_sine": data_sine})
-df.to_csv("data/toy_time_series/toy_time_series_dependency.csv", index=False)
+df.to_csv("data/toy_time_series/toy_time_series_dependency_1.csv", index=False)
 
 plt.plot(data_exp_sine)
 plt.show()
