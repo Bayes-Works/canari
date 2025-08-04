@@ -408,7 +408,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model._save_states_history()
+            transition_model.save_states_history()
 
         self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(self.var_states_prior)
