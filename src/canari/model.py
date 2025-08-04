@@ -367,62 +367,10 @@ class Model:
                 self.mu_states_posterior,
                 self.var_states_posterior,
             )
-            # exp_index = self.get_states_index("exp")
-            # scaled_exp_index = self.get_states_index("scaled exp")
-            # cov_states[exp_index, :] = 0
-            # cov_states[:, exp_index] = 0
-            # cov_states[scaled_exp_index, :] = 0
-            # cov_states[:, scaled_exp_index] = 0
-        if "simp exp" in self.states_name:
-            cov_states = self._exp_simp_cov_states(
-                cov_states,
-                self.mu_states_prior,
-                self.var_states_prior,
-                self.mu_states_posterior,
-                self.var_states_posterior,
-            )
+
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append(self.mu_states_posterior)
         self.states.var_smooth.append(self.var_states_posterior)
-
-    def _exp_simp_cov_states(
-        self,
-        cov_states,
-        mu_states,
-        var_states,
-        mu_states_prior,
-        var_states_prior,
-    ):
-        latent_level_index = self.get_states_index("simp latent level")
-        exp_index = self.get_states_index("simp exp")
-
-        magnitud_normal_space_exponential_space_prior = (
-            var_states_prior[exp_index, latent_level_index]
-            / var_states_prior[latent_level_index, latent_level_index]
-        )
-        magnitud_normal_space_exponential_space_transition = (
-            var_states[exp_index, latent_level_index]
-            / var_states[latent_level_index, latent_level_index]
-        )
-        skip_index1 = {exp_index}
-        for other_component_index in range(len(mu_states_prior)):
-            if other_component_index in skip_index1:
-                continue
-            cov_states[exp_index, other_component_index] = (
-                magnitud_normal_space_exponential_space_prior
-                * cov_states[latent_level_index, other_component_index]
-            )
-            cov_states[other_component_index, exp_index] = (
-                magnitud_normal_space_exponential_space_transition
-                * cov_states[other_component_index, latent_level_index]
-            )
-
-        cov_states[exp_index, exp_index] = (
-            magnitud_normal_space_exponential_space_prior
-            * magnitud_normal_space_exponential_space_transition
-            * cov_states[latent_level_index, latent_level_index]
-        )
-        return cov_states
 
     def _exponential_cov_states(
         self,
@@ -494,45 +442,6 @@ class Model:
             + cov_states[exp_index, exp_index]
             * mu_states_prior[scale_index]
             * mu_states[scale_index]
-        )
-        return cov_states
-
-    def _exp_simp_cov_states(
-        self,
-        cov_states,
-        mu_states,
-        var_states,
-        mu_states_prior,
-        var_states_prior,
-    ):
-        latent_level_index = self.get_states_index("simp latent level")
-        exp_index = self.get_states_index("simp exp")
-
-        magnitud_normal_space_exponential_space_prior = (
-            var_states_prior[exp_index, latent_level_index]
-            / var_states_prior[latent_level_index, latent_level_index]
-        )
-        magnitud_normal_space_exponential_space_transition = (
-            var_states[exp_index, latent_level_index]
-            / var_states[latent_level_index, latent_level_index]
-        )
-        skip_index1 = {exp_index}
-        for other_component_index in range(len(mu_states_prior)):
-            if other_component_index in skip_index1:
-                continue
-            cov_states[exp_index, other_component_index] = (
-                magnitud_normal_space_exponential_space_prior
-                * cov_states[latent_level_index, other_component_index]
-            )
-            cov_states[other_component_index, exp_index] = (
-                magnitud_normal_space_exponential_space_transition
-                * cov_states[other_component_index, latent_level_index]
-            )
-
-        cov_states[exp_index, exp_index] = (
-            magnitud_normal_space_exponential_space_prior
-            * magnitud_normal_space_exponential_space_transition
-            * cov_states[latent_level_index, latent_level_index]
         )
         return cov_states
 
@@ -725,74 +634,6 @@ class Model:
             np.float64(var_obs_predict),
         )
 
-    def _exp_simp_forward_modification(
-        self, mu_states_prior, var_states_prior, var_states
-    ):
-        latent_level_index = self.get_states_index("simp latent level")
-        latent_trend_index = self.get_states_index("simp latent trend")
-        exp_index = self.get_states_index("simp exp")
-        mu_states_prior[exp_index] = (
-            np.exp(
-                -mu_states_prior[latent_level_index]
-                + 0.5 * var_states_prior[latent_level_index, latent_level_index]
-            )
-            - 1
-        )
-        var_states_prior[exp_index, exp_index] = np.exp(
-            -2 * mu_states_prior[latent_level_index]
-            + var_states_prior[latent_level_index, latent_level_index]
-        ) * (np.exp(var_states_prior[latent_level_index, latent_level_index]) - 1)
-
-        var_states_prior[latent_level_index, exp_index] = -var_states_prior[
-            latent_level_index, latent_level_index
-        ] * np.exp(
-            -mu_states_prior[latent_level_index]
-            + 0.5 * var_states_prior[latent_level_index, latent_level_index]
-        )
-
-        var_states_prior[exp_index, latent_level_index] = var_states_prior[
-            latent_level_index, exp_index
-        ]
-
-        var_states_prior[latent_trend_index, exp_index] = -np.exp(
-            -mu_states_prior[latent_level_index]
-            + 0.5 * var_states_prior[latent_level_index, latent_level_index]
-        ) * (
-            var_states[latent_trend_index, latent_trend_index]
-            + var_states[latent_level_index, latent_trend_index]
-        )
-        var_states_prior[exp_index, latent_trend_index] = var_states_prior[
-            latent_trend_index, exp_index
-        ]
-
-        magnitud_normal_space_exponential_space = (
-            var_states_prior[exp_index, latent_level_index]
-            / var_states_prior[latent_level_index, latent_level_index]
-        )
-        skip_index = {latent_level_index, latent_trend_index, exp_index}
-        for other_component_index in range(len(mu_states_prior)):
-            if other_component_index in skip_index:
-                continue
-            cov_other_component_index = (
-                magnitud_normal_space_exponential_space
-                * var_states_prior[latent_level_index, other_component_index]
-            )
-            var_states_prior[exp_index, other_component_index] = (
-                cov_other_component_index
-            )
-            var_states_prior[other_component_index, exp_index] = (
-                cov_other_component_index
-            )
-        mu_obs_predict, var_obs_predict = common.calc_observation(
-            mu_states_prior, var_states_prior, self.observation_matrix
-        )
-        return (
-            mu_states_prior,
-            var_states_prior,
-            np.float64(mu_obs_predict),
-            np.float64(var_obs_predict),
-        )
-
     def _exponential_backward_modification(
         self, mu_states_posterior, var_states_posterior
     ):
@@ -865,54 +706,6 @@ class Model:
             replace_index=scaled_exp_index,
         ).get_results()
 
-        return (mu_states_posterior, var_states_posterior)
-
-    def _exp_simp_backward_modification(
-        self, mu_states_posterior, var_states_posterior
-    ):
-        latent_level_index = self.get_states_index("simp latent level")
-        exp_index = self.get_states_index("simp exp")
-        mu_states_posterior[exp_index] = (
-            np.exp(
-                -mu_states_posterior[latent_level_index]
-                + 0.5 * var_states_posterior[latent_level_index, latent_level_index]
-            )
-            - 1
-        )
-        var_states_posterior[exp_index, exp_index] = np.exp(
-            -2 * mu_states_posterior[latent_level_index]
-            + var_states_posterior[latent_level_index, latent_level_index]
-        ) * (np.exp(var_states_posterior[latent_level_index, latent_level_index]) - 1)
-
-        var_states_posterior[latent_level_index, exp_index] = -var_states_posterior[
-            latent_level_index, latent_level_index
-        ] * np.exp(
-            -mu_states_posterior[latent_level_index]
-            + 0.5 * var_states_posterior[latent_level_index, latent_level_index]
-        )
-
-        var_states_posterior[exp_index, latent_level_index] = var_states_posterior[
-            latent_level_index, exp_index
-        ]
-
-        magnitud_normal_space_exponential_space = (
-            var_states_posterior[exp_index, latent_level_index]
-            / var_states_posterior[latent_level_index, latent_level_index]
-        )
-        skip_index = {latent_level_index, exp_index}
-        for other_component_index in range(len(mu_states_posterior)):
-            if other_component_index in skip_index:
-                continue
-            cov_other_component_index = (
-                magnitud_normal_space_exponential_space
-                * var_states_posterior[latent_level_index, other_component_index]
-            )
-            var_states_posterior[exp_index, other_component_index] = (
-                cov_other_component_index
-            )
-            var_states_posterior[other_component_index, exp_index] = (
-                cov_other_component_index
-            )
         return (mu_states_posterior, var_states_posterior)
 
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
@@ -1425,13 +1218,6 @@ class Model:
                 )
             )
 
-        if "simp exp" in self.states_name:
-            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
-                self._exp_simp_forward_modification(
-                    mu_states_prior, var_states_prior, self.var_states
-                )
-            )
-
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
@@ -1504,27 +1290,6 @@ class Model:
                 )
             )
 
-        if "simp exp" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self._exp_simp_backward_modification(
-                    mu_states_posterior, var_states_posterior
-                )
-            )
-
-        if "exp" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self._exponential_backward_modification(
-                    mu_states_posterior, var_states_posterior
-                )
-            )
-
-        if "simp exp" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self._exp_simp_backward_modification(
-                    mu_states_posterior, var_states_posterior
-                )
-            )
-
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -1554,21 +1319,7 @@ class Model:
             matrix_inversion_tol (float): Numerical stability threshold for matrix
                                             pseudoinversion (pinv). Defaults to 1E-12.
         """
-        # if "exp" not in self.states_name:
-        #     (
-        #         self.states.mu_smooth[time_step],
-        #         self.states.var_smooth[time_step],
-        #     ) = common.rts_smoother(
-        #         self.states.mu_prior[time_step + 1],
-        #         self.states.var_prior[time_step + 1],
-        #         self.states.mu_smooth[time_step + 1],
-        #         self.states.var_smooth[time_step + 1],
-        #         self.states.mu_posterior[time_step],
-        #         self.states.var_posterior[time_step],
-        #         self.states.cov_states[time_step + 1],
-        #         matrix_inversion_tol,
-        #         tol_type,
-        #     )
+
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
@@ -1585,39 +1336,6 @@ class Model:
         )
 
         if "exp" in self.states_name:
-            # exp_index = self.get_states_index("exp")
-            # scaled_exp_index = self.get_states_index("scaled exp")
-            # var_prior = self.states.var_prior[time_step + 1]
-            # var_prior[exp_index, :] = 0
-            # var_prior[:, exp_index] = 0
-            # var_prior[scaled_exp_index, :] = 0
-            # var_prior[:, scaled_exp_index] = 0
-            # var_posterior = self.states.var_posterior[time_step]
-            # var_posterior[exp_index, :] = 0
-            # var_posterior[:, exp_index] = 0
-            # var_posterior[scaled_exp_index, :] = 0
-            # var_posterior[:, scaled_exp_index] = 0
-            # mu_prior = self.states.mu_prior[time_step + 1]
-            # mu_prior[exp_index] = 0
-            # mu_prior[scaled_exp_index] = 0
-            # mu_posterior = self.states.mu_posterior[time_step]
-            # mu_posterior[exp_index] = 0
-            # mu_posterior[scaled_exp_index] = 0
-
-            # (
-            #     self.states.mu_smooth[time_step],
-            #     self.states.var_smooth[time_step],
-            # ) = common.rts_smoother(
-            #     mu_prior,
-            #     var_prior,
-            #     self.states.mu_smooth[time_step + 1],
-            #     self.states.var_smooth[time_step + 1],
-            #     mu_posterior,
-            #     var_posterior,
-            #     self.states.cov_states[time_step + 1],
-            #     matrix_inversion_tol,
-            #     tol_type,
-            # )
 
             (
                 self.states.mu_smooth[time_step],
