@@ -29,14 +29,14 @@ output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
-    train_split=0.35354,
-    validation_split=0.087542,
+    train_split=0.289,
+    validation_split=0.0693,
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 LSTM = LstmNetwork(
-        look_back_len=33,
+        look_back_len=17,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -47,7 +47,7 @@ LSTM = LstmNetwork(
 model = Model(
     LocalTrend(),
     LSTM,
-    WhiteNoise(std_error=0.02222769157019269),
+    WhiteNoise(std_error=0.028761848586134717),
 )
 # model._mu_local_level = 0
 model.auto_initialize_baseline_states(train_data["y"][0:52 * 3 + 1])
@@ -270,7 +270,7 @@ print("statationary_ar_error_var =", np.sqrt(model_dict['sigma_ar']**2/(1 - mode
 
 # Save model_dict to local
 import pickle
-with open("saved_params/real_ts9_lstmres.pkl", "wb") as f:
+with open("saved_params/real_ts5_lstmres.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
 ####################################################################

@@ -620,7 +620,9 @@ class hsl_detection:
             # Set the base_model back to the original state
             base_model.lstm_output_history = copy.deepcopy(output_history_temp)
             base_model.lstm_net.set_lstm_states(cell_states_temp)
-        return y_likelihood.item(), x_likelihood
+        # return y_likelihood.item(), x_likelihood
+        return 1, x_likelihood
+
     
     def _intervene_current_priors(self, base_model, drift_model):
         base_model_prior = {
