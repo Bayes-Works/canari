@@ -287,7 +287,7 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            self.lstm_net.update_param = self._update_lstm_param
+            # self.lstm_net.update_param = self._update_lstm_param
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
@@ -308,23 +308,6 @@ class Model:
         if "AR_error" in self.states_name:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
-
-    def _update_lstm_param(
-        self,
-        delta_mu_lstm: np.ndarray,
-        delta_var_lstm: np.ndarray,
-    ):
-        """
-        Update the LSTM neural network's parameters.
-
-        Args:
-            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
-            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
-        """
-
-        self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
-        self.lstm_net.backward()
-        self.lstm_net.step()
 
     def white_noise_decay(
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
@@ -370,7 +353,7 @@ class Model:
         self.sched_sigma_v = scheduled_sigma_v
         self._current_epoch += 1
 
-    def _save_states_history(self):
+    def save_states_history(self):
         """
         Save current prior, posterior hidden states, and cross-covariaces between hidden states
         at two consecutive time steps for later use in Kalman's smoother.
@@ -384,6 +367,17 @@ class Model:
         self.states.cov_states.append(cov_states)
         self.states.mu_smooth.append(self.mu_states_posterior)
         self.states.var_smooth.append(self.var_states_posterior)
+
+    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
+        """
+        Update LSTM history
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        self.lstm_output_history.update(
+            mu_states[lstm_index],
+            var_states[lstm_index, lstm_index],
+        )
 
     def _set_posterior_states(
         self,
@@ -1067,6 +1061,41 @@ class Model:
             var_states_posterior,
         )
 
+    def update_lstm_param(
+        self,
+        delta_mu_states: np.ndarray,
+        delta_var_states: np.ndarray,
+    ):
+        """
+        TODO: update
+        Update the LSTM neural network's parameters.
+
+        Args:
+            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
+            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        delta_mu_lstm = np.array(
+            delta_mu_states[lstm_index] / self.var_states_prior[lstm_index, lstm_index]
+        )
+        delta_var_lstm = np.array(
+            delta_var_states[lstm_index, lstm_index]
+            / self.var_states_prior[lstm_index, lstm_index] ** 2
+        )
+
+        if self.lstm_net.model_noise:
+            delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
+            delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
+            delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+
+        self.lstm_net.set_delta_z(
+            np.array(delta_mu_lstm, dtype=np.float32),
+            np.array(delta_var_lstm, dtype=np.float32),
+        )
+        self.lstm_net.backward()
+        self.lstm_net.step()
+
     def rts_smoother(
         self,
         time_step: int,
@@ -1136,22 +1165,18 @@ class Model:
         std_obs_preds = []
 
         for x in data["x"]:
-            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior) = (
-                self.forward(x)
-            )
+            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior) = ()
 
             if self.lstm_net:
-                lstm_index = self.get_states_index("lstm")
-                self.lstm_output_history.update(
-                    mu_states_prior[lstm_index],
-                    var_states_prior[lstm_index, lstm_index],
-                )
+                self.update_lstm_history(mu_states_prior, var_states_prior)
 
+            # Store variables
             self._set_posterior_states(mu_states_prior, var_states_prior)
-            self._save_states_history()
+            self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
+
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1199,8 +1224,7 @@ class Model:
             (
                 mu_obs_pred,
                 var_obs_pred,
-                _,
-                var_states_prior,
+                *_,
             ) = self.forward(x)
 
             (
@@ -1210,32 +1234,14 @@ class Model:
                 var_states_posterior,
             ) = self.backward(y)
 
+            # Update LSTM parameters
             if self.lstm_net:
-                lstm_index = self.get_states_index("lstm")
-                delta_mu_lstm = np.array(
-                    delta_mu_states[lstm_index]
-                    / var_states_prior[lstm_index, lstm_index]
-                )
-                delta_var_lstm = np.array(
-                    delta_var_states[lstm_index, lstm_index]
-                    / var_states_prior[lstm_index, lstm_index] ** 2
-                )
-
-                if self.lstm_net.model_noise:
-                    delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
-                    delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
-                    delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
-
+                self.update_lstm_param(delta_mu_states, delta_var_states)
                 if train_lstm:
-                    self.lstm_net.update_param(
-                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
-                    )
-                self.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[lstm_index, lstm_index],
-                )
+                    self.update_lstm_history(mu_states_posterior, var_states_posterior)
 
-            self._save_states_history()
+            # Store variables
+            self.save_states_history()
             self.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
