@@ -83,8 +83,8 @@ class ModelEnsemble:
 
     def backward(
         self,
-        obs: float,
         covariates: np.ndarray,
+        obs: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """ """
 
@@ -101,31 +101,13 @@ class ModelEnsemble:
             ) = model.backward(obs_temp)
 
             if model.lstm_net:
-                lstm_index = model.get_states_index("lstm")
-                delta_mu_lstm = np.array(
-                    delta_mu_states[lstm_index]
-                    / model.var_states_prior[lstm_index, lstm_index]
-                )
-                delta_var_lstm = np.array(
-                    delta_var_states[lstm_index, lstm_index]
-                    / model.var_states_prior[lstm_index, lstm_index] ** 2
-                )
-
-                if model.lstm_net.model_noise:
-                    delta_mu_v2bar, delta_var_v2bar = model._delta_hete_noise()
-                    delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
-                    delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
-
-                model.lstm_net.update_param(
-                    np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
-                )
+                model.update_lstm_param(delta_mu_states, delta_var_states)
 
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         """ """
 
         mu_obs_preds = []
         std_obs_preds = []
-        states = []
         for x in data["x"]:
             (
                 mu_obs_pred,
@@ -134,16 +116,14 @@ class ModelEnsemble:
 
             for model in self.model:
                 if model.lstm_net:
-                    lstm_index = model.get_states_index("lstm")
-                    model.lstm_output_history.update(
-                        model.mu_states_prior[lstm_index],
-                        model.var_states_prior[lstm_index, lstm_index],
+                    model.update_lstm_history(
+                        model.mu_states_prior, model.var_states_prior
                     )
 
                 model._set_posterior_states(
                     model.mu_states_prior, model.var_states_prior
                 )
-                model._save_states_history()
+                model.save_states_history()
                 model.set_states(model.mu_states_prior, model.var_states_prior)
 
             mu_obs_preds.append(mu_obs_pred)
@@ -173,16 +153,14 @@ class ModelEnsemble:
                 var_obs_pred,
             ) = self.forward(x)
 
-            self.backward(y, x)
+            self.backward(x, y)
 
             for model in self.model:
                 if model.lstm_net:
-                    lstm_index = model.get_states_index("lstm")
-                    model.lstm_output_history.update(
-                        model.mu_states_posterior[lstm_index],
-                        model.var_states_posterior[lstm_index, lstm_index],
+                    model.update_lstm_history(
+                        model.mu_states_posterior, model.var_states_posterior
                     )
-                model._save_states_history()
+                model.save_states_history()
                 model.set_states(model.mu_states_posterior, model.var_states_posterior)
 
             mu_obs_preds.append(mu_obs_pred)
