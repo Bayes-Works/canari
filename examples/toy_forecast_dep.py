@@ -15,7 +15,7 @@ from canari import (
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/toy_time_series_dependency_1.csv"
+data_file = "./data/toy_time_series/sine_dependency.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
 lags = [0, 9]
@@ -31,7 +31,7 @@ df_raw.index.name = "date_time"
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
-    time_covariates=["hour_of_day"],
+    # time_covariates=["hour_of_day"],
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -43,14 +43,14 @@ model_target = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=1,
-        num_features=12,
+        num_features=11,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        model_noise=True,
+        # model_noise=True,
     ),
-    # WhiteNoise(std_error=1e-1),
+    WhiteNoise(std_error=1e-1),
 )
 model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 
@@ -58,17 +58,17 @@ model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 model_covar = Model(
     LstmNetwork(
         look_back_len=10,
-        num_features=2,
+        num_features=1,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        model_noise=True,
+        # model_noise=True,
     ),
-    # WhiteNoise(std_error=0.0032322250444898116),
+    WhiteNoise(std_error=0.0032322250444898116),
 )
 model_covar.output_col = [1]
-model_covar.input_col = [11]
+# model_covar.input_col = [10]
 
 # Ensemble Model
 model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
