@@ -7,7 +7,7 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelEnsemble,
+    ModelAssemble,
     plot_data,
     plot_prediction,
     plot_states,
@@ -52,8 +52,6 @@ model_target = Model(
     ),
     # WhiteNoise(std_error=1e-1),
 )
-
-model_target.model_type = "target"
 model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Dependent model
@@ -69,15 +67,11 @@ model_covar = Model(
     ),
     # WhiteNoise(std_error=0.0032322250444898116),
 )
-model_covar.model_type = "covariate"
 model_covar.output_col = [1]
-# model_covar.input_col = [2]
-model_covar.output_lag_col = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 model_covar.input_col = [11]
 
 # Ensemble Model
-model = ModelEnsemble(model_target, model_covar)
-model.recal_covariates_col(data_processor.covariates_col)
+model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
 
 # Training
 num_epoch = 50
