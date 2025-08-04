@@ -167,7 +167,6 @@ class Model:
         self.output_col = []
         self.input_col = []
         self.output_lag_col = []
-        self.model_type = "target"
 
         # State-space model matrices
         self.mu_states = None
@@ -1420,7 +1419,9 @@ class Model:
         std_obs_preds = []
 
         for x in data["x"]:
-            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior) = ()
+            (mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior) = (
+                self.forward(x)
+            )
 
             if self.lstm_net:
                 self.update_lstm_history(mu_states_prior, var_states_prior)
