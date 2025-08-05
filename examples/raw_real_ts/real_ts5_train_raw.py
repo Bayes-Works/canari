@@ -59,7 +59,7 @@ model = Model(
     AR,
 )
 # model._mu_local_level = 0
-model.auto_initialize_baseline_states(train_data["y"][0:52*4])
+model.auto_initialize_baseline_states(train_data["y"])
 
 
 # Training
@@ -288,10 +288,10 @@ model_dict['gen_phi_ar'] = ar_model.states.get_mean(states_type="prior", states_
 model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
 
-# Save model_dict to local
-import pickle
-with open("saved_params/real_ts5_tsmodel_raw.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/real_ts5_tsmodel_raw.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
