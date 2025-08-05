@@ -358,7 +358,6 @@ class Model:
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
-        ###
         if "exp" in self.states_name:
             cov_states = self._exponential_cov_states(
                 cov_states,
@@ -375,26 +374,39 @@ class Model:
     def _exponential_cov_states(
         self,
         cov_states,
-        mu_states,
-        var_states,
         mu_states_prior,
         var_states_prior,
+        mu_states_posterior,
+        var_states_posterior,
     ):
+        """
+        The cross covariance matrix between `exp` and `scaled exp` with other states are non linear.
+        This function computes the correct cross-covariance for `exp` and `scaled exp` with other states.
+        Args:
+            cov_states (np.ndarray): cross-covariances between two hidden states at two consecutive time steps.
+            mu_states_prior (np.ndarray): Prior mean of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix.
+            mu_states_posterior (np.ndarray): Posterior mean of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix.
+
+        Returns:
+            Tuple[np.ndarray]: Updated (cov_states).
+        """
         latent_level_index = self.get_states_index("latent level")
         exp_index = self.get_states_index("exp")
         scale_index = self.get_states_index("scale")
         scaled_exp_index = self.get_states_index("scaled exp")
 
         magnitud_normal_space_exponential_space_prior = (
+            var_states_posterior[exp_index, latent_level_index]
+            / var_states_posterior[latent_level_index, latent_level_index]
+        )
+        magnitud_normal_space_exponential_space_transition = (
             var_states_prior[exp_index, latent_level_index]
             / var_states_prior[latent_level_index, latent_level_index]
         )
-        magnitud_normal_space_exponential_space_transition = (
-            var_states[exp_index, latent_level_index]
-            / var_states[latent_level_index, latent_level_index]
-        )
         skip_index1 = {exp_index, scaled_exp_index}
-        for other_component_index in range(len(mu_states_prior)):
+        for other_component_index in range(len(mu_states_posterior)):
             if other_component_index in skip_index1:
                 continue
             cov_states[exp_index, other_component_index] = (
@@ -413,108 +425,37 @@ class Model:
         )
 
         skip_index2 = {scaled_exp_index}
-        for other_component_index in range(len(mu_states_prior)):
+        for other_component_index in range(len(mu_states_posterior)):
             if other_component_index in skip_index2:
                 continue
             cov_states[scaled_exp_index, other_component_index] = (
                 cov_states[scale_index, other_component_index]
-                * mu_states_prior[exp_index]
+                * mu_states_posterior[exp_index]
                 + cov_states[exp_index, other_component_index]
-                * mu_states_prior[scale_index]
+                * mu_states_posterior[scale_index]
             )
             cov_states[other_component_index, scaled_exp_index] = (
-                cov_states[other_component_index, scale_index] * mu_states[exp_index]
-                + cov_states[other_component_index, exp_index] * mu_states[scale_index]
+                cov_states[other_component_index, scale_index]
+                * mu_states_prior[exp_index]
+                + cov_states[other_component_index, exp_index]
+                * mu_states_prior[scale_index]
             )
 
         cov_states[scaled_exp_index, scaled_exp_index] = (
             cov_states[scale_index, scale_index] * cov_states[exp_index, exp_index]
             + cov_states[scale_index, exp_index] * cov_states[exp_index, scale_index]
             + cov_states[scale_index, scale_index]
+            * mu_states_posterior[exp_index]
             * mu_states_prior[exp_index]
-            * mu_states[exp_index]
             + cov_states[scale_index, exp_index]
-            * mu_states_prior[exp_index]
-            * mu_states[scale_index]
+            * mu_states_posterior[exp_index]
+            * mu_states_prior[scale_index]
             + cov_states[exp_index, scale_index]
-            * mu_states_prior[scale_index]
-            * mu_states[exp_index]
-            + cov_states[exp_index, exp_index]
-            * mu_states_prior[scale_index]
-            * mu_states[scale_index]
-        )
-        return cov_states
-
-    def _exponential_cov_states(
-        self,
-        cov_states,
-        mu_states,
-        var_states,
-        mu_states_prior,
-        var_states_prior,
-    ):
-        latent_level_index = self.get_states_index("latent level")
-        exp_index = self.get_states_index("exp")
-        scale_index = self.get_states_index("scale")
-        scaled_exp_index = self.get_states_index("scaled exp")
-
-        magnitud_normal_space_exponential_space_prior = (
-            var_states_prior[exp_index, latent_level_index]
-            / var_states_prior[latent_level_index, latent_level_index]
-        )
-        magnitud_normal_space_exponential_space_transition = (
-            var_states[exp_index, latent_level_index]
-            / var_states[latent_level_index, latent_level_index]
-        )
-        skip_index1 = {exp_index, scaled_exp_index}
-        for other_component_index in range(len(mu_states_prior)):
-            if other_component_index in skip_index1:
-                continue
-            cov_states[exp_index, other_component_index] = (
-                magnitud_normal_space_exponential_space_prior
-                * cov_states[latent_level_index, other_component_index]
-            )
-            cov_states[other_component_index, exp_index] = (
-                magnitud_normal_space_exponential_space_transition
-                * cov_states[other_component_index, latent_level_index]
-            )
-
-        cov_states[exp_index, exp_index] = (
-            magnitud_normal_space_exponential_space_prior
-            * magnitud_normal_space_exponential_space_transition
-            * cov_states[latent_level_index, latent_level_index]
-        )
-
-        skip_index2 = {scaled_exp_index}
-        for other_component_index in range(len(mu_states_prior)):
-            if other_component_index in skip_index2:
-                continue
-            cov_states[scaled_exp_index, other_component_index] = (
-                cov_states[scale_index, other_component_index]
-                * mu_states_prior[exp_index]
-                + cov_states[exp_index, other_component_index]
-                * mu_states_prior[scale_index]
-            )
-            cov_states[other_component_index, scaled_exp_index] = (
-                cov_states[other_component_index, scale_index] * mu_states[exp_index]
-                + cov_states[other_component_index, exp_index] * mu_states[scale_index]
-            )
-
-        cov_states[scaled_exp_index, scaled_exp_index] = (
-            cov_states[scale_index, scale_index] * cov_states[exp_index, exp_index]
-            + cov_states[scale_index, exp_index] * cov_states[exp_index, scale_index]
-            + cov_states[scale_index, scale_index]
+            * mu_states_posterior[scale_index]
             * mu_states_prior[exp_index]
-            * mu_states[exp_index]
-            + cov_states[scale_index, exp_index]
-            * mu_states_prior[exp_index]
-            * mu_states[scale_index]
-            + cov_states[exp_index, scale_index]
-            * mu_states_prior[scale_index]
-            * mu_states[exp_index]
             + cov_states[exp_index, exp_index]
+            * mu_states_posterior[scale_index]
             * mu_states_prior[scale_index]
-            * mu_states[scale_index]
         )
         return cov_states
 
@@ -554,7 +495,7 @@ class Model:
             var_states (np.ndarray): Variance-covariance matrix before the linear update of the states
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).
+            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior, mu_obs_predict, var_obs_predict).
         """
         latent_level_index = self.get_states_index("latent level")
         latent_trend_index = self.get_states_index("latent trend")
@@ -630,8 +571,8 @@ class Model:
         return (
             mu_states_prior,
             var_states_prior,
-            np.float64(mu_obs_predict),
-            np.float64(var_obs_predict),
+            mu_obs_predict,
+            var_obs_predict,
         )
 
     def _exponential_backward_modification(
@@ -642,7 +583,7 @@ class Model:
 
         The update is applied to `latent level`, `latent trend` and `scale`
         After that, the function applies the closed form solutions to compute the posterior distribution of `exp` from `latent level` and `latent trend`.
-        It also applies GMA transformations to compute the posterior distribution of `scaled exp` from `exp amplitude` and `scale`.
+        It also applies GMA transformations to compute the posterior distribution of `scaled exp` from `exp` and `scale`.
 
         Args:
             mu_states_posterior (np.ndarray): Posterior mean vector of the states.
@@ -1340,12 +1281,24 @@ class Model:
             (
                 self.states.mu_smooth[time_step],
                 self.states.var_smooth[time_step],
-            ) = self.exponential_smoother(
+            ) = self._exponential_smoother(
                 self.states.mu_smooth[time_step],
                 self.states.var_smooth[time_step],
             )
 
-    def exponential_smoother(self, mu_states_smooth, var_states_smooth):
+    def _exponential_smoother(self, mu_states_smooth, var_states_smooth):
+        """
+        Apply exponential closed form solutions to get the smoothed estimates of `exp` and `scaled exp`.
+        Closed form solutions are applied to `exp` with the smoothed estimates of `latent level` and `latent trend`.
+        It also applies GMA transformations to compute the smoothed estimates of `scaled exp` from `exp` and `scale`.
+
+        Args:
+            mu_states_smooth (np.ndarray): Smoothed mean vector of the states.
+            var_states_smooth (np.ndarray): Smoothed variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_smooth, var_states_smooth).
+        """
 
         latent_level_index = self.get_states_index("latent level")
         scale_index = self.get_states_index("scale")
@@ -1393,7 +1346,7 @@ class Model:
             replace_index=scaled_exp_index,
         ).get_results()
 
-        return (np.float64(mu_states_smooth), np.float64(var_states_smooth))
+        return (mu_states_smooth, var_states_smooth)
 
     def forecast(
         self, data: Dict[str, np.ndarray]

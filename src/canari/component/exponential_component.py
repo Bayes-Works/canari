@@ -65,7 +65,7 @@ class Exponential(BaseComponent):
             "latent level",  # latent level
             "latent trend",  # latent trend
             "scale",  # scale
-            "exp",
+            "exp",  # exp
             "scaled exp",  # scaled exp
         ]
 
