@@ -127,8 +127,8 @@ class hsl_detection:
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
-                obs=self.base_model.mu_states_prior[self.AR_index], 
-                obs_var=self.base_model.var_states_prior[self.AR_index, self.AR_index])
+                obs=self.base_model.mu_states_posterior[self.AR_index], 
+                obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
@@ -148,66 +148,66 @@ class hsl_detection:
     
     def estimate_LTd_dist(self):
         print('mean and std before roll out synthetic data', np.mean(self.LTd_buffer), np.std(self.LTd_buffer))
-        # Roll out ten synthetic time series
-        # # Generate synthetic time series
-        covariate_col = self.data_processor.covariates_col
-        train_index, val_index, test_index = self.data_processor.get_split_indices()
-        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                'std': self.data_processor.scale_const_std[covariate_col]}
-        gen_model_copy = copy.deepcopy(self.generate_model)
-        if "lstm" in self.generate_model.states_name:
-            gen_model_copy.lstm_net = self.generate_model.lstm_net
-            gen_model_copy.lstm_output_history = copy.deepcopy(self.generate_model.lstm_output_history)
-            gen_model_copy.lstm_net.set_lstm_states(copy.deepcopy(self.generate_model.lstm_net.get_lstm_states()))
-        generated_ts, time_covariate, _, _ = gen_model_copy.generate_time_series(num_time_series=10, num_time_steps=52*6, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=False, sample_from_lstm_pred=False)
-        # # Run the current model on the synthetic time series
-        if "lstm" in self.base_model.states_name:
-            lstm_index = self.base_model.get_states_index("lstm")
-            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
-            cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
-        for k in tqdm(range(len(generated_ts))):
-            base_model_copy = copy.deepcopy(self.base_model)
-            if "lstm" in self.base_model.states_name:
-                base_model_copy.lstm_net = self.base_model.lstm_net
-                base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
-                base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
-            drift_model_copy = copy.deepcopy(self.drift_model)
+        # # Roll out ten synthetic time series
+        # # # Generate synthetic time series
+        # covariate_col = self.data_processor.covariates_col
+        # train_index, val_index, test_index = self.data_processor.get_split_indices()
+        # time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+        #                         'mu': self.data_processor.scale_const_mean[covariate_col], 
+        #                         'std': self.data_processor.scale_const_std[covariate_col]}
+        # gen_model_copy = copy.deepcopy(self.generate_model)
+        # if "lstm" in self.generate_model.states_name:
+        #     gen_model_copy.lstm_net = self.generate_model.lstm_net
+        #     gen_model_copy.lstm_output_history = copy.deepcopy(self.generate_model.lstm_output_history)
+        #     gen_model_copy.lstm_net.set_lstm_states(copy.deepcopy(self.generate_model.lstm_net.get_lstm_states()))
+        # generated_ts, time_covariate, _, _ = gen_model_copy.generate_time_series(num_time_series=10, num_time_steps=52*6, 
+        #                                                         time_covariates=self.data_processor.time_covariates, 
+        #                                                         time_covariate_info=time_covariate_info,
+        #                                                         add_anomaly=False, sample_from_lstm_pred=False)
+        # # # Run the current model on the synthetic time series
+        # if "lstm" in self.base_model.states_name:
+        #     lstm_index = self.base_model.get_states_index("lstm")
+        #     output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
+        #     cell_states_temp = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
+        # for k in tqdm(range(len(generated_ts))):
+        #     base_model_copy = copy.deepcopy(self.base_model)
+        #     if "lstm" in self.base_model.states_name:
+        #         base_model_copy.lstm_net = self.base_model.lstm_net
+        #         base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+        #         base_model_copy.lstm_net.set_lstm_states(cell_states_temp)
+        #     drift_model_copy = copy.deepcopy(self.drift_model)
 
-            base_model_copy.initialize_states_history()
-            drift_model_copy.initialize_states_history()
-            mu_ar_preds, std_ar_preds = [], []
+        #     base_model_copy.initialize_states_history()
+        #     drift_model_copy.initialize_states_history()
+        #     mu_ar_preds, std_ar_preds = [], []
 
-            for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
+        #     for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
 
-                _, _, _, _ = base_model_copy.forward(x)
-                (
-                    _, _,
-                    mu_states_posterior,
-                    var_states_posterior,
-                ) = base_model_copy.backward(y)
+        #         _, _, _, _ = base_model_copy.forward(x)
+        #         (
+        #             _, _,
+        #             mu_states_posterior,
+        #             var_states_posterior,
+        #         ) = base_model_copy.backward(y)
 
-                if "lstm" in base_model_copy.states_name:
-                    base_model_copy.lstm_output_history.update(
-                        mu_states_posterior[lstm_index],
-                        var_states_posterior[lstm_index, lstm_index],
-                    )
+        #         if "lstm" in base_model_copy.states_name:
+        #             base_model_copy.lstm_output_history.update(
+        #                 mu_states_posterior[lstm_index],
+        #                 var_states_posterior[lstm_index, lstm_index],
+        #             )
 
-                base_model_copy._save_states_history()
-                base_model_copy.set_states(mu_states_posterior, var_states_posterior)
+        #         base_model_copy._save_states_history()
+        #         base_model_copy.set_states(mu_states_posterior, var_states_posterior)
 
-                mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
-                _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.AR_index], 
-                    obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
-                drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-                self.LTd_buffer.append(mu_drift_states_prior[1].item())
-                mu_ar_preds.append(mu_ar_pred)
-                std_ar_preds.append(var_ar_pred**0.5)
+        #         mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
+        #         _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+        #             obs=base_model_copy.mu_states_posterior[self.AR_index], 
+        #             obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
+        #         drift_model_copy._save_states_history()
+        #         drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+        #         self.LTd_buffer.append(mu_drift_states_prior[1].item())
+        #         mu_ar_preds.append(mu_ar_pred)
+        #         std_ar_preds.append(var_ar_pred**0.5)
 
             # states_mu_prior = np.array(base_model_copy.states.mu_prior)
             # states_var_prior = np.array(base_model_copy.states.var_prior)
@@ -278,7 +278,7 @@ class hsl_detection:
         self.LTd_pdf = common.gaussian_pdf(mu = self.mu_LTd, std = self.LTd_std)
         print('mean and std after roll out synthetic data',self.mu_LTd, self.LTd_std)
 
-    def tune(self, decay_factor: Optional[float] = 0.9, begin_std_LTd: Optional[float] = 2):
+    def tune(self, decay_factor: Optional[float] = 0.9, begin_std_LTd: Optional[float] = 1):
         '''
         Tune the std_LTd using synthetic time series
         '''
@@ -361,8 +361,8 @@ class hsl_detection:
 
                     mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                     _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                        obs=base_model_copy.mu_states_prior[self.AR_index], 
-                        obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
+                        obs=base_model_copy.mu_states_posterior[self.AR_index], 
+                        obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
                     drift_model_copy._save_states_history()
                     drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                     mu_ar_preds.append(mu_ar_pred)
@@ -566,8 +566,8 @@ class hsl_detection:
             # Drift model filter process
             mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = self.drift_model.forward()
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
-                obs=self.base_model.mu_states_prior[self.AR_index], 
-                obs_var=self.base_model.var_states_prior[self.AR_index, self.AR_index])
+                obs=self.base_model.mu_states_posterior[self.AR_index], 
+                obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             self.mu_ar_preds.append(mu_ar_pred)
@@ -611,7 +611,11 @@ class hsl_detection:
         y_likelihood = likelihood(mu_obs_pred, np.sqrt(var_obs_pred) * self.y_std_scale, obs)
 
         _, _, mu_d_states_prior, _ = drift_model_copy.forward()
-        x_likelihood = state_dist(mu_d_states_prior[1].item())
+        _, _, mu_drift_states_posterior, _ = drift_model_copy.backward(
+                obs=base_model_copy.mu_states_posterior[self.AR_index], 
+                obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
+        
+        x_likelihood = state_dist(mu_drift_states_posterior[1].item())
 
         if "lstm" in base_model.states_name:
             # Set the base_model back to the original state
@@ -777,8 +781,8 @@ class hsl_detection:
 
                 mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_prior[self.AR_index], 
-                    obs_var=base_model_copy.var_states_prior[self.AR_index, self.AR_index])
+                    obs=base_model_copy.mu_states_posterior[self.AR_index], 
+                    obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 mu_ar_preds.append(mu_ar_pred)
