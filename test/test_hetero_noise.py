@@ -13,7 +13,7 @@ BASE_DIR = os.path.dirname(__file__)
 
 def model_test_runner(model: Model, plot: bool) -> float:
     """
-    Run training and forecasting for time-series forecasting model
+    Run training and forecasting model
     """
 
     output_col = [0]
@@ -93,7 +93,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
 
 def test_model_forecast(run_mode, plot_mode):
-    """Test model forecastin with lstm component"""
+    """Test model forecasting"""
     # Model
     model = Model(
         LocalTrend(),
@@ -109,7 +109,9 @@ def test_model_forecast(run_mode, plot_mode):
     )
     mse = model_test_runner(model, plot=plot_mode)
 
-    path_metric = os.path.join(BASE_DIR, "../test/saved_metric/test_agvi_metric.csv")
+    path_metric = os.path.join(
+        BASE_DIR, "../test/saved_metric/test_hetero_noise_metric.csv"
+    )
     if run_mode == "save_threshold":
         pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
         print(f"Saved MSE to {path_metric}: {mse}")

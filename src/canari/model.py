@@ -285,7 +285,6 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            # self.lstm_net.update_param = self._update_lstm_param
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
@@ -1236,9 +1235,9 @@ class Model:
 
             # Update LSTM parameters
             if self.lstm_net:
-                self.update_lstm_param(delta_mu_states, delta_var_states)
                 if train_lstm:
-                    self.update_lstm_history(mu_states_posterior, var_states_posterior)
+                    self.update_lstm_param(delta_mu_states, delta_var_states)
+                self.update_lstm_history(mu_states_posterior, var_states_posterior)
 
             # Store variables
             self.save_states_history()
@@ -1342,8 +1341,6 @@ class Model:
         self.filter(train_data)
         self.smoother()
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-        # self.set_memory(states=self.states, time_step=0)
-        # self._current_epoch += 1
 
         return (
             np.array(mu_validation_preds).flatten(),
