@@ -9,7 +9,7 @@ from canari.model import Model
 
 class ModelAssemble:
     """
-    Ensemble of model for modelling dependencies.
+    Assemble of models for modelling dependencies.
     """
 
     def __init__(
@@ -26,9 +26,9 @@ class ModelAssemble:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Forward
+        Make a one-step-ahead prediction using the prediction step of the Kalman filter.
         """
 
         mu_pred = []
@@ -84,7 +84,9 @@ class ModelAssemble:
         covariates: np.ndarray,
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """ """
+        """
+        Update step in the Kalman filter for one time step.
+        """
 
         # Covariate models
         for model in self.covariate_model:
@@ -107,7 +109,11 @@ class ModelAssemble:
             self.target_model.update_lstm_param(delta_mu_states, delta_var_states)
 
     def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
-        """ """
+        """
+        Perform multi-step-ahead forecast over an entire dataset by recursively making
+        one-step-ahead predictions, i.e., reapeatly apply the
+        Kalman prediction step over multiple time steps.
+        """
 
         mu_obs_preds = []
         std_obs_preds = []
@@ -142,7 +148,10 @@ class ModelAssemble:
         self,
         data: Dict[str, np.ndarray],
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """ """
+        """
+        Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
+        update steps over multiple time steps.
+        """
 
         mu_obs_preds = []
         std_obs_preds = []
@@ -180,7 +189,10 @@ class ModelAssemble:
         matrix_inversion_tol: Optional[float] = 1e-12,
         tol_type: Optional[str] = "relative",  # relative of absolute
     ):
-        """ """
+        """
+        Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
+        RTS smoothing equation over multiple time steps.
+        """
 
         for model in [self.target_model] + self.covariate_model:
             model.smoother(matrix_inversion_tol=matrix_inversion_tol, tol_type=tol_type)
@@ -194,7 +206,8 @@ class ModelAssemble:
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Train LSTM
+        Train both the target model and covariate models on the provided
+        training set, then evaluate on the validation set.
         """
 
         self._recal_covariates_col(
@@ -222,7 +235,9 @@ class ModelAssemble:
         )
 
     def set_memory(self, time_step: int):
-        """ """
+        """
+        Set memory
+        """
         if time_step == 0:
             for model in [self.target_model] + self.covariate_model:
                 model.set_memory(states=model.states, time_step=time_step)

@@ -13,13 +13,15 @@ BASE_DIR = os.path.dirname(__file__)
 
 def model_test_runner(model: ModelAssemble, plot: bool) -> float:
     """
-    Run training and forecasting for time-series forecasting model
+    Run training and forecasting for model
     """
 
     output_col = [0]
 
     # Read data
-    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine_dependency.csv")
+    data_file = os.path.join(
+        BASE_DIR, "../data/toy_time_series/exp_sine_dependency.csv"
+    )
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
     df_raw.columns = ["exp_sine", "sine"]
     lags = [0, 9]
@@ -96,7 +98,7 @@ def model_test_runner(model: ModelAssemble, plot: bool) -> float:
 
 
 def test_model_forecast(run_mode, plot_mode):
-    """Test model forecastin with lstm component"""
+    """Test model forecasting"""
 
     # Independent model
     model_target = Model(
