@@ -148,6 +148,20 @@ def backward(
         delta_var_states,
     )
 
+def distribution_update(
+    obs: float,
+    obs_var: float,
+    mu_obs_predicted: np.ndarray,
+    var_obs_predicted: np.ndarray,
+    var_states_prior: np.ndarray,
+    observation_matrix: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    cov_obs_states = observation_matrix @ var_states_prior
+    jacobian = cov_obs_states.T / var_obs_predicted
+    delta_mu_states = jacobian @ (obs - mu_obs_predicted)
+    delta_var_states = jacobian @ (obs_var - var_obs_predicted) @ jacobian.T
+    return delta_mu_states, delta_var_states
+
 
 def rts_smoother(
     mu_states_prior: np.ndarray,
@@ -380,6 +394,16 @@ class GMA(object):
             Tuple[np.ndarray, np.ndarray]: Mean vector and covariance matrix.
         """
         return self.mu, self.var
+    
+def gaussian_pdf(mu: float, std:float) -> None:
+    """Gaussian probability density function"""
+    pdf = lambda x: np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
+    return pdf
+
+def likelihood(mu: np.ndarray, std: np.ndarray, observation: np.ndarray) -> None:
+    """Compute the likelihood"""
+    pdf = gaussian_pdf(mu, std)
+    return pdf(observation)
 
 
 def norm_cdf(x) -> np.ndarray:
