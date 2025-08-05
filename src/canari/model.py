@@ -894,10 +894,10 @@ class Model:
             )
             self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
             self._var_v2bar_prior = var_v2bar_prior
-            if self._current_epoch >= 4:
-                self.process_noise_matrix[noise_index, noise_index] = (
-                    self._mu_v2bar_tilde
-                )
+            self.process_noise_matrix[noise_index, noise_index] = (
+                self._mu_v2bar_tilde.item()
+            )
+            self.sched_sigma_v = self._mu_v2bar_tilde**0.5
         else:
             raise ValueError("In the LSTM component, model_noise should be True. ")
 
