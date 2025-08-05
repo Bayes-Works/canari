@@ -109,12 +109,11 @@ hsl_tsad_agent.estimate_LTd_dist()
 # hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.4580000000000002)
 # hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.8)
 
-
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 7.5964446e-05, 0.00030706805, np.array([-1.0887551e-03, -1.7420119e-01, 1.0078957e+02]), np.array([1.0372983e-02, 1.1818467e+00, 6.2148186e+01])
 # hsl_tsad_agent.tune()
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts9_raw.pkl', max_training_epoch=50)
@@ -123,7 +122,7 @@ mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
 # #  Plot
-state_type = "prior"
+state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
 gs = gridspec.GridSpec(11, 1)
@@ -191,14 +190,14 @@ ax4.fill_between(time,
                 np.array(mu_ar_preds_all) + np.array(std_ar_preds_all),
                 color='tab:red',
                 alpha=0.5)
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model.states,
-#     states_type=state_type,
-#     states_to_plot=['level'],
-#     sub_plot=ax4,
-# )
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model.states,
+    states_type=state_type,
+    states_to_plot=['level'],
+    sub_plot=ax4,
+)
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
