@@ -15,7 +15,7 @@ from canari import (
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/sine_dependency.csv"
+data_file = "./data/toy_time_series/exp_sine_dependency.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
 lags = [0, 9]
@@ -31,7 +31,6 @@ df_raw.index.name = "date_time"
 output_col = [0]
 data_processor = DataProcess(
     data=df_raw,
-    # time_covariates=["hour_of_day"],
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -47,7 +46,7 @@ model_target = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        manual_seed=1,
+        manual_seed=2,
         # model_noise=True,
     ),
     WhiteNoise(std_error=1e-1),
@@ -62,15 +61,14 @@ model_covar = Model(
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
-        manual_seed=1,
+        manual_seed=2,
         # model_noise=True,
     ),
-    WhiteNoise(std_error=0.0032322250444898116),
+    WhiteNoise(std_error=0.003),
 )
 model_covar.output_col = [1]
-# model_covar.input_col = [10]
 
-# Ensemble Model
+# Assemble models
 model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
 
 # Training
@@ -97,36 +95,21 @@ for epoch in range(num_epoch):
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
 
-    # Covariate predictions
-    val_time = data_processor.get_time(split="validation")
-    _, val_index, _ = data_processor.get_split_indices()
-    mu_val_covar = np.array(model_covar.output_history.mu)[val_index]
-    var_val_covar = np.array(model_covar.output_history.var)[val_index]
-    validation_obs_covar = data_processor.get_data("validation", column=[1]).flatten()
-    mse_cov = metric.mse(mu_val_covar, validation_obs_covar)
-
     # Early-stopping
     model_target.early_stopping(
         evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=10
-    )
-    model_covar.early_stopping(
-        evaluate_metric=mse_cov, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=10
     )
 
     if epoch == model_target.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            model_target.states
-        )  # If we want to plot the states, plot those from optimal epoch
+        states_optim = copy.copy(model_target.states)
 
     if model_target.stop_training:
         break
 
 print(f"Optimal epoch target model     : {model_target.optimal_epoch}")
 print(f"Validation metric      :{model_target.early_stop_metric: 0.4f}")
-print(f"Optimal epoch covariate model      : {model_covar.optimal_epoch}")
-print(f"Validation metric      :{model_covar.early_stop_metric: 0.4f}")
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -140,7 +123,6 @@ plot_prediction(
     data_processor=data_processor,
     mean_validation_pred=mu_validation_preds_optim,
     std_validation_pred=std_validation_preds_optim,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
 plt.show()

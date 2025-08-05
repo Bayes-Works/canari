@@ -13,7 +13,7 @@ BASE_DIR = os.path.dirname(__file__)
 
 def model_test_runner(model: Model, plot: bool) -> float:
     """
-    Run training and forecasting for time-series forecasting model
+    Run training and forecasting for model
     """
 
     output_col = [0]
@@ -93,7 +93,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
 
 def test_model_forecast(run_mode, plot_mode):
-    """Test model forecastin with lstm component"""
+    """Test model forecasting"""
     # Model
     model = Model(
         LocalTrend(),
