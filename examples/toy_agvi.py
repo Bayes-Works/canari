@@ -5,27 +5,23 @@ import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-from datetime import datetime, timedelta
+from canari.component import LocalTrend, LstmNetwork
 
 # # Read data
-data_file = "./data/traffic.npy"
-df = np.load(data_file)
-ts = 2
-cut_off = 24 * 7 * 5
-df = pd.DataFrame(df[:cut_off, ts])
-start_date = "2008-01-01 00:00:00"
-time_idx = pd.date_range(start=start_date, periods=len(df), freq="H")
-df.index = time_idx
-df.index.name = "date_time"
-df.columns = ["values"]
+data_file = "./data/toy_time_series/exp_sine_agvi.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+data_file_time = "./data/toy_time_series/sine_datetime.csv"
+time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+time_series = pd.to_datetime(time_series[0])
+df_raw.index = time_series
+df_raw.index.name = "date_time"
+df_raw.columns = ["values"]
 
 # Define parameters
 output_col = [0]
 num_epoch = 50
 data_processor = DataProcess(
-    data=df,
-    time_covariates=["hour_of_day", "day_of_week"],
+    data=df_raw,
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -35,17 +31,19 @@ train_data, validation_data, test_data, standardized_data = data_processor.get_s
 
 # Model
 model = Model(
+    LocalTrend(),
     LstmNetwork(
         look_back_len=24,
-        num_features=3,
-        num_layer=2,
+        num_features=1,
+        num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
         model_noise=True,
     ),
-    # WhiteNoise(std_error=0.2),
 )
+model.auto_initialize_baseline_states(train_data["y"][0:24])
+
 
 # Training
 for epoch in range(num_epoch):
@@ -54,33 +52,6 @@ for epoch in range(num_epoch):
         validation_data=validation_data,
     )
     model.set_memory(states=states, time_step=0)
-
-    # # # Unstandardize the predictions
-    # mu_validation_preds = normalizer.unstandardize(
-    #     mu_validation_preds,
-    #     data_processor.scale_const_mean[data_processor.output_col],
-    #     data_processor.scale_const_std[data_processor.output_col],
-    # )
-
-    # std_validation_preds = normalizer.unstandardize_std(
-    #     std_validation_preds,
-    #     data_processor.scale_const_std[data_processor.output_col],
-    # )
-
-    # validation_obs = data_processor.get_data("validation").flatten()
-    # validation_log_lik = metric.log_likelihood(
-    #     prediction=mu_validation_preds,
-    #     observation=validation_obs,
-    #     std=std_validation_preds,
-    # )
-
-    # # Early-stopping
-    # model.early_stopping(
-    #     evaluate_metric=-validation_log_lik,
-    #     current_epoch=epoch,
-    #     max_epoch=num_epoch,
-    #     skip_epoch=5,
-    # )
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -105,9 +76,7 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
+        states_optim = copy.copy(states)
 
     if model.stop_training:
         break
@@ -120,7 +89,6 @@ fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
     standardization=False,
-    plot_train_data=False,
     plot_column=output_col,
     validation_label="y",
 )
@@ -132,10 +100,3 @@ plot_prediction(
 )
 plt.legend()
 plt.show()
-
-plt.plot(model.early_stop_metric_history)
-plt.show()
-
-
-# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
-# plt.show()
