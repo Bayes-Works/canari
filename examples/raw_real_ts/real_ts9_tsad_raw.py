@@ -14,6 +14,7 @@ import pytagi.metric as metric
 from matplotlib import gridspec
 import pickle
 from pytagi import Normalizer
+import copy
 
 
 # # # Read data
@@ -42,7 +43,9 @@ data_processor = DataProcess(
 
 
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
-
+train_val_data = copy.deepcopy(normalized_data)
+train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]
+train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 
 ####################################################################
 ######################### Pretrained model #########################
@@ -95,6 +98,7 @@ hsl_tsad_agent_pre = hsl_detection(base_model=pretrained_model.load_dict(pretrai
 hsl_tsad_agent_pre.filter(train_data)
 hsl_tsad_agent_pre.filter(validation_data)
 hsl_tsad_agent.drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
+hsl_tsad_agent.init_drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_states
 
 mu_ar_preds_all, std_ar_preds_all = [], []
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
@@ -103,21 +107,19 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
-hsl_tsad_agent.estimate_LTd_dist()
-# hsl_tsad_agent.mu_LTd =  8.961089891650545e-07
-# hsl_tsad_agent.LTd_std = 5.023986246335341e-06
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.4580000000000002)
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 0.8)
+# hsl_tsad_agent.estimate_LTd_dist()
+hsl_tsad_agent.mu_LTd =  4.569313246766417e-06
+hsl_tsad_agent.LTd_std = 3.4926335180412916e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
+hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 7.5964446e-05, 0.00030706805, np.array([-1.0887551e-03, -1.7420119e-01, 1.0078957e+02]), np.array([1.0372983e-02, 1.1818467e+00, 6.2148186e+01])
-# hsl_tsad_agent.tune()
-# hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.5817458e-05, 0.00022171895, np.array([-7.1317918e-05, -1.2022230e-02, 1.0660063e+02]), np.array([1.0962029e-02, 1.3616621e+00, 6.2825909e+01])
 
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts9_raw.csv', 
                                   load_model_path='saved_params/NN_detection_model_real_ts9_raw.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
