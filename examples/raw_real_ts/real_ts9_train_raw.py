@@ -42,8 +42,8 @@ num_epoch = 300
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Define AR model
-AR_process_error_var_prior = 1e4
-var_W2bar_prior = 1e4
+AR_process_error_var_prior = 1
+var_W2bar_prior = 1
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
         look_back_len=33,
@@ -59,7 +59,7 @@ model = Model(
     AR,
 )
 # model._mu_local_level = 0
-model.auto_initialize_baseline_states(train_data["y"][0:52*4])
+model.auto_initialize_baseline_states(train_data["y"][0 : 52 * 3 + 1])
 
 
 # Training
@@ -286,10 +286,10 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 model_dict['gen_phi_ar'] = ar_model.states.get_mean(states_type="prior", states_name="phi")[-1]
 model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
-# Save model_dict to local
-import pickle
-with open("saved_params/real_ts9_tsmodel_raw.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/real_ts9_tsmodel_raw.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
