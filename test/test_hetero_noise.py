@@ -19,9 +19,9 @@ def model_test_runner(model: Model, plot: bool) -> float:
     output_col = [0]
 
     # Read data
-    data_file = "./data/toy_time_series/exp_sine_agvi.csv"
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/exp_sine_agvi.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
