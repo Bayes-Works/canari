@@ -37,6 +37,25 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
+# Plot data
+fig, axs = plt.subplots(2, 1, figsize=(10, 6))
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=[0],
+    sub_plot=axs[0],
+)
+axs[0].set_title("Target ts")
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=[1],
+    sub_plot=axs[1],
+)
+axs[1].set_title("Covariate ts")
+plt.tight_layout()
+plt.show()
+
 # Independent model
 model_target = Model(
     LocalTrend(),
