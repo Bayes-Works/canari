@@ -46,8 +46,8 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        model_noise=True,
     ),
+    WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
