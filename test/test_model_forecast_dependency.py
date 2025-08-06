@@ -27,7 +27,7 @@ def model_test_runner(model: ModelAssemble, plot: bool) -> float:
     lags = [0, 9]
     df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
