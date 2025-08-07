@@ -15,11 +15,9 @@ from canari import (
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/exp_sine_dependency.csv"
+data_file = "./data/toy_time_series/exp_sine_dependency_amp.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
-lags = [0, 9]
-df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -61,7 +59,7 @@ model_target = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=1,
-        num_features=11,
+        num_features=2,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
@@ -75,7 +73,7 @@ model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 # Dependent model
 model_covar = Model(
     LstmNetwork(
-        look_back_len=10,
+        look_back_len=1,
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
@@ -83,7 +81,7 @@ model_covar = Model(
         manual_seed=1,
         # model_noise=True,
     ),
-    WhiteNoise(std_error=3e-3),
+    WhiteNoise(std_error=1e-2),
 )
 model_covar.output_col = [1]
 
@@ -97,6 +95,8 @@ for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        use_val_posterior_covariate=False,
+        update_param_covar_model=False,
     )
     model.set_memory(time_step=0)
 
