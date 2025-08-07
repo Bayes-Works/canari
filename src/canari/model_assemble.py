@@ -5,6 +5,7 @@ Emsemble of model
 import numpy as np
 from typing import Optional, List, Tuple, Dict, Union
 from canari.model import Model
+import canari.common as common
 
 
 class ModelAssemble:
@@ -26,6 +27,8 @@ class ModelAssemble:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
+        posterior_covariate: Optional[bool] = True,
+        train_lstm_covar: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
@@ -41,16 +44,24 @@ class ModelAssemble:
             # get model input
             x = mu_input_covariates[model.input_col]
             mu_pred_covar, var_pred_covar, *_ = model.forward(x)
+            var_pred_covar = var_pred_covar - model.sched_sigma_v**2
+
+            if posterior_covariate:
+                # Backward for covar_models
+                y_covar = mu_input_covariates[model.output_col].copy()
+                delta_mu, delta_var, mu_pos, var_pos = model.backward(y_covar)
+                mu_pred_covar, var_pred_covar = common.calc_observation(
+                    mu_pos, var_pos, model.observation_matrix
+                )
+                if train_lstm_covar and model.lstm_net:
+                    model.update_lstm_param(delta_mu, delta_var)
 
             # save output history
-            var_pred_covar_wo_noise = var_pred_covar - model.sched_sigma_v**2
-            model.output_history.save_output_history(
-                mu_pred_covar, var_pred_covar_wo_noise
-            )
+            model.output_history.save_output_history(mu_pred_covar, var_pred_covar)
 
             # Replace in target model's input
             mu_input_covariates[model.output_col] = mu_pred_covar
-            var_input_covariates[model.output_col] = var_pred_covar_wo_noise
+            var_input_covariates[model.output_col] = var_pred_covar
 
             # Replace lags
             if len(model.output_lag_col) > 0:
@@ -81,25 +92,12 @@ class ModelAssemble:
 
     def backward(
         self,
-        covariates: np.ndarray,
         obs: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Update step in the Kalman filter for one time step.
         """
 
-        # Covariate models
-        for model in self.covariate_model:
-            obs_temp = covariates[model.output_col].copy()
-            (
-                delta_mu_states_covar,
-                delta_var_states_covar,
-                *_,
-            ) = model.backward(obs_temp)
-            if model.lstm_net:
-                model.update_lstm_param(delta_mu_states_covar, delta_var_states_covar)
-
-        # Target model
         (
             delta_mu_states,
             delta_var_states,
@@ -108,7 +106,12 @@ class ModelAssemble:
         if self.target_model.lstm_net:
             self.target_model.update_lstm_param(delta_mu_states, delta_var_states)
 
-    def forecast(self, data: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+    def forecast(
+        self,
+        data: Dict[str, np.ndarray],
+        posterior_covariate: Optional[bool] = False,
+        train_lstm_covar: Optional[bool] = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform multi-step-ahead forecast over an entire dataset by recursively making
         one-step-ahead predictions, i.e., reapeatly apply the
@@ -122,7 +125,7 @@ class ModelAssemble:
             (
                 mu_obs_pred,
                 var_obs_pred,
-            ) = self.forward(x)
+            ) = self.forward(x, posterior_covariate, train_lstm_covar)
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
@@ -166,7 +169,7 @@ class ModelAssemble:
                 var_obs_pred,
             ) = self.forward(x)
 
-            self.backward(x, y)
+            self.backward(y)
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
@@ -201,6 +204,8 @@ class ModelAssemble:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
+        val_posterior_covariate: Optional[bool] = False,
+        val_train_lstm_covar: Optional[bool] = False,
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
@@ -227,7 +232,9 @@ class ModelAssemble:
 
         self.filter(train_data)
         self.smoother()
-        mu_validation_preds, std_validation_preds = self.forecast(validation_data)
+        mu_validation_preds, std_validation_preds = self.forecast(
+            validation_data, val_posterior_covariate, val_train_lstm_covar
+        )
 
         return (
             np.array(mu_validation_preds),
