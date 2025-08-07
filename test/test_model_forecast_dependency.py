@@ -124,7 +124,7 @@ def test_model_forecast(run_mode, plot_mode):
             device="cpu",
             manual_seed=1,
         ),
-        WhiteNoise(std_error=0.003),
+        WhiteNoise(std_error=3e-3),
     )
     model_covariate.output_col = [1]
 
