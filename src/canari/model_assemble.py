@@ -28,7 +28,7 @@ class ModelAssemble:
         self,
         input_covariates: Optional[np.ndarray] = None,
         posterior_covariate: Optional[bool] = True,
-        train_lstm_covar: Optional[bool] = True,
+        update_param_covar_model: Optional[bool] = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
@@ -53,7 +53,7 @@ class ModelAssemble:
                 mu_pred_covar, var_pred_covar = common.calc_observation(
                     mu_pos, var_pos, model.observation_matrix
                 )
-                if train_lstm_covar and model.lstm_net:
+                if update_param_covar_model and model.lstm_net:
                     model.update_lstm_param(delta_mu, delta_var)
 
             # save output history
@@ -110,7 +110,7 @@ class ModelAssemble:
         self,
         data: Dict[str, np.ndarray],
         posterior_covariate: Optional[bool] = False,
-        train_lstm_covar: Optional[bool] = False,
+        update_param_covar_model: Optional[bool] = False,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform multi-step-ahead forecast over an entire dataset by recursively making
@@ -125,7 +125,7 @@ class ModelAssemble:
             (
                 mu_obs_pred,
                 var_obs_pred,
-            ) = self.forward(x, posterior_covariate, train_lstm_covar)
+            ) = self.forward(x, posterior_covariate, update_param_covar_model)
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
@@ -204,8 +204,8 @@ class ModelAssemble:
         self,
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
-        val_posterior_covariate: Optional[bool] = False,
-        val_train_lstm_covar: Optional[bool] = False,
+        use_val_posterior_covariate: Optional[bool] = False,
+        update_param_covar_model: Optional[bool] = False,
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
@@ -233,7 +233,7 @@ class ModelAssemble:
         self.filter(train_data)
         self.smoother()
         mu_validation_preds, std_validation_preds = self.forecast(
-            validation_data, val_posterior_covariate, val_train_lstm_covar
+            validation_data, use_val_posterior_covariate, update_param_covar_model
         )
 
         return (
