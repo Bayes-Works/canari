@@ -29,7 +29,7 @@ class Exponential(BaseComponent):
         >>> exponential.component_name
         'exp'
         >>> exponential.states_name
-        ['latent level', 'latent trend', 'scale', 'exp', 'scaled exp']
+        ['latent level', 'latent trend', 'exp scale factor', 'exp', 'scaled exp']
         >>> exponential.transition_matrix
         array([ [1, 1, 0, 0, 0],
                 [0, 1, 0, 0, 0],
@@ -64,7 +64,7 @@ class Exponential(BaseComponent):
         self._states_name = [
             "latent level",  # latent level
             "latent trend",  # latent trend
-            "scale",  # scale
+            "exp scale factor",  # exp scale factor
             "exp",  # exp
             "scaled exp",  # scaled exp
         ]
