@@ -18,7 +18,7 @@ import copy
 
 
 # # # Read data
-data_file = "./data/benchmark_data/test_5_data.csv"
+data_file = "./data/benchmark_data/test_8_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -29,10 +29,8 @@ df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
-# train_split=0.28
-# validation_split=0.07
-train_split=0.289
-validation_split=0.0693
+train_split=0.3
+validation_split=0.074
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -51,11 +49,11 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts5_tsmodel_raw.pkl", "rb") as f:
+with open("saved_params/real_ts8_tsmodel_raw.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=17,
+        look_back_len=15,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -75,13 +73,15 @@ pretrained_model = Model(
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
                    mu_states=[model_dict['states_optimal'].mu_prior[0][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                   var_states=[model_dict['states_optimal'].var_prior[0][autoregression_index, autoregression_index].item()]),
 )
 gen_model = Model(
     # LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=np.diag(model_dict['states_optimal'].var_prior[0][0:2, 0:2])),\
     LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
-    Autoregression(phi=model_dict['gen_phi_ar'], std_error=model_dict['gen_sigma_ar']),
+    Autoregression(phi=model_dict['gen_phi_ar'], std_error=model_dict['gen_sigma_ar'],
+                   mu_states=[model_dict['states_optimal'].mu_prior[0][autoregression_index].item()], 
+                   var_states=[model_dict['states_optimal'].var_prior[0][autoregression_index, autoregression_index].item()]),
 )
 
 pretrained_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -105,18 +105,18 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
-# hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -3.0206570332763772e-05
-hsl_tsad_agent.LTd_std = 6.453585694259389e-05
+hsl_tsad_agent.estimate_LTd_dist()
+# hsl_tsad_agent.mu_LTd =  4.569313246766417e-06
+# hsl_tsad_agent.LTd_std = 3.4926335180412916e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 
-# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_raw.csv')
+hsl_tsad_agent.collect_synthetic_samples(num_time_series=10, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts8_raw.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -4.4244734e-06, 0.0012855766, np.array([1.2464410e-04, 1.4889071e-02, 1.0699100e+02]), np.array([1.0791812e-02, 1.3350937e+00, 6.2438927e+01])
+# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.5817458e-05, 0.00022171895, np.array([-7.1317918e-05, -1.2022230e-02, 1.0660063e+02]), np.array([1.0962029e-02, 1.3616621e+00, 6.2825909e+01])
 
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts5_raw.csv', 
-                                  load_model_path='saved_params/NN_detection_model_real_ts5_raw.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_real_ts8_raw.csv', 
+                                  save_model_path='saved_params/NN_detection_model_real_ts8_raw.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))

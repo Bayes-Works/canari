@@ -339,7 +339,8 @@ class hsl_detection:
 
             i += 1
 
-        self.detection_threshold = max(np.nanmax(p_anm_to_tune) * 1.1, 0.3)
+        self.detection_threshold = max(np.nanmax(p_anm_to_tune) * 1.1, 0.1)
+        # self.detection_threshold = np.nanmax(p_anm_to_tune) * 1.1
         print(f"Detection threshold tuned to: {self.detection_threshold}")
 
         states_mu_prior = np.array(self.init_base_model.states.mu_posterior)
