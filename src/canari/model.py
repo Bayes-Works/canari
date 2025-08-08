@@ -378,7 +378,7 @@ class Model:
         var_states_prior,
         mu_states_posterior,
         var_states_posterior,
-    ):
+    ) -> float:
         """
         The cross covariance matrix between `exp` and `scaled exp` with other states are non linear.
         This function computes the correct cross-covariance for `exp` and `scaled exp` with other states.
@@ -481,7 +481,7 @@ class Model:
 
     def _update_exp_and_scaled_exp(
         self, mu_states, var_states, var_states_behind, method
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Apply forward path exponential moment transformations.
 
@@ -504,6 +504,8 @@ class Model:
         exp_scale_factor_index = self.get_states_index("exp scale factor")
         exp_index = self.get_states_index("exp")
         scaled_exp_index = self.get_states_index("scaled exp")
+        mu_obs_predict = []
+        var_obs_predict = []
 
         mu_states[exp_index] = (
             np.exp(
@@ -570,14 +572,13 @@ class Model:
             mu_obs_predict, var_obs_predict = common.calc_observation(
                 mu_states, var_states, self.observation_matrix
             )
-            return (
-                mu_states,
-                var_states,
-                mu_obs_predict,
-                var_obs_predict,
-            )
-        elif method in {"backward", "smoother"}:
-            return (mu_states, var_states)
+
+        return (
+            mu_states,
+            var_states,
+            mu_obs_predict,
+            var_obs_predict,
+        )
 
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
@@ -1155,8 +1156,10 @@ class Model:
             )
 
         if "exp" in self.states_name:
-            mu_states_posterior, var_states_posterior = self._update_exp_and_scaled_exp(
-                mu_states_posterior, var_states_posterior, 0, "backward"
+            mu_states_posterior, var_states_posterior, *_ = (
+                self._update_exp_and_scaled_exp(
+                    mu_states_posterior, var_states_posterior, 0, "backward"
+                )
             )
 
         self.mu_states_posterior = mu_states_posterior
@@ -1209,6 +1212,7 @@ class Model:
             (
                 self.states.mu_smooth[time_step],
                 self.states.var_smooth[time_step],
+                *_,
             ) = self._update_exp_and_scaled_exp(
                 self.states.mu_smooth[time_step],
                 self.states.var_smooth[time_step],
