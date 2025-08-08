@@ -220,6 +220,9 @@ plot_states(
 )
 ax6.set_xticklabels([])
 ax7.plot(time, hsl_tsad_agent.p_anm_all)
+detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
+for i in range(len(detection_time)):
+    ax7.axvline(x=time[detection_time[i]], color='red', linestyle='--', label='Anomaly start')
 ax7.set_ylabel("p_anm")
 ax7.set_xlim(ax0.get_xlim())
 ax7.set_ylim(-0.05, 1.05)
