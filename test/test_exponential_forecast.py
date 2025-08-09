@@ -61,16 +61,14 @@ def test_model_forecast(run_mode, plot_mode):
     # Components
     sigma_v = np.sqrt(0.1)
     exponential = Exponential(
-        mu_states=[0, 0.015, 10.5, 0, 0],
-        var_states=[0.00001**2, 0.005**2, 0.5**2, 0, 0],
+        mu_states=[0, 0.013, 9.7, 0, 0],
+        var_states=[0.00001**2, 0.005**2, 0.3**2, 0, 0],
     )
     noise = WhiteNoise(std_error=sigma_v)
     localtrend = LocalTrend(
-        mu_states=[1.95, -0.00], var_states=[0.1**2, 0.01**2], std_error=0
+        mu_states=[1.95, -0.00], var_states=[0.1**2, 0.0075**2], std_error=0
     )
-    periodic = Periodic(
-        mu_states=[1.9, 1.9], var_states=[0.1**2, 0.1**2], period=365.25
-    )
+    periodic = Periodic(mu_states=[1.9, 1.9], var_states=[0.1**2, 0.1**2], period=52)
 
     # Model
     model = Model(exponential, noise, periodic, localtrend)
