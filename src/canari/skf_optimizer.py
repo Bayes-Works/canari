@@ -285,10 +285,12 @@ else:
             ):
                 skf = self._initialize_skf(config, model_param)
                 slope = config["slope"]
+                threshold_anm_prob = config["threshold_anm_prob"]
 
                 detection_rate, false_rate, false_alarm_train = (
                     skf.detect_synthetic_anomaly(
                         data=self._data,
+                        threshold = threshold_anm_prob,
                         num_anomaly=self._num_synthetic_anomaly,
                         slope_anomaly=slope,
                         max_timestep_to_detect=self._max_timestep_to_detect,
