@@ -4,60 +4,101 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
+from canari import (
+    DataProcess,
+    Model,
+    ModelAssemble,
+    plot_data,
+    plot_prediction,
+    plot_states,
+)
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/sine.csv"
+data_file = "./data/toy_time_series/exp_sine_dependency_amp.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
-df_raw = df_raw.add(linear_space, axis=0)
+df_raw.columns = ["exp_sine", "sine"]
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
 
-# Resampling data
-df = df_raw.resample("H").mean()
-
-# Define parameters
+# Data pre-processing
 output_col = [0]
-num_epoch = 50
 data_processor = DataProcess(
-    data=df,
+    data=df_raw,
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
 )
+train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
+# Plot data
+fig, axs = plt.subplots(2, 1, figsize=(10, 6))
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=[0],
+    sub_plot=axs[0],
+)
+axs[0].set_title("Target ts")
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=[1],
+    sub_plot=axs[1],
+)
+axs[1].set_title("Covariate ts")
+plt.tight_layout()
+plt.show()
 
-# Model
-sigma_v = 0.003
-model = Model(
+# Independent model
+model_target = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=19,
+        look_back_len=1,
+        num_features=2,
+        num_layer=1,
+        num_hidden_unit=50,
+        device="cpu",
+        manual_seed=1,
+        # model_noise=True,
+    ),
+    WhiteNoise(std_error=1e-1),
+)
+model_target.auto_initialize_baseline_states(train_data["y"][0:24])
+
+# Dependent model
+model_covar = Model(
+    LstmNetwork(
+        look_back_len=1,
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
+        # model_noise=True,
     ),
-    WhiteNoise(std_error=sigma_v),
+    WhiteNoise(std_error=1e-2),
 )
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+model_covar.output_col = [1]
+
+# Assemble models
+model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
 
 # Training
+num_epoch = 50
 for epoch in range(num_epoch):
-    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
+
+    (mu_validation_preds, std_validation_preds) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        use_val_posterior_covariate=False,
+        update_param_covar_model=False,
     )
-    model.set_memory(states=states, time_step=0)
+    model.set_memory(time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -69,27 +110,25 @@ for epoch in range(num_epoch):
         std_validation_preds,
         data_processor.scale_const_std[output_col],
     )
-
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(
-        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
+    model_target.early_stopping(
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=10
     )
-    if epoch == model.optimal_epoch:
+
+    if epoch == model_target.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
+        states_optim = copy.copy(model_target.states)
 
-    if model.stop_training:
+    if model_target.stop_training:
         break
 
-print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
+print(f"Optimal epoch target model     : {model_target.optimal_epoch}")
+print(f"Validation metric      :{model_target.early_stop_metric: 0.4f}")
 
 #  Plot
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -103,11 +142,6 @@ plot_prediction(
     data_processor=data_processor,
     mean_validation_pred=mu_validation_preds_optim,
     std_validation_pred=std_validation_preds_optim,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
 plt.show()
-
-
-# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
-# plt.show()
