@@ -19,15 +19,7 @@ data_exp_sine = np.exp(data_sine) + linear_space
 
 
 df = pd.DataFrame({"data_exp_sine": data_exp_sine})
-df.to_csv("data/toy_time_series/data_exp_sine_agvi.csv", index=False)
+df.to_csv("data/toy_time_series/exp_sine_agvi.csv", index=False)
 
 plt.plot(data_exp_sine)
 plt.show()
-
-
-# data_file_time = "./data/toy_time_series/sine_datetime.csv"
-# time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-# time_series = pd.to_datetime(time_series[0])
-# df_raw.index = time_series
-# df_raw.index.name = "date_time"
-# df_raw.columns = ["values"]
