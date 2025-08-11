@@ -13,20 +13,20 @@ BASE_DIR = os.path.dirname(__file__)
 
 def model_test_runner(model: Model, plot: bool) -> float:
     """
-    Run training and forecasting for model
+    Run training and forecasting model
     """
 
     output_col = [0]
 
     # Read data
-    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/exp_sine_agvi.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    linear_space = np.linspace(0, 2, num=len(df_raw))
-    df_raw = df_raw.add(linear_space, axis=0)
     data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["values"]
 
     # Data processing
     data_processor = DataProcess(
@@ -98,19 +98,19 @@ def test_model_forecast(run_mode, plot_mode):
     model = Model(
         LocalTrend(),
         LstmNetwork(
-            look_back_len=19,
+            look_back_len=24,
             num_features=1,
             num_layer=1,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
+            model_noise=True,
         ),
-        WhiteNoise(std_error=0.0032322250444898116),
     )
     mse = model_test_runner(model, plot=plot_mode)
 
     path_metric = os.path.join(
-        BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
+        BASE_DIR, "../test/saved_metric/test_hetero_noise_metric.csv"
     )
     if run_mode == "save_threshold":
         pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)

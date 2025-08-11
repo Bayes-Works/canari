@@ -4,14 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
-from canari import DataProcess, Model, plot_data, plot_prediction
+from canari import DataProcess, Model, ModelAssemble, plot_data, plot_prediction
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 import fire
 
 BASE_DIR = os.path.dirname(__file__)
 
 
-def model_test_runner(model: Model, plot: bool) -> float:
+def model_test_runner(model: ModelAssemble, plot: bool) -> float:
     """
     Run training and forecasting for model
     """
@@ -19,14 +19,19 @@ def model_test_runner(model: Model, plot: bool) -> float:
     output_col = [0]
 
     # Read data
-    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
+    data_file = os.path.join(
+        BASE_DIR, "../data/toy_time_series/exp_sine_dependency.csv"
+    )
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    linear_space = np.linspace(0, 2, num=len(df_raw))
-    df_raw = df_raw.add(linear_space, axis=0)
+    df_raw.columns = ["exp_sine", "sine"]
+    lags = [0, 9]
+    df_raw = DataProcess.add_lagged_columns(df_raw, lags)
+
     data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
+    df_raw.index.name = "date_time"
 
     # Data processing
     data_processor = DataProcess(
@@ -38,14 +43,14 @@ def model_test_runner(model: Model, plot: bool) -> float:
     train_data, validation_data, _, _ = data_processor.get_splits()
 
     # Initialize model
-    model.auto_initialize_baseline_states(train_data["y"][0:24])
+    model.target_model.auto_initialize_baseline_states(train_data["y"][0:24])
     num_epoch = 50
     for epoch in range(num_epoch):
-        (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
+        (mu_validation_preds, std_validation_preds) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(states=states, time_step=0)
+        model.set_memory(time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -63,13 +68,13 @@ def model_test_runner(model: Model, plot: bool) -> float:
         mse = metric.mse(mu_validation_preds, validation_obs)
 
         # Early-stopping
-        model.early_stopping(
+        model.target_model.early_stopping(
             evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
         )
-        if epoch == model.optimal_epoch:
+        if epoch == model.target_model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
-        if model.stop_training:
+        if model.target_model.stop_training:
             break
 
     # Validation metric
@@ -94,24 +99,44 @@ def model_test_runner(model: Model, plot: bool) -> float:
 
 def test_model_forecast(run_mode, plot_mode):
     """Test model forecasting"""
-    # Model
-    model = Model(
+
+    # Independent model
+    model_target = Model(
         LocalTrend(),
         LstmNetwork(
-            look_back_len=19,
+            look_back_len=1,
+            num_features=11,
+            num_layer=1,
+            num_hidden_unit=50,
+            device="cpu",
+            manual_seed=1,
+        ),
+        WhiteNoise(std_error=1e-1),
+    )
+
+    # Dependent model
+    model_covariate = Model(
+        LstmNetwork(
+            look_back_len=10,
             num_features=1,
             num_layer=1,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
         ),
-        WhiteNoise(std_error=0.0032322250444898116),
+        WhiteNoise(std_error=3e-3),
     )
+    model_covariate.output_col = [1]
+
+    # Ensemble Model
+    model = ModelAssemble(target_model=model_target, covariate_model=model_covariate)
+
     mse = model_test_runner(model, plot=plot_mode)
 
     path_metric = os.path.join(
-        BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
+        BASE_DIR, "../test/saved_metric/test_forecast_dependency_metric.csv"
     )
+
     if run_mode == "save_threshold":
         pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
         print(f"Saved MSE to {path_metric}: {mse}")

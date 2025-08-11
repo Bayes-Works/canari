@@ -5,14 +5,11 @@ import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
+from canari.component import LocalTrend, LstmNetwork
 
 # # Read data
-data_file = "./data/toy_time_series/sine.csv"
+data_file = "./data/toy_time_series/exp_sine_agvi.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
-df_raw = df_raw.add(linear_space, axis=0)
-
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(time_series[0])
@@ -20,14 +17,11 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
-# Resampling data
-df = df_raw.resample("H").mean()
-
 # Define parameters
 output_col = [0]
 num_epoch = 50
 data_processor = DataProcess(
-    data=df,
+    data=df_raw,
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
@@ -36,20 +30,20 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.003
 model = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=19,
+        look_back_len=24,
         num_features=1,
         num_layer=1,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
+        model_noise=True,
     ),
-    WhiteNoise(std_error=sigma_v),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
+
 
 # Training
 for epoch in range(num_epoch):
@@ -76,14 +70,13 @@ for epoch in range(num_epoch):
 
     # Early-stopping
     model.early_stopping(
-        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=5
     )
+
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
+        states_optim = copy.copy(states)
 
     if model.stop_training:
         break
@@ -101,13 +94,9 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds_optim,
-    std_validation_pred=std_validation_preds_optim,
+    mean_validation_pred=mu_validation_preds,
+    std_validation_pred=std_validation_preds,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
 plt.show()
-
-
-# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
-# plt.show()
