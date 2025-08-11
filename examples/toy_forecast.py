@@ -107,3 +107,7 @@ plot_prediction(
 )
 plt.legend()
 plt.show()
+
+
+# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
+# plt.show()
