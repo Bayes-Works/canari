@@ -78,9 +78,6 @@ for epoch in range(num_epoch):
     model.early_stopping(
         evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
     )
-    model.early_stopping(
-        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
-    )
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -110,7 +107,3 @@ plot_prediction(
 )
 plt.legend()
 plt.show()
-
-
-# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
-# plt.show()

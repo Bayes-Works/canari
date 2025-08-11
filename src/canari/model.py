@@ -354,28 +354,6 @@ class Model:
                 scheduled_sigma_v = min_noise_std
             self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
 
-        if self.get_states_index("white noise") is not None:
-            noise_index = self.get_states_index("white noise")
-            white_noise_component = next(
-                (
-                    component
-                    for component in self.components.values()
-                    if "white noise" in component.component_name
-                ),
-                None,
-            )
-            min_noise_std = white_noise_component.std_error
-        elif self.get_states_index("heteroscedastic noise") is not None:
-            noise_index = self.get_states_index("heteroscedastic noise")
-            min_noise_std = 0
-        else:
-            noise_index = None
-
-        if noise_index is not None:
-            if scheduled_sigma_v < min_noise_std:
-                scheduled_sigma_v = min_noise_std
-            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
         self.sched_sigma_v = scheduled_sigma_v
         self._current_epoch += 1
 
@@ -462,34 +440,34 @@ class Model:
                 continue
             cov_states[scaled_exp_index, other_component_index] = (
                 cov_states[exp_scale_factor_index, other_component_index]
-                * mu_states_posterior[exp_index]
+                * mu_states_posterior[exp_index].item()
                 + cov_states[exp_index, other_component_index]
-                * mu_states_posterior[exp_scale_factor_index]
+                * mu_states_posterior[exp_scale_factor_index].item()
             )
             cov_states[other_component_index, scaled_exp_index] = (
                 cov_states[other_component_index, exp_scale_factor_index]
-                * mu_states_prior[exp_index]
+                * mu_states_prior[exp_index].item()
                 + cov_states[other_component_index, exp_index]
-                * mu_states_prior[exp_scale_factor_index]
+                * mu_states_prior[exp_scale_factor_index].item()
             )
 
         cov_states[scaled_exp_index, scaled_exp_index] = (
             cov_states[exp_scale_factor_index, exp_scale_factor_index]
-            * cov_states[exp_index, exp_index]
+            * cov_states[exp_index, exp_index].item()
             + cov_states[exp_scale_factor_index, exp_index]
             * cov_states[exp_index, exp_scale_factor_index]
             + cov_states[exp_scale_factor_index, exp_scale_factor_index]
-            * mu_states_posterior[exp_index]
-            * mu_states_prior[exp_index]
+            * mu_states_posterior[exp_index].item()
+            * mu_states_prior[exp_index].item()
             + cov_states[exp_scale_factor_index, exp_index]
-            * mu_states_posterior[exp_index]
-            * mu_states_prior[exp_scale_factor_index]
+            * mu_states_posterior[exp_index].item()
+            * mu_states_prior[exp_scale_factor_index].item()
             + cov_states[exp_index, exp_scale_factor_index]
-            * mu_states_posterior[exp_scale_factor_index]
-            * mu_states_prior[exp_index]
+            * mu_states_posterior[exp_scale_factor_index].item()
+            * mu_states_prior[exp_index].item()
             + cov_states[exp_index, exp_index]
-            * mu_states_posterior[exp_scale_factor_index]
-            * mu_states_prior[exp_scale_factor_index]
+            * mu_states_posterior[exp_scale_factor_index].item()
+            * mu_states_prior[exp_scale_factor_index].item()
         )
         return cov_states
 
@@ -550,24 +528,17 @@ class Model:
         mu_obs_predict = []
         var_obs_predict = []
 
-        mu_states[exp_index] = (
-            np.exp(
-                -mu_states[latent_level_index]
-                + 0.5 * var_states[latent_level_index, latent_level_index]
-            )
-            - 1
+        mu_ll = np.asarray(mu_states[latent_level_index]).item()
+        var_ll = np.asarray(var_states[latent_level_index, latent_level_index]).item()
+
+        mu_states[exp_index] = np.exp(-mu_ll + 0.5 * var_ll) - 1
+
+        var_states[exp_index, exp_index] = np.exp(-2 * mu_ll + var_ll) * (
+            np.exp(var_ll) - 1
         )
 
-        var_states[exp_index, exp_index] = np.exp(
-            -2 * mu_states[latent_level_index]
-            + var_states[latent_level_index, latent_level_index]
-        ) * (np.exp(var_states[latent_level_index, latent_level_index]) - 1)
-
-        var_states[latent_level_index, exp_index] = -var_states[
-            latent_level_index, latent_level_index
-        ] * np.exp(
-            -mu_states[latent_level_index]
-            + 0.5 * var_states[latent_level_index, latent_level_index]
+        var_states[latent_level_index, exp_index] = -var_ll * np.exp(
+            -mu_ll + 0.5 * var_ll
         )
 
         var_states[exp_index, latent_level_index] = var_states[
@@ -577,8 +548,7 @@ class Model:
         if method == "forward":
             skip_index = {latent_level_index, latent_trend_index, exp_index}
             var_states[latent_trend_index, exp_index] = -np.exp(
-                -mu_states[latent_level_index]
-                + 0.5 * var_states[latent_level_index, latent_level_index]
+                -mu_ll + 0.5 * var_ll
             ) * (
                 var_states_behind[latent_trend_index, latent_trend_index]
                 + var_states_behind[latent_level_index, latent_trend_index]
@@ -1251,19 +1221,6 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
-        # for estimate delta_mu_lstm
-        # noise_index = self.get_states_index("heteroscedastic noise")
-        # lstm_index = self.get_states_index("lstm")
-        # _delta_mu_states, _delta_var_states = common.backward(
-        #     obs,
-        #     self.mu_obs_predict,
-        #     self.var_obs_predict
-        #     - self.process_noise_matrix[noise_index, noise_index]
-        #     + 1e-3,
-        #     self.var_states_prior,
-        #     self.observation_matrix,
-        # )
-        # delta_mu_states[lstm_index, 0] = _delta_mu_states[lstm_index, 0]
 
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
