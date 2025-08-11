@@ -28,6 +28,7 @@ from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 import canari.common as common
 from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
+from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 
@@ -190,13 +191,6 @@ class Model:
         self.var_W2bar = None
         self.mu_W2_prior = None
         self.var_W2_prior = None
-
-        # Noise related attribute
-        self.sched_sigma_v = None
-        self._var_v2bar_prior = None
-        self._mu_v2bar_tilde = None
-        self._var_v2bar_tilde = None
-        self._cov_v2bar_tilde = None
 
         # Noise related attribute
         self.sched_sigma_v = None
@@ -470,6 +464,17 @@ class Model:
             * mu_states_prior[exp_scale_factor_index].item()
         )
         return cov_states
+
+    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
+        """
+        Update LSTM history
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        self.lstm_output_history.update(
+            mu_states[lstm_index],
+            var_states[lstm_index, lstm_index],
+        )
 
     def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
