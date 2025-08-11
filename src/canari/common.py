@@ -4,7 +4,6 @@ Utility functions that are used in mulitple classes.
 
 from typing import Tuple, Optional
 import numpy as np
-from pytagi import Normalizer
 from canari.data_struct import LstmOutputHistory
 from math import erf
 

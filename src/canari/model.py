@@ -26,8 +26,7 @@ from typing import Optional, List, Tuple, Dict
 import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
-import canari.common as common
-from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
+from canari import common
 from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
@@ -307,73 +306,23 @@ class Model:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
 
-    def white_noise_decay(
-        self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
+    def _set_posterior_states(
+        self,
+        new_mu_states: np.ndarray,
+        new_var_states: np.ndarray,
     ):
         """
-        Apply exponential decay to white noise standard deviation over epochs, and modify
-        the variance for the white noise component in :attr:`~canari.model.Model.process_noise_matrix`.
-        This decaying noise structure is intended to improve the training performance
-        of TAGI-LSTM.
+        Set values the posterior hidden states, i.e.,
+        :attr:`~canari.model.Model.mu_states_posterior` and
+        :attr:`~canari.model.Model.var_states_posterior`
 
         Args:
-            epoch (int): Current training epoch.
-            white_noise_max_std (float): Maximum allowed noise std.
-            white_noise_decay_factor (float): Factor controlling decay rate.
+            new_mu_states (np.ndarray): Posterior state means.
+            new_var_states (np.ndarray): Posterior state variances.
         """
 
-        scheduled_sigma_v = white_noise_max_std * np.exp(
-            -white_noise_decay_factor * epoch
-        )
-
-        if self.get_states_index("white noise") is not None:
-            noise_index = self.get_states_index("white noise")
-            white_noise_component = next(
-                (
-                    component
-                    for component in self.components.values()
-                    if "white noise" in component.component_name
-                ),
-                None,
-            )
-            min_noise_std = white_noise_component.std_error
-        elif self.get_states_index("heteroscedastic noise") is not None:
-            noise_index = self.get_states_index("heteroscedastic noise")
-            min_noise_std = 0
-        else:
-            noise_index = None
-
-        if noise_index is not None:
-            if scheduled_sigma_v < min_noise_std:
-                scheduled_sigma_v = min_noise_std
-            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
-        self.sched_sigma_v = scheduled_sigma_v
-        self._current_epoch += 1
-
-    def save_states_history(self):
-        """
-        Save current prior, posterior hidden states, and cross-covariaces between hidden states
-        at two consecutive time steps for later use in Kalman's smoother.
-        """
-
-        self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior)
-        self.states.var_posterior.append(self.var_states_posterior)
-        cov_states = self.var_states @ self.transition_matrix.T
-        if "exp" in self.states_name:
-            cov_states = self._exponential_cov_states(
-                cov_states,
-                self.mu_states_prior,
-                self.var_states_prior,
-                self.mu_states_posterior,
-                self.var_states_posterior,
-            )
-
-        self.states.cov_states.append(cov_states)
-        self.states.mu_smooth.append(self.mu_states_posterior)
-        self.states.var_smooth.append(self.var_states_posterior)
+        self.mu_states_posterior = new_mu_states.copy()
+        self.var_states_posterior = new_var_states.copy()
 
     def _exponential_cov_states(
         self,
@@ -385,9 +334,12 @@ class Model:
     ) -> float:
         """
         The cross covariance matrix between `exp` and `scaled exp` with other states are non linear.
-        This function computes the correct cross-covariance for `exp` and `scaled exp` with other states.
+        This function computes the correct cross-covariance for `exp`
+        and `scaled exp` with other states.
+
         Args:
-            cov_states (np.ndarray): cross-covariances between two hidden states at two consecutive time steps.
+            cov_states (np.ndarray): cross-covariances between two hidden states
+                                        at two consecutive time steps.
             mu_states_prior (np.ndarray): Prior mean of the states.
             var_states_prior (np.ndarray): Prior variance-covariance matrix.
             mu_states_posterior (np.ndarray): Posterior mean of the states.
@@ -465,46 +417,6 @@ class Model:
         )
         return cov_states
 
-    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
-        """
-        Update LSTM history
-        """
-
-        lstm_index = self.get_states_index("lstm")
-        self.lstm_output_history.update(
-            mu_states[lstm_index],
-            var_states[lstm_index, lstm_index],
-        )
-
-    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
-        """
-        Update LSTM history
-        """
-
-        lstm_index = self.get_states_index("lstm")
-        self.lstm_output_history.update(
-            mu_states[lstm_index],
-            var_states[lstm_index, lstm_index],
-        )
-
-    def _set_posterior_states(
-        self,
-        new_mu_states: np.ndarray,
-        new_var_states: np.ndarray,
-    ):
-        """
-        Set values the posterior hidden states, i.e.,
-        :attr:`~canari.model.Model.mu_states_posterior` and
-        :attr:`~canari.model.Model.var_states_posterior`
-
-        Args:
-            new_mu_states (np.ndarray): Posterior state means.
-            new_var_states (np.ndarray): Posterior state variances.
-        """
-
-        self.mu_states_posterior = new_mu_states.copy()
-        self.var_states_posterior = new_var_states.copy()
-
     def _update_exp_and_scaled_exp(
         self, mu_states, var_states, var_states_behind, method
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -512,15 +424,19 @@ class Model:
         Apply forward path exponential moment transformations.
 
         Updates prior state means and variances based on the exponential model.
-        The modification is applied after that `latent level`, `latent trend` and `exp scale factor` are updated by the transition matrix.
-        After that,the closed form solutions to compute the prior distribution of `exp` from `latent level` and `latent trend`.
-        GMA is also applied to `exp scale factor` and `exp` to get the prior distribution of `scaled exp`.
+        The modification is applied after that `latent level`, `latent trend` and `exp scale factor`
+        are updated by the transition matrix.
+        After that,the closed form solutions to compute the prior distribution of `exp`
+        from `latent level` and `latent trend`.
+        GMA is also applied to `exp scale factor` and `exp` to get the prior distribution
+        of `scaled exp`.
         These are used during the forward pass when exponential components are present.
 
         Args:
             mu_states_prior (np.ndarray): Prior mean vector of the states.
             var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
-            var_states (np.ndarray): Variance-covariance matrix before the linear update of the states
+            var_states (np.ndarray): Variance-covariance matrix before the linear update
+                                        of the states
 
         Returns:
             Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior, mu_obs_predict, var_obs_predict).
@@ -728,7 +644,8 @@ class Model:
 
         Apply backward BAR moment updates during state-space filtering.
 
-        Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.
+        Computes the constrained posterior distribution of AR state according to the bounding
+        coefficient gamma when it is provided.
 
         Args:
             mu_states_posterior (np.ndarray): Posterior mean vector of the states.
@@ -902,6 +819,86 @@ class Model:
         delta_var_v2bar = jcb * delta_var_v2bar_tilde * jcb / self._var_v2bar_prior**2
 
         return delta_mu_v2bar, delta_var_v2bar
+
+    def white_noise_decay(
+        self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
+    ):
+        """
+        Apply exponential decay to white noise standard deviation over epochs, and modify
+        the variance for the white noise component in
+        :attr:`~canari.model.Model.process_noise_matrix`.
+        This decaying noise structure is intended to improve the training performance
+        of TAGI-LSTM.
+
+        Args:
+            epoch (int): Current training epoch.
+            white_noise_max_std (float): Maximum allowed noise std.
+            white_noise_decay_factor (float): Factor controlling decay rate.
+        """
+
+        min_noise_std = 0
+        scheduled_sigma_v = white_noise_max_std * np.exp(
+            -white_noise_decay_factor * epoch
+        )
+
+        if self.get_states_index("white noise") is not None:
+            noise_index = self.get_states_index("white noise")
+            white_noise_component = next(
+                (
+                    component
+                    for component in self.components.values()
+                    if "white noise" in component.component_name
+                ),
+                None,
+            )
+            min_noise_std = white_noise_component.std_error
+        elif self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
+        else:
+            noise_index = None
+
+        if noise_index is not None:
+            if scheduled_sigma_v < min_noise_std:
+                scheduled_sigma_v = min_noise_std
+            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
+        self.sched_sigma_v = scheduled_sigma_v
+        self._current_epoch += 1
+
+    def save_states_history(self):
+        """
+        Save current prior, posterior hidden states, and cross-covariaces between hidden states
+        at two consecutive time steps for later use in Kalman's smoother.
+        """
+
+        self.states.mu_prior.append(self.mu_states_prior)
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior)
+        self.states.var_posterior.append(self.var_states_posterior)
+        cov_states = self.var_states @ self.transition_matrix.T
+        if "exp" in self.states_name:
+            cov_states = self._exponential_cov_states(
+                cov_states,
+                self.mu_states_prior,
+                self.var_states_prior,
+                self.mu_states_posterior,
+                self.var_states_posterior,
+            )
+
+        self.states.cov_states.append(cov_states)
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
+
+    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
+        """
+        Update LSTM history
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        self.lstm_output_history.update(
+            mu_states[lstm_index],
+            var_states[lstm_index, lstm_index],
+        )
 
     def get_dict(self) -> dict:
         """
