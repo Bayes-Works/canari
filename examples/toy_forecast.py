@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction
+from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
@@ -26,7 +26,6 @@ df = df_raw.resample("H").mean()
 # Define parameters
 output_col = [0]
 num_epoch = 50
-
 data_processor = DataProcess(
     data=df,
     train_split=0.8,
@@ -37,7 +36,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.0032322250444898116
+sigma_v = 0.003
 model = Model(
     LocalTrend(),
     LstmNetwork(
@@ -76,7 +75,9 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
+    model.early_stopping(
+        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=0
+    )
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -100,9 +101,13 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 plt.legend()
 plt.show()
+
+
+# plot_states(data_processor=data_processor, states=states_optim, states_type="posterior")
+# plt.show()
