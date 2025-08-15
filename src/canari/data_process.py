@@ -221,6 +221,11 @@ class DataProcess:
             {
                 "x": data[self.train_start : self.train_end, self.covariates_col],
                 "y": data[self.train_start : self.train_end, self.output_col],
+                "start_date": self.train_start,
+                "cov_names": self.data.columns[self.covariates_col].tolist(),
+                "time_covariates": self.time_covariates,
+                "scale_const_mean": self.scale_const_mean,
+                "scale_const_std": self.scale_const_std,
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
             },
@@ -230,6 +235,7 @@ class DataProcess:
                     self.validation_start : self.validation_end, self.covariates_col
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
+                "start_date": self.validation_start,
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
             },
@@ -237,6 +243,7 @@ class DataProcess:
             {
                 "x": data[self.test_start : self.test_end, self.covariates_col],
                 "y": data[self.test_start : self.test_end, self.output_col],
+                "start_date": self.test_start,
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
             },
@@ -244,6 +251,7 @@ class DataProcess:
             {
                 "x": data[: self.test_end, self.covariates_col],
                 "y": data[: self.test_end, self.output_col],
+                "start_date": self.train_start,
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
             },

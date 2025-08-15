@@ -61,9 +61,11 @@ def main(
                 look_back_len=param["look_back_len"],
                 num_features=5,
                 num_layer=1,
+                infer_len=52,
                 num_hidden_unit=50,
                 device="cpu",
                 manual_seed=1,
+                smoother=False, 
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )

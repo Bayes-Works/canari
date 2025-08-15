@@ -53,6 +53,8 @@ if platform.system() == "Windows":
             num_synthetic_anomaly: Optional[int] = 50,
             num_optimization_trial: Optional[int] = 50,
             grid_search: Optional[bool] = False,
+            lstm_states: Optional[list] = None,
+            lstm_look_back: Optional[tuple] = None,
         ):
             """
             Initializes the SKFOptimizer.
@@ -71,6 +73,8 @@ if platform.system() == "Windows":
             self.skf_optim = None
             self.param_optim = None
             self._trial_count = 0
+            self.lstm_states = lstm_states
+            self.lstm_look_back = lstm_look_back
 
         def _log_trial(self, study: optuna.Study, trial: optuna.Trial):
             """
@@ -116,7 +120,12 @@ if platform.system() == "Windows":
                             name, low, high, log=log_uniform
                         )
 
-            skf = self._initialize_skf(param, self._model_param)
+            skf = self._initialize_skf(
+                param,
+                self._model_param,
+                lstm_states=self.lstm_states,
+                lstm_look_back=self.lstm_look_back,
+            )
             slope = param.get("slope")
 
             detection_rate, false_rate, false_alarm_train = (
@@ -169,7 +178,12 @@ if platform.system() == "Windows":
             )
 
             self.param_optim = study.best_params
-            self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
+            self.skf_optim = self._initialize_skf(
+                self.param_optim,
+                self._model_param,
+                lstm_states=self.lstm_states,
+                lstm_look_back=self.lstm_look_back,
+            )
 
             print("-----")
             print(
@@ -254,6 +268,8 @@ else:
             num_optimization_trial: Optional[int] = 50,
             grid_search: Optional[bool] = False,
             algorithm: Optional[str] = "default",
+            lstm_states: Optional[list] = None,
+            lstm_look_back: Optional[tuple] = None,
         ):
             """
             Initializes the SKFOptimizer.
@@ -272,6 +288,8 @@ else:
             self._algorithm = algorithm
             self.skf_optim = None
             self.param_optim = None
+            self.lstm_states = lstm_states
+            self.lstm_look_back = lstm_look_back
 
         def optimize(self):
             """
@@ -283,7 +301,13 @@ else:
                 config,
                 model_param: dict,
             ):
-                skf = self._initialize_skf(config, model_param)
+                # skf = self._initialize_skf(config, model_param)
+                skf = self._initialize_skf(
+                    config,
+                    model_param,
+                    lstm_states=self.lstm_states,
+                    lstm_look_back=self.lstm_look_back,
+                )
                 slope = config["slope"]
 
                 detection_rate, false_rate, false_alarm_train = (
@@ -400,8 +424,13 @@ else:
             )
 
             # Get the optimal skf
-            self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
-
+            # self.skf_optim = self._initialize_skf(self.param_optim, self._model_param)
+            self.skf_optim = self._initialize_skf(
+                self.param_optim,
+                self._model_param,
+                lstm_states=self.lstm_states,
+                lstm_look_back=self.lstm_look_back,
+            )
             # Print optimal parameters
             print("-----")
             print(

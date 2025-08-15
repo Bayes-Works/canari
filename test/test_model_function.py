@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-from canari import Model, common
+from canari import Model
 from canari.component import (
     LocalTrend,
     LocalLevel,
@@ -13,7 +13,6 @@ from canari.component import (
     Periodic,
     BaseComponent,
 )
-import fire
 
 
 def compute_observation_and_state_updates(
@@ -296,6 +295,9 @@ def test_online_AR():
     mu_obs_true = np.array([[0.0]])
     var_obs_true = np.array([[3.0]])
     mu_states_prior_true = np.array([[0.0, 0.8, 0.0, 0.0, 3.0, 3.0]]).T
+    mu_obs_true = np.array([[0.0]])
+    var_obs_true = np.array([[3.0]])
+    mu_states_prior_true = np.array([[0.0, 0.8, 0.0, 0.0, 3.0, 3.0]]).T
     var_states_prior_true = np.array(
         [
             [3.0, 0.0, 0.0, 3.0, 0.0, 0.0],
@@ -334,6 +336,7 @@ def test_online_AR():
     npt.assert_allclose(mu_states_prior, mu_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(var_states_prior, var_states_prior_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(delta_mu_states, delta_mu_states_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(delta_var_states, delta_var_states_true, rtol=1e-6, atol=1e-8)
     npt.assert_allclose(
         mu_states_posterior, mu_states_posterior_true, rtol=1e-6, atol=1e-8
