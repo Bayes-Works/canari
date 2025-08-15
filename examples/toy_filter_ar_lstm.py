@@ -63,6 +63,7 @@ lstm = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     # manual_seed=1,
+    # smoother=False,
 )
 ar = Autoregression(
     mu_states=[0, 0, 0, 0, 0, mu_W2bar_prior],

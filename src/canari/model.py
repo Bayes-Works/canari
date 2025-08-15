@@ -25,13 +25,12 @@ import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
 from pytagi import Normalizer as normalizer
+from pytagi.nn import OutputUpdater
 from canari.component.base_component import BaseComponent
 from canari import common
 from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
-from pytagi.nn import OutputUpdater
-from pytagi import Normalizer as normalizer
 
 
 class Model:
@@ -288,7 +287,6 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            self.lstm_net.update_param = self._update_lstm_param
             if (
                 self.lstm_net.smooth_look_back_mu is not None
                 and self.lstm_net.smooth_look_back_var is not None
@@ -460,6 +458,7 @@ class Model:
         Returns:
             Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior, mu_obs_predict, var_obs_predict).
         """
+
         latent_level_index = self.get_states_index("latent level")
         latent_trend_index = self.get_states_index("latent trend")
         exp_scale_factor_index = self.get_states_index("exp scale factor")
@@ -1520,10 +1519,6 @@ class Model:
             self.lstm_net.eval()
 
         for index, x in enumerate(data["x"]):
-            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
-                x
-            )
-
             if self.lstm_net:
                 if index == 0 or index == (len(data["y"]) - 1):
                     _lstm_states = self.lstm_net.get_lstm_states()
@@ -1594,8 +1589,14 @@ class Model:
             self.lstm_net.train()
 
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+            if self.lstm_net:
+                if index == 0 or index == (len(data["y"]) - 1):
+                    _lstm_states = self.lstm_net.get_lstm_states()
+                    self.lstm_states_history.append(_lstm_states)
+                else:
+                    self.lstm_states_history.append(None)
 
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+            mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
                 delta_mu_states,
                 delta_var_states,
@@ -1726,6 +1727,7 @@ class Model:
                         white_noise_max_std,
                         white_noise_decay_factor,
                     )
+                    break
 
         if self.lstm_net.smooth:
             if train_data is not None and train_data["cov_names"] is not None:
@@ -1735,7 +1737,6 @@ class Model:
             else:
                 self.store_initial_lookback()
 
-                    break
         self.filter(train_data)
 
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)

@@ -214,9 +214,7 @@ def rts_smoother(
 
 def prepare_lstm_input(
     lstm_output_history: LstmOutputHistory,
-   
     input_covariates: np.ndarray,
-    learn_covariates: bool = False,,
     var_input_covariates: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -231,17 +229,12 @@ def prepare_lstm_input(
     """
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
-    if learn_covariates:
-        var_lstm_input = np.concatenate(
-            (lstm_output_history.var, np.ones(len(input_covariates), dtype=np.float32))
-        )
-    else:
-        if var_input_covariates is not None:
+    if var_input_covariates is not None:
         var_lstm_input = np.concatenate((lstm_output_history.var, var_input_covariates))
     else:
         var_lstm_input = np.concatenate(
-                (lstm_output_history.var, np.zeros(len(input_covariates)))
-            )
+            (lstm_output_history.var, np.zeros(len(input_covariates)))
+        )
     return mu_lstm_input, var_lstm_input
 
 

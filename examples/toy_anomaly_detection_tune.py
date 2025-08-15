@@ -70,7 +70,7 @@ def main(
                     device="cpu",
                     manual_seed=1,
                     smoother=True,
-                    model_noise=True,
+                    # model_noise=True,
                 ),
                 WhiteNoise(),
             )
