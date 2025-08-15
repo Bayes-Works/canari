@@ -172,11 +172,11 @@ def main(
         ]
     )
     plt.title("Train data with added synthetic anomalies")
-    plt.show()
+    # plt.show()
 
     if param_optimization:
         skf_param_space = {
-            "std_transition_error": [1e-6, 1e-2],
+            "std_transition_error": [1e-6, 1e-4],
             "norm_to_abnorm_prob": [1e-6, 1e-2],
             "slope": [slope_lower_bound, slope_upper_bound],
             "threshold_anm_prob": [1e-2, 1.],
