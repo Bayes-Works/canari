@@ -13,7 +13,7 @@ plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
 df_il = pd.read_csv("saved_results/prob_eva/detrended_allts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/detrended_allts_results_skf.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_allts_results_skf_aug14.csv")
 df_mp = pd.read_csv("saved_results/prob_eva/detrended_allts_results_mp.csv")
 df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
 
