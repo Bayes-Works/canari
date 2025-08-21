@@ -86,6 +86,7 @@ class LstmNetwork(BaseComponent):
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
         smoother: Optional[bool] = True,
+        model_noise: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -93,7 +94,6 @@ class LstmNetwork(BaseComponent):
         self.look_back_len = look_back_len
         self.infer_len = infer_len
         self.num_features = num_features
-        self.num_output = num_output
         self.device = device
         self.num_thread = num_thread
         self.manual_seed = manual_seed
@@ -104,25 +104,39 @@ class LstmNetwork(BaseComponent):
         self._mu_states = mu_states
         self._var_states = var_states
         self.smoother = smoother
+        self.model_noise = model_noise
+        self.num_output = 2 * num_output if self.model_noise else num_output
         super().__init__()
 
     def initialize_component_name(self):
         self._component_name = "lstm"
 
     def initialize_num_states(self):
-        self._num_states = 1
+        self._num_states = 2 if self.model_noise else 1
 
     def initialize_states_name(self):
-        self._states_name = ["lstm"]
+        if self.model_noise:
+            self._states_name = ["lstm", "heteroscedastic noise"]
+        else:
+            self._states_name = ["lstm"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array([[0]])
+        if self.model_noise:
+            self._transition_matrix = np.array([[0, 0], [0, 0]])
+        else:
+            self._transition_matrix = np.array([[0]])
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[1]])
+        if self.model_noise:
+            self._observation_matrix = np.array([[1, 1]])
+        else:
+            self._observation_matrix = np.array([[1]])
 
     def initialize_process_noise_matrix(self):
-        self._process_noise_matrix = np.array([[self.std_error**2]])
+        if self.model_noise:
+            self._process_noise_matrix = np.array([[self.std_error**2, 0], [0, 0]])
+        else:
+            self._process_noise_matrix = np.array([[self.std_error**2]])
 
     def initialize_mu_states(self):
         if self._mu_states is None:
@@ -211,6 +225,7 @@ class LstmNetwork(BaseComponent):
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.lstm_infer_len = self.infer_len
+        lstm_network.model_noise = self.model_noise
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":

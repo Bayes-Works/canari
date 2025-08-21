@@ -6,27 +6,27 @@ from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 from canari import DataProcess, Model, plot_data, plot_prediction
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-import pytest
+import fire
 
 BASE_DIR = os.path.dirname(__file__)
 
 
 def model_test_runner(model: Model, plot: bool) -> float:
     """
-    Run training and forecasting for time-series forecasting model
+    Run training and forecasting model
     """
 
     output_col = [0]
 
     # Read data
-    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/exp_sine_agvi.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    linear_space = np.linspace(0, 2, num=len(df_raw))
-    df_raw = df_raw.add(linear_space, axis=0)
     data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["values"]
 
     # Data processing
     data_processor = DataProcess(
@@ -45,6 +45,7 @@ def model_test_runner(model: Model, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
+        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -68,7 +69,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
-        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
@@ -92,55 +92,39 @@ def model_test_runner(model: Model, plot: bool) -> float:
     return mse
 
 
-@pytest.mark.parametrize(
-    "smoother,mse_index", [(False, 0), (True, 1)], ids=["LSTM", "SLSTM"]
-)
-def test_model_forecast(run_mode, plot_mode, smoother, mse_index):
-    """Test model forecasting with LSTM and SLSTM"""
+def test_model_forecast(run_mode, plot_mode):
+    """Test model forecasting"""
+    # Model
     model = Model(
         LocalTrend(),
         LstmNetwork(
-            look_back_len=19,
+            look_back_len=24,
             num_features=1,
             num_layer=1,
-            infer_len=24,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
-            smoother=smoother,
+            model_noise=True,
         ),
-        WhiteNoise(std_error=0.0032322250444898116),
     )
     mse = model_test_runner(model, plot=plot_mode)
-    mse = round(mse, 10)
 
     path_metric = os.path.join(
-        BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
+        BASE_DIR, "../test/saved_metric/test_hetero_noise_metric.csv"
     )
     if run_mode == "save_threshold":
-        if os.path.exists(path_metric):
-            df = pd.read_csv(path_metric)
-            if len(df) <= mse_index:
-                # Extend the dataframe if needed
-                for _ in range(mse_index - len(df) + 1):
-                    df.loc[len(df)] = [np.nan]
-            df.loc[mse_index, "mse"] = mse
-            df.to_csv(path_metric, mse_index=False)
-        else:
-            data = [np.nan] * (mse_index + 1)
-            data[mse_index] = mse
-            pd.DataFrame({"mse": data}).to_csv(path_metric, mse_index=False)
+        pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
         print(f"Saved MSE to {path_metric}: {mse}")
     else:
         # load threshold
         threshold = None
         if os.path.exists(path_metric):
             df = pd.read_csv(path_metric)
-            threshold = float(df["mse"].iloc[mse_index])
+            threshold = float(df["mse"].iloc[0])
 
         assert (
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
-        assert mse <= threshold or np.isclose(
-            mse, threshold, rtol=1e-8
-        ), f"MSE {mse} is not close enough to the saved threshold {threshold}"
+        assert (
+            mse < threshold
+        ), f"MSE {mse} is smaller than the saved threshold {threshold}"

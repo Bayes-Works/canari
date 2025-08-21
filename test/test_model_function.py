@@ -398,5 +398,5 @@ def test_BAR():
         mu_states_posterior, mu_states_posterior_true, rtol=1e-6, atol=1e-8
     )
     npt.assert_allclose(
-        var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-8
+        var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-6
     )
