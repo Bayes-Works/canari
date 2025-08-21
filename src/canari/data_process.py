@@ -94,7 +94,6 @@ class DataProcess:
         self.time_covariates = time_covariates
         self.output_col = output_col
 
-        data = data.astype("float32")
         self.data = data.copy()
         self.scale_const_mean, self.scale_const_std = None, None
 
@@ -119,7 +118,7 @@ class DataProcess:
             "hour_of_day": lambda idx: idx.hour,
             "day_of_week": lambda idx: idx.dayofweek,
             "day_of_year": lambda idx: idx.dayofyear,
-            "week_of_year": lambda idx: idx.isocalendar().week,
+            "week_of_year": lambda idx: idx.isocalendar().week.astype(float),
             "month_of_year": lambda idx: idx.month,
             "quarter_of_year": lambda idx: idx.quarter,
         }
@@ -129,7 +128,7 @@ class DataProcess:
 
         for cov in dict.fromkeys(self.time_covariates):
             vals = allowed[cov](self.data.index)
-            self.data[cov] = np.array(vals, dtype=np.float32)
+            self.data[cov] = np.array(vals)
 
     def _get_split_start_end_indices(self):
         """
@@ -222,6 +221,8 @@ class DataProcess:
             {
                 "x": data[self.train_start : self.train_end, self.covariates_col],
                 "y": data[self.train_start : self.train_end, self.output_col],
+                "covariates_col": self.covariates_col,
+                "data_col_names": self.data.columns.tolist(),
                 "start_date": self.train_start,
                 "cov_names": self.data.columns[self.covariates_col].tolist(),
                 "time_covariates": self.time_covariates,
@@ -235,18 +236,24 @@ class DataProcess:
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
                 "start_date": self.validation_start,
+                "covariates_col": self.covariates_col,
+                "data_col_names": self.data.columns.tolist(),
             },
             # Test split
             {
                 "x": data[self.test_start : self.test_end, self.covariates_col],
                 "y": data[self.test_start : self.test_end, self.output_col],
                 "start_date": self.test_start,
+                "covariates_col": self.covariates_col,
+                "data_col_names": self.data.columns.tolist(),
             },
             # All data
             {
                 "x": data[: self.test_end, self.covariates_col],
                 "y": data[: self.test_end, self.output_col],
                 "start_date": self.train_start,
+                "covariates_col": self.covariates_col,
+                "data_col_names": self.data.columns.tolist(),
             },
         )
 
@@ -282,11 +289,11 @@ class DataProcess:
 
         train_index, val_index, test_index = self.get_split_indices()
         if split == "train":
-            return data[train_index, data_column]
+            return data[train_index][:, data_column]
         elif split == "validation":
-            return data[val_index, data_column]
+            return data[val_index][:, data_column]
         elif split == "test":
-            return data[test_index, data_column]
+            return data[test_index][:, data_column]
         elif split == "all":
             return data[:, data_column]
         else:
