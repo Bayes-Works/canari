@@ -30,6 +30,8 @@ dependencies = [
   "statsmodels==0.14.4",
   "optuna==4.2.0",
   "pytest==8.3.4",
+  "ray[tune]",
+  "scikit-optimize",
 ]
 
 [tool.setuptools]

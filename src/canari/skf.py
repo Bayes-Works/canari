@@ -408,7 +408,7 @@ class SKF:
         """
 
         for transition_model in self.model.values():
-            transition_model._save_states_history()
+            transition_model.save_states_history()
 
         self.states.mu_prior.append(self.mu_states_prior)
         self.states.var_prior.append(self.var_states_prior)
@@ -946,6 +946,16 @@ class SKF:
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
+            # Heteroscedastic noise
+            if self.lstm_net.model_noise:
+                mu_v2bar_prior = mu_lstm_pred[1::2]
+                var_v2bar_prior = var_lstm_pred[1::2]
+                mu_lstm_pred = mu_lstm_pred[0::2]
+                var_lstm_pred = var_lstm_pred[0::2]
+                self.model["norm_norm"]._estim_hete_noise(
+                    mu_v2bar_prior, var_v2bar_prior
+                )
+
         else:
             mu_lstm_pred = None
             var_lstm_pred = None
@@ -959,8 +969,6 @@ class SKF:
             ) = transition_model.forward(
                 mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
             )
-            # if np.isnan(mu_pred_transit[transit]):
-            #     check = 1
 
         self.transition_coef = self._estimate_transition_coef(
             obs,

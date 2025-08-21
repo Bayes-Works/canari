@@ -26,12 +26,11 @@ from typing import Optional, List, Tuple, Dict
 import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
-import canari.common as common
-from canari.data_struct import LstmOutputHistory, StatesHistory
+from canari import common
+from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from pytagi.nn import OutputUpdater
-from pytagi import Normalizer as normalizer
 
 
 class Model:
@@ -135,6 +134,7 @@ class Model:
         }
         self._initialize_model()
         self.states = StatesHistory()
+        self.output_history = OutputHistory()
 
     def __deepcopy__(self, memo):
         """
@@ -165,6 +165,9 @@ class Model:
         self.components = {}
         self.num_states = 0
         self.states_name = []
+        self.output_col = []
+        self.input_col = []
+        self.output_lag_col = []
 
         # State-space model matrices
         self.mu_states = None
@@ -189,6 +192,12 @@ class Model:
         self.var_W2bar = None
         self.mu_W2_prior = None
         self.var_W2_prior = None
+        # Noise related attribute
+        self.sched_sigma_v = None
+        self._var_v2bar_prior = None
+        self._mu_v2bar_tilde = None
+        self._var_v2bar_tilde = None
+        self._cov_v2bar_tilde = None
 
         # Early stopping attributes
         self.early_stop_metric = None
@@ -277,7 +286,6 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            self.lstm_net.update_param = self._update_lstm_param
             if (
                 self.lstm_net.smooth_look_back_mu is not None
                 and self.lstm_net.smooth_look_back_var is not None
@@ -314,71 +322,6 @@ class Model:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
 
-    def _update_lstm_param(
-        self,
-        delta_mu_lstm: np.ndarray,
-        delta_var_lstm: np.ndarray,
-    ):
-        """
-        Update the LSTM neural network's parameters.
-
-        Args:
-            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
-            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
-        """
-
-        self.lstm_net.set_delta_z(np.array(delta_mu_lstm), np.array(delta_var_lstm))
-        self.lstm_net.backward()
-        self.lstm_net.step()
-
-    def white_noise_decay(
-        self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
-    ):
-        """
-        Apply exponential decay to white noise standard deviation over epochs, and modify
-        the variance for the white noise component in :attr:`~canari.model.Model.process_noise_matrix`.
-        This decaying noise structure is intended to improve the training performance
-        of TAGI-LSTM.
-
-        Args:
-            epoch (int): Current training epoch.
-            white_noise_max_std (float): Maximum allowed noise std.
-            white_noise_decay_factor (float): Factor controlling decay rate.
-        """
-
-        noise_index = self.get_states_index("white noise")
-        scheduled_sigma_v = white_noise_max_std * np.exp(
-            -white_noise_decay_factor * epoch
-        )
-
-        white_noise_component = next(
-            (
-                component
-                for component in self.components.values()
-                if "white noise" in component.component_name
-            ),
-            None,
-        )
-
-        if scheduled_sigma_v < white_noise_component.std_error:
-            scheduled_sigma_v = white_noise_component.std_error
-        self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
-
-    def _save_states_history(self):
-        """
-        Save current prior, posterior hidden states, and cross-covariaces between hidden states
-        at two consecutive time steps for later use in Kalman's smoother.
-        """
-
-        self.states.mu_prior.append(self.mu_states_prior)
-        self.states.var_prior.append(self.var_states_prior)
-        self.states.mu_posterior.append(self.mu_states_posterior)
-        self.states.var_posterior.append(self.var_states_posterior)
-        cov_states = self.var_states @ self.transition_matrix.T
-        self.states.cov_states.append(cov_states)
-        self.states.mu_smooth.append(self.mu_states_posterior)
-        self.states.var_smooth.append(self.var_states_posterior)
-
     def _set_posterior_states(
         self,
         new_mu_states: np.ndarray,
@@ -396,6 +339,196 @@ class Model:
 
         self.mu_states_posterior = new_mu_states.copy()
         self.var_states_posterior = new_var_states.copy()
+
+    def _exponential_cov_states(
+        self,
+        cov_states,
+        mu_states_prior,
+        var_states_prior,
+        mu_states_posterior,
+        var_states_posterior,
+    ) -> float:
+        """
+        The cross covariance matrix between `exp` and `scaled exp` with other states are non linear.
+        This function computes the correct cross-covariance for `exp`
+        and `scaled exp` with other states.
+
+        Args:
+            cov_states (np.ndarray): cross-covariances between two hidden states
+                                        at two consecutive time steps.
+            mu_states_prior (np.ndarray): Prior mean of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix.
+            mu_states_posterior (np.ndarray): Posterior mean of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix.
+
+        Returns:
+            Tuple[np.ndarray]: Updated (cov_states).
+        """
+        latent_level_index = self.get_states_index("latent level")
+        exp_index = self.get_states_index("exp")
+        exp_scale_factor_index = self.get_states_index("exp scale factor")
+        scaled_exp_index = self.get_states_index("scaled exp")
+
+        mag_norm_exp_prior = (
+            var_states_posterior[exp_index, latent_level_index]
+            / var_states_posterior[latent_level_index, latent_level_index]
+        )
+        mag_norm_exp_trans = (
+            var_states_prior[exp_index, latent_level_index]
+            / var_states_prior[latent_level_index, latent_level_index]
+        )
+        skip_index1 = {exp_index, scaled_exp_index}
+        for other_component_index in range(len(mu_states_posterior)):
+            if other_component_index in skip_index1:
+                continue
+            cov_states[exp_index, other_component_index] = (
+                mag_norm_exp_prior
+                * cov_states[latent_level_index, other_component_index]
+            )
+            cov_states[other_component_index, exp_index] = (
+                mag_norm_exp_trans
+                * cov_states[other_component_index, latent_level_index]
+            )
+
+        cov_states[exp_index, exp_index] = (
+            mag_norm_exp_prior
+            * mag_norm_exp_trans
+            * cov_states[latent_level_index, latent_level_index]
+        )
+
+        skip_index2 = {scaled_exp_index}
+        for other_component_index in range(len(mu_states_posterior)):
+            if other_component_index in skip_index2:
+                continue
+            cov_states[scaled_exp_index, other_component_index] = (
+                cov_states[exp_scale_factor_index, other_component_index]
+                * mu_states_posterior[exp_index].item()
+                + cov_states[exp_index, other_component_index]
+                * mu_states_posterior[exp_scale_factor_index].item()
+            )
+            cov_states[other_component_index, scaled_exp_index] = (
+                cov_states[other_component_index, exp_scale_factor_index]
+                * mu_states_prior[exp_index].item()
+                + cov_states[other_component_index, exp_index]
+                * mu_states_prior[exp_scale_factor_index].item()
+            )
+
+        cov_states[scaled_exp_index, scaled_exp_index] = (
+            cov_states[exp_scale_factor_index, exp_scale_factor_index]
+            * cov_states[exp_index, exp_index].item()
+            + cov_states[exp_scale_factor_index, exp_index]
+            * cov_states[exp_index, exp_scale_factor_index]
+            + cov_states[exp_scale_factor_index, exp_scale_factor_index]
+            * mu_states_posterior[exp_index].item()
+            * mu_states_prior[exp_index].item()
+            + cov_states[exp_scale_factor_index, exp_index]
+            * mu_states_posterior[exp_index].item()
+            * mu_states_prior[exp_scale_factor_index].item()
+            + cov_states[exp_index, exp_scale_factor_index]
+            * mu_states_posterior[exp_scale_factor_index].item()
+            * mu_states_prior[exp_index].item()
+            + cov_states[exp_index, exp_index]
+            * mu_states_posterior[exp_scale_factor_index].item()
+            * mu_states_prior[exp_scale_factor_index].item()
+        )
+        return cov_states
+
+    def _update_exp_and_scaled_exp(
+        self, mu_states, var_states, var_states_behind, method
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Apply forward path exponential moment transformations.
+
+        Updates prior state means and variances based on the exponential model.
+        The modification is applied after that `latent level`, `latent trend` and `exp scale factor`
+        are updated by the transition matrix.
+        After that,the closed form solutions to compute the prior distribution of `exp`
+        from `latent level` and `latent trend`.
+        GMA is also applied to `exp scale factor` and `exp` to get the prior distribution
+        of `scaled exp`.
+        These are used during the forward pass when exponential components are present.
+
+        Args:
+            mu_states_prior (np.ndarray): Prior mean vector of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
+            var_states (np.ndarray): Variance-covariance matrix before the linear update
+                                        of the states
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior, mu_obs_predict, var_obs_predict).
+        """
+        latent_level_index = self.get_states_index("latent level")
+        latent_trend_index = self.get_states_index("latent trend")
+        exp_scale_factor_index = self.get_states_index("exp scale factor")
+        exp_index = self.get_states_index("exp")
+        scaled_exp_index = self.get_states_index("scaled exp")
+        mu_obs_predict = []
+        var_obs_predict = []
+
+        mu_ll = np.asarray(mu_states[latent_level_index]).item()
+        var_ll = np.asarray(var_states[latent_level_index, latent_level_index]).item()
+
+        mu_states[exp_index] = np.exp(-mu_ll + 0.5 * var_ll) - 1
+
+        var_states[exp_index, exp_index] = np.exp(-2 * mu_ll + var_ll) * (
+            np.exp(var_ll) - 1
+        )
+
+        var_states[latent_level_index, exp_index] = -var_ll * np.exp(
+            -mu_ll + 0.5 * var_ll
+        )
+
+        var_states[exp_index, latent_level_index] = var_states[
+            latent_level_index, exp_index
+        ]
+
+        if method == "forward":
+            skip_index = {latent_level_index, latent_trend_index, exp_index}
+            var_states[latent_trend_index, exp_index] = -np.exp(
+                -mu_ll + 0.5 * var_ll
+            ) * (
+                var_states_behind[latent_trend_index, latent_trend_index]
+                + var_states_behind[latent_level_index, latent_trend_index]
+            )
+            var_states[exp_index, latent_trend_index] = var_states[
+                latent_trend_index, exp_index
+            ]
+        elif method in {"backward", "smoother"}:
+            skip_index = {latent_level_index, exp_index}
+
+        magnitud_normal_space_exponential_space = (
+            var_states[exp_index, latent_level_index]
+            / var_states[latent_level_index, latent_level_index]
+        )
+        for other_component_index in range(len(mu_states)):
+            if other_component_index in skip_index:
+                continue
+            cov_other_component_index = (
+                magnitud_normal_space_exponential_space
+                * var_states[latent_level_index, other_component_index]
+            )
+            var_states[exp_index, other_component_index] = cov_other_component_index
+            var_states[other_component_index, exp_index] = cov_other_component_index
+
+        mu_states, var_states = GMA(
+            mu_states,
+            var_states,
+            index1=exp_scale_factor_index,
+            index2=exp_index,
+            replace_index=scaled_exp_index,
+        ).get_results()
+
+        if method == "forward":
+            mu_obs_predict, var_obs_predict = common.calc_observation(
+                mu_states, var_states, self.observation_matrix
+            )
+
+        return (
+            mu_states,
+            var_states,
+            mu_obs_predict,
+            var_obs_predict,
+        )
 
     def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
         """
@@ -527,7 +660,8 @@ class Model:
 
         Apply backward BAR moment updates during state-space filtering.
 
-        Computes the constrained posterior distribution of AR state according to the bounding coefficient gamma when it is provided.
+        Computes the constrained posterior distribution of AR state according to the bounding
+        coefficient gamma when it is provided.
 
         Args:
             mu_states_posterior (np.ndarray): Posterior mean vector of the states.
@@ -602,7 +736,7 @@ class Model:
             var_bar, 1e-8
         ).item()  # For numerical stability
 
-        return np.float32(mu_states_posterior), np.float32(var_states_posterior)
+        return mu_states_posterior, var_states_posterior
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
@@ -656,6 +790,127 @@ class Model:
                     initial_covariate + covariates_generation, 4
                 )
         return covariates_generation
+
+    def _estim_hete_noise(
+        self,
+        mu_v2bar_prior: np.ndarray,
+        var_v2bar_prior: np.ndarray,
+    ):
+        """
+        Estimate variance for the white noise hidden states using LSTM with AGVI
+        """
+
+        if self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
+            self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
+            self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
+                np.exp(var_v2bar_prior) - 1
+            )
+            self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+            self._var_v2bar_prior = var_v2bar_prior
+            self.process_noise_matrix[noise_index, noise_index] = (
+                self._mu_v2bar_tilde.item()
+            )
+            self.sched_sigma_v = self._mu_v2bar_tilde**0.5
+        else:
+            raise ValueError("In the LSTM component, model_noise should be True. ")
+
+    def _delta_hete_noise(self):
+        """
+        Estimate delta for v2bar which is the second output of the LSTM network
+        """
+
+        noise_index = self.get_states_index("heteroscedastic noise")
+        mu_noise_posterior = self.mu_states_posterior[noise_index]
+        var_noise_posterior = self.var_states_posterior[noise_index, noise_index]
+
+        mu_v2_posterior = mu_noise_posterior**2 + var_noise_posterior
+        var_v2_posterior = (
+            2 * var_noise_posterior**2 + 4 * var_noise_posterior * mu_noise_posterior**2
+        )
+
+        mu_v2_prior = self._mu_v2bar_tilde
+        var_v2_prior = 3 * self._var_v2bar_tilde + 2 * self._mu_v2bar_tilde**2
+
+        k = self._var_v2bar_tilde / var_v2_prior
+
+        delta_mu_v2bar_tilde = k * (mu_v2_posterior - mu_v2_prior)
+        delta_var_v2bar_tilde = k**2 * (var_v2_posterior - var_v2_prior)
+
+        jcb = self._cov_v2bar_tilde / self._var_v2bar_tilde
+        delta_mu_v2bar = jcb * delta_mu_v2bar_tilde / self._var_v2bar_prior
+        delta_var_v2bar = jcb * delta_var_v2bar_tilde * jcb / self._var_v2bar_prior**2
+
+        return delta_mu_v2bar, delta_var_v2bar
+
+    def white_noise_decay(
+        self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
+    ):
+        """
+        Apply exponential decay to white noise standard deviation over epochs, and modify
+        the variance for the white noise component in
+        :attr:`~canari.model.Model.process_noise_matrix`.
+        This decaying noise structure is intended to improve the training performance
+        of TAGI-LSTM.
+
+        Args:
+            epoch (int): Current training epoch.
+            white_noise_max_std (float): Maximum allowed noise std.
+            white_noise_decay_factor (float): Factor controlling decay rate.
+        """
+
+        min_noise_std = 0
+        scheduled_sigma_v = white_noise_max_std * np.exp(
+            -white_noise_decay_factor * epoch
+        )
+
+        if self.get_states_index("white noise") is not None:
+            noise_index = self.get_states_index("white noise")
+            white_noise_component = next(
+                (
+                    component
+                    for component in self.components.values()
+                    if "white noise" in component.component_name
+                ),
+                None,
+            )
+            min_noise_std = white_noise_component.std_error
+        elif self.get_states_index("heteroscedastic noise") is not None:
+            noise_index = self.get_states_index("heteroscedastic noise")
+        else:
+            noise_index = None
+
+        if noise_index is not None:
+            if scheduled_sigma_v < min_noise_std:
+                scheduled_sigma_v = min_noise_std
+            self.process_noise_matrix[noise_index, noise_index] = scheduled_sigma_v**2
+
+        self.sched_sigma_v = scheduled_sigma_v
+        self._current_epoch += 1
+
+    def save_states_history(self):
+        """
+        Save current prior, posterior hidden states, and cross-covariaces between hidden states
+        at two consecutive time steps for later use in Kalman's smoother.
+        """
+
+        self.states.mu_prior.append(self.mu_states_prior)
+        self.states.var_prior.append(self.var_states_prior)
+        self.states.mu_posterior.append(self.mu_states_posterior)
+        self.states.var_posterior.append(self.var_states_posterior)
+        cov_states = self.var_states @ self.transition_matrix.T
+        if "exp" in self.states_name:
+            cov_states = self._exponential_cov_states(
+                cov_states,
+                self.mu_states_prior,
+                self.var_states_prior,
+                self.mu_states_posterior,
+                self.var_states_posterior,
+            )
+
+        self.states.cov_states.append(cov_states)
+        self.states.mu_smooth.append(self.mu_states_posterior)
+        self.states.var_smooth.append(self.var_states_posterior)
 
     def store_initial_lookback(self, lookback_covariates=None):
         """
@@ -753,6 +1008,17 @@ class Model:
         # TODO: how to handle laggs
 
         return dummy
+
+    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
+        """
+        Update LSTM history
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        self.lstm_output_history.update(
+            mu_states[lstm_index],
+            var_states[lstm_index, lstm_index],
+        )
 
     def get_dict(self) -> dict:
         """
@@ -963,6 +1229,7 @@ class Model:
     def forward(
         self,
         input_covariates: Optional[np.ndarray] = None,
+        var_input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -998,12 +1265,25 @@ class Model:
         # LSTM prediction:
         lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
-            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
-            )
+            if var_input_covariates is not None:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates, var_input_covariates
+                )
+            else:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
+
+            # Heteroscedastic noise
+            if self.lstm_net.model_noise:
+                mu_v2bar_prior = mu_lstm_pred[1::2]
+                var_v2bar_prior = var_lstm_pred[1::2]
+                mu_lstm_pred = mu_lstm_pred[0::2]
+                var_lstm_pred = var_lstm_pred[0::2]
+                self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1016,6 +1296,13 @@ class Model:
             var_lstm_pred,
             lstm_states_index,
         )
+
+        if "exp" in self.states_name:
+            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
+                self._update_exp_and_scaled_exp(
+                    mu_states_prior, var_states_prior, self.var_states, "forward"
+                )
+            )
 
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
@@ -1064,6 +1351,8 @@ class Model:
             self.var_states_prior,
             self.observation_matrix,
         )
+
+        # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
         mu_states_posterior = self.mu_states_prior + delta_mu_states
@@ -1082,6 +1371,13 @@ class Model:
                 mu_states_posterior, var_states_posterior
             )
 
+        if "exp" in self.states_name:
+            mu_states_posterior, var_states_posterior, *_ = (
+                self._update_exp_and_scaled_exp(
+                    mu_states_posterior, var_states_posterior, 0, "backward"
+                )
+            )
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -1091,6 +1387,41 @@ class Model:
             mu_states_posterior,
             var_states_posterior,
         )
+
+    def update_lstm_param(
+        self,
+        delta_mu_states: np.ndarray,
+        delta_var_states: np.ndarray,
+    ):
+        """
+        TODO: update
+        Update the LSTM neural network's parameters.
+
+        Args:
+            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
+            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
+        """
+
+        lstm_index = self.get_states_index("lstm")
+        delta_mu_lstm = np.array(
+            delta_mu_states[lstm_index] / self.var_states_prior[lstm_index, lstm_index]
+        )
+        delta_var_lstm = np.array(
+            delta_var_states[lstm_index, lstm_index]
+            / self.var_states_prior[lstm_index, lstm_index] ** 2
+        )
+
+        if self.lstm_net.model_noise:
+            delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
+            delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
+            delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+
+        self.lstm_net.set_delta_z(
+            np.array(delta_mu_lstm, dtype=np.float32),
+            np.array(delta_var_lstm, dtype=np.float32),
+        )
+        self.lstm_net.backward()
+        self.lstm_net.step()
 
     def rts_smoother(
         self,
@@ -1126,6 +1457,19 @@ class Model:
             matrix_inversion_tol,
             tol_type,
         )
+
+        if "exp" in self.states_name:
+
+            (
+                self.states.mu_smooth[time_step],
+                self.states.var_smooth[time_step],
+                *_,
+            ) = self._update_exp_and_scaled_exp(
+                self.states.mu_smooth[time_step],
+                self.states.var_smooth[time_step],
+                0,
+                "smoother",
+            )
 
     def forecast(
         self, data: Dict[str, np.ndarray]
@@ -1176,14 +1520,11 @@ class Model:
                 else:
                     self.lstm_states_history.append(None)
 
-                lstm_index = self.get_states_index("lstm")
-                self.lstm_output_history.update(
-                    mu_states_prior[lstm_index],
-                    var_states_prior[lstm_index, lstm_index],
-                )
+                self.update_lstm_history(mu_states_prior, var_states_prior)
 
+            # Store variables
             self._set_posterior_states(mu_states_prior, var_states_prior)
-            self._save_states_history()
+            self.save_states_history()
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
@@ -1237,7 +1578,7 @@ class Model:
 
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
 
-            mu_obs_pred, var_obs_pred, _, var_states_prior = self.forward(x)
+            mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
                 delta_mu_states,
                 delta_var_states,
@@ -1245,6 +1586,7 @@ class Model:
                 var_states_posterior,
             ) = self.backward(y)
 
+            # Update LSTM parameters
             if self.lstm_net:
                 if index == 0 or index == (len(data["y"]) - 1):
                     _lstm_states = self.lstm_net.get_lstm_states()
@@ -1252,25 +1594,12 @@ class Model:
                 else:
                     self.lstm_states_history.append(None)
 
-                lstm_index = self.get_states_index("lstm")
-                delta_mu_lstm = np.array(
-                    delta_mu_states[lstm_index]
-                    / var_states_prior[lstm_index, lstm_index]
-                )
-                delta_var_lstm = np.array(
-                    delta_var_states[lstm_index, lstm_index]
-                    / var_states_prior[lstm_index, lstm_index] ** 2
-                )
                 if train_lstm:
-                    self.lstm_net.update_param(
-                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
-                    )
-                self.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[lstm_index, lstm_index],
-                )
+                    self.update_lstm_param(delta_mu_states, delta_var_states)
+                self.update_lstm_history(mu_states_posterior, var_states_posterior)
 
-            self._save_states_history()
+            # Store variables
+            self.save_states_history()
             self.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
@@ -1378,10 +1707,15 @@ class Model:
             )
 
         # Decaying observation's variance
-        if white_noise_decay and self.get_states_index("white noise") is not None:
-            self.white_noise_decay(
-                self._current_epoch, white_noise_max_std, white_noise_decay_factor
-            )
+        if white_noise_decay:
+            for noise_type in ("white noise", "heteroscedastic noise"):
+                if self.get_states_index(noise_type) is not None:
+                    self.white_noise_decay(
+                        self._current_epoch,
+                        white_noise_max_std,
+                        white_noise_decay_factor,
+                    )
+                    break
 
         if self.lstm_net.smooth:
             if train_data is not None and train_data["cov_names"] is not None:
@@ -1392,13 +1726,8 @@ class Model:
                 self.store_initial_lookback()
 
         self.filter(train_data)
-
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
-
-        # Aplly smoother on the training set
         self.smoother()
-
-        self._current_epoch += 1
 
         return (
             np.array(mu_validation_preds).flatten(),

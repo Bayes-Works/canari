@@ -42,8 +42,8 @@ class LstmOutputHistory:
         Args:
             look_back_len (int): Number of time steps to keep in history.
         """
-        self.mu = np.zeros(look_back_len, dtype=np.float32)
-        self.var = np.ones(look_back_len, dtype=np.float32)
+        self.mu = np.zeros(look_back_len)
+        self.var = np.ones(look_back_len)
 
     def update(self, mu_lstm, var_lstm):
         """
@@ -71,8 +71,8 @@ class LstmOutputHistory:
         Raises:
             ValueError: If the shapes of `mu` and `var` do not match the initialized window size.
         """
-        self.mu = mu.astype(np.float32)
-        self.var = var.astype(np.float32)
+        self.mu = mu.copy()
+        self.var = var.copy()
 
 
 @dataclass
@@ -213,3 +213,29 @@ class StatesHistory:
             )
 
         return standard_deviation
+
+
+@dataclass
+class OutputHistory:
+    """
+    Save output history mean and variance
+    """
+
+    mu: List[float] = field(init=False)
+    var: List[float] = field(init=False)
+
+    def initialize(self):
+        """
+        Initialize `mu` and `var`  as empty lists.
+        """
+
+        self.mu = []
+        self.var = []
+
+    def save_output_history(self, mu: float, var: float):
+        """
+        Add `mu` and `var` to the saved history
+        """
+
+        self.mu.append(mu.item())
+        self.var.append(var.item())
