@@ -386,9 +386,9 @@ def plot_states(
                     [r"$\mu$", f"$\pm{num_std}\sigma$"], loc=legend_location, ncol=2
                 )
 
-        # Plot horizontal line at y=0.0 for specific states
-        if plot_state in ["trend", "acceleration"]:
-            ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
+        # # Plot horizontal line at y=0.0 for specific states
+        # if plot_state in ["trend", "acceleration"]:
+        #     ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
