@@ -65,6 +65,7 @@ model_target = Model(
         device="cpu",
         manual_seed=1,
         # model_noise=True,
+        smoother=False,
     ),
     WhiteNoise(std_error=1e-1),
 )
@@ -80,6 +81,7 @@ model_covar = Model(
         device="cpu",
         manual_seed=1,
         # model_noise=True,
+        smoother=False,
     ),
     WhiteNoise(std_error=1e-2),
 )
@@ -95,7 +97,7 @@ for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
-        use_val_posterior_covariate=False,
+        use_val_posterior_covariate=True,
         update_param_covar_model=False,
     )
     model.set_memory(time_step=0)
