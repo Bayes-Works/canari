@@ -40,9 +40,7 @@ df_raw.columns = ["obs"]
 # LT anomaly
 # anm_mag = 0.010416667/10
 time_anomaly = 52*4
-# anm_mag = 0.3/52
-anm_mag = 20/52
-# anm_mag = 0
+anm_mag = 15/52
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -118,13 +116,12 @@ pretrained_model.smoother()
 state_type = "prior"
 #  Plot states from pretrained model
 # fig = plt.figure(figsize=(8, 4.8))
-fig = plt.figure(figsize=(5.5, 3))
+fig = plt.figure(figsize=(5.5, 2.2), constrained_layout=True)
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
-
 
 plot_data(
     data_processor=data_processor,
@@ -134,11 +131,11 @@ plot_data(
     sub_plot=ax0,
 )
 time = data_processor.get_time(split="all")
-ax0.plot(time, mu_y_preds, color='tab:blue', label='Predicted mean')
+ax0.plot(time, mu_y_preds, color='tab:green', label='Predicted mean')
 ax0.fill_between(time, 
                  mu_y_preds - std_y_preds, 
                  mu_y_preds + std_y_preds, 
-                 color='tab:blue', alpha=0.2, label='Predicted std')
+                 color='tab:green', alpha=0.2, label='Predicted std')
 plot_states(
     data_processor=data_processor,
     standardization=True,
@@ -160,6 +157,7 @@ plot_states(
 )
 ax1.set_ylabel('$x^{\mathtt{LT}}$')
 ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+ax1.yaxis.offsetText.set_fontsize(6)
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -182,8 +180,15 @@ plot_states(
 )
 ax3.set_ylabel('$x^{\mathtt{AR}}$')
 ax3.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-# ax3.set_xticklabels([])
 
-plt.tight_layout(h_pad=0.01, w_pad=0.1)
+# # Plot stationary AR
+# phi_ar = model_dict['states_optimal'].mu_prior[-1][phi_index].item()
+# sigma_ar = np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item())
+# std_ar_stationary = sigma_ar / np.sqrt(1 - phi_ar**2)
+# ax3.fill_between(time, 0 - std_ar_stationary, 0 + std_ar_stationary, color='tab:orange', alpha=0.2, label='Stationary AR std')
+
+fig.align_ylabels([ax0, ax1, ax2, ax3])
+plt.tight_layout(h_pad=0.1, w_pad=0.1)
+plt.subplots_adjust(hspace=0.4)
 plt.savefig('delay.png', dpi=300)
 plt.show()
