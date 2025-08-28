@@ -768,13 +768,13 @@ class hsl_detection:
 
         LL_index = base_model.states_name.index("level")
         LT_index = base_model.states_name.index("trend")
-        ar_index = base_model.states_name.index("autoregression")
+        # ar_index = base_model.states_name.index("autoregression")
         base_model_prior['mu'][LL_index] += drift_model_prior['mu'][0]
         base_model_prior['mu'][LT_index] += drift_model_prior['mu'][1]
-        base_model_prior['mu'][ar_index] = drift_model_prior['mu'][2]
+        # base_model_prior['mu'][ar_index] = drift_model_prior['mu'][2]
         base_model_prior['var'][LL_index, LL_index] += drift_model_prior['var'][0, 0]
         base_model_prior['var'][LT_index, LT_index] += drift_model_prior['var'][1, 1]
-        base_model_prior['var'][ar_index, ar_index] = drift_model_prior['var'][2, 2]
+        # base_model_prior['var'][ar_index, ar_index] = drift_model_prior['var'][2, 2]
         drift_model_prior['mu'][0] = 0
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
