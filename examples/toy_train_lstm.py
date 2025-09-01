@@ -73,10 +73,9 @@ for epoch in range(num_epoch):
     if model.lstm_net.smooth:
         if train_data is not None and train_data["cov_names"] is not None:
             # Generate standardized look-back covariates
-            lookback_covariates = model.generate_look_back_covariates(train_data)
-            model.store_initial_lookback(lookback_covariates)
+            model.pretraining_filter(train_data)
         else:
-            model.store_initial_lookback()
+            model.pretraining_filter()
 
     model.filter(train_data, train_lstm=True)
 

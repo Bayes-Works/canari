@@ -82,7 +82,6 @@ class LstmNetwork(BaseComponent):
         gain_weight: Optional[int] = 1,
         gain_bias: Optional[int] = 1,
         load_lstm_net: Optional[str] = None,
-        load_lstm_look_back: Optional[tuple] = None,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
         smoother: Optional[bool] = True,
@@ -100,7 +99,6 @@ class LstmNetwork(BaseComponent):
         self.gain_weight = gain_weight
         self.gain_bias = gain_bias
         self.load_lstm_net = load_lstm_net
-        self.load_lstm_look_back = load_lstm_look_back
         self._mu_states = mu_states
         self._var_states = var_states
         self.smoother = smoother
@@ -226,6 +224,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.lstm_infer_len = self.infer_len
         lstm_network.model_noise = self.model_noise
+        lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
@@ -244,14 +243,6 @@ class LstmNetwork(BaseComponent):
 
         if self.smoother:
             lstm_network.smooth = True
-
-            if self.load_lstm_look_back is not None:
-                lstm_network.smooth_look_back_mu = np.array(
-                    self.load_lstm_look_back[0], dtype=np.float32
-                )
-                lstm_network.smooth_look_back_var = np.array(
-                    self.load_lstm_look_back[1], dtype=np.float32
-                )
         else:
             lstm_network.smooth = False
 
