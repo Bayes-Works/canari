@@ -298,10 +298,6 @@ class Model:
                 self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
             if self.lstm_net.smooth_look_back_states is not None:
                 self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
-            # TODO: check for better intialization
-            self.lstm_net.num_samples = (
-                1  # dummy intialization until otherwise specified
-            )
 
     def _initialize_autoregression(self):
         """
@@ -843,6 +839,17 @@ class Model:
 
         return delta_mu_v2bar, delta_var_v2bar
 
+    def _update_lstm_states_history(self, index: int, last_step: int):
+        """
+        Store LSTM states at specific time steps for later use.
+        """
+
+        if index == 0 or index == last_step:
+            _lstm_states = self.lstm_net.get_lstm_states()
+            self.lstm_states_history.append(_lstm_states)
+        else:
+            self.lstm_states_history.append(None)
+
     def white_noise_decay(
         self, epoch: int, white_noise_max_std: float, white_noise_decay_factor: float
     ):
@@ -912,14 +919,24 @@ class Model:
         self.states.mu_smooth.append(self.mu_states_posterior)
         self.states.var_smooth.append(self.var_states_posterior)
 
-    def store_initial_lookback(self, lookback_covariates=None):
+    def pretraining_filter(self, train_data: dict):
         """
         Run exactly `lstm_look_back_len` dummy steps through the LSTM so that the
         `lstm_output_history` gets filled with `lstm_look_back_len` predictions.
         Assumes `self.lstm_net` and `self.lstm_output_history` already exist.
         """
+
         # set lstm to training mode
         self.lstm_net.train()
+
+        # initialize the smoothing buffer for SLTM
+        if self.lstm_net.smooth and self._current_epoch == 1:
+            self.lstm_net.num_samples = (
+                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+            )
+
+        # prepare loockback covariates
+        lookback_covariates = self.generate_look_back_covariates(train_data)
 
         self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
         # reset LSTM states to zeros
@@ -1199,9 +1216,6 @@ class Model:
             >>> # If the next analysis starts from t = 200
             >>> model.set_memory(states=model.states, time_step=200))
         """
-        if lstm_states:
-            self.lstm_states_history = lstm_states
-
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
         else:
@@ -1224,7 +1238,7 @@ class Model:
                 self.lstm_output_history.mu = mu_lstm_to_set
                 self.lstm_output_history.var = std_lstm_to_set**2
 
-                self.lstm_net.set_lstm_states(self.lstm_states_history[time_step - 1])
+                self.lstm_net.set_lstm_states(lstm_states[time_step - 1])
 
     def forward(
         self,
@@ -1514,12 +1528,7 @@ class Model:
             )
 
             if self.lstm_net:
-                if index == 0 or index == (len(data["y"]) - 1):
-                    _lstm_states = self.lstm_net.get_lstm_states()
-                    self.lstm_states_history.append(_lstm_states)
-                else:
-                    self.lstm_states_history.append(None)
-
+                self._update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_history(mu_states_prior, var_states_prior)
 
             # Store variables
@@ -1588,11 +1597,7 @@ class Model:
 
             # Update LSTM parameters
             if self.lstm_net:
-                if index == 0 or index == (len(data["y"]) - 1):
-                    _lstm_states = self.lstm_net.get_lstm_states()
-                    self.lstm_states_history.append(_lstm_states)
-                else:
-                    self.lstm_states_history.append(None)
+                self._update_lstm_states_history(index, last_step=len(data["y"]) - 1)
 
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
@@ -1700,11 +1705,6 @@ class Model:
         Examples:
             >>> mu_preds_val, std_preds_val, states = model.lstm_train(train_data=train_set,validation_data=val_set)
         """
-        # TODO check for a better intialzation that is not relient on epoch count
-        if self.lstm_net.smooth and self._current_epoch == 0:
-            self.lstm_net.num_samples = (
-                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
-            )
 
         # Decaying observation's variance
         if white_noise_decay:
@@ -1720,10 +1720,9 @@ class Model:
         if self.lstm_net.smooth:
             if train_data is not None and train_data["cov_names"] is not None:
                 # Generate standardized look-back covariates
-                lookback_covariates = self.generate_look_back_covariates(train_data)
-                self.store_initial_lookback(lookback_covariates)
+                self.pretraining_filter(train_data)
             else:
-                self.store_initial_lookback()
+                self.pretraining_filter()
 
         self.filter(train_data)
         mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
