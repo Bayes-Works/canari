@@ -702,11 +702,20 @@ class SKF:
         Set 'mu_states' and 'var_states' for each transition models in :attr:`.model` using their posterior.
         """
 
-        for transition_model in self.model.values():
-            transition_model.set_states(
-                transition_model.mu_states_posterior,
-                transition_model.var_states_posterior,
-            )
+        # for transition_model in self.model.values():
+        #     transition_model.set_states(
+        #         transition_model.mu_states_posterior,
+        #         transition_model.var_states_posterior,
+        #     )
+
+        for origin_state in self.marginal_list:
+            for arrival_state in self.marginal_list:
+                transit = f"{origin_state}_{arrival_state}"
+                reverse_transit = f"{arrival_state}_{origin_state}"
+                self.model[transit].set_states(
+                    self.model[reverse_transit].mu_states_posterior,
+                    self.model[reverse_transit].var_states_posterior,
+                )
 
     def set_memory(self, states: StatesHistory, time_step: int):
         """
@@ -1026,8 +1035,13 @@ class SKF:
         for origin_state in self.marginal_list:
             for arrival_state in self.marginal_list:
                 transit = f"{origin_state}_{arrival_state}"
+                # self.model[transit]._set_posterior_states(
+                #     mu_states_marginal[origin_state],
+                #     var_states_marginal[origin_state],
+                # )
                 self.model[transit]._set_posterior_states(
-                    mu_states_marginal[origin_state], var_states_marginal[origin_state]
+                    mu_states_marginal[arrival_state],
+                    var_states_marginal[arrival_state],
                 )
 
         self.mu_states_posterior = mu_states_posterior
@@ -1057,7 +1071,7 @@ class SKF:
             None
         """
 
-        epsilon = 0 * 1e-20
+        epsilon = 0 * 1e-10
         for transition_model in self.model.values():
             transition_model.rts_smoother(
                 time_step, matrix_inversion_tol=matrix_inversion_tol, tol_type=tol_type
@@ -1209,7 +1223,7 @@ class SKF:
 
     def smoother(
         self,
-        matrix_inversion_tol: Optional[float] = 1e-4,
+        matrix_inversion_tol: Optional[float] = 1e-3,
         tol_type: Optional[str] = "relative",  # relative of absolute
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
@@ -1236,6 +1250,9 @@ class SKF:
         self.smooth_marginal_prob_history = copy.copy(self.filter_marginal_prob_history)
         self._initialize_smoother()
         for time_step in reversed(range(0, num_time_steps - 1)):
+            if time_step == 40:
+                # if time_step == 175:
+                check = 1
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
         return (
