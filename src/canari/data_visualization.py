@@ -507,7 +507,7 @@ def plot_skf_states(
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
-        _add_dynamic_grids(ax, time)
+        # _add_dynamic_grids(ax, time)
 
     if plot_observation:
         plot_data(
@@ -517,7 +517,7 @@ def plot_skf_states(
             sub_plot=axes[0],
             plot_nan=plot_nan,
         )
-    _add_dynamic_grids(axes[0], time)
+    # _add_dynamic_grids(axes[0], time)
 
     # Add legends for the first subplot
     if legend_location:
@@ -530,7 +530,7 @@ def plot_skf_states(
     # Plot abnormal model probability
     axes[len(states_to_plot)].plot(time, model_prob, color="b")
     axes[len(states_to_plot)].set_ylabel("Pr(Abnormal)")
-    _add_dynamic_grids(axes[len(states_to_plot)], time)
+    # _add_dynamic_grids(axes[len(states_to_plot)], time)
     axes[len(states_to_plot)].set_ylim(-0.02, 1)
     axes[len(states_to_plot)].set_xlabel("Time")
     if legend_location:

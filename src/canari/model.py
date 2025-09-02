@@ -876,6 +876,11 @@ class Model:
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
+
+        if "lstm" in self.states_name:
+            idx_lstm = self.get_states_index("lstm")
+            cov_states[idx_lstm, :] = 0
+
         if "exp" in self.states_name:
             cov_states = self._exponential_cov_states(
                 cov_states,
@@ -1315,17 +1320,34 @@ class Model:
                                             pseudoinversion (pinv). Defaults to 1E-12.
         """
 
+        mu_prior_next = self.states.mu_prior[time_step + 1].copy()
+        var_prior_next = self.states.var_prior[time_step + 1].copy()
+        mu_smooth_next = self.states.mu_smooth[time_step + 1].copy()
+        var_smooth_next = self.states.var_smooth[time_step + 1].copy()
+        mu_posterior_current = self.states.mu_posterior[time_step].copy()
+        var_posterior_current = self.states.var_posterior[time_step].copy()
+        cov_next = self.states.cov_states[time_step + 1].copy()
+
+        # if "lstm" in self.states_name:
+        #     idx_lstm = self.get_states_index("lstm")
+        #     mu_prior_next[idx_lstm] = 0
+        #     var_prior_next[idx_lstm, :] = 0
+        #     var_prior_next[:, idx_lstm] = 0
+        #     mu_smooth_next[idx_lstm] = 0
+        #     var_smooth_next[idx_lstm, :] = 0
+        #     var_smooth_next[:, idx_lstm] = 0
+
         (
             self.states.mu_smooth[time_step],
             self.states.var_smooth[time_step],
         ) = common.rts_smoother(
-            self.states.mu_prior[time_step + 1],
-            self.states.var_prior[time_step + 1],
-            self.states.mu_smooth[time_step + 1],
-            self.states.var_smooth[time_step + 1],
-            self.states.mu_posterior[time_step],
-            self.states.var_posterior[time_step],
-            self.states.cov_states[time_step + 1],
+            mu_prior_next,
+            var_prior_next,
+            mu_smooth_next,
+            var_smooth_next,
+            mu_posterior_current,
+            var_posterior_current,
+            cov_next,
             matrix_inversion_tol,
             tol_type,
         )

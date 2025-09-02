@@ -6,6 +6,7 @@ from typing import Tuple, Optional
 import numpy as np
 from canari.data_struct import LstmOutputHistory
 from math import erf
+import scipy.linalg as la
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -205,6 +206,48 @@ def rts_smoother(
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
+
+    # is_sym = np.allclose(var_states_prior, var_states_prior.T, atol=1e-6, rtol=1e-6)
+    # if tol_type == "absolute":
+    #     # Absolute tolerance → use `atol=...`, keep `rtol` at default.
+    #     if is_sym:
+    #         var_states_prior_pinv = la.pinvh(
+    #             var_states_prior, atol=matrix_inversion_tol, check_finite=False
+    #         )
+    #     else:
+    #         var_states_prior_pinv = la.pinv(
+    #             var_states_prior, atol=matrix_inversion_tol, check_finite=False
+    #         )
+
+    # elif tol_type == "relative":
+    #     # Relative tolerance → use `rtol=...`, keep `atol=0`.
+    #     if is_sym:
+    #         var_states_prior_pinv = la.pinvh(
+    #             var_states_prior, rtol=matrix_inversion_tol, check_finite=False
+    #         )
+    #     else:
+    #         var_states_prior_pinv = la.pinv(
+    #             var_states_prior, rtol=matrix_inversion_tol, check_finite=False
+    #         )
+    # else:
+    #     raise ValueError("tol_type must be 'relative' or 'absolute'.")
+
+    # if tol_type == "absolute":
+    #     var_states_prior_pinv = la.pinvh(
+    #         var_states_prior, atol=matrix_inversion_tol, check_finite=False
+    #     )
+    # else:
+    #     var_states_prior_pinv = la.pinvh(
+    #         var_states_prior, rtol=matrix_inversion_tol, check_finite=False
+    #     )
+
+    # jcb = cross_cov_states @ var_states_prior_pinv
+
+    # # RTS update
+    # mu_states_smooth = mu_states_posterior + jcb @ (mu_states_smooth - mu_states_prior)
+    # var_states_smooth = (
+    #     var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
+    # )
 
     return (
         mu_states_smooth,

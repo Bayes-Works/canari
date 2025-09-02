@@ -52,20 +52,23 @@ lstm_network = LstmNetwork(
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
-    manual_seed=1,
-    model_noise=True,
+    manual_seed=2,
+    # model_noise=True,
 )
+noise = WhiteNoise(std_error=1e-2)
 
 # Normal model
 model = Model(
     local_trend,
     lstm_network,
+    noise,
 )
 
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
     lstm_network,
+    noise,
 )
 
 # Switching Kalman filter
@@ -126,35 +129,127 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother()
+# smooth_marginal_abnorm_prob, states = skf.smoother()
+
 # smooth_marginal_abnorm_prob, states = skf.smoother(
-#     matrix_inversion_tol=1e-2, tol_type="absolute"
+#     matrix_inversion_tol=1e-5, tol_type="relative"
 # )
+
+smooth_marginal_abnorm_prob, states = skf.smoother(
+    matrix_inversion_tol=1e-3, tol_type="absolute"
+)
+
+# from scipy.io import savemat
+
+# # Norm_norm
+# nn_mu_prior = np.stack(skf.model["norm_norm"].states.mu_prior, axis=0)
+# nn_mu_prior = np.asarray(nn_mu_prior, dtype=np.float64)
+# nn_var_prior = np.stack(skf.model["norm_norm"].states.var_prior, axis=0)
+# nn_var_prior = np.asarray(nn_var_prior, dtype=np.float64)
+# nn_mu_pos = np.stack(skf.model["norm_norm"].states.mu_posterior, axis=0)
+# nn_mu_pos = np.asarray(nn_mu_pos, dtype=np.float64)
+# nn_var_pos = np.stack(skf.model["norm_norm"].states.var_posterior, axis=0)
+# nn_var_pos = np.asarray(nn_var_pos, dtype=np.float64)
+# nn_cov = np.stack(skf.model["norm_norm"].states.cov_states, axis=0)
+# nn_cov = np.asarray(nn_cov, dtype=np.float64)
+# # Norm_abnorm
+# nab_mu_prior = np.stack(skf.model["norm_abnorm"].states.mu_prior, axis=0)
+# nab_mu_prior = np.asarray(nab_mu_prior, dtype=np.float64)
+# nab_var_prior = np.stack(skf.model["norm_abnorm"].states.var_prior, axis=0)
+# nab_var_prior = np.asarray(nab_var_prior, dtype=np.float64)
+# nab_mu_pos = np.stack(skf.model["norm_abnorm"].states.mu_posterior, axis=0)
+# nab_mu_pos = np.asarray(nab_mu_pos, dtype=np.float64)
+# nab_var_pos = np.stack(skf.model["norm_abnorm"].states.var_posterior, axis=0)
+# nab_var_pos = np.asarray(nab_var_pos, dtype=np.float64)
+# nab_cov = np.stack(skf.model["norm_abnorm"].states.cov_states, axis=0)
+# nab_cov = np.asarray(nab_cov, dtype=np.float64)
+# # Aborm_norm
+# abn_mu_prior = np.stack(skf.model["abnorm_norm"].states.mu_prior, axis=0)
+# abn_mu_prior = np.asarray(abn_mu_prior, dtype=np.float64)
+# abn_var_prior = np.stack(skf.model["abnorm_norm"].states.var_prior, axis=0)
+# abn_var_prior = np.asarray(abn_var_prior, dtype=np.float64)
+# abn_mu_pos = np.stack(skf.model["abnorm_norm"].states.mu_posterior, axis=0)
+# abn_mu_pos = np.asarray(abn_mu_pos, dtype=np.float64)
+# abn_var_pos = np.stack(skf.model["abnorm_norm"].states.var_posterior, axis=0)
+# abn_var_pos = np.asarray(abn_var_pos, dtype=np.float64)
+# abn_cov = np.stack(skf.model["abnorm_norm"].states.cov_states, axis=0)
+# abn_cov = np.asarray(abn_cov, dtype=np.float64)
+# # Aborm_abnorm
+# abab_mu_prior = np.stack(skf.model["abnorm_abnorm"].states.mu_prior, axis=0)
+# abab_mu_prior = np.asarray(abab_mu_prior, dtype=np.float64)
+# abab_var_prior = np.stack(skf.model["abnorm_abnorm"].states.var_prior, axis=0)
+# abab_var_prior = np.asarray(abab_var_prior, dtype=np.float64)
+# abab_mu_pos = np.stack(skf.model["abnorm_abnorm"].states.mu_posterior, axis=0)
+# abab_mu_pos = np.asarray(abab_mu_pos, dtype=np.float64)
+# abab_var_pos = np.stack(skf.model["abnorm_abnorm"].states.var_posterior, axis=0)
+# abab_var_pos = np.asarray(abab_var_pos, dtype=np.float64)
+# abab_cov = np.stack(skf.model["abnorm_abnorm"].states.cov_states, axis=0)
+# abab_cov = np.asarray(abab_cov, dtype=np.float64)
+
+# savemat(
+#     "toy_anomaly.mat",
+#     {
+#         "nn_mu_prior": nn_mu_prior,
+#         "nn_var_prior": nn_var_prior,
+#         "nn_mu_pos": nab_mu_pos,
+#         "nn_var_pos": nn_var_pos,
+#         "nn_cov": nn_cov,
+#         "nab_mu_prior": nab_mu_prior,
+#         "nab_var_prior": nab_var_prior,
+#         "nab_mu_pos": nab_mu_pos,
+#         "nab_var_pos": nab_var_pos,
+#         "nab_cov": nab_cov,
+#         "abn_mu_prior": abn_mu_prior,
+#         "abn_var_prior": abn_var_prior,
+#         "abn_mu_pos": abn_mu_pos,
+#         "abn_var_pos": abn_var_pos,
+#         "abn_cov": abn_cov,
+#         "abab_mu_prior": abab_mu_prior,
+#         "abab_var_prior": abab_var_prior,
+#         "abab_mu_pos": abab_mu_pos,
+#         "abab_var_pos": abab_var_pos,
+#         "abab_cov": abab_cov,
+#     },
+# )
+
+data_processor.data.index = range(len(data_processor.data))
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_data(
-    data_processor=data_processor,
-    plot_column=output_col,
-    standardization=True,
-    plot_test_data=False,
-    sub_plot=ax,
-    validation_label="y",
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds_optim,
-    std_validation_pred=std_validation_preds_optim,
-    sub_plot=ax,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
-ax.set_xlabel("Time")
-plt.title("Validation predictions")
-plt.tight_layout()
-plt.legend()
-plt.show()
+# fig, ax = plt.subplots(figsize=(10, 6))
+# plot_data(
+#     data_processor=data_processor,
+#     plot_column=output_col,
+#     standardization=True,
+#     plot_test_data=False,
+#     sub_plot=ax,
+#     validation_label="y",
+# )
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds_optim,
+#     std_validation_pred=std_validation_preds_optim,
+#     sub_plot=ax,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+# )
+# ax.set_xlabel("Time")
+# plt.title("Validation predictions")
+# plt.tight_layout()
+# plt.legend()
+# plt.show()
 
+
+# fig, ax = plot_skf_states(
+#     data_processor=data_processor,
+#     states=states,
+#     states_type="posterior",
+#     model_prob=marginal_abnorm_prob_plot,
+#     # standardization=True,
+#     color="b",
+#     legend_location="upper left",
+# )
+# fig.suptitle("SKF hidden states", fontsize=10, y=1)
+# plt.show()
 
 fig, ax = plot_skf_states(
     data_processor=data_processor,
@@ -166,4 +261,49 @@ fig, ax = plot_skf_states(
     legend_location="upper left",
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
+plt.show()
+
+
+fig, ax = plot_skf_states(
+    data_processor=data_processor,
+    states=skf.model["norm_norm"].states,
+    states_type="smooth",
+    model_prob=marginal_abnorm_prob_plot,
+    color="b",
+    legend_location="upper left",
+)
+fig.suptitle("norm_norm", fontsize=10, y=1)
+plt.show()
+
+fig, ax = plot_skf_states(
+    data_processor=data_processor,
+    states=skf.model["norm_abnorm"].states,
+    states_type="smooth",
+    model_prob=marginal_abnorm_prob_plot,
+    color="b",
+    legend_location="upper left",
+)
+fig.suptitle("norm_abnorm", fontsize=10, y=1)
+plt.show()
+
+fig, ax = plot_skf_states(
+    data_processor=data_processor,
+    states=skf.model["abnorm_norm"].states,
+    states_type="smooth",
+    model_prob=marginal_abnorm_prob_plot,
+    color="b",
+    legend_location="upper left",
+)
+fig.suptitle("abnorm_norm", fontsize=10, y=1)
+plt.show()
+
+fig, ax = plot_skf_states(
+    data_processor=data_processor,
+    states=skf.model["abnorm_abnorm"].states,
+    states_type="smooth",
+    model_prob=marginal_abnorm_prob_plot,
+    color="b",
+    legend_location="upper left",
+)
+fig.suptitle("abnorm_abnorm", fontsize=10, y=1)
 plt.show()
