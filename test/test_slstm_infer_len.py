@@ -5,18 +5,19 @@ import copy
 import pytagi.metric as metric
 from canari import DataProcess, Model
 from canari.component import LstmNetwork, WhiteNoise
+import numpy as np
 import pytest
 
 BASE_DIR = os.path.dirname(__file__)
 
 
 def create_slstm_model(look_back_len: int) -> Model:
-    sigma_v = 0.001
+    sigma_v = 3e-2
     return Model(
         LstmNetwork(
             look_back_len=look_back_len,
             num_features=2,
-            infer_len=24 * 2,
+            infer_len=24 * 3,
             num_layer=1,
             num_hidden_unit=40,
             device="cpu",
@@ -29,7 +30,7 @@ def create_slstm_model(look_back_len: int) -> Model:
 @pytest.mark.parametrize(
     "look_back_len,start_offset", [(l, s) for l in [11, 19, 23] for s in [0, 6, 12]]
 )
-def test_slstm_infer_len_parametrized(look_back_len, start_offset):
+def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     """
     Run training and forecasting for time-series forecasting model for multiple inference lengths.
     """
@@ -79,14 +80,70 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset):
         )
         if epoch == model.optimal_epoch:
             states_optim = copy.copy(states)
+            model_optim_dict = model.get_dict()
 
         model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
     # Get first state and observation
-    first_state = states.get_mean("lstm", "prior", True)[0]
+    prior_states_mu = states_optim.get_mean("lstm", "prior", True)
+    prior_states_std = states_optim.get_std("lstm", "prior", True)
+    first_state = prior_states_mu[0]
     first_observation = train_data["y"][0]
+
+    # plot (optional)
+    if plot_mode:
+        model.load_dict(model_optim_dict)
+
+        look_back_mu = model.lstm_net.smooth_look_back_mu
+        look_back_std = model.lstm_net.smooth_look_back_var**0.5
+
+        states_mu = prior_states_mu[:len(train_data["y"])]
+        states_std = prior_states_std[:len(train_data["y"])]
+
+        look_back_len_actual = len(look_back_mu)
+        x_look_back = np.arange(-look_back_len_actual, 0)
+        x_states = np.arange(0, len(states_mu))
+        x_obs = np.arange(0, len(train_data["y"]))
+
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(
+            x_look_back,
+            look_back_mu,
+            label="Look-back (smoothed)",
+            color="tab:green",
+        )
+        plt.fill_between(
+            x_look_back,
+            look_back_mu - look_back_std,
+            look_back_mu + look_back_std,
+            color="tab:green",
+            alpha=0.3,
+        )
+        plt.plot(
+            x_states,
+            states_mu,
+            label="Prior states",
+            color="tab:blue",
+        )
+        plt.fill_between(
+            x_states,
+            states_mu - states_std,
+            states_mu + states_std,
+            color="tab:blue",
+            alpha=0.3,
+        )
+        plt.plot(x_obs, train_data["y"], label="Observation", color="tab:red")
+        plt.axvline(x=-0.5, color="k", ls="--", label="Look-back boundary")
+
+        plt.xlabel("Relative time (0 = first observation)")
+        plt.ylabel("Value")
+        plt.title(f"SLSTM with look_back_len={look_back_len}")
+        plt.legend()
+        plt.show()
 
     npt.assert_allclose(
         first_state,
