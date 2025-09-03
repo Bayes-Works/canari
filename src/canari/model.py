@@ -286,18 +286,7 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
-            if (
-                self.lstm_net.smooth_look_back_mu is not None
-                and self.lstm_net.smooth_look_back_var is not None
-            ):
-                self.lstm_output_history.set(
-                    mu=self.lstm_net.smooth_look_back_mu,
-                    var=self.lstm_net.smooth_look_back_var,
-                )
-            else:
-                self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            if self.lstm_net.smooth_look_back_states is not None:
-                self.lstm_net.set_lstm_states(self.lstm_net.smooth_look_back_states)
+            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
 
     def _initialize_autoregression(self):
         """

@@ -239,7 +239,6 @@ class LstmNetwork(BaseComponent):
 
         lstm_network.smooth_look_back_mu = None
         lstm_network.smooth_look_back_var = None
-        lstm_network.smooth_look_back_states = None
 
         if self.smoother:
             lstm_network.smooth = True
