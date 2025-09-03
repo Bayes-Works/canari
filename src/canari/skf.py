@@ -142,7 +142,7 @@ class SKF:
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
         self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
-        self.model = self._transition()
+        self.model = [None, None, None, None]
         self.states = StatesHistory()
         self._initialize_attributes()
         self._initialize_model(norm_model, abnorm_model)
@@ -191,6 +191,7 @@ class SKF:
         # General attributes
         self.num_states = 0
         self.states_name = []
+        self.index_states_diff = None
 
         # SKF-related attributes
         self.mu_states_init = None
@@ -288,6 +289,7 @@ class SKF:
                 soure_model.states_name.insert(i, state)
                 states_diff.append(state)
 
+        # TODO: add "heteroscedastic noise"
         if "white noise" in soure_model.states_name:
             index_noise = soure_model.states_name.index("white noise")
             target_model.process_noise_matrix[index_noise, index_noise] = (
@@ -333,10 +335,12 @@ class SKF:
         )
 
         # Store transitional models in a dictionary
-        self.model["norm_norm"] = norm_norm
-        self.model["abnorm_abnorm"] = abnorm_abnorm
-        self.model["norm_abnorm"] = norm_abnorm
-        self.model["abnorm_norm"] = abnorm_norm
+        self.model[0] = norm_norm
+        self.model[1] = norm_abnorm
+        self.model[2] = abnorm_norm
+        self.model[3] = abnorm_abnorm
+        self.reset_model_transit()
+        self.save_initial_matrices()
 
     def _link_skf_to_model(self):
         """Attach SKF attributes (state count, names, LSTM) from 'norm_norm' model.
@@ -348,11 +352,11 @@ class SKF:
             None
         """
 
-        self.num_states = self.model["norm_norm"].num_states
-        self.states_name = self.model["norm_norm"].states_name
-        if self.model["norm_norm"].lstm_net is not None:
-            self.lstm_net = self.model["norm_norm"].lstm_net
-            self.lstm_output_history = self.model["norm_norm"].lstm_output_history
+        self.num_states = self.model[0].num_states
+        self.states_name = self.model[0].states_name
+        if self.model[0].lstm_net is not None:
+            self.lstm_net = self.model[0].lstm_net
+            self.lstm_output_history = self.model[0].lstm_output_history
 
     def _set_same_states_transition_models(self):
         """
@@ -363,10 +367,26 @@ class SKF:
             None
         """
 
-        for transition_model in self.model.values():
+        for transition_model in self.model:
             transition_model.set_states(
-                self.model["norm_norm"].mu_states, self.model["norm_norm"].var_states
+                self.model[0].mu_states, self.model[0].var_states
             )
+
+    def reset_model_transit(self):
+        """"""
+        for i, model in enumerate(self.model):
+            if i == 0:
+                model.origin_state = "norm"
+                model.arrival_state = "norm"
+            elif i == 1:
+                model.origin_state = "norm"
+                model.arrival_state = "abnorm"
+            elif i == 2:
+                model.origin_state = "abnorm"
+                model.arrival_state = "norm"
+            else:
+                model.origin_state = "abnorm"
+                model.arrival_state = "abnorm"
 
     def _initialize_smoother(self):
         """
@@ -407,7 +427,7 @@ class SKF:
         the marginal model.
         """
 
-        for transition_model in self.model.values():
+        for transition_model in self.model:
             transition_model.save_states_history()
 
         self.states.mu_prior.append(self.mu_states_prior)
@@ -663,7 +683,7 @@ class SKF:
             >>> skf.auto_initialize_baseline_states(train_set["y"][0:23])
         """
 
-        self.model["norm_norm"].auto_initialize_baseline_states(y)
+        self.model[0].auto_initialize_baseline_states(y)
         self.save_initial_states()
 
     def save_initial_states(self):
@@ -675,8 +695,8 @@ class SKF:
 
         """
 
-        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
-        self.var_states_init = self.model["norm_norm"].var_states.copy()
+        self.mu_states_init = self.model[0].mu_states.copy()
+        self.var_states_init = self.model[0].var_states.copy()
 
     def load_initial_states(self):
         """
@@ -684,8 +704,28 @@ class SKF:
 
         """
 
-        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
-        self.model["norm_norm"].var_states = self.var_states_init.copy()
+        self.model[0].mu_states = self.mu_states_init.copy()
+        self.model[0].var_states = self.var_states_init.copy()
+
+    def save_initial_matrices(self):
+        """"""
+
+        self.matrices = {
+            "norm_norm": {},
+            "norm_abnorm": {},
+            "abnorm_norm": {},
+            "abnorm_abnorm": {},
+        }
+
+        for model in self.model:
+            transit = f"{model.origin_state}_{model.arrival_state}"
+            self.matrices[transit]["transition_matrix"] = model.transition_matrix.copy()
+            self.matrices[transit][
+                "process_noise_matrix"
+            ] = model.process_noise_matrix.copy()
+            self.matrices[transit][
+                "observation_matrix"
+            ] = model.observation_matrix.copy()
 
     def initialize_states_history(self):
         """
@@ -693,7 +733,7 @@ class SKF:
         :attr:`.states` with empty lists, as well as for all transition models in :attr:`.model`.
         """
 
-        for transition_model in self.model.values():
+        for transition_model in self.model:
             transition_model.initialize_states_history()
         self.states.initialize(self.states_name)
 
@@ -702,11 +742,19 @@ class SKF:
         Set 'mu_states' and 'var_states' for each transition models in :attr:`.model` using their posterior.
         """
 
-        for transition_model in self.model.values():
+        for transition_model in self.model:
             transition_model.set_states(
                 transition_model.mu_states_posterior,
                 transition_model.var_states_posterior,
             )
+
+    @staticmethod
+    def set_matrices(model, matrices):
+        """"""
+
+        model.transition_matrix = matrices["transition_matrix"].copy()
+        model.observation_matrix = matrices["observation_matrix"].copy()
+        model.process_noise_matrix = matrices["process_noise_matrix"].copy()
 
     def set_memory(self, states: StatesHistory, time_step: int):
         """
@@ -724,7 +772,7 @@ class SKF:
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
 
-        self.model["norm_norm"].set_memory(states=states, time_step=0)
+        self.model[0].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
@@ -837,7 +885,7 @@ class SKF:
             >>> mu_preds_val, std_preds_val, states = skf.lstm_train(train_data=train_set,validation_data=val_set)
         """
 
-        return self.model["norm_norm"].lstm_train(
+        return self.model[0].lstm_train(
             train_data,
             validation_data,
             white_noise_decay,
@@ -889,7 +937,7 @@ class SKF:
             self.optimal_epoch,
             self.early_stop_metric,
             self.early_stop_metric_history,
-        ) = self.model["norm_norm"].early_stopping(
+        ) = self.model[0].early_stopping(
             current_epoch=current_epoch,
             max_epoch=max_epoch,
             mode=mode,
@@ -950,14 +998,15 @@ class SKF:
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
-                )
+                self.model[0]._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
         else:
             mu_lstm_pred = None
             var_lstm_pred = None
 
-        for transit, transition_model in self.model.items():
+        for transition_model in self.model:
+            transit = (
+                f"{transition_model.origin_state}_{transition_model.arrival_state}"
+            )
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
@@ -980,7 +1029,7 @@ class SKF:
         mu_obs_pred, var_obs_pred = common.calc_observation(
             mu_states_prior,
             var_states_prior,
-            self.model["norm_norm"].observation_matrix,
+            self.model[0].observation_matrix,
         )
 
         self.mu_states_prior = mu_states_prior
@@ -1008,7 +1057,10 @@ class SKF:
         mu_states_transit = self._transition()
         var_states_transit = self._transition()
 
-        for transit, transition_model in self.model.items():
+        for transition_model in self.model:
+            transit = (
+                f"{transition_model.origin_state}_{transition_model.arrival_state}"
+            )
             _, _, mu_states_transit[transit], var_states_transit[transit] = (
                 transition_model.backward(obs)
             )
@@ -1023,12 +1075,21 @@ class SKF:
         )
 
         # Reassign posterior states
-        for origin_state in self.marginal_list:
-            for arrival_state in self.marginal_list:
-                transit = f"{origin_state}_{arrival_state}"
-                self.model[transit]._set_posterior_states(
-                    mu_states_marginal[origin_state], var_states_marginal[origin_state]
+        for transition_model in self.model:
+            transition_model._set_posterior_states(
+                mu_states_marginal[transition_model.arrival_state],
+                var_states_marginal[transition_model.arrival_state],
+            )
+            if transition_model.origin_state != transition_model.arrival_state:
+                current_origin = copy.copy(transition_model.origin_state)
+                current_arrival = copy.copy(transition_model.arrival_state)
+                transition_model.origin_state = current_arrival
+                transition_model.arrival_state = current_origin
+
+                new_transit = (
+                    f"{transition_model.origin_state}_{transition_model.arrival_state}"
                 )
+                self.set_matrices(transition_model, self.matrices[new_transit])
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
@@ -1183,7 +1244,7 @@ class SKF:
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
-                lstm_index = self.model["norm_norm"].get_states_index("lstm")
+                lstm_index = self.model[0].get_states_index("lstm")
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[
@@ -1201,7 +1262,7 @@ class SKF:
                 self.marginal_prob["abnorm"]
             )
 
-        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
+        self.set_memory(states=self.model[0].states, time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
