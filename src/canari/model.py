@@ -1055,6 +1055,12 @@ class Model:
         save_dict["states_name"] = self.states_name
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
+            save_dict["lstm_states_history"] = self.lstm_states_history
+            if self.lstm_net.smooth:
+                save_dict["lstm_smooth_look_back_param"] = (
+                    self.lstm_net.smooth_look_back_mu,
+                    self.lstm_net.smooth_look_back_var,
+                )
 
         return save_dict
 
@@ -1079,6 +1085,12 @@ class Model:
         model.set_states(save_dict["mu_states"], save_dict["var_states"])
         if model.lstm_net:
             model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+            model.lstm_states_history = save_dict["lstm_states_history"]
+            if model.lstm_net.smooth:
+                (
+                    model.lstm_net.smooth_look_back_mu,
+                    model.lstm_net.smooth_look_back_var,
+                ) = save_dict["lstm_smooth_look_back_param"]
 
         return model
 
@@ -1193,7 +1205,9 @@ class Model:
         self.states.initialize(self.states_name)
 
     def set_memory(
-        self, states: StatesHistory, time_step: int, lstm_states: Optional[List] = None
+        self,
+        states: StatesHistory,
+        time_step: int,
     ):
         """
         Set :attr:`~canari.model.Model.mu_states`, :attr:`~canari.model.Model.var_states`, and
@@ -1216,6 +1230,7 @@ class Model:
             >>> # If the next analysis starts from t = 200
             >>> model.set_memory(states=model.states, time_step=200))
         """
+
         if time_step == 0:
             self.initialize_states_with_smoother_estimates()
         else:
@@ -1238,7 +1253,7 @@ class Model:
                 self.lstm_output_history.mu = mu_lstm_to_set
                 self.lstm_output_history.var = std_lstm_to_set**2
 
-                self.lstm_net.set_lstm_states(lstm_states[time_step - 1])
+                self.lstm_net.set_lstm_states(self.lstm_states_history[time_step - 1])
 
     def forward(
         self,

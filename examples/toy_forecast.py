@@ -84,7 +84,6 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
-        lstm_states_optim = copy.copy(model.lstm_states_history)
 
     if model.stop_training:
         break

@@ -218,6 +218,7 @@ class SKF:
         # LSTM-related attributes
         self.lstm_net = None
         self.lstm_output_history = None
+        self.lstm_states_history = None
 
         # Early stopping attributes
         self.stop_training = False
@@ -677,6 +678,16 @@ class SKF:
 
         self.mu_states_init = self.model["norm_norm"].mu_states.copy()
         self.var_states_init = self.model["norm_norm"].var_states.copy()
+        if self.model["norm_norm"].lstm_net.smooth:
+            self.lstm_smooth_look_back_mu = self.model[
+                "norm_norm"
+            ].lstm_net.smooth_look_back_mu
+            self.lstm_smooth_look_back_var = self.model[
+                "norm_norm"
+            ].lstm_net.smooth_look_back_var
+            self.lstm_states_history = copy.deepcopy(
+                self.model["norm_norm"].lstm_states_history
+            )
 
     def load_initial_states(self):
         """
@@ -686,6 +697,14 @@ class SKF:
 
         self.model["norm_norm"].mu_states = self.mu_states_init.copy()
         self.model["norm_norm"].var_states = self.var_states_init.copy()
+        if self.model["norm_norm"].lstm_net.smooth:
+            self.model["norm_norm"].lstm_output_history.set(
+                self.model["norm_norm"].lstm_net.smooth_look_back_mu,
+                self.model["norm_norm"].lstm_net.smooth_look_back_var,
+            )
+            self.model["norm_norm"].lstm_net.set_lstm_states(
+                self.model["norm_norm"].lstm_states_history[0]
+            )
 
     def initialize_states_history(self):
         """
@@ -708,9 +727,7 @@ class SKF:
                 transition_model.var_states_posterior,
             )
 
-    def set_memory(
-        self, states: StatesHistory, time_step: int, lstm_states: Optional[list] = None
-    ):
+    def set_memory(self, states: StatesHistory, time_step: int):
         """
         Apply :meth:`~canari.model.Model.set_memory` for the transition model 'norm_norm' stored in :attr:`.model`.
         If `time_step=0`, reset :attr:`.marginal_prob` using :attr:`.norm_model_prior_prob`.
@@ -725,9 +742,7 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
-        self.model["norm_norm"].set_memory(
-            states=states, time_step=0, lstm_states=lstm_states
-        )
+        self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
             self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
@@ -753,6 +768,14 @@ class SKF:
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
+            save_dict["lstm_states_history"] = self.model[
+                "norm_norm"
+            ].lstm_states_history
+            if self.lstm_net.smooth:
+                save_dict["lstm_smooth_look_back_param"] = (
+                    self.lstm_net.smooth_look_back_mu,
+                    self.lstm_net.smooth_look_back_var,
+                )
 
         return save_dict
 
@@ -777,6 +800,12 @@ class SKF:
         norm_model = Model(*norm_components)
         if norm_model.lstm_net:
             norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
+            norm_model.lstm_output_history = save_dict["lstm_states_history"]
+            if norm_model.lstm_net.smooth:
+                (
+                    norm_model.lstm_net.smooth_look_back_mu,
+                    norm_model.lstm_net.smooth_look_back_var,
+                ) = save_dict["lstm_smooth_look_back_param"]
 
         # Create abnormal model
         ab_components = list(save_dict["abnorm_model"]["components"].values())
@@ -1207,7 +1236,6 @@ class SKF:
         self.set_memory(
             states=self.model["norm_norm"].states,
             time_step=0,
-            lstm_states=self.model["norm_norm"].lstm_states_history,
         )
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
