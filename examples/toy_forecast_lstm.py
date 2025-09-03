@@ -64,7 +64,7 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0, lstm_states=model.lstm_states_history)
+    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
