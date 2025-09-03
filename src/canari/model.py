@@ -876,6 +876,11 @@ class Model:
         self.states.mu_posterior.append(self.mu_states_posterior)
         self.states.var_posterior.append(self.var_states_posterior)
         cov_states = self.var_states @ self.transition_matrix.T
+
+        if "lstm" in self.states_name:
+            idx_lstm = self.get_states_index("lstm")
+            cov_states[idx_lstm, :] = 0
+
         if "exp" in self.states_name:
             cov_states = self._exponential_cov_states(
                 cov_states,

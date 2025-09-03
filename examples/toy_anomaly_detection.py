@@ -53,19 +53,22 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    model_noise=True,
+    # model_noise=True,
 )
+noise = WhiteNoise(std_error=5e-2)
 
 # Normal model
 model = Model(
     local_trend,
     lstm_network,
+    noise,
 )
 
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
     lstm_network,
+    noise,
 )
 
 # Switching Kalman filter
@@ -88,7 +91,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     (mu_validation_preds, std_validation_preds, states) = skf.lstm_train(
         train_data=train_data, validation_data=validation_data
     )
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
+    skf.model[0].set_memory(states=states, time_step=0)
 
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -126,7 +129,7 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother()
+# smooth_marginal_abnorm_prob, states = skf.smoother()
 # smooth_marginal_abnorm_prob, states = skf.smoother(
 #     matrix_inversion_tol=1e-2, tol_type="absolute"
 # )
