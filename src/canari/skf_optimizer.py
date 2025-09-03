@@ -269,8 +269,6 @@ else:
             num_optimization_trial: Optional[int] = 50,
             grid_search: Optional[bool] = False,
             algorithm: Optional[str] = "default",
-            lstm_states: Optional[list] = None,
-            lstm_look_back: Optional[tuple] = None,
         ):
             """
             Initializes the SKFOptimizer.
@@ -289,8 +287,6 @@ else:
             self._algorithm = algorithm
             self.skf_optim = None
             self.param_optim = None
-            self.lstm_states = lstm_states
-            self.lstm_look_back = lstm_look_back
 
         def optimize(self):
             """
@@ -305,8 +301,6 @@ else:
                 skf = self._initialize_skf(
                     config,
                     model_param,
-                    lstm_states=self.lstm_states,
-                    lstm_look_back=self.lstm_look_back,
                 )
                 slope = config["slope"]
 
@@ -427,8 +421,6 @@ else:
             self.skf_optim = self._initialize_skf(
                 self.param_optim,
                 self._model_param,
-                lstm_states=self.lstm_states,
-                lstm_look_back=self.lstm_look_back,
             )
 
             # Print optimal parameters
