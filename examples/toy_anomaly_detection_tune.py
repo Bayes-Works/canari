@@ -21,7 +21,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optimization: int = 20,
+    num_trial_optimization: int = 10,
     param_optimization: bool = True,
     param_grid_search: bool = False,
 ):
@@ -69,7 +69,7 @@ def main(
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
-                    smoother=True,
+                    # smoother=False,
                 ),
                 WhiteNoise(std_error=param["sigma_v"]),
             )
@@ -115,11 +115,6 @@ def main(
                     mu_validation_preds_optim = mu_validation_preds.copy()
                     std_validation_preds_optim = std_validation_preds.copy()
                     states_optim = copy.copy(states)
-                    lstm_optim_states = copy.copy(model.lstm_states_history)
-                    optimal_look_back = (
-                        model.lstm_net.smooth_look_back_mu,
-                        model.lstm_net.smooth_look_back_var,
-                    )
 
                 if model.stop_training:
                     break
@@ -129,8 +124,6 @@ def main(
                 states_optim,
                 mu_validation_preds_optim,
                 std_validation_preds_optim,
-                lstm_optim_states,
-                optimal_look_back,
             )
 
         # Define parameter search space
@@ -162,8 +155,6 @@ def main(
             states_optim,
             mu_validation_preds,
             std_validation_preds,
-            lstm_optim_states,
-            optimal_look_back,
         ) = initialize_model(param, train_data, validation_data)
         # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -195,19 +186,18 @@ def main(
 
         ##################
         # Optimize for skf
-        def initialize_skf(
-            skf_param_space, model_param: dict, lstm_states=None, lstm_look_back=None
-        ):
+        def initialize_skf(skf_param_space, model_param: dict):
             norm_model = Model.load_dict(model_param)
 
-            if lstm_states is not None:
-                norm_model.lstm_states_history = lstm_states
-                norm_model.lstm_net.set_lstm_states(lstm_states[0])
-
-            if lstm_look_back is not None:
-                norm_model.lstm_output_history.set(lstm_look_back[0], lstm_look_back[1])
-                norm_model.lstm_net.smooth_look_back_mu = lstm_look_back[0]
-                norm_model.lstm_net.smooth_look_back_var = lstm_look_back[1]
+            # set smoothed look back and states for lstm
+            if norm_model.lstm_net.smooth:
+                norm_model.lstm_output_history.set(
+                    model_param["lstm_smooth_look_back_param"][0],
+                    model_param["lstm_smooth_look_back_param"][1],
+                )
+                norm_model.lstm_net.set_lstm_states(
+                    model_param["lstm_states_history"][0]
+                )
 
             abnorm_model = Model(
                 LocalAcceleration(),
@@ -275,8 +265,6 @@ def main(
             num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=param_grid_search,
-            lstm_states=lstm_optim_states if lstm_optim_states is not None else None,
-            lstm_look_back=optimal_look_back if optimal_look_back is not None else None,
         )
         skf_optimizer.optimize()
         # Get parameters
@@ -284,15 +272,10 @@ def main(
         skf_optim = initialize_skf(
             skf_param,
             model_optim_dict,
-            lstm_states=lstm_optim_states if not None else None,
-            lstm_look_back=optimal_look_back if not None else None,
         )
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
-        if skf_optim.lstm_net.smooth:
-            skf_optim_dict["lstm_states"] = lstm_optim_states
-            skf_optim_dict["lstm_look_back"] = optimal_look_back
         with open("saved_params/toy_anomaly_detection_tune.pkl", "wb") as f:
             pickle.dump(skf_optim_dict, f)
 
@@ -303,18 +286,47 @@ def main(
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
         if skf_optim.lstm_net.smooth:
-            skf_optim.lstm_output_history.set(
-                skf_optim_dict["lstm_look_back"][0],
-                skf_optim_dict["lstm_look_back"][1],
+            skf_optim.model["norm_norm"].lstm_output_history.set(
+                skf_optim_dict["lstm_smooth_look_back_param"][0],
+                skf_optim_dict["lstm_smooth_look_back_param"][1],
             )
             skf_optim.model["norm_norm"].lstm_states_history = skf_optim_dict[
-                "lstm_states"
+                "lstm_states_history"
             ]
             skf_optim.model["norm_norm"].lstm_net.set_lstm_states(
-                skf_optim_dict["lstm_states"][0]
+                skf_optim_dict["lstm_states_history"][0]
             )
 
-    ########################################
+    #######################################
+    # check the smoothed parameters
+    if skf_optim.lstm_net.smooth:
+        print(
+            "Smoothed look back mean:",
+            skf_optim.lstm_output_history.mu,
+        )
+        print(
+            "Smoothed look back std:",
+            np.sqrt(skf_optim.lstm_output_history.var),
+        )
+        print(
+            "Smoothed lstm states in history:",
+            skf_optim.model["norm_norm"].lstm_states_history[0],
+        )
+        print(
+            "Smoothed lstm states in SLSTM:",
+            skf_optim.lstm_net.get_lstm_states(),
+        )
+        # plot the look back
+        plt.figure()
+        plt.plot(
+            skf_optim.model["norm_norm"].lstm_output_history.mu,
+        )
+        plt.title("SKF LSTM look back output")
+        plt.xlabel("Look back time step")
+        plt.ylabel("Look back output")
+        plt.show()
+    #######################################
+
     # Detect anomaly
     print("Model parameters used:", skf_optim_dict["model_param"])
     print("SKF model parameters used:", skf_optim_dict["skf_param"])

@@ -122,15 +122,9 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
-        lstm_states_optim = copy.copy(skf.model["norm_norm"].lstm_states_history)
-        optimal_look_back = (
-            skf.model["norm_norm"].lstm_net.smooth_look_back_mu,
-            skf.model["norm_norm"].lstm_net.smooth_look_back_var,
-        )
+        model_optim_dict = skf.get_dict()
 
-    skf.model["norm_norm"].set_memory(
-        states=states, time_step=0, lstm_states=model.lstm_states_history
-    )
+    skf.model["norm_norm"].set_memory(states=states, time_step=0)
     if skf.stop_training:
         break
 
@@ -138,8 +132,38 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.lstm_net.smooth_look_back_mu, skf.lstm_net.smooth_look_back_var = optimal_look_back
-skf.set_memory(states=states_optim, time_step=0, lstm_states=lstm_states_optim)
+skf.load_dict(model_optim_dict)
+
+#####################################
+# check the smoothed parameters
+if skf.lstm_net.smooth:
+    print(
+        "Smoothed look back mean:",
+        skf.lstm_output_history.mu,
+    )
+    print(
+        "Smoothed look back std:",
+        np.sqrt(skf.lstm_output_history.var),
+    )
+    print(
+        "Smoothed lstm states in history:",
+        skf.model["norm_norm"].lstm_states_history[0],
+    )
+    print(
+        "Smoothed lstm states in SLSTM:",
+        skf.lstm_net.get_lstm_states(),
+    )
+    # plot the look back
+    plt.figure()
+    plt.plot(
+        skf.model["norm_norm"].lstm_output_history.mu,
+    )
+    plt.title("SKF LSTM look back output")
+    plt.xlabel("Look back time step")
+    plt.ylabel("Look back output")
+    plt.show()
+#######################################
+
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother(
     matrix_inversion_tol=1e-2, tol_type="absolute"
