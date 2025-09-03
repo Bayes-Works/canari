@@ -6,6 +6,7 @@ from typing import Tuple, Optional
 import numpy as np
 from canari.data_struct import LstmOutputHistory
 from math import erf
+import scipy.linalg as la
 
 
 def create_block_diag(*arrays: np.ndarray) -> np.ndarray:
@@ -205,6 +206,8 @@ def rts_smoother(
     var_states_smooth = (
         var_states_posterior + jcb @ (var_states_smooth - var_states_prior) @ jcb.T
     )
+
+    var_states_smooth = (var_states_smooth + var_states_smooth.T) / 2
 
     return (
         mu_states_smooth,

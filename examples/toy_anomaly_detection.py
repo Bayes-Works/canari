@@ -130,9 +130,11 @@ print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 # # Anomaly Detection
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
 # smooth_marginal_abnorm_prob, states = skf.smoother()
-# smooth_marginal_abnorm_prob, states = skf.smoother(
-#     matrix_inversion_tol=1e-2, tol_type="absolute"
-# )
+# skf.reset_model_transit()
+# skf.load_initial_matrices()
+smooth_marginal_abnorm_prob, states = skf.smoother(
+    matrix_inversion_tol=1e-2, tol_type="relative"
+)
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
@@ -168,5 +170,17 @@ fig, ax = plot_skf_states(
     color="b",
     legend_location="upper left",
 )
-fig.suptitle("SKF hidden states", fontsize=10, y=1)
+fig.suptitle("SKF smooth", fontsize=10, y=1)
 plt.show()
+
+# fig, ax = plot_skf_states(
+#     data_processor=data_processor,
+#     states=states,
+#     states_type="posterior",
+#     model_prob=marginal_abnorm_prob_plot,
+#     # standardization=True,
+#     color="b",
+#     legend_location="upper left",
+# )
+# fig.suptitle("SKF prior", fontsize=10, y=1)
+# plt.show()

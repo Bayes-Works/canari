@@ -399,25 +399,16 @@ class SKF:
             None
         """
 
-        self.model["norm_abnorm"].states.mu_smooth[-1] = (
-            self.model["abnorm_abnorm"].states.mu_posterior[-1].copy()
-        )
-        self.model["norm_abnorm"].states.var_smooth[-1] = (
-            self.model["abnorm_abnorm"].states.var_posterior[-1].copy()
-        )
-        self.model["abnorm_norm"].states.mu_smooth[-1] = (
-            self.model["norm_norm"].states.mu_posterior[-1].copy()
-        )
-        self.model["abnorm_norm"].states.var_smooth[-1] = (
-            self.model["norm_norm"].states.var_posterior[-1].copy()
-        )
+        # for model in self.model:
+        #     model.states.mu_smooth[-1] = model.states.mu_posterior[-1].copy()
+        #     model.states.var_smooth[-1] = model.states.var_posterior[-1].copy()
 
         self.states.mu_smooth[-1], self.states.var_smooth[-1] = common.gaussian_mixture(
-            self.model["norm_norm"].states.mu_posterior[-1],
-            self.model["norm_norm"].states.var_posterior[-1],
+            self.model[0].states.mu_posterior[-1],
+            self.model[0].states.var_posterior[-1],
             self.filter_marginal_prob_history["norm"][-1],
-            self.model["abnorm_abnorm"].states.mu_posterior[-1],
-            self.model["abnorm_abnorm"].states.var_posterior[-1],
+            self.model[3].states.mu_posterior[-1],
+            self.model[3].states.var_posterior[-1],
             self.filter_marginal_prob_history["abnorm"][-1],
         )
 
@@ -516,7 +507,10 @@ class SKF:
         mu_states_transit = self._transition()
         var_states_transit = self._transition()
 
-        for transit, transition_model in self.model.items():
+        for transition_model in self.model:
+            transit = (
+                f"{transition_model.origin_state}_{transition_model.arrival_state}"
+            )
             mu_states_transit[transit] = transition_model.states.mu_smooth[time_step]
             var_states_transit[transit] = transition_model.states.var_smooth[time_step]
 
@@ -726,6 +720,19 @@ class SKF:
             self.matrices[transit][
                 "observation_matrix"
             ] = model.observation_matrix.copy()
+
+    def load_initial_matrices(self):
+        """"""
+
+        for model in self.model:
+            transit = f"{model.origin_state}_{model.arrival_state}"
+            model.transition_matrix = self.matrices[transit]["transition_matrix"].copy()
+            model.process_noise_matrix = self.matrices[transit][
+                "process_noise_matrix"
+            ].copy()
+            model.observation_matrix = self.matrices[transit][
+                "observation_matrix"
+            ].copy()
 
     def initialize_states_history(self):
         """
@@ -1119,7 +1126,7 @@ class SKF:
         """
 
         epsilon = 0 * 1e-20
-        for transition_model in self.model.values():
+        for transition_model in self.model:
             transition_model.rts_smoother(
                 time_step, matrix_inversion_tol=matrix_inversion_tol, tol_type=tol_type
             )
@@ -1194,15 +1201,20 @@ class SKF:
             state_type="smooth",
         )
 
-        for origin_state in self.marginal_list:
-            for arrival_state in self.marginal_list:
-                transit = f"{origin_state}_{arrival_state}"
-                self.model[transit].states.mu_smooth[time_step] = mu_states_marginal[
-                    arrival_state
-                ].copy()
-                self.model[transit].states.var_smooth[time_step] = var_states_marginal[
-                    arrival_state
-                ].copy()
+        # Reassign smooth states
+        for transition_model in self.model:
+            transition_model.states.mu_smooth[time_step] = mu_states_marginal[
+                transition_model.origin_state
+            ].copy()
+            transition_model.states.var_smooth[time_step] = var_states_marginal[
+                transition_model.origin_state
+            ].copy()
+
+            if transition_model.origin_state != transition_model.arrival_state:
+                current_origin = copy.copy(transition_model.origin_state)
+                current_arrival = copy.copy(transition_model.arrival_state)
+                transition_model.origin_state = current_arrival
+                transition_model.arrival_state = current_origin
 
     def filter(
         self,
@@ -1263,6 +1275,7 @@ class SKF:
             )
 
         self.set_memory(states=self.model[0].states, time_step=0)
+
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
