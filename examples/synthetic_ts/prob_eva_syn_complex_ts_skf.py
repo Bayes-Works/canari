@@ -20,17 +20,13 @@ from tqdm import tqdm
 import random
 
 # # # Read data
-data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -54,7 +50,7 @@ with open("saved_params/syn_complex_ts_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=29,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -69,16 +65,16 @@ print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 
 stdtrans_normtoab_probthred_combs = [
-                                     [0.00342715185063372, 3.07697361603181e-06, 0.02892882889656792],
-                                     [0.004703179031803964, 1.2777983356171921e-06, 0.1815522593778395],
-                                     [0.0021161274124564477, 1.000922100929949e-06, 0.015737540974875713],
-                                     [0.0014973401700002476, 2.698480811792557e-06, 0.01785007998307663],
-                                     [0.0011483189948316651, 3.479429808444131e-05, 0.04127172303484497],
-                                     [0.0007758469624725784, 0.0007601164865473083, 0.123104745400439643],
-                                     [0.0003303186492886974, 1.939942112090878e-05, 0.04506890006921923],
-                                     [0.00033008176621528976, 4.9984370919747134e-05, 0.0376212092340361],
-                                     [0.002551763817843497, 5.3156978559439626e-05, 0.09625807853548385],
-                                     [5.3525554586891886e-05, 0.006597587154479165, 0.15094114550475424],
+                                     [0.00013242122906899747, 0.00012330050233640326, 0.09548276689682396],
+                                     [0.0001334536158194801, 1.1998289711683686e-06, 0.19558330695480902],
+                                     [0.00013370610709464095, 0.00011761152232847044, 0.43493860466257206],
+                                     [0.0004154904529456, 3.028226142600307e-06, 0.40284429542370906],
+                                     [0.0002967670780380956, 3.88919829190665e-05, 0.419503838275256594],
+                                     [0.00010015341650543427, 3.258333327508768e-05, 0.016730428894357052],
+                                     [0.0006085246801147487, 1.2328489359425264e-06, 0.34698232329761238],
+                                     [0.00019372399192480233, 5.261887494720216e-06, 0.032250287513274974],
+                                     [8.548944456909893e-06, 1.6860892705898506e-05, 0.5402683628390458],
+                                     [0.00012976426743550138, 1.3776977253309432e-05, 0.10988346057529473],
                                      ]
 
 # # False alarms check

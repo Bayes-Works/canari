@@ -21,17 +21,13 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
+data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -78,7 +74,7 @@ with open("saved_params/syn_simple_ts_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=16,
+        look_back_len=13,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -125,13 +121,14 @@ hsl_tsad_agent.init_drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.mu_LTd = 2.3146175023826112e-05 
-hsl_tsad_agent.LTd_std = 0.00012207840318264503
+hsl_tsad_agent.mu_LTd = -1.8543255516705544e-05
+hsl_tsad_agent.LTd_std = 5.909502346945472e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.1)
-hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
+# hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
+hsl_tsad_agent.detection_threshold = 0.1638814757675824
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.7446167e-05, 0.0020595256, np.array([1.93166037e-04, 1.69607755e-02, 1.01968056e+02]), np.array([1.0766621e-02, 1.2040362e+00, 6.0929508e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 

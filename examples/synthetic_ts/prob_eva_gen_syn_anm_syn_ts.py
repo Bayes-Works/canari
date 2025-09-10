@@ -17,17 +17,13 @@ from pytagi import Normalizer as normalizer
 
 
 # # Read data
-data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
+data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
