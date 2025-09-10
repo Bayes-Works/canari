@@ -17,18 +17,14 @@ import pickle
 from pytagi import Normalizer
 
 
-# # Read data
-data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
+# # # Read data
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -45,11 +41,11 @@ num_epoch = 300
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Define AR model
-AR_process_error_var_prior = 1e2
-var_W2bar_prior = 1e2
+AR_process_error_var_prior = 1e3
+var_W2bar_prior = 1e3
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=29,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -289,10 +285,10 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 model_dict['gen_phi_ar'] = ar_model.states.get_mean(states_type="prior", states_name="phi")[-1]
 model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
-# Save model_dict to local
-import pickle
-with open("saved_params/syn_complex_ts_tsmodel.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/syn_complex_ts_tsmodel.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################
