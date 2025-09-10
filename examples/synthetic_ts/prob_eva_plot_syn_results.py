@@ -14,8 +14,8 @@ plt.rcParams.update(params)
 
 df_il = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_il.csv")
 df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_ts_whitenoise_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_mp_norm.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_prophet_online.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
@@ -192,7 +192,7 @@ ax[0].fill_between(
     df_skf_whitenoise_mean["detection_time"]["mean"] + df_skf_whitenoise_mean["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_prophet_mean.index, df_prophet_mean["detection_time"]["mean"], label="SKF (whitenoise)")
+ax[0].plot(df_prophet_mean.index, df_prophet_mean["detection_time"]["mean"], label="Prophet")
 ax[0].fill_between(
     df_prophet_mean.index,
     df_prophet_mean["detection_time"]["mean"] - df_prophet_mean["detection_time"]["std"],

@@ -20,17 +20,13 @@ from tqdm import tqdm
 import random
 
 # # # Read data
-data_file = "./data/toy_time_series/synthetic_simple_autoregression_periodic.csv"
+data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_simple_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
@@ -54,7 +50,7 @@ with open("saved_params/syn_simple_ts_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=16,
+        look_back_len=13,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -69,16 +65,16 @@ print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 
 stdtrans_normtoab_probthred_combs = [
-                                     [7.875379715217655e-05, 1.9958538040725365e-06, 0.9256530410044609],
-                                     [5.484364382881987e-05, 0.0002251832150158605, 0.427522021819501547],
-                                     [6.193222223397714e-05, 1.3117417080896941e-05, 0.62037345530635673],
-                                     [3.3958836731827355e-05, 7.070365587924503e-06, 0.19028229504375316],
-                                     [6.217512463475877e-05, 8.08352658485382e-06, 0.76613127484960674],
-                                     [7.723839623242055e-05, 0.0005725294355282344, 0.76228404334867208],
-                                     [5.729393128803718e-05, 0.0017506101519408227, 0.80237881951913468],
-                                     [1.307877781191042e-05, 0.002006595192014648, 0.030036413605155642],
-                                     [5.969590572873653e-05, 1.396815167996253e-06, 0.610476478836818346],
-                                     [1.3397232016210988e-05, 6.241857982495791e-06, 0.5446132905478336],
+                                     [7.412755940338512e-06, 6.416635290671406e-05, 0.025359912456186927],
+                                     [7.374493944956498e-05, 2.3964863102703695e-06, 0.06633948717161109],
+                                     [5.952173244769044e-05, 2.820337832175992e-06, 0.12449169965336978],
+                                     [6.966914482559759e-05, 1.0933282904607644e-06, 0.56406166304168602],
+                                     [4.471188431839439e-05, 0.0003199513506302794, 0.11629614421165259],
+                                     [0.000252303150190864, 3.4338343221193907e-05, 0.16922952097869445],
+                                     [3.0075775375881952e-05, 0.00014087260031204994, 0.18086475784666017],
+                                     [1.4984866680322357e-05, 0.0009906033035675128, 0.3637495229603723],
+                                     [1.7578354405475338e-05, 4.587107733586499e-05, 0.040363168265581215],
+                                     [3.661762975642531e-05, 0.0014125590060904748, 0.04464206823801334],
                                      ]
 
 # # False alarms check
@@ -158,8 +154,8 @@ for _, row in df.iterrows():
 results_all = []
 
 for k in tqdm(range(len(restored_data))):
-# for k in tqdm(range(2)):
-#     k += 150
+# for k in tqdm(range(4)):
+#     k += 60
 
     df_k = copy.deepcopy(df_raw)
     # Replace the values in the dataframe with the restored_data[k][0]
