@@ -18,12 +18,11 @@ os.environ['OMP_NUM_THREADS'] = '1'
 # # Set the first column name to "ds"
 # df_raw.columns = ['ds', 'y']
 
-data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
-df_raw = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-df_raw[0] = pd.to_datetime(df_raw[0])
-df_raw.columns = ['ds']
-data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
-df_raw["y"] = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+# Set the first column name to "ds"
+df_raw.columns = ['ds', 'y']
 
 train_split=0.3
 validation_split=0.1
@@ -47,7 +46,7 @@ for _, row in df.iterrows():
     restored_data.append((values, anomaly_magnitude, anomaly_start_index))
 
 begin_idx = int(len(df_raw) * 0.4)
-threshold = 0.3
+threshold = 1.1
 results_all = []
 
 for ts_index in tqdm(range(len(restored_data))):

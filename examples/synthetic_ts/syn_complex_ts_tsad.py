@@ -18,17 +18,26 @@ import copy
 
 
 # # # Read data
-data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# linear_space = np.linspace(0, 2, num=len(df_raw))
-# df_raw = df_raw.add(linear_space, axis=0)
-
-data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
-time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_series = pd.to_datetime(time_series[0])
+time_series = pd.to_datetime(df_raw.iloc[:, 0])
+df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values"]
+df_raw.columns = ["obs"]
+
+# LT anomaly
+# anm_mag = 0.010416667/10
+time_anomaly = 52*8
+# anm_mag = 0.3/52
+anm_mag = 2/52
+# anm_mag = 0
+# anm_baseline = np.linspace(0, 3, num=len(df_raw))
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # Data pre-processing
 output_col = [0]
@@ -53,7 +62,7 @@ with open("saved_params/syn_complex_ts_tsmodel.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=29,
+        look_back_len=12,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -106,14 +115,15 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -6.919172142423019e-06
-hsl_tsad_agent.LTd_std = 8.060949397171501e-05
+hsl_tsad_agent.mu_LTd = 8.80775230573433e-06
+hsl_tsad_agent.LTd_std = 9.759977096661932e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
-hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
+# hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
+hsl_tsad_agent.detection_threshold = 0.1
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_complex_ts.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -6.447088e-05, 0.0005223349, np.array([-7.47846905e-04, -8.39954466e-02, 1.07514404e+02]), np.array([1.1162145e-02, 1.3886616e+00, 6.2690197e+01])
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.2672563e-07, 0.0003784413, np.array([2.1387481e-04, 2.0945203e-02, 1.0730808e+02]), np.array([1.1220957e-02, 1.3929614e+00, 6.2583759e+01])
 
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_complex_ts.csv', 
                                   load_model_path='saved_params/NN_detection_model_syn_complex_ts.pkl', max_training_epoch=50)

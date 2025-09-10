@@ -34,24 +34,20 @@ def main(
     num_trial_optimization: int = 20,
     param_optimization: bool = True,
 ):
-    # Read data
-    data_file = "./data/toy_time_series/synthetic_autoregression_periodic.csv"
+    # # # Read data
+    data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    # linear_space = np.linspace(0, 2, num=len(df_raw))
-    # df_raw = df_raw.add(linear_space, axis=0)
-
-    data_file_time = "./data/toy_time_series/synthetic_autoregression_periodic_datetime.csv"
-    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(time_series[0])
+    time_series = pd.to_datetime(df_raw.iloc[:, 0])
+    df_raw = df_raw.iloc[:, 1:]
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["values"]
+    df_raw.columns = ["obs"]
 
     # LT anomaly
     # anm_mag = 0.010416667/10
-    time_anomaly = 52*13
+    time_anomaly = 52*8
     # anm_mag = 0.3/52
-    anm_mag = 50/52
+    anm_mag = 10/52
     # anm_mag = 0
     # anm_baseline = np.linspace(0, 3, num=len(df_raw))
     anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -77,11 +73,11 @@ def main(
     ########################################
 
 
-    with open("saved_params/syn_complex_ts_tsmodel.pkl", "rb") as f:
+    with open("saved_params/syn_simple_ts_tsmodel.pkl", "rb") as f:
         model_dict = pickle.load(f)
 
     LSTM = LstmNetwork(
-            look_back_len=29,
+            look_back_len=13,
             num_features=2,
             num_layer=1,
             num_hidden_unit=50,
@@ -155,26 +151,26 @@ def main(
         num_samples=1,
         slope=[slope_lower_bound, slope_upper_bound],
     )
-    plot_data(
-        data_processor=data_processor,
-        standardization=True,
-        plot_validation_data=False,
-        plot_test_data=False,
-        plot_column=output_col,
-    )
-    train_time = data_processor.get_time("train")
-    for ts in synthetic_anomaly_data:
-        plt.plot(train_time, ts["y"])
-    plt.legend(
-        [
-            "data without anomaly",
-            "",
-            "smallest anomaly tested",
-            "largest anomaly tested",
-        ]
-    )
-    plt.title("Train data with added synthetic anomalies")
-    plt.show()
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     plot_validation_data=False,
+    #     plot_test_data=False,
+    #     plot_column=output_col,
+    # )
+    # train_time = data_processor.get_time("train")
+    # for ts in synthetic_anomaly_data:
+    #     plt.plot(train_time, ts["y"])
+    # plt.legend(
+    #     [
+    #         "data without anomaly",
+    #         "",
+    #         "smallest anomaly tested",
+    #         "largest anomaly tested",
+    #     ]
+    # )
+    # plt.title("Train data with added synthetic anomalies")
+    # plt.show()
 
     if param_optimization:
         skf_param_space = {
