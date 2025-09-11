@@ -285,8 +285,9 @@ def main(
         with open("saved_params/toy_anomaly_detection_tune.pkl", "rb") as f:
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
+        skf_optim.lstm_output_history = skf_optim.model["norm_norm"].lstm_output_history
         if skf_optim.lstm_net.smooth:
-            skf_optim.model["norm_norm"].lstm_output_history.set(
+            skf_optim.lstm_output_history.set(
                 skf_optim_dict["lstm_smooth_look_back_param"][0],
                 skf_optim_dict["lstm_smooth_look_back_param"][1],
             )
@@ -319,7 +320,7 @@ def main(
         # plot the look back
         plt.figure()
         plt.plot(
-            skf_optim.model["norm_norm"].lstm_output_history.mu,
+            skf_optim.lstm_output_history.mu,
         )
         plt.title("SKF LSTM look back output")
         plt.xlabel("Look back time step")

@@ -354,6 +354,7 @@ class SKF:
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
             self.lstm_output_history = self.model["norm_norm"].lstm_output_history
+            self.lstm_states_history = self.model["norm_norm"].lstm_states_history
 
     def _set_same_states_transition_models(self):
         """
@@ -685,7 +686,7 @@ class SKF:
             self.lstm_smooth_look_back_var = self.model[
                 "norm_norm"
             ].lstm_net.smooth_look_back_var
-            self.lstm_states_history = copy.deepcopy(
+            self.lstm_states_history = copy.copy(
                 self.model["norm_norm"].lstm_states_history
             )
 
@@ -699,11 +700,11 @@ class SKF:
         self.model["norm_norm"].var_states = self.var_states_init.copy()
         if self.model["norm_norm"].lstm_net.smooth:
             self.model["norm_norm"].lstm_output_history.set(
-                self.model["norm_norm"].lstm_net.smooth_look_back_mu,
-                self.model["norm_norm"].lstm_net.smooth_look_back_var,
+                self.lstm_smooth_look_back_mu,
+                self.lstm_smooth_look_back_var,
             )
             self.model["norm_norm"].lstm_net.set_lstm_states(
-                self.model["norm_norm"].lstm_states_history[0]
+                self.lstm_states_history[0]
             )
 
     def initialize_states_history(self):
@@ -800,7 +801,7 @@ class SKF:
         norm_model = Model(*norm_components)
         if norm_model.lstm_net:
             norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            norm_model.lstm_output_history = save_dict["lstm_states_history"]
+            norm_model.lstm_states_history = save_dict["lstm_states_history"]
             if norm_model.lstm_net.smooth:
                 (
                     norm_model.lstm_net.smooth_look_back_mu,

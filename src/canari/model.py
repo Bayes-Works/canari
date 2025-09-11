@@ -741,10 +741,13 @@ class Model:
             np.ndarray: Encoded covariate matrix of shape (num_generated_samples, 1).
         """
 
-        step = 1 if num_generated_samples >= 0 else -1
-        covariates_generation = np.arange(0, num_generated_samples, step).reshape(-1, 1)
-        if num_generated_samples < 0:
-            covariates_generation = covariates_generation[::-1]
+        if num_generated_samples >= 0:
+            # Forward generation: offsets are [0, 1, 2, ..., n-1]
+            covariates_generation = np.arange(0, num_generated_samples).reshape(-1, 1)
+        else:
+            # Reverse generation: offsets are [-n, ..., -2, -1]
+            n_abs = abs(num_generated_samples)
+            covariates_generation = np.arange(-n_abs, 0).reshape(-1, 1)
 
         def safe_mod(x, base):
             return (x % base + base) % base
@@ -920,8 +923,8 @@ class Model:
 
         # initialize the smoothing buffer for SLTM
         if self.lstm_net.smooth and self._current_epoch == 1:
-            self.lstm_net.num_samples = (
-                self.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
+            self.lstm_net.num_samples = self.lstm_net.lstm_infer_len + len(
+                train_data["y"]
             )
 
         # prepare loockback covariates
@@ -942,7 +945,7 @@ class Model:
 
         out_updater = OutputUpdater(device)
 
-        for i in range(self.lstm_net.lstm_infer_len - 1):
+        for i in range(self.lstm_net.lstm_infer_len):
             if lookback_covariates is None:
                 dummy_covariates = []
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -1003,7 +1006,7 @@ class Model:
             std = scale_const_std[col_idx + 1]
             init_val = init_val * std + mu
             raw = self._prepare_covariates_generation(
-                init_val.reshape(1),
+                int(init_val),
                 num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
@@ -1650,8 +1653,8 @@ class Model:
 
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
-            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len - 1]
+            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
+            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
             mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
             var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
             self.lstm_net.smooth_look_back_mu = mu_sequence
@@ -1659,7 +1662,7 @@ class Model:
 
             # set the smoothed lstm_states at the first time step
             self.lstm_states_history[0] = self.lstm_net.get_lstm_states(
-                self.lstm_net.lstm_infer_len - 2
+                self.lstm_net.lstm_infer_len - 1
             )
 
         return self.states

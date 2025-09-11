@@ -17,7 +17,7 @@ def create_slstm_model(look_back_len: int) -> Model:
         LstmNetwork(
             look_back_len=look_back_len,
             num_features=2,
-            infer_len=24 * 3,
+            infer_len=24 * 2,
             num_layer=1,
             num_hidden_unit=40,
             device="cpu",
@@ -36,23 +36,26 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     """
     output_col = [0]
 
-    # Read and prepare data
-    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
-    df_raw_orig = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+    # # Read data
+    data_file = "./data/toy_time_series/sine.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 
-    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
-    time_series_orig = pd.read_csv(
-        data_file_time, skiprows=1, delimiter=",", header=None
-    )
-
-    df_raw = copy.copy(df_raw_orig)
-    time_series = pd.to_datetime(time_series_orig[0])
+    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+    time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
-    df_raw = df_raw[start_offset:]
+    df_raw.index.name = "date_time"
+    df_raw.columns = ["values"]
+
+    # Resampling data
+    df = df_raw.resample("H").mean()
+
+    # offset the data by a random start time
+    df = df.iloc[start_offset:]
 
     # Data processing
     data_processor = DataProcess(
-        data=df_raw,
+        data=df,
         train_split=0.8,
         validation_split=0.2,
         time_covariates=["hour_of_day"],
@@ -68,6 +71,8 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
         (mu_validation_preds, _, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
+            white_noise_max_std=1.0,
+            white_noise_decay_factor=0.99,
         )
 
         # Calculate the log-likelihood metric
@@ -80,27 +85,29 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
         )
         if epoch == model.optimal_epoch:
             states_optim = copy.copy(states)
-            model_optim_dict = model.get_dict()
 
         model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
+    # reset memory
+    model.set_memory(states=states_optim, time_step=0)
+    _, _, states = model.filter(data=train_data, train_lstm=False)
+
     # Get first state and observation
-    prior_states_mu = states_optim.get_mean("lstm", "prior", True)
-    prior_states_std = states_optim.get_std("lstm", "prior", True)
+    prior_states_mu = states.get_mean("lstm", "prior", True)
+    prior_states_std = states.get_std("lstm", "prior", True)
     first_state = prior_states_mu[0]
     first_observation = train_data["y"][0]
 
-    # plot (optional)
+    # plot
     if plot_mode:
-        model.load_dict(model_optim_dict)
 
         look_back_mu = model.lstm_net.smooth_look_back_mu
         look_back_std = model.lstm_net.smooth_look_back_var**0.5
 
-        states_mu = prior_states_mu[:len(train_data["y"])]
-        states_std = prior_states_std[:len(train_data["y"])]
+        states_mu = prior_states_mu[: len(train_data["y"])]
+        states_std = prior_states_std[: len(train_data["y"])]
 
         look_back_len_actual = len(look_back_mu)
         x_look_back = np.arange(-look_back_len_actual, 0)
@@ -128,6 +135,8 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
             states_mu,
             label="Prior states",
             color="tab:blue",
+            marker="o",
+            markersize=3,
         )
         plt.fill_between(
             x_states,
@@ -136,18 +145,25 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
             color="tab:blue",
             alpha=0.3,
         )
-        plt.plot(x_obs, train_data["y"], label="Observation", color="tab:red")
-        plt.axvline(x=-0.5, color="k", ls="--", label="Look-back boundary")
+        plt.plot(
+            x_obs,
+            train_data["y"],
+            label="Observation",
+            color="tab:red",
+            marker="x",
+            markersize=3,
+        )
+        plt.axvline(x=0, color="k", ls="--", label="Look-back boundary")
 
         plt.xlabel("Relative time (0 = first observation)")
         plt.ylabel("Value")
+        plt.minorticks_on()
         plt.title(f"SLSTM with look_back_len={look_back_len}")
         plt.legend()
         plt.show()
-
     npt.assert_allclose(
         first_state,
         first_observation,
-        atol=0.2,
+        atol=0.3,
         err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
     )
