@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 import ast
 
-from matplotlib import ticker
-formatter = ticker.ScalarFormatter(useMathText=True)
-formatter.set_scientific(True) 
-formatter.set_powerlimits((-1,1)) 
 params = {'text.usetex' : True,
           'font.size' : 12,
           'font.family' : 'lmodern',
@@ -17,10 +13,10 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_prophet_online.csv")
+df_il = pd.read_csv("saved_results/prob_eva/detrended_allts_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/detrended_allts_results_skf_aug14.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/detrended_allts_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
@@ -101,6 +97,81 @@ df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
 fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
 # fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
 
+# # Plot for mse_LL
+# ax[0].plot(df_il_mean.index, df_il_mean["mse_LL"]["mean"], label="IL")
+# ax[0].fill_between(
+#     df_il_mean.index,
+#     df_il_mean["mse_LL"]["mean"] - df_il_mean["mse_LL"]["std"],
+#     df_il_mean["mse_LL"]["mean"] + df_il_mean["mse_LL"]["std"],
+#     alpha=0.2,
+# )
+
+# ax[0].plot(df_skf_mean.index, df_skf_mean["mse_LL"]["mean"], label="SKF")
+# ax[0].fill_between(
+#     df_skf_mean.index,
+#     df_skf_mean["mse_LL"]["mean"] - df_skf_mean["mse_LL"]["std"],
+#     df_skf_mean["mse_LL"]["mean"] + df_skf_mean["mse_LL"]["std"],
+#     alpha=0.2,
+# )
+
+# ax[0].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["mse_LL"]["mean"], label="SKF (whitenoise)")
+# ax[0].fill_between(
+#     df_skf_whitenoise_mean.index,
+#     df_skf_whitenoise_mean["mse_LL"]["mean"] - df_skf_whitenoise_mean["mse_LL"]["std"],
+#     df_skf_whitenoise_mean["mse_LL"]["mean"] + df_skf_whitenoise_mean["mse_LL"]["std"],
+#     alpha=0.2,
+# )
+# ax[0].plot(df_prophet_mean.index, df_prophet_mean["mse_LL"]["mean"], label="Prophet")
+# ax[0].fill_between(
+#     df_prophet_mean.index,
+#     df_prophet_mean["mse_LL"]["mean"] - df_prophet_mean["mse_LL"]["std"],
+#     df_prophet_mean["mse_LL"]["mean"] + df_prophet_mean["mse_LL"]["std"],
+#     alpha=0.2,
+# )
+# ax[0].set_ylabel(r"MSE($x^{\mathrm{LL}}$)")
+# # ax[0].set_ylabel(r"MAPE($x^{\mathrm{LL}}$)")
+# ax[0].legend(ncol=2)
+# ax[0].set_xscale('log')
+# ax[0].set_yscale('log')
+# ax[0].set_xticklabels([])
+
+# Plot for mse_LT
+# ax[1].plot(df_il_mean.index, df_il_mean["mse_LT"]["mean"], label="IL")
+# ax[1].fill_between(
+#     df_il_mean.index,
+#     df_il_mean["mse_LT"]["mean"] - df_il_mean["mse_LT"]["std"],
+#     df_il_mean["mse_LT"]["mean"] + df_il_mean["mse_LT"]["std"],
+#     alpha=0.2,
+# )
+# ax[1].plot(df_skf_mean.index, df_skf_mean["mse_LT"]["mean"], label="SKF")
+# ax[1].fill_between(
+#     df_skf_mean.index,
+#     df_skf_mean["mse_LT"]["mean"] - df_skf_mean["mse_LT"]["std"],
+#     df_skf_mean["mse_LT"]["mean"] + df_skf_mean["mse_LT"]["std"],
+#     alpha=0.2,
+# )
+# ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["mse_LT"]["mean"], label="SKF (whitenoise)")
+# ax[1].fill_between(
+#     df_skf_whitenoise_mean.index,
+#     df_skf_whitenoise_mean["mse_LT"]["mean"] - df_skf_whitenoise_mean["mse_LT"]["std"],
+#     df_skf_whitenoise_mean["mse_LT"]["mean"] + df_skf_whitenoise_mean["mse_LT"]["std"],
+#     alpha=0.2,
+# )
+# ax[1].plot(df_prophet_mean.index, df_prophet_mean["mse_LT"]["mean"], label="Prophet")
+# ax[1].fill_between(
+#     df_prophet_mean.index,
+#     df_prophet_mean["mse_LT"]["mean"] - df_prophet_mean["mse_LT"]["std"],
+#     df_prophet_mean["mse_LT"]["mean"] + df_prophet_mean["mse_LT"]["std"],
+#     alpha=0.2,
+# )
+# ax[1].set_ylabel(r"MSE($x^{\mathrm{LT}}$)")
+# # ax[1].set_ylabel(r"MAPE($x^{\mathrm{LT}}$)")
+# # Format x-axis ticks with scientific notation
+# ax[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+# ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+# ax[1].set_xscale('log')
+# ax[1].set_yscale('log')
+# ax[1].set_xticklabels([])
 
 # Plot for detection_time
 ax[0].plot(df_il_mean.index, df_il_mean["detection_time"]["mean"], label=r"\textbf{RSI}")
@@ -131,16 +202,15 @@ ax[0].fill_between(
     df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
+ax[0].set_ylabel(r"$\Delta t\ (\mathrm{yr})$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
 ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
-# ax[0].legend(ncol=2)
-# Show the legend outside the plot
 ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
@@ -192,7 +262,6 @@ ax[2].fill_between(
 )
 ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
-# ax[2].set_yscale('symlog', linthresh=1e2)
 ax[2].set_yscale('symlog')
 ax[2].set_ylim(-0.01, 5e2)
 ax[2].set_xscale('log')
@@ -201,5 +270,5 @@ fig.align_ylabels(ax)
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('syn_ts_results_legend.png', dpi=300)
+plt.savefig('detrend_ts_results_legend.png', dpi=300)
 plt.show()
