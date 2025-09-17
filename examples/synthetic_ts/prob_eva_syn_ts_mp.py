@@ -47,7 +47,7 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 m = 52
 start_index = int(0.4*len(df_raw))
-mp, mpi = past_only_matrix_profile(np.array(df_raw["obs"]).flatten().astype("float64"), m, start_idx=start_index, normalize=True)
+mp, mpi = past_only_matrix_profile(np.array(df_raw["obs"]).flatten().astype("float64"), m, start_idx=start_index, normalize=False)
 
 #  Plot
 from matplotlib import gridspec
@@ -73,7 +73,7 @@ threshold = np.max(mp[np.isfinite(mp)]) * 1.1
 print(f"Threshold for anomaly detection: {threshold}")
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_complex_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_complex_ts_regen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -108,7 +108,7 @@ for k in tqdm(range(len(restored_data))):
     anm_start_index_global = anm_start_index + len(df_k) - len(test_data_k["y"])
 
     start_index = int(0.4*len(df_k))
-    mp, mpi = past_only_matrix_profile(np.array(df_k["obs"]).flatten().astype("float64"), m, start_idx=start_index, normalize=True)
+    mp, mpi = past_only_matrix_profile(np.array(df_k["obs"]).flatten().astype("float64"), m, start_idx=start_index, normalize=False)
     # Set infinite values to NaN
     mp[np.isinf(mp)] = np.nan
 
@@ -146,4 +146,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/syn_complex_ts_results_mp_norm.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_complex_regen_ts_results_mp.csv", index=False)
