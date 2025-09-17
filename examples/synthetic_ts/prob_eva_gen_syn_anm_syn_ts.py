@@ -17,7 +17,7 @@ from pytagi import Normalizer as normalizer
 
 
 # # Read data
-data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -46,6 +46,33 @@ num_test_ts = 10
 time_series_all = []
 anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])/52
 
+# Generate num_test_ts * len(anm_mag_all) stationary synthetic time series
+model = Model(
+    LocalTrend(
+        mu_states=[0, 0],
+        var_states=[1e-12, 1e-12],
+        std_error=0,
+    ),  
+    Periodic(period=52, mu_states=[0, 5 * 5], var_states=[1e-12, 1e-12]),
+    Periodic(period=13, mu_states=[0, 10], var_states=[1e-12, 1e-12]),
+    Autoregression(
+        std_error=2, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05]
+    ),
+)
+num_time_steps = 52 * 12
+gen_ts, _, _, _ = model.generate_time_series(num_time_series=num_test_ts*len(anm_mag_all),
+                                    num_time_steps=num_time_steps,
+                                    )
+train_val_data_raw = df_raw["obs"].values[0:data_processor.validation_end]
+
+# # Normalize the generated time series
+# gen_ts = (gen_ts - scale_const_mean[0])/(scale_const_std[0] + 1e-10)
+
+for i in range(gen_ts.shape[0]):
+    gen_ts[i, :(len(df_raw) - len(test_data["y"]))] = train_val_data_raw
+
+
+# Put anomalies in the synthetic time series
 for i, anm_mag in tqdm(enumerate(anm_mag_all)):
     for k in range(num_test_ts):
 
@@ -62,18 +89,22 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         anm_baseline[anm_start_index_global:] -= anm_baseline[anm_start_index_global]
         anm_baseline[:anm_start_index_global] = 0
 
-        gen_df_raw = copy.deepcopy(df_raw)
-        gen_df_raw = gen_df_raw.add(anm_baseline, axis=0)
+        # gen_df_raw = copy.deepcopy(df_raw)
+        # gen_df_raw = gen_df_raw.add(anm_baseline, axis=0)
 
-        gen_data_processor = DataProcess(
-            data=gen_df_raw,
-            time_covariates=["week_of_year"],
-            train_split=train_split,
-            validation_split=validation_split,
-            output_col=output_col,
-        )
+        # gen_data_processor = DataProcess(
+        #     data=gen_df_raw,
+        #     time_covariates=["week_of_year"],
+        #     train_split=train_split,
+        #     validation_split=validation_split,
+        #     output_col=output_col,
+        # )
 
-        values_str = str(list(gen_df_raw.values.flatten()))
+        # values_str = str(list(gen_df_raw.values.flatten()))
+        # time_series_all.append([values_str, anm_mag, anm_start_index])
+
+        gen_anm_ts = gen_ts[i*num_test_ts + k, :] + anm_baseline
+        values_str = str(list(gen_anm_ts))
         time_series_all.append([values_str, anm_mag, anm_start_index])
 
         # #  Plot
@@ -95,4 +126,4 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 # Save to CSV
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index"])
-df_time_series_all.to_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv", index=False)
+df_time_series_all.to_csv("data/prob_eva_syn_time_series/syn_complex_ts_regen.csv", index=False)
