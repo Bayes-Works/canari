@@ -40,21 +40,27 @@ df_prophet["detection_rate"] = df_prophet["detection_time"].apply(
 
 # Get anomaly_detected_index from df_prophet["anomaly_detected_index"]
 df_il["anomaly_detected_index"] = df_il["anomaly_detected_index"].apply(ast.literal_eval)
-df_il["false_alarms_num"] = df_il["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+df_il["alarms_num"] = df_il["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
 )
 df_skf["anomaly_detected_index"] = df_skf["anomaly_detected_index"].apply(ast.literal_eval)
-df_skf["false_alarms_num"] = df_skf["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+df_skf["alarms_num"] = df_skf["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
 )
 df_mp["anomaly_detected_index"] = df_mp["anomaly_detected_index"].apply(ast.literal_eval)
-df_mp["false_alarms_num"] = df_mp["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+df_mp["alarms_num"] = df_mp["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
 )
 df_prophet["anomaly_detected_index"] = df_prophet["anomaly_detected_index"].apply(ast.literal_eval)
-df_prophet["false_alarms_num"] = df_prophet["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+df_prophet["alarms_num"] = df_prophet["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
 )
+
+# Set alarms_num to 0 if "detection_rate" is 0
+df_il.loc[df_il["detection_rate"] == 0, "alarms_num"] = 0
+df_skf.loc[df_skf["detection_rate"] == 0, "alarms_num"] = 0
+df_mp.loc[df_mp["detection_rate"] == 0, "alarms_num"] = 0
+df_prophet.loc[df_prophet["detection_rate"] == 0, "alarms_num"] = 0
 
 # For the same anomaly magnitude, compute the mean and variance of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"], stored them in a new dataframe
 df_il_mean = df_il.groupby("anomaly_magnitude").agg(
@@ -63,7 +69,7 @@ df_il_mean = df_il.groupby("anomaly_magnitude").agg(
         "mse_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
-        "false_alarms_num": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
     }
 )
 df_skf_mean = df_skf.groupby("anomaly_magnitude").agg(
@@ -72,14 +78,14 @@ df_skf_mean = df_skf.groupby("anomaly_magnitude").agg(
         "mse_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
-        "false_alarms_num": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
     }
 )
 df_skf_whitenoise_mean = df_mp.groupby("anomaly_magnitude").agg(
     {
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
-        "false_alarms_num": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
     }
 )
 
@@ -89,13 +95,13 @@ df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
         "mse_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
-        "false_alarms_num": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
     }
 )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
-# fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
 
 # # Plot for mse_LL
 # ax[0].plot(df_il_mean.index, df_il_mean["mse_LL"]["mean"], label="IL")
@@ -209,7 +215,7 @@ ax[0].set_yticklabels([0, 1, 2, 3])
 ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
-ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+# ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 
 
 # Plot for detection_rate
@@ -228,35 +234,35 @@ ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 ax[1].set_xticklabels([])
 
 # Plot the number of false alarms for prophet
-ax[2].plot(df_il_mean.index, df_il_mean["false_alarms_num"]["mean"], label="IL", color = "tab:blue")
+ax[2].plot(df_il_mean.index, df_il_mean["alarms_num"]["mean"], label="IL", color = "tab:blue")
 ax[2].fill_between(
     df_il_mean.index,
-    df_il_mean["false_alarms_num"]["mean"] - df_il_mean["false_alarms_num"]["std"],
-    df_il_mean["false_alarms_num"]["mean"] + df_il_mean["false_alarms_num"]["std"],
+    df_il_mean["alarms_num"]["mean"] - df_il_mean["alarms_num"]["std"],
+    df_il_mean["alarms_num"]["mean"] + df_il_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:blue"
 )
-ax[2].plot(df_skf_mean.index, df_skf_mean["false_alarms_num"]["mean"], label="SKF", color = "tab:orange")
+ax[2].plot(df_skf_mean.index, df_skf_mean["alarms_num"]["mean"], label="SKF", color = "tab:orange")
 ax[2].fill_between(
     df_skf_mean.index,
-    df_skf_mean["false_alarms_num"]["mean"] - df_skf_mean["false_alarms_num"]["std"],
-    df_skf_mean["false_alarms_num"]["mean"] + df_skf_mean["false_alarms_num"]["std"],
+    df_skf_mean["alarms_num"]["mean"] - df_skf_mean["alarms_num"]["std"],
+    df_skf_mean["alarms_num"]["mean"] + df_skf_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:orange"
 )
-ax[2].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["false_alarms_num"]["mean"], label="Matrix profile", color = "tab:green")
+ax[2].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["alarms_num"]["mean"], label="Matrix profile", color = "tab:green")
 ax[2].fill_between(
     df_skf_whitenoise_mean.index,
-    df_skf_whitenoise_mean["false_alarms_num"]["mean"] - df_skf_whitenoise_mean["false_alarms_num"]["std"],
-    df_skf_whitenoise_mean["false_alarms_num"]["mean"] + df_skf_whitenoise_mean["false_alarms_num"]["std"],
+    df_skf_whitenoise_mean["alarms_num"]["mean"] - df_skf_whitenoise_mean["alarms_num"]["std"],
+    df_skf_whitenoise_mean["alarms_num"]["mean"] + df_skf_whitenoise_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:green"
 )
-ax[2].plot(df_prophet_mean.index, df_prophet_mean["false_alarms_num"]["mean"], label="Prophet", color = "tab:red")
+ax[2].plot(df_prophet_mean.index, df_prophet_mean["alarms_num"]["mean"], label="Prophet", color = "tab:red")
 ax[2].fill_between(
     df_prophet_mean.index,
-    df_prophet_mean["false_alarms_num"]["mean"] - df_prophet_mean["false_alarms_num"]["std"],
-    df_prophet_mean["false_alarms_num"]["mean"] + df_prophet_mean["false_alarms_num"]["std"],
+    df_prophet_mean["alarms_num"]["mean"] - df_prophet_mean["alarms_num"]["std"],
+    df_prophet_mean["alarms_num"]["mean"] + df_prophet_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:red"
 )
@@ -270,5 +276,5 @@ fig.align_ylabels(ax)
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('detrend_ts_results_legend.png', dpi=300)
+plt.savefig('detrend_ts_results.png', dpi=300)
 plt.show()

@@ -12,16 +12,21 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_mp_norm.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_ts_results_prophet_online.csv")
+df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_prophet_online.csv")
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
 df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
 df_mp["anomaly_magnitude"] = np.abs(df_mp["anomaly_magnitude"]) * 52
 df_prophet["anomaly_magnitude"] = np.abs(df_prophet["anomaly_magnitude"]) * 52
+
+df_il["anomaly_detected_index"] = df_il["anomaly_detected_index"].apply(ast.literal_eval)
+df_skf["anomaly_detected_index"] = df_skf["anomaly_detected_index"].apply(ast.literal_eval)
+df_mp["anomaly_detected_index"] = df_mp["anomaly_detected_index"].apply(ast.literal_eval)
+df_prophet["anomaly_detected_index"] = df_prophet["anomaly_detected_index"].apply(ast.literal_eval)
 
 # Compute detection_rate, for each anomaly magnitude, when df_il["detection_time"] == 260, it means that the anomaly is not detected
 df_il["detection_rate"] = df_il["detection_time"].apply(
@@ -37,22 +42,63 @@ df_prophet["detection_rate"] = df_prophet["detection_time"].apply(
     lambda x: 0 if x >= 52 * 3 else 1
 )
 
-# Get anomaly_detected_index from df_prophet["anomaly_detected_index"]
-df_il["anomaly_detected_index"] = df_il["anomaly_detected_index"].apply(ast.literal_eval)
+
+# Compute the false alarm rate for each method
+anm_time_range_begin = 250
+# Sum all the anomaly_start_index
+sum_anm_start_index = df_il["anomaly_start_index"].sum() - anm_time_range_begin * df_il.shape[0]
+false_alarms_il = 0
+neg_detect_indices = []
+for i in range(df_il.shape[0]):
+    if df_il.iloc[i]["detection_time"] < 0:
+        false_alarms_il += len(df_il.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+# Delete the rows with negative detection time
+df_il = df_il.drop(index=neg_detect_indices)
+false_alarm_rate_il = false_alarms_il * 10 / (sum_anm_start_index/52)
+print("False alarm rate for IL: ", false_alarm_rate_il, "per 10 years")
+
+false_alarms_skf = 0
+neg_detect_indices = []
+for i in range(df_skf.shape[0]):
+    if df_skf.iloc[i]["detection_time"] < 0:
+        false_alarms_skf += len(df_skf.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+df_skf = df_skf.drop(index=neg_detect_indices)
+false_alarm_rate_skf = false_alarms_skf * 10 / (sum_anm_start_index/52)
+print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
+
+false_alarms_mp = 0
+neg_detect_indices = []
+for i in range(df_mp.shape[0]):
+    if df_mp.iloc[i]["detection_time"] < 0:
+        false_alarms_mp += len(df_mp.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+df_mp = df_mp.drop(index=neg_detect_indices)
+false_alarm_rate_mp = false_alarms_mp * 10 / (sum_anm_start_index/52)
+print("False alarm rate for MP: ", false_alarm_rate_mp, "per 10 years")
+
+false_alarms_prophet = 0
+neg_detect_indices = []
+for i in range(df_prophet.shape[0]):
+    if df_prophet.iloc[i]["detection_time"] < 0:
+        false_alarms_prophet += len(df_prophet.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+df_prophet = df_prophet.drop(index=neg_detect_indices)
+false_alarm_rate_prophet = false_alarms_prophet * 10 / (sum_anm_start_index/52)
+print("False alarm rate for Prophet: ", false_alarm_rate_prophet, "per 10 years")
+
 df_il["false_alarms_num"] = df_il["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+    lambda x: len(x) if len(x) > 0 else 0
 )
-df_skf["anomaly_detected_index"] = df_skf["anomaly_detected_index"].apply(ast.literal_eval)
 df_skf["false_alarms_num"] = df_skf["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+    lambda x: len(x) if len(x) > 0 else 0
 )
-df_mp["anomaly_detected_index"] = df_mp["anomaly_detected_index"].apply(ast.literal_eval)
 df_mp["false_alarms_num"] = df_mp["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+    lambda x: len(x) if len(x) > 0 else 0
 )
-df_prophet["anomaly_detected_index"] = df_prophet["anomaly_detected_index"].apply(ast.literal_eval)
 df_prophet["false_alarms_num"] = df_prophet["anomaly_detected_index"].apply(
-    lambda x: len(x) - 1 if len(x) > 1 else 0
+    lambda x: len(x) if len(x) > 0 else 0
 )
 
 # For the same anomaly magnitude, compute the mean and variance of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"], stored them in a new dataframe

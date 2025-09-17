@@ -35,7 +35,7 @@ test_start = validation_start + int(
 )
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_complex_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_complex_ts_regen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -196,4 +196,4 @@ for ts_index in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-results_df.to_csv("saved_results/prob_eva/syn_complex_ts_results_prophet_online.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv", index=False)
