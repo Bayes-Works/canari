@@ -8,7 +8,7 @@ from matplotlib import gridspec
 import matplotlib.dates as mdates
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
+data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 date_time = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -30,7 +30,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_complex_ts_regen.csv")
 
 # Containers for restored data
 restored_data = []
@@ -59,7 +59,9 @@ ax0 = plt.subplot(gs[0])
 for j in range(int(len(restored_data)/10)):
     j = int(j*10)
     ax0.plot(date_time, restored_data[j][0])
-    ax0.axvline(x=date_time[restored_data[j][2]+len(df_raw)-len(test_data["y"])], color='r', linestyle='--', alpha=0.3)
+    # Get the color of the first line
+    line_color = ax0.get_lines()[-1].get_color()
+    ax0.axvline(x=date_time[restored_data[j][2]+len(df_raw)-len(test_data["y"])], linestyle='--', alpha=0.3, color=line_color)
 # ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
 # ax0.set_title("Data generation")
 
