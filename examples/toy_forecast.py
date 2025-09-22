@@ -48,6 +48,7 @@ model = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
+        smoother=True,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -59,7 +60,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(

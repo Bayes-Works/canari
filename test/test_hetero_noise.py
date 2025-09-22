@@ -45,7 +45,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -105,6 +104,7 @@ def test_model_forecast(run_mode, plot_mode):
             device="cpu",
             manual_seed=1,
             model_noise=True,
+            smoother=False,
         ),
     )
     mse = model_test_runner(model, plot=plot_mode)

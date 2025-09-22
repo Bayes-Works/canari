@@ -86,7 +86,6 @@ lstm_network = LstmNetwork(
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -125,7 +124,6 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model_lstm.set_memory(states=states, time_step=0)
 
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -154,20 +152,12 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
-        model_lstm_optim_dict = model_lstm.get_dict()
 
     if model_lstm.stop_training:
         break
 
 print(f"Optimal epoch       : {model_lstm.optimal_epoch}")
 print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
-
-# set memory and parameters to optimal epoch
-model_lstm.load_dict(model_lstm_optim_dict)
-model_lstm.set_memory(
-    states=states_optim,
-    time_step=0, # reset to zero for skf
-)
 
 # # Anomaly Detection
 skf.model["norm_norm"].lstm_net = model_lstm.lstm_net

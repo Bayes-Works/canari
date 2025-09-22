@@ -237,9 +237,6 @@ class LstmNetwork(BaseComponent):
             else:
                 lstm_network.to_device("cuda")
 
-        lstm_network.smooth_look_back_mu = None
-        lstm_network.smooth_look_back_var = None
-
         if self.smoother:
             lstm_network.smooth = True
         else:

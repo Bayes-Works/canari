@@ -59,9 +59,7 @@ model = Model(
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 if model.lstm_net.smooth:
-    model.lstm_net.num_samples = (
-        model.lstm_net.lstm_infer_len - 1 + len(train_data["y"])
-    )
+    model.lstm_net.num_samples = model.lstm_net.lstm_infer_len + len(train_data["y"])
 
 # Training
 for epoch in range(num_epoch):
@@ -71,13 +69,9 @@ for epoch in range(num_epoch):
 
     # warm-up for infer_len steps
     if model.lstm_net.smooth:
-        if train_data is not None and train_data["cov_names"] is not None:
-            # Generate standardized look-back covariates
-            model.pretraining_filter(train_data)
-        else:
-            model.pretraining_filter()
+        model.pretraining_filter(train_data)
 
-    model.filter(train_data, train_lstm=True)
+    model.filter(train_data)
 
     # forecast on the validation set
     mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
@@ -105,13 +99,13 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(
             model.states
         )  # If we want to plot the states, plot those from optimal epoch
-        model_optim_dict = model.get_dict()
 
     # smooth on train data
     model.smoother()
 
-    # reset the memory to smoothed states
-    model.set_memory(states=model.states, time_step=0)
+    model.set_memory(time_step=0)
+    model._current_epoch += 1
+
     if model.stop_training:
         break
 
@@ -119,10 +113,8 @@ print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
 # set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
 model.set_memory(
-    states=states_optim,
-    time_step=data_processor.test_start,
+    time_step=data_processor.test_start - 1,
 )
 
 # forecat on the test set

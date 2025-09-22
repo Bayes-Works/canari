@@ -51,7 +51,6 @@ model = Model(
         num_hidden_unit=40,
         device="cpu",
         manual_seed=1,
-        # smoother=False,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -64,7 +63,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -89,7 +87,6 @@ for epoch in range(num_epoch):
         states_optim = copy.copy(
             states
         )  # If we want to plot the states, plot those from optimal epoch
-        model_optim_dict = model.get_dict()
 
     if model.stop_training:
         break
@@ -98,11 +95,8 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
 model.set_memory(
-    states=states_optim,
-    time_step=data_processor.test_start,
+    time_step=data_processor.test_start - 1,
 )
 
 # forecat on the test set

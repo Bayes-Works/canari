@@ -48,6 +48,7 @@ skf_slstm = SKF(
     norm_to_abnorm_prob=1e-4,
 )
 
+
 def SKF_anomaly_detection_runner(
     test_model: SKF,
     time_step_anomaly: int,
@@ -117,7 +118,6 @@ def SKF_anomaly_detection_runner(
             max_epoch=num_epoch,
         )
 
-        test_model.model["norm_norm"].set_memory(states=states, time_step=0)
         if test_model.stop_training:
             break
 

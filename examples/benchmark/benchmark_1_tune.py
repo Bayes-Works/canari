@@ -58,7 +58,7 @@ def main(
                     look_back_len=param["look_back_len"],
                     num_features=2,
                     num_layer=1,
-                    infer_len=52,
+                    infer_len=52 * 3,
                     num_hidden_unit=50,
                     device="cpu",
                     manual_seed=1,
@@ -185,7 +185,7 @@ def main(
         plt.title("Validation predictions")
         plt.show()
         # Save best model for SKF analysis later
-        model_optim_dict = model_optim.get_dict()
+        model_optim_dict = model_optim.get_dict(time_step=0)
 
         ##################
         # Optimize for skf
@@ -280,9 +280,11 @@ def main(
     print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
+    filter_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
+        states_type="smooth",
         states=states,
         model_prob=filter_marginal_abnorm_prob,
     )

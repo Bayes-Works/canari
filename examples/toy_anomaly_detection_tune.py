@@ -25,6 +25,7 @@ def main(
     param_optimization: bool = True,
     param_grid_search: bool = False,
 ):
+    ######### Data processing #########
     # Read data
     data_file = "./data/toy_time_series/sine.csv"
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
@@ -53,79 +54,105 @@ def main(
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-    ########################################
-    # Parameter optimization
+    ######### Define model with parameters #########
+    def initialize_model(param, train_data, validation_data):
+        model = Model(
+            LocalTrend(),
+            LstmNetwork(
+                look_back_len=param["look_back_len"],
+                num_features=2,
+                num_layer=1,
+                infer_len=24 * 3,
+                num_hidden_unit=50,
+                device="cpu",
+                manual_seed=1,
+                smoother=True,
+            ),
+            WhiteNoise(std_error=param["sigma_v"]),
+        )
+
+        model.auto_initialize_baseline_states(train_data["y"][0:24])
+        states_optim = None
+        mu_validation_preds_optim = None
+        std_validation_preds_optim = None
+        num_epoch = 50
+        for epoch in range(num_epoch):
+            mu_validation_preds, std_validation_preds, states = model.lstm_train(
+                train_data=train_data,
+                validation_data=validation_data,
+            )
+
+            mu_validation_preds_unnorm = normalizer.unstandardize(
+                mu_validation_preds,
+                data_processor.scale_const_mean[data_processor.output_col],
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+
+            std_validation_preds_unnorm = normalizer.unstandardize_std(
+                std_validation_preds,
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+
+            validation_obs = data_processor.get_data("validation").flatten()
+            validation_log_lik = metric.log_likelihood(
+                prediction=mu_validation_preds_unnorm,
+                observation=validation_obs,
+                std=std_validation_preds_unnorm,
+            )
+
+            model.early_stopping(
+                evaluate_metric=-validation_log_lik,
+                current_epoch=epoch,
+                max_epoch=num_epoch,
+            )
+            model.metric_optim = model.early_stop_metric
+
+            if epoch == model.optimal_epoch:
+                mu_validation_preds_optim = mu_validation_preds.copy()
+                std_validation_preds_optim = std_validation_preds.copy()
+                states_optim = copy.copy(states)
+
+            if model.stop_training:
+                break
+
+        return (
+            model,
+            states_optim,
+            mu_validation_preds_optim,
+            std_validation_preds_optim,
+        )
+
+    ######### Define SKF model with parameters #########
+    def initialize_skf(skf_param_space, model_param: dict, train_data):
+        norm_model = Model.load_dict(model_param)
+
+        abnorm_model = Model(
+            LocalAcceleration(),
+            LstmNetwork(),
+            WhiteNoise(),
+        )
+        skf = SKF(
+            norm_model=norm_model,
+            abnorm_model=abnorm_model,
+            std_transition_error=skf_param_space["std_transition_error"],
+            norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
+        )
+        skf.save_initial_states()
+
+        detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
+            data=train_data,
+            num_anomaly=50,
+            slope_anomaly=skf_param_space["slope"],
+        )
+        skf.metric_optim["detection_rate"] = detection_rate
+        skf.metric_optim["false_rate"] = false_rate
+        skf.metric_optim["false_alarm_train"] = false_alarm_train
+
+        return skf
+
+    ######### Parameter optimization #########
     if param_optimization:
-        ##################
-        # Optimize for model
-        def initialize_model(param, train_data, validation_data):
-            model = Model(
-                LocalTrend(),
-                LstmNetwork(
-                    look_back_len=param["look_back_len"],
-                    num_features=2,
-                    num_layer=1,
-                    infer_len=24 * 3,
-                    num_hidden_unit=50,
-                    device="cpu",
-                    manual_seed=1,
-                    # smoother=False,
-                ),
-                WhiteNoise(std_error=param["sigma_v"]),
-            )
-
-            model.auto_initialize_baseline_states(train_data["y"][0:24])
-            states_optim = None
-            mu_validation_preds_optim = None
-            std_validation_preds_optim = None
-            num_epoch = 50
-            for epoch in range(num_epoch):
-                mu_validation_preds, std_validation_preds, states = model.lstm_train(
-                    train_data=train_data,
-                    validation_data=validation_data,
-                )
-                model.set_memory(states=states, time_step=0)
-
-                mu_validation_preds_unnorm = normalizer.unstandardize(
-                    mu_validation_preds,
-                    data_processor.scale_const_mean[data_processor.output_col],
-                    data_processor.scale_const_std[data_processor.output_col],
-                )
-
-                std_validation_preds_unnorm = normalizer.unstandardize_std(
-                    std_validation_preds,
-                    data_processor.scale_const_std[data_processor.output_col],
-                )
-
-                validation_obs = data_processor.get_data("validation").flatten()
-                validation_log_lik = metric.log_likelihood(
-                    prediction=mu_validation_preds_unnorm,
-                    observation=validation_obs,
-                    std=std_validation_preds_unnorm,
-                )
-
-                model.early_stopping(
-                    evaluate_metric=-validation_log_lik,
-                    current_epoch=epoch,
-                    max_epoch=num_epoch,
-                )
-                model.metric_optim = model.early_stop_metric
-
-                if epoch == model.optimal_epoch:
-                    mu_validation_preds_optim = mu_validation_preds.copy()
-                    std_validation_preds_optim = std_validation_preds.copy()
-                    states_optim = copy.copy(states)
-
-                if model.stop_training:
-                    break
-
-            return (
-                model,
-                states_optim,
-                mu_validation_preds_optim,
-                std_validation_preds_optim,
-            )
-
+        # # Optimize for model
         # Define parameter search space
         if param_optimization:
             param_space = {
@@ -149,6 +176,7 @@ def main(
         model_optimizer.optimize()
         # Get best model
         param = model_optimizer.get_best_param()
+
         # Train best model
         (
             model_optim,
@@ -156,6 +184,7 @@ def main(
             mu_validation_preds,
             std_validation_preds,
         ) = initialize_model(param, train_data, validation_data)
+
         # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
         plot_data(
@@ -182,37 +211,9 @@ def main(
         plt.title("Validation predictions")
         plt.show()
         # Save best model for SKF analysis later
-        model_optim_dict = model_optim.get_dict()
+        model_optim_dict = model_optim.get_dict(time_step=0)
 
-        ##################
-        # Optimize for skf
-        def initialize_skf(skf_param_space, model_param: dict):
-            norm_model = Model.load_dict(model_param)
-
-            # set smoothed look back and states for lstm
-            if norm_model.lstm_net.smooth:
-                norm_model.lstm_output_history.set(
-                    model_param["lstm_smooth_look_back_param"][0],
-                    model_param["lstm_smooth_look_back_param"][1],
-                )
-                norm_model.lstm_net.set_lstm_states(
-                    model_param["lstm_states_history"][0]
-                )
-
-            abnorm_model = Model(
-                LocalAcceleration(),
-                LstmNetwork(),
-                WhiteNoise(),
-            )
-            skf = SKF(
-                norm_model=norm_model,
-                abnorm_model=abnorm_model,
-                std_transition_error=skf_param_space["std_transition_error"],
-                norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
-            )
-            skf.save_initial_states()
-            return skf
-
+        # # Optimize for skf
         # Define parameter search space
         slope_upper_bound = 5e-2
         slope_lower_bound = 1e-3
@@ -262,84 +263,37 @@ def main(
             model_param=model_optim_dict,
             param_space=skf_param_space,
             data=train_data,
-            num_synthetic_anomaly=50,
             num_optimization_trial=num_trial_optimization * 2,
             grid_search=param_grid_search,
         )
         skf_optimizer.optimize()
         # Get parameters
         skf_param = skf_optimizer.get_best_param()
-        skf_optim = initialize_skf(
-            skf_param,
-            model_optim_dict,
-        )
+
+        skf_optim = initialize_skf(skf_param, model_optim_dict, train_data)
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
+        skf_optim_dict["cov_names"] = train_data["cov_names"]
         with open("saved_params/toy_anomaly_detection_tune.pkl", "wb") as f:
             pickle.dump(skf_optim_dict, f)
-
     else:
-        ########################################
-        # Load saved skf model
+        # # Load saved skf model
         with open("saved_params/toy_anomaly_detection_tune.pkl", "rb") as f:
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
-        if skf_optim.lstm_net.smooth:
-            skf_optim.model["norm_norm"].lstm_output_history.set(
-                skf_optim_dict["lstm_smooth_look_back_param"][0],
-                skf_optim_dict["lstm_smooth_look_back_param"][1],
-            )
-            skf_optim.model["norm_norm"].lstm_states_history = skf_optim_dict[
-                "lstm_states_history"
-            ]
-            skf_optim.model["norm_norm"].lstm_net.set_lstm_states(
-                skf_optim_dict["lstm_states_history"][0]
-            )
 
-    #######################################
-    # check the smoothed parameters
-    if skf_optim.lstm_net.smooth:
-        print(
-            "Smoothed look back mean:",
-            skf_optim.lstm_output_history.mu,
-        )
-        print(
-            "Smoothed look back std:",
-            np.sqrt(skf_optim.lstm_output_history.var),
-        )
-        print(
-            "Smoothed lstm states in history:",
-            skf_optim.model["norm_norm"].lstm_states_history[0],
-        )
-        print(
-            "Smoothed lstm states in SLSTM:",
-            skf_optim.lstm_net.get_lstm_states(),
-        )
-        # plot the look back
-        plt.figure()
-        plt.plot(
-            skf_optim.model["norm_norm"].lstm_output_history.mu,
-        )
-        plt.title("SKF LSTM look back output")
-        plt.xlabel("Look back time step")
-        plt.ylabel("Look back output")
-        plt.show()
-    #######################################
-
-    # Detect anomaly
+    ######### Detect anomaly #########
     print("Model parameters used:", skf_optim_dict["model_param"])
     print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother(
-        matrix_inversion_tol=1e-2, tol_type="absolute"
-    )
+    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
         states=states,
-        # states_type="smooth",
+        states_type="smooth",
         model_prob=filter_marginal_abnorm_prob,
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)

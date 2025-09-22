@@ -50,7 +50,6 @@ def model_test_runner(model: ModelAssemble, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(

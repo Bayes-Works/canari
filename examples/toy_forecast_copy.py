@@ -4,11 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LocalTrend, LstmNetwork
+from canari import DataProcess, Model, plot_data, plot_prediction
+from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/exp_sine_agvi.csv"
+data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -17,35 +17,42 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values"]
 
+# Param
+look_back_len = 23
+start_offset = 12
+
+# Resampling data
+df = df_raw.resample("H").mean()
+df = df.iloc[start_offset:]
+
 # Define parameters
 output_col = [0]
 num_epoch = 50
+
 data_processor = DataProcess(
-    data=df_raw,
+    data=df,
     train_split=0.8,
     validation_split=0.2,
+    time_covariates=["hour_of_day"],
     output_col=output_col,
 )
 
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
+sigma_v = 3e-2
 model = Model(
-    LocalTrend(),
     LstmNetwork(
-        look_back_len=24,
-        num_features=1,
+        look_back_len=look_back_len,
+        num_features=2,
+        infer_len=24 * 5,
         num_layer=1,
-        infer_len=24 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        model_noise=True,
-        smoother=False,
     ),
+    WhiteNoise(std_error=sigma_v),
 )
-model.auto_initialize_baseline_states(train_data["y"][0:24])
-
 
 # Training
 for epoch in range(num_epoch):
@@ -70,14 +77,13 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
-    model.early_stopping(
-        evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch, skip_epoch=5
-    )
-
+    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(states)
+        states_optim = copy.copy(
+            states
+        )  # If we want to plot the states, plot those from optimal epoch
 
     if model.stop_training:
         break
@@ -85,19 +91,35 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
+# Get first state and observation
+prior_states_mu = states_optim.get_mean("lstm", "prior", True)
+first_state = prior_states_mu[0]
+first_observation = train_data["y"][0]
+
 #  Plot
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_data(
-    data_processor=data_processor,
-    standardization=False,
-    plot_column=output_col,
-    validation_label="y",
-)
-plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
-    validation_label=[r"$\mu$", f"$\pm\sigma$"],
-)
-plt.legend()
+# fig, ax = plt.subplots(figsize=(10, 6))
+# plot_data(
+#     data_processor=data_processor,
+#     standardization=False,
+#     plot_column=output_col,
+#     validation_label="y",
+# )
+# plot_prediction(
+#     data_processor=data_processor,
+#     mean_validation_pred=mu_validation_preds,
+#     std_validation_pred=std_validation_preds,
+#     validation_label=[r"$\mu$", f"$\pm\sigma$"],
+# )
+# plt.legend()
+# plt.show()
+mu_infer = model.lstm_output_history.mu
+real_data = data_processor.get_data(split="all", standardization=True).flatten()
+
+mu_lstm = states_optim.get_mean("lstm", "prior", True)
+t = np.arange(len(mu_infer))
+t1 = np.arange(len(real_data)) + len(mu_infer)
+
+plt.plot(t, mu_infer)
+plt.plot(t1, real_data, color="r")
+plt.plot(t1, mu_lstm, color="b")
 plt.show()
