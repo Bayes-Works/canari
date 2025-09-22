@@ -193,8 +193,7 @@ class SKF:
         self.states_name = []
 
         # SKF-related attributes
-        self.mu_states_init = None
-        self.var_states_init = None
+        self._memory_init = None
         self.mu_states_prior = None
         self.var_states_prior = None
         self.mu_states_posterior = None
@@ -217,14 +216,15 @@ class SKF:
 
         # LSTM-related attributes
         self.lstm_net = None
-        self.lstm_output_history = None
-        self.lstm_states_history = None
 
         # Early stopping attributes
         self.stop_training = False
         self.optimal_epoch = 0
         self.early_stop_metric_history = []
         self.early_stop_metric = None
+
+        # Optimization
+        self.metric_optim = {}
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
         """Initialize transition models and link SKF to these new models.
@@ -245,7 +245,6 @@ class SKF:
             abnorm_model,
         )
         self._link_skf_to_model()
-        self.save_initial_states()
 
     @staticmethod
     def _create_compatible_models(soure_model, target_model) -> None:
@@ -353,7 +352,6 @@ class SKF:
         self.states_name = self.model["norm_norm"].states_name
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
-            self.lstm_output_history = self.model["norm_norm"].lstm_output_history
 
     def _set_same_states_transition_models(self):
         """
@@ -665,7 +663,6 @@ class SKF:
         """
 
         self.model["norm_norm"].auto_initialize_baseline_states(y)
-        self.save_initial_states()
 
     def save_initial_states(self):
         """
@@ -676,18 +673,7 @@ class SKF:
 
         """
 
-        self.mu_states_init = self.model["norm_norm"].mu_states.copy()
-        self.var_states_init = self.model["norm_norm"].var_states.copy()
-        if self.model["norm_norm"].lstm_net.smooth:
-            self.lstm_smooth_look_back_mu = self.model[
-                "norm_norm"
-            ].lstm_net.smooth_look_back_mu
-            self.lstm_smooth_look_back_var = self.model[
-                "norm_norm"
-            ].lstm_net.smooth_look_back_var
-            self.lstm_states_history = copy.deepcopy(
-                self.model["norm_norm"].lstm_states_history
-            )
+        self._memory_init = self.model["norm_norm"].get_memory()
 
     def load_initial_states(self):
         """
@@ -695,16 +681,7 @@ class SKF:
 
         """
 
-        self.model["norm_norm"].mu_states = self.mu_states_init.copy()
-        self.model["norm_norm"].var_states = self.var_states_init.copy()
-        if self.model["norm_norm"].lstm_net.smooth:
-            self.model["norm_norm"].lstm_output_history.set(
-                self.model["norm_norm"].lstm_net.smooth_look_back_mu,
-                self.model["norm_norm"].lstm_net.smooth_look_back_var,
-            )
-            self.model["norm_norm"].lstm_net.set_lstm_states(
-                self.model["norm_norm"].lstm_states_history[0]
-            )
+        self.model["norm_norm"].set_memory(memory=self._memory_init)
 
     def initialize_states_history(self):
         """
@@ -715,6 +692,7 @@ class SKF:
         for transition_model in self.model.values():
             transition_model.initialize_states_history()
         self.states.initialize(self.states_name)
+        self.model["norm_norm"].lstm_states_history = []
 
     def set_states(self):
         """
@@ -727,7 +705,7 @@ class SKF:
                 transition_model.var_states_posterior,
             )
 
-    def set_memory(self, states: StatesHistory, time_step: int):
+    def set_memory(self, time_step: int):
         """
         Apply :meth:`~canari.model.Model.set_memory` for the transition model 'norm_norm' stored in :attr:`.model`.
         If `time_step=0`, reset :attr:`.marginal_prob` using :attr:`.norm_model_prior_prob`.
@@ -742,13 +720,13 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
-        self.model["norm_norm"].set_memory(states=states, time_step=0)
+
+        self.model["norm_norm"].set_memory(time_step=time_step)
         if time_step == 0:
-            self.load_initial_states()
             self.marginal_prob["norm"] = copy.copy(self.norm_model_prior_prob)
             self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
-    def get_dict(self) -> dict:
+    def get_dict(self, time_step: Optional[int] = None) -> dict:
         """
         Export an SKF object into a dictionary.
 
@@ -760,22 +738,13 @@ class SKF:
         """
 
         save_dict = {}
-        save_dict["norm_model"] = self.model["norm_norm"].get_dict()
+        save_dict["norm_model"] = self.model["norm_norm"].get_dict(time_step=time_step)
         save_dict["abnorm_model"] = self.model["abnorm_abnorm"].get_dict()
+
         save_dict["std_transition_error"] = self.std_transition_error
         save_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
         save_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
-        if self.lstm_net:
-            save_dict["lstm_network_params"] = self.lstm_net.state_dict()
-            save_dict["lstm_states_history"] = self.model[
-                "norm_norm"
-            ].lstm_states_history
-            if self.lstm_net.smooth:
-                save_dict["lstm_smooth_look_back_param"] = (
-                    self.lstm_net.smooth_look_back_mu,
-                    self.lstm_net.smooth_look_back_var,
-                )
 
         return save_dict
 
@@ -798,14 +767,23 @@ class SKF:
         # Create normal model
         norm_components = list(save_dict["norm_model"]["components"].values())
         norm_model = Model(*norm_components)
+
+        # TODO: trick: run skf.filter to initialize skf.model["norm_norm"] states
+        if "cov_names" in save_dict:
+            dummy_input = np.full((len(save_dict["cov_names"]),), np.nan)
+            norm_model.forward(input_covariates=dummy_input)
+
         if norm_model.lstm_net:
-            norm_model.lstm_net.load_state_dict(save_dict["lstm_network_params"])
-            norm_model.lstm_output_history = save_dict["lstm_states_history"]
-            if norm_model.lstm_net.smooth:
-                (
-                    norm_model.lstm_net.smooth_look_back_mu,
-                    norm_model.lstm_net.smooth_look_back_var,
-                ) = save_dict["lstm_smooth_look_back_param"]
+            norm_model.lstm_net.load_state_dict(
+                save_dict["norm_model"]["lstm_network_params"]
+            )
+            norm_model.lstm_net.set_lstm_states(
+                save_dict["norm_model"]["memory"]["lstm_states"]
+            )
+            norm_model.lstm_output_history.set(
+                save_dict["norm_model"]["memory"]["lstm_output_history_mu"],
+                save_dict["norm_model"]["memory"]["lstm_output_history_var"],
+            )
 
         # Create abnormal model
         ab_components = list(save_dict["abnorm_model"]["components"].values())
@@ -820,7 +798,8 @@ class SKF:
             norm_model_prior_prob=save_dict["norm_model_prior_prob"],
         )
         skf.model["norm_norm"].set_states(
-            save_dict["norm_model"]["mu_states"], save_dict["norm_model"]["var_states"]
+            save_dict["norm_model"]["memory"]["mu_states"],
+            save_dict["norm_model"]["memory"]["var_states"],
         )
 
         return skf
@@ -970,7 +949,7 @@ class SKF:
 
         if self.lstm_net:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, input_covariates
+                self.model["norm_norm"].lstm_output_history, input_covariates
             )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1070,8 +1049,8 @@ class SKF:
     def rts_smoother(
         self,
         time_step: int,
-        matrix_inversion_tol: Optional[float] = 1e-3,
-        tol_type: Optional[str] = "relative",  # relative of absolute
+        matrix_inversion_tol: Optional[float] = 1e-2,
+        tol_type: Optional[str] = "absolute",  # relative of absolute
     ):
         """
         Smoother for the Switching Kalman filter at a given time step.
@@ -1210,18 +1189,22 @@ class SKF:
         self._set_same_states_transition_models()
         self.initialize_states_history()
 
-        for x, y in zip(data["x"], data["y"]):
+        # set lstm to train mode
+        if self.lstm_net:
+            self.lstm_net.train()
+            if self.lstm_net.smooth:
+                self.lstm_net.num_samples = len(data["y"])
+
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
-                lstm_index = self.model["norm_norm"].get_states_index("lstm")
-                self.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[
-                        lstm_index,
-                        lstm_index,
-                    ],
+                self.model["norm_norm"].update_lstm_history(
+                    mu_states_posterior, var_states_posterior
+                )
+                self.model["norm_norm"].update_lstm_states_history(
+                    index, last_step=len(data["y"]) - 1
                 )
 
             self._save_states_history()
@@ -1233,10 +1216,7 @@ class SKF:
                 self.marginal_prob["abnorm"]
             )
 
-        self.set_memory(
-            states=self.model["norm_norm"].states,
-            time_step=0,
-        )
+        self.set_memory(time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
@@ -1244,8 +1224,8 @@ class SKF:
 
     def smoother(
         self,
-        matrix_inversion_tol: Optional[float] = 1e-4,
-        tol_type: Optional[str] = "relative",  # relative of absolute
+        matrix_inversion_tol: Optional[float] = 1e-2,
+        tol_type: Optional[str] = "absolute",  # relative of absolute
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman smoother over an entire time series data.
@@ -1326,6 +1306,7 @@ class SKF:
         )
 
         filter_marginal_abnorm_prob, _ = self.filter(data=data)
+        self.load_initial_states()
 
         # Check false alarm in the training set
         if any(filter_marginal_abnorm_prob > threshold):
@@ -1344,6 +1325,8 @@ class SKF:
                 num_anomaly_detected += 1
             if any(filter_marginal_abnorm_prob[:window_start] > threshold):
                 num_false_alarm += 1
+
+            self.load_initial_states()
 
         detection_rate = num_anomaly_detected / num_anomaly
         false_rate = num_false_alarm / num_anomaly

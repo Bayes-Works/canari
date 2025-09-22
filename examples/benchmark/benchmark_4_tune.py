@@ -20,10 +20,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 # Fix parameters:
-sigma_v_fix = 0.04745968073623808
-look_back_len_fix = 51
-SKF_std_transition_error_fix = 3.288056287040139e-05
-SKF_norm_to_abnorm_prob_fix = 2.8867340936017124e-06
+sigma_v_fix = 0.05124855054302865
+look_back_len_fix = 25
+SKF_std_transition_error_fix = 2.541335546268896e-05
+SKF_norm_to_abnorm_prob_fix = 1.382402188781518e-06
 
 
 def main(
@@ -124,7 +124,6 @@ def main(
                 std_validation_preds_optim = std_validation_preds.copy()
                 states_optim = copy.copy(states)
 
-            model.set_memory(states=states, time_step=0)
             if model.stop_training:
                 break
 
@@ -172,7 +171,7 @@ def main(
     )
 
     # Save best model for SKF analysis later
-    model_optim_dict = model_optim.get_dict()
+    model_optim_dict = model_optim.get_dict(time_step=0)
 
     # Plot
     fig, ax = plt.subplots(figsize=(10, 6))

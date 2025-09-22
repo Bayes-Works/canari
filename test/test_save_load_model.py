@@ -25,8 +25,12 @@ def compare_model_dict(model_1_dict, model_2_dict):
         )
         assert component_1.states_name == component_2.states_name
 
-    npt.assert_allclose(model_1_dict["mu_states"], model_2_dict["mu_states"])
-    npt.assert_allclose(model_1_dict["var_states"], model_2_dict["var_states"])
+    npt.assert_allclose(
+        model_1_dict["memory"]["mu_states"], model_2_dict["memory"]["mu_states"]
+    )
+    npt.assert_allclose(
+        model_1_dict["memory"]["var_states"], model_2_dict["memory"]["var_states"]
+    )
 
     if "lstm_network_params" in model_1_dict and "lstm_network_params" in model_2_dict:
         assert (

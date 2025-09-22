@@ -80,8 +80,6 @@ skf = SKF(
     abnorm_model=ab_model,
     std_transition_error=1e-3,
     norm_to_abnorm_prob=1e-4,
-    abnorm_to_norm_prob=1e-4,
-    norm_model_prior_prob=0.99,
 )
 
 # Anomaly Detection

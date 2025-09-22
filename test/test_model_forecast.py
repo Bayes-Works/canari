@@ -68,7 +68,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
         if epoch == model.optimal_epoch:
             mu_validation_preds_optim = mu_validation_preds
 
-        model.set_memory(states=states, time_step=0)
         if model.stop_training:
             break
 
