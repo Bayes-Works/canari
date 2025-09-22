@@ -38,6 +38,7 @@ skf_slstm = SKF(
     norm_model_prior_prob=0.99,
 )
 
+
 @pytest.mark.parametrize("skf_version", [skf_lstm, skf_slstm], ids=["LSTM", "SLSTM"])
 def test_skf_save_load(skf_version):
     """Test save/load for SKF.py"""

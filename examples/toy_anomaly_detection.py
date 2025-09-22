@@ -44,18 +44,17 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 5e-2
+sigma_v = 0.024112372902053345
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(
-    look_back_len=10,
+    look_back_len=19,
     num_features=2,
     num_layer=1,
     infer_len=24 * 3,
     num_hidden_unit=50,
     device="cpu",
     manual_seed=1,
-    # smoother=False,
 )
 noise = WhiteNoise(std_error=sigma_v)
 
@@ -77,8 +76,8 @@ ab_model = Model(
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-4,
-    norm_to_abnorm_prob=1e-4,
+    std_transition_error=0.001600240379892559,
+    norm_to_abnorm_prob=1.4628808810167713e-06,
 )
 skf.auto_initialize_baseline_states(train_data["y"][0:24])
 
@@ -122,9 +121,6 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
-        model_optim_dict = skf.get_dict()
-
-    skf.model["norm_norm"].set_memory(states=states, time_step=0)
     if skf.stop_training:
         break
 
@@ -132,42 +128,8 @@ print(f"Optimal epoch       : {skf.optimal_epoch}")
 print(f"Validation log-likelihood  :{skf.early_stop_metric: 0.4f}")
 
 # # Anomaly Detection
-skf.load_dict(model_optim_dict)
-
-#####################################
-# check the smoothed parameters
-if skf.lstm_net.smooth:
-    print(
-        "Smoothed look back mean:",
-        skf.lstm_output_history.mu,
-    )
-    print(
-        "Smoothed look back std:",
-        np.sqrt(skf.lstm_output_history.var),
-    )
-    print(
-        "Smoothed lstm states in history:",
-        skf.model["norm_norm"].lstm_states_history[0],
-    )
-    print(
-        "Smoothed lstm states in SLSTM:",
-        skf.lstm_net.get_lstm_states(),
-    )
-    # plot the look back
-    plt.figure()
-    plt.plot(
-        skf.model["norm_norm"].lstm_output_history.mu,
-    )
-    plt.title("SKF LSTM look back output")
-    plt.xlabel("Look back time step")
-    plt.ylabel("Look back output")
-    plt.show()
-#######################################
-
 filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
-smooth_marginal_abnorm_prob, states = skf.smoother(
-    matrix_inversion_tol=1e-2, tol_type="absolute"
-)
+smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob

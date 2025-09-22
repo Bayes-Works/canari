@@ -25,7 +25,7 @@ lstm_network = LstmNetwork(
     infer_len=24,
     num_hidden_unit=50,
     device="cpu",
-    # smoother=False,
+    smoother=False,
 )
 slstm_netwotk = LstmNetwork(
     look_back_len=lstm_look_back_len,
@@ -73,6 +73,7 @@ skf_lstm = SKF(
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
 )
+skf_lstm.save_initial_states()
 
 skf_slstm = SKF(
     norm_model=slstm_model,
@@ -80,6 +81,7 @@ skf_slstm = SKF(
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
 )
+skf_slstm.save_initial_states()
 
 
 @pytest.mark.parametrize("skf_version", [skf_lstm, skf_slstm], ids=["LSTM", "SLSTM"])
@@ -110,7 +112,9 @@ def test_skf_transition_models(skf_version):
     )
 
     # Test process noise matrices
-    idx_acc = skf_version.model["norm_norm"].get_states_index(states_name="acceleration")
+    idx_acc = skf_version.model["norm_norm"].get_states_index(
+        states_name="acceleration"
+    )
     assert (
         skf_version.model["norm_norm"].process_noise_matrix[idx_acc, idx_acc]
         == skf_version.model["abnorm_abnorm"].process_noise_matrix[idx_acc, idx_acc]
@@ -124,7 +128,9 @@ def test_skf_transition_models(skf_version):
         == skf_version.model["norm_abnorm"].process_noise_matrix[idx_acc, idx_acc]
     )
 
-    idx_noise = skf_version.model["norm_norm"].get_states_index(states_name="white noise")
+    idx_noise = skf_version.model["norm_norm"].get_states_index(
+        states_name="white noise"
+    )
     assert (
         skf_version.model["norm_norm"].process_noise_matrix[idx_noise, idx_noise]
         == skf_version.model["abnorm_abnorm"].process_noise_matrix[idx_noise, idx_noise]
@@ -147,18 +153,6 @@ def test_skf_filter(skf_version):
     data["x"] = np.array([[0.1]])
     data["y"] = np.array([0.1])
 
-    # for SLSTM set smooth_look_back
-    if skf_version.lstm_net.smooth:
-        skf_version.lstm_net.smooth_look_back_mu = (
-            np.ones((lstm_look_back_len), dtype=np.float32) * 5
-        )  # dummy values
-        skf_version.lstm_net.smooth_look_back_var = (
-            np.ones((lstm_look_back_len), dtype=np.float32) * 5
-        )  # dummy values
-        skf_version.model["norm_norm"].lstm_states_history = [
-            skf_version.lstm_net.get_lstm_states()
-        ]
-
     skf_version.filter(data=data)
 
     assert (
@@ -167,32 +161,21 @@ def test_skf_filter(skf_version):
     )
 
     # Check if lstm's memory is clear at at end of skf_version.filer
-    if skf_version.lstm_net.smooth:
-        npt.assert_allclose(
-            skf_version.lstm_net.smooth_look_back_mu,
-            skf_version.lstm_output_history.mu,
-        )
-        npt.assert_allclose(
-            skf_version.lstm_net.smooth_look_back_var,
-            skf_version.lstm_output_history.var,
-        )
-        lhs = skf_version.lstm_net.get_lstm_states()
-        rhs = skf_version.model["norm_norm"].lstm_states_history[0]
-        assert lhs.keys() == rhs.keys()
-        for k in lhs:
-            npt.assert_allclose(lhs[k], rhs[k], err_msg=f"mismatch in '{k}'")
-
-    else:
+    if not skf_version.lstm_net.smooth:
         lstm_output_history_init = LstmOutputHistory()
         lstm_output_history_init.initialize(lstm_look_back_len)
         npt.assert_allclose(
-            skf_version.lstm_output_history.mu, lstm_output_history_init.mu
+            skf_version.model["norm_norm"].lstm_output_history.mu,
+            lstm_output_history_init.mu,
         )
         npt.assert_allclose(
-            skf_version.lstm_output_history.var, lstm_output_history_init.var
+            skf_version.model["norm_norm"].lstm_output_history.var,
+            lstm_output_history_init.var,
         )
-    assert skf_version.marginal_prob["norm"] == skf_version.norm_model_prior_prob
-    assert skf_version.marginal_prob["abnorm"] == 1 - skf_version.norm_model_prior_prob
+        assert skf_version.marginal_prob["norm"] == skf_version.norm_model_prior_prob
+        assert (
+            skf_version.marginal_prob["abnorm"] == 1 - skf_version.norm_model_prior_prob
+        )
 
 
 @pytest.mark.parametrize("skf_version", [skf_lstm, skf_slstm], ids=["LSTM", "SLSTM"])

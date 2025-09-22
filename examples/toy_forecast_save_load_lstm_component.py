@@ -66,7 +66,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -122,8 +121,8 @@ model2 = Model(
 )
 
 # Provide model #2 the initial values from where model #1 stop
-model2.mu_states = model.early_stop_init_mu_states
-model2.var_states = model.early_stop_init_var_states
+memory = model.get_memory()
+model2.set_memory(memory=memory)
 lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
 
 # # #

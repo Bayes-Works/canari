@@ -1,6 +1,7 @@
 import copy
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
@@ -60,13 +61,13 @@ plt.show()
 model_target = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=1,
+        look_back_len=10,
         num_features=11,
         num_layer=1,
+        infer_len=10 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        # model_noise=True,
         smoother=False,
     ),
     WhiteNoise(std_error=1e-1),
@@ -79,11 +80,11 @@ model_covar = Model(
         look_back_len=10,
         num_features=1,
         num_layer=1,
+        infer_len=10 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
         smoother=False,
-        # model_noise=True,
     ),
     WhiteNoise(std_error=3e-3),
 )
@@ -94,13 +95,12 @@ model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
 
 # Training
 num_epoch = 50
-for epoch in range(num_epoch):
+for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
     (mu_validation_preds, std_validation_preds) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -115,6 +115,20 @@ for epoch in range(num_epoch):
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
+
+    # fig, ax = plot_states(
+    #     data_processor=data_processor,
+    #     states=model.covariate_model[0].states,
+    #     standardization=True,
+    # )
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     # plot_column=output_col,
+    #     plot_column=[1],
+    #     sub_plot=ax[0],
+    # )
+    # plt.show()
 
     # Early-stopping
     model_target.early_stopping(

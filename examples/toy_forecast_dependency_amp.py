@@ -64,7 +64,6 @@ model_target = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        # model_noise=True,
         smoother=False,
     ),
     WhiteNoise(std_error=1e-1),
@@ -80,7 +79,6 @@ model_covar = Model(
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        # model_noise=True,
         smoother=False,
     ),
     WhiteNoise(std_error=1e-2),
@@ -100,7 +98,6 @@ for epoch in range(num_epoch):
         use_val_posterior_covariate=True,
         update_param_covar_model=False,
     )
-    model.set_memory(time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(

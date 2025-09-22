@@ -105,7 +105,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -137,11 +136,6 @@ for epoch in range(num_epoch):
         mu_validation_preds_optim = mu_validation_preds_unnorm.copy()
         std_validation_preds_optim = std_validation_preds_unnorm.copy()
         states_optim = copy.copy(states)
-        lstm_optim_states = copy.copy(model.lstm_states_history)
-        optimal_look_back = (
-            model.lstm_net.smooth_look_back_mu,
-            model.lstm_net.smooth_look_back_var,
-        )
 
     if model.stop_training:
         break
@@ -149,13 +143,8 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-model_dict = model.get_dict()
+model_dict = model.get_dict(time_step=0)
 model_dict["states_optimal"] = states_optim
-
-# get smoothed lstm states
-if model.lstm_net.smooth:
-    (smoothed_look_back_mu, smoothed_look_back_var) = optimal_look_back
-    smoothed_lstm_states = lstm_optim_states[0]
 
 # Save model_dict to local
 import pickle
@@ -189,8 +178,8 @@ train_val_data = np.concatenate(
 
 pretrained_model = Model(
     LocalTrend(
-        mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1),
-        var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2]),
+        mu_states=pretrained_model_dict["memory"]["mu_states"][0:2].reshape(-1),
+        var_states=np.diag(pretrained_model_dict["memory"]["var_states"][0:2, 0:2]),
     ),
     LSTM,
     Autoregression(
@@ -198,20 +187,17 @@ pretrained_model = Model(
             pretrained_model_dict["states_optimal"].mu_prior[-1][W2bar_index].item()
         ),
         phi=pretrained_model_dict["states_optimal"].mu_prior[-1][phi_index].item(),
-        mu_states=[pretrained_model_dict["mu_states"][autoregression_index].item()],
+        mu_states=[
+            pretrained_model_dict["memory"]["mu_states"][autoregression_index].item()
+        ],
         var_states=[
-            pretrained_model_dict["var_states"][
+            pretrained_model_dict["memory"]["var_states"][
                 autoregression_index, autoregression_index
             ].item()
         ],
     ),
 )
 pretrained_model.lstm_net.load_state_dict(pretrained_model_dict["lstm_network_params"])
-if pretrained_model.lstm_net.smooth:
-    pretrained_model.lstm_output_history.set(
-        smoothed_look_back_mu, smoothed_look_back_var
-    )
-    pretrained_model.lstm_net.set_lstm_states(smoothed_lstm_states)
 
 # Generate data
 pretrained_model.filter(train_data, train_lstm=False)
