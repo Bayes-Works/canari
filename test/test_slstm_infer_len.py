@@ -86,25 +86,30 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
             evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
         )
         if epoch == model.optimal_epoch:
-            states_optim = copy.copy(states)
             model_optim_dict = model.get_dict()
             model_optim_dict["cov_names"] = train_data["cov_names"]
 
         if model.stop_training:
             break
 
+    # reset model and states to optimal
+    model.load_dict(model_optim_dict)
+    model.set_memory(time_step=0)
+
+    # filter using smoothed look-back from optimal epoch
+    _, _, states = model.filter(data=train_data, train_lstm=False)
+
     # Get first state and observation
-    prior_states_mu = states_optim.get_mean("lstm", "prior", True)
-    prior_states_std = states_optim.get_std("lstm", "prior", True)
+    prior_states_mu = states.get_mean("lstm", "prior", True)
+    prior_states_std = states.get_std("lstm", "prior", True)
     first_state = prior_states_mu[0]
     first_observation = train_data["y"][0]
 
     # plot (optional)
     if plot_mode:
-        model.load_dict(model_optim_dict)
 
-        look_back_mu = model.lstm_net.smooth_look_back_mu
-        look_back_std = model.lstm_net.smooth_look_back_var**0.5
+        look_back_mu = model.early_stop_lstm_output_mu
+        look_back_std = model.early_stop_lstm_output_var**0.5
 
         states_mu = prior_states_mu[: len(train_data["y"])]
         states_std = prior_states_std[: len(train_data["y"])]
