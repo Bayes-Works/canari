@@ -150,8 +150,8 @@ df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
 )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-# fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
-fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
 
 
 # Plot for detection_time
@@ -192,7 +192,7 @@ ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 # ax[0].legend(ncol=2)
 # Show the legend outside the plot
-# ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
