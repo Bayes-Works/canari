@@ -1,10 +1,8 @@
 import os
 import pandas as pd
 import numpy.testing as npt
-import copy
 import pytagi.metric as metric
 from canari import DataProcess, Model
-from pytagi import Normalizer as normalizer
 from canari.component import LstmNetwork, WhiteNoise
 import numpy as np
 import pytest
@@ -29,7 +27,7 @@ def create_slstm_model(look_back_len: int) -> Model:
 
 
 @pytest.mark.parametrize(
-    "look_back_len,start_offset", [(l, s) for l in [12, 19, 23] for s in [0, 6, 12]]
+    "look_back_len,start_offset", [(l, s) for l in [12, 18, 24] for s in [0, 6, 12]]
 )
 def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     """
@@ -73,12 +71,12 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
         (mu_validation_preds, _, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_max_std=1.0,
-            white_noise_decay_factor=0.99,
         )
 
         # Calculate the log-likelihood metric
-        validation_obs = data_processor.get_data("validation").flatten()
+        validation_obs = data_processor.get_data(
+            "validation", standardization=True
+        ).flatten()
         mse = metric.mse(mu_validation_preds, validation_obs)
 
         # Early-stopping
@@ -163,6 +161,6 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     npt.assert_allclose(
         first_state,
         first_observation,
-        atol=0.2,
+        atol=0.08,
         err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
     )
