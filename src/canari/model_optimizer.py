@@ -67,7 +67,7 @@ class ModelOptimizer:
         Initialize the ModelOptimizer.
         """
 
-        self.model_objective = model
+        self.model = model
         self.model_optim = None
         self.param_optim = None
         self._param_space = param_space
@@ -84,9 +84,7 @@ class ModelOptimizer:
         """
         objective: returns a metric that is used for optimization
         """
-        trained_model, *_ = self.model_objective(
-            config, self._train_data, self._validation_data
-        )
+        trained_model, *_ = self.model(config, self._train_data, self._validation_data)
         _metric = trained_model.metric_optim
 
         metric = {}
@@ -186,7 +184,7 @@ class ModelOptimizer:
             best_trial.trial_id, "Unknown"
         )
 
-        best_model, *_ = self.model_objective(
+        best_model, *_ = self.model(
             self.param_optim, self._train_data, self._validation_data
         )
         self.model_optim = best_model
@@ -272,7 +270,7 @@ class ModelOptimizer:
         )
 
         self.param_optim = study.best_params
-        self.model_optim, *_ = self.model_objective(
+        self.model_optim, *_ = self.model(
             self.param_optim, self._train_data, self._validation_data
         )
 
