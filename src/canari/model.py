@@ -1010,7 +1010,7 @@ class Model:
             std = scale_const_std[col_idx + 1]
             init_val = init_val * std + mu
             raw = self._prepare_covariates_generation(
-                int(init_val),
+                int(np.rint(init_val)),
                 num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
