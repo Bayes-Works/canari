@@ -72,8 +72,6 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
         (mu_validation_preds, _, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_max_std=1.0,
-            white_noise_decay_factor=0.99,
         )
 
         # Calculate the log-likelihood metric
