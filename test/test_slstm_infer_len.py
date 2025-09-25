@@ -12,30 +12,31 @@ import pytest
 BASE_DIR = os.path.dirname(__file__)
 
 
-def create_slstm_model(look_back_len: int) -> Model:
+def create_slstm_model(look_back_len: int, infer_length: int) -> Model:
     sigma_v = 3e-2
     return Model(
         LstmNetwork(
             look_back_len=look_back_len,
             num_features=2,
-            infer_len=24 * 2,
+            infer_len=infer_length,
             num_layer=1,
             num_hidden_unit=40,
             device="cpu",
-            manual_seed=1,
+            manual_seed=2,
         ),
         WhiteNoise(std_error=sigma_v),
     )
 
 
 @pytest.mark.parametrize(
-    "look_back_len,start_offset", [(l, s) for l in [12, 19, 23] for s in [0, 6, 12]]
+    "look_back_len,start_offset", [(l, s) for l in [12, 18, 24] for s in [0, 6, 12]]
 )
 def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     """
     Run training and forecasting for time-series forecasting model for multiple inference lengths.
     """
     output_col = [0]
+    infer_length = 24 * 5
 
     # # Read data
     data_file = "./data/toy_time_series/sine.csv"
@@ -65,7 +66,7 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     train_data, validation_data, _, _ = data_processor.get_splits()
 
     # Initialize model
-    model = create_slstm_model(look_back_len=look_back_len)
+    model = create_slstm_model(look_back_len, infer_length)
 
     # Train model
     num_epoch = 50
@@ -73,8 +74,13 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
         (mu_validation_preds, _, states) = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_max_std=1.0,
-            white_noise_decay_factor=0.99,
+        )
+
+        # # Unstandardize the predictions
+        mu_validation_preds = normalizer.unstandardize(
+            mu_validation_preds,
+            data_processor.scale_const_mean[output_col],
+            data_processor.scale_const_std[output_col],
         )
 
         # Calculate the log-likelihood metric
@@ -86,25 +92,28 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
             evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch
         )
         if epoch == model.optimal_epoch:
-            states_optim = copy.copy(states)
             model_optim_dict = model.get_dict()
             model_optim_dict["cov_names"] = train_data["cov_names"]
 
         if model.stop_training:
             break
 
+    # Testing first prediction
+    # filter using smoothed look-back from optimal epoch
+    _, _, states = model.filter(data=train_data, train_lstm=False)
+    model.smoother()
+
     # Get first state and observation
-    prior_states_mu = states_optim.get_mean("lstm", "prior", True)
-    prior_states_std = states_optim.get_std("lstm", "prior", True)
+    prior_states_mu = states.get_mean("lstm", "prior", True)
+    prior_states_std = states.get_std("lstm", "prior", True)
     first_state = prior_states_mu[0]
     first_observation = train_data["y"][0]
 
     # plot (optional)
     if plot_mode:
-        model.load_dict(model_optim_dict)
 
-        look_back_mu = model.lstm_net.smooth_look_back_mu
-        look_back_std = model.lstm_net.smooth_look_back_var**0.5
+        look_back_mu = model.early_stop_lstm_output_mu
+        look_back_std = model.early_stop_lstm_output_var**0.5
 
         states_mu = prior_states_mu[: len(train_data["y"])]
         states_std = prior_states_std[: len(train_data["y"])]
@@ -158,6 +167,17 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     npt.assert_allclose(
         first_state,
         first_observation,
-        atol=0.2,
+        atol=0.08,
         err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
     )
+
+    # Testing mse for the inferred look-back length
+    mu_infer = model.lstm_output_history.mu
+    real_data = data_processor.get_data(split="all", standardization=True).flatten()
+    obs_pretrain = real_data[:infer_length]
+    obs_pretrain = obs_pretrain[-look_back_len:]
+    mse = metric.mse(mu_infer, obs_pretrain)
+
+    print(f"MSE : {mse}")
+
+    assert mse < 4e-2, f"MSE {mse} is bigger than the saved threshold {4e-2}"
