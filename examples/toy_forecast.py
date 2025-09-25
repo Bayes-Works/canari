@@ -18,6 +18,7 @@ time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None
 time_series = pd.to_datetime(time_series[0])
 df_raw.index = time_series
 df_raw.index.name = "date_time"
+
 df_raw.columns = ["values"]
 
 # Resampling data
@@ -32,6 +33,7 @@ data_processor = DataProcess(
     train_split=0.8,
     validation_split=0.2,
     output_col=output_col,
+    time_covariates=["hour_of_day"],
 )
 
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
@@ -42,7 +44,7 @@ model = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=19,
-        num_features=1,
+        num_features=2,
         infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=50,

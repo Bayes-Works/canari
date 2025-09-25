@@ -22,7 +22,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 def main(
     num_trial_optimization: int = 10,
-    param_optimization: bool = True,
+    param_optimization: bool = False,
     param_grid_search: bool = False,
 ):
     ######### Data processing #########
@@ -55,7 +55,7 @@ def main(
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     ######### Define model with parameters #########
-    def initialize_model(param, train_data, validation_data):
+    def model_with_parameters(param, train_data, validation_data):
         model = Model(
             LocalTrend(),
             LstmNetwork(
@@ -72,7 +72,6 @@ def main(
         )
 
         model.auto_initialize_baseline_states(train_data["y"][0:24])
-        states_optim = None
         mu_validation_preds_optim = None
         std_validation_preds_optim = None
         num_epoch = 50
@@ -110,20 +109,18 @@ def main(
             if epoch == model.optimal_epoch:
                 mu_validation_preds_optim = mu_validation_preds.copy()
                 std_validation_preds_optim = std_validation_preds.copy()
-                states_optim = copy.copy(states)
 
             if model.stop_training:
                 break
 
         return (
             model,
-            states_optim,
             mu_validation_preds_optim,
             std_validation_preds_optim,
         )
 
     ######### Define SKF model with parameters #########
-    def initialize_skf(skf_param_space, model_param: dict, train_data):
+    def skf_with_parameters(skf_param_space, model_param: dict, train_data):
         norm_model = Model.load_dict(model_param)
 
         abnorm_model = Model(
@@ -166,7 +163,7 @@ def main(
             }
         # Define optimizer
         model_optimizer = ModelOptimizer(
-            model=initialize_model,
+            model=model_with_parameters,
             param_space=param_space,
             train_data=train_data,
             validation_data=validation_data,
@@ -180,10 +177,9 @@ def main(
         # Train best model
         (
             model_optim,
-            states_optim,
             mu_validation_preds,
             std_validation_preds,
-        ) = initialize_model(param, train_data, validation_data)
+        ) = model_with_parameters(param, train_data, validation_data)
 
         # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -198,11 +194,11 @@ def main(
             data_processor=data_processor,
             mean_validation_pred=mu_validation_preds,
             std_validation_pred=std_validation_preds,
-            validation_label=[r"$\mu$", f"$\pm\sigma$"],
+            validation_label=["mean", "std"],
         )
         plot_states(
             data_processor=data_processor,
-            states=states_optim,
+            states=model_optim.states,
             standardization=True,
             states_to_plot=["level"],
             sub_plot=ax,
@@ -259,7 +255,7 @@ def main(
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         skf_optimizer = SKFOptimizer(
-            initialize_skf=initialize_skf,
+            skf=skf_with_parameters,
             model_param=model_optim_dict,
             param_space=skf_param_space,
             data=train_data,
@@ -270,7 +266,7 @@ def main(
         # Get parameters
         skf_param = skf_optimizer.get_best_param()
 
-        skf_optim = initialize_skf(skf_param, model_optim_dict, train_data)
+        skf_optim = skf_with_parameters(skf_param, model_optim_dict, train_data)
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
