@@ -27,7 +27,7 @@ class SKFOptimizer:
     Optimize hyperparameters for :class:`~canari.skf.SKF` using the Ray Tune external library.
 
     Args:
-        initialize_skf (Callable): Function that returns an SKF instance given a configuration.
+        skf (Callable): Function that returns an SKF instance given a configuration.
         model_param (dict): Serializable dictionary for :class:`~canari.model.Model` obtained from
                             :meth:`~canari.model.Model.get_dict`.
         param_space (dict): Parameter search space: two-value lists [min, max] for defining the
@@ -56,7 +56,7 @@ class SKFOptimizer:
 
     def __init__(
         self,
-        initialize_skf: Callable,
+        skf: Callable,
         model_param: dict,
         param_space: dict,
         data: dict,
@@ -72,7 +72,7 @@ class SKFOptimizer:
         Initializes the SKFOptimizer.
         """
 
-        self._initialize_skf = initialize_skf
+        self.skf = skf
         self._model_param = model_param
         self._param_space = param_space
         self._data = data
@@ -97,7 +97,7 @@ class SKFOptimizer:
         objective: returns a metric that is used for optimization
         """
 
-        skf = self._initialize_skf(
+        skf = self.skf(
             config,
             model_param,
             self._data,
@@ -221,7 +221,7 @@ class SKFOptimizer:
         )
 
         # Get the optimal skf
-        self.skf_optim = self._initialize_skf(
+        self.skf_optim = self.skf(
             self.param_optim,
             self._model_param,
             self._data,
@@ -308,7 +308,7 @@ class SKFOptimizer:
         )
 
         self.param_optim = study.best_params
-        self.skf_optim = self._initialize_skf(
+        self.skf_optim = self.skf(
             self.param_optim,
             self._model_param,
             self._data,

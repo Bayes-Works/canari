@@ -20,6 +20,7 @@ df_raw.columns = ["values"]
 # Param
 look_back_len = 23
 start_offset = 12
+num_cycle = 5
 
 # Resampling data
 df = df_raw.resample("H").mean()
@@ -45,9 +46,9 @@ model = Model(
     LstmNetwork(
         look_back_len=look_back_len,
         num_features=2,
-        infer_len=24 * 5,
+        infer_len=24 * num_cycle,
         num_layer=1,
-        num_hidden_unit=50,
+        num_hidden_unit=40,
         device="cpu",
         manual_seed=1,
     ),
@@ -114,12 +115,15 @@ first_observation = train_data["y"][0]
 # plt.show()
 mu_infer = model.lstm_output_history.mu
 real_data = data_processor.get_data(split="all", standardization=True).flatten()
-
+obs_pretrain = real_data[: 24 * num_cycle]
 mu_lstm = states_optim.get_mean("lstm", "prior", True)
-t = np.arange(len(mu_infer))
-t1 = np.arange(len(real_data)) + len(mu_infer)
 
-plt.plot(t, mu_infer)
-plt.plot(t1, real_data, color="r")
-plt.plot(t1, mu_lstm, color="b")
+t = np.arange(len(obs_pretrain))
+t1 = np.arange(len(mu_infer)) + len(obs_pretrain) - len(mu_infer)
+t2 = np.arange(len(real_data)) + len(obs_pretrain)
+
+plt.plot(t, obs_pretrain, color="green")
+plt.plot(t1, mu_infer, color="magenta")
+plt.scatter(t2, real_data, color="r")
+plt.scatter(t2, mu_lstm, color="b")
 plt.show()
