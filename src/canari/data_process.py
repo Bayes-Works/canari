@@ -216,6 +216,11 @@ class DataProcess:
         """Return training, validation, and test splits"""
 
         data = self.standardize_data()
+        if isinstance(self.data.index, pd.DatetimeIndex):
+            freq = pd.infer_freq(self.data.index)
+        else:
+            freq = self.data.index[1] - self.data.index[0]
+
         return (
             # Train split
             {
@@ -223,11 +228,12 @@ class DataProcess:
                 "y": data[self.train_start : self.train_end, self.output_col],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
-                "start_date": self.train_start,
+                "start_date": self.data.index[self.train_start],
                 "cov_names": self.data.columns[self.covariates_col].tolist(),
                 "time_covariates": self.time_covariates,
                 "scale_const_mean": self.scale_const_mean,
                 "scale_const_std": self.scale_const_std,
+                "freq": freq,
             },
             # Validation split
             {
@@ -235,25 +241,27 @@ class DataProcess:
                     self.validation_start : self.validation_end, self.covariates_col
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
-                "start_date": self.validation_start,
+                "start_date": self.data.index[self.validation_start],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
+                "freq": freq,
             },
             # Test split
             {
                 "x": data[self.test_start : self.test_end, self.covariates_col],
                 "y": data[self.test_start : self.test_end, self.output_col],
-                "start_date": self.test_start,
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
+                "freq": freq,
             },
             # All data
             {
                 "x": data[: self.test_end, self.covariates_col],
                 "y": data[: self.test_end, self.output_col],
-                "start_date": self.train_start,
+                "start_date": self.data.index[self.train_start],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
+                "freq": freq,
             },
         )
 

@@ -24,6 +24,7 @@ References:
 import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
+import pandas as pd
 from pytagi import Normalizer as normalizer
 from pytagi.nn import OutputUpdater
 from canari.component.base_component import BaseComponent
@@ -948,7 +949,6 @@ class Model:
         out_updater = OutputUpdater(device)
 
         for i in range(self.lstm_net.lstm_infer_len):
-
             dummy_covariates = lookback_covariates[i]
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.lstm_output_history, dummy_covariates
@@ -997,7 +997,7 @@ class Model:
         scale_const_std = train_data["scale_const_std"]
 
         # Initialize dummy array with NaNs
-        dummy = np.full((inferred_len, n_cov), np.nan, dtype=np.float32)
+        dummy = np.full((inferred_len, n_cov), np.nan)
 
         # Handle time covariates
         time_covs = train_data["time_covariates"] or []
@@ -1010,15 +1010,12 @@ class Model:
             std = scale_const_std[col_idx + 1]
             init_val = init_val * std + mu
             raw = self._prepare_covariates_generation(
-                int(np.rint(init_val)),
+                np.rint(init_val),
                 num_generated_samples=-inferred_len,
                 time_covariates=[tc],
             )
             normed = (raw - mu) / (std + 1e-10)
             dummy[:, col_idx] = normed[:, 0]
-
-        # --- Handle lagged features ---
-        # TODO: how to handle laggs
 
         return dummy
 
