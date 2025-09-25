@@ -91,10 +91,8 @@ def model_test_runner(model: Model, plot: bool) -> float:
     return mse
 
 
-@pytest.mark.parametrize(
-    "smoother,mse_index", [(False, 0), (True, 1)], ids=["LSTM", "SLSTM"]
-)
-def test_model_forecast(run_mode, plot_mode, smoother, mse_index):
+@pytest.mark.parametrize("smoother", [(False), (True)], ids=["LSTM", "SLSTM"])
+def test_model_forecast(run_mode, plot_mode, smoother):
     """Test model forecasting with LSTM and SLSTM"""
     model = Model(
         LocalTrend(),
@@ -117,25 +115,36 @@ def test_model_forecast(run_mode, plot_mode, smoother, mse_index):
         BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
     )
     if run_mode == "save_threshold":
+        target_column = "SLSTM" if smoother else "LSTM"
+        columns = ["LSTM", "SLSTM"]
+
         if os.path.exists(path_metric):
             df = pd.read_csv(path_metric)
-            if len(df) <= mse_index:
-                # Extend the dataframe if needed
-                for _ in range(mse_index - len(df) + 1):
-                    df.loc[len(df)] = [np.nan]
-            df.loc[mse_index, "mse"] = mse
-            df.to_csv(path_metric, mse_index=False)
         else:
-            data = [np.nan] * (mse_index + 1)
-            data[mse_index] = mse
-            pd.DataFrame({"mse": data}).to_csv(path_metric, mse_index=False)
+            df = pd.DataFrame()
+
+        for column in columns:
+            if column not in df.columns:
+                df[column] = np.nan
+
+        df = df[columns]
+
+        if df.empty:
+            df.loc[0] = {column: np.nan for column in columns}
+
+        df.loc[0, target_column] = mse
+        df.to_csv(path_metric, index=False)
         print(f"Saved MSE to {path_metric}: {mse}")
     else:
         # load threshold
         threshold = None
         if os.path.exists(path_metric):
             df = pd.read_csv(path_metric)
-            threshold = float(df["mse"].iloc[mse_index])
+            target_column = "SLSTM" if smoother else "LSTM"
+            if target_column in df.columns:
+                value_series = df[target_column].dropna()
+                if not value_series.empty:
+                    threshold = float(value_series.iloc[0])
 
         assert (
             threshold is not None
