@@ -238,6 +238,10 @@ data_processor = DataProcess(
 )
 _, _, _, data10 = data_processor.get_splits()
 
+####################################### Plot shaded training and validation regions #######################################
+training_splits = [0.25, 0.25, 0.25, 0.23, 0.29, 0.29, 0.29, 0.30, 0.35, 0.28]
+validation_splits = [0.07, 0.08, 0.10, 0.07, 0.07, 0.07, 0.07, 0.07, 0.09, 0.05]
+
 # Plot real time series
 fig = plt.figure(figsize=(8.7, 2.2), constrained_layout=True)
 gs = gridspec.GridSpec(2, 5)
@@ -260,59 +264,179 @@ ax0.plot(datetime1, data1["y"], label="Observed", color='C0')
 ax0.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
 ax0.set_ylim([ymin, ymax])
 ax0.set_yticks(yticks)
+ax0.axvspan(datetime1[0],
+            datetime1[int(len(data1["y"])*(training_splits[0]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax0.axvspan(datetime1[int(len(data1["y"])*training_splits[0]+1)],
+            datetime1[int(len(data1["y"])*(training_splits[0]+validation_splits[0]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax1.plot(datetime2, data2["y"], label="Observed", color='C0')
 ax1.xaxis.set_major_locator(mdates.YearLocator(base=5))
 ax1.set_ylim([ymin, ymax])
 ax1.set_yticks(yticks)
 ax1.set_yticklabels([])
+ax1.axvspan(datetime2[0],
+            datetime2[int(len(data2["y"])*(training_splits[1]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax1.axvspan(datetime2[int(len(data2["y"])*training_splits[1]+1)],
+            datetime2[int(len(data2["y"])*(training_splits[1]+validation_splits[1]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax2.plot(datetime3, data3["y"], label="Observed", color='C0')
 ax2.xaxis.set_major_locator(mdates.YearLocator(base=6))
 ax2.set_ylim([ymin, ymax])
 ax2.set_yticks(yticks)
 ax2.set_yticklabels([])
+ax2.axvspan(datetime3[0],
+            datetime3[int(len(data3["y"])*(training_splits[2]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax2.axvspan(datetime3[int(len(data3["y"])*training_splits[2]+1)],
+            datetime3[int(len(data3["y"])*(training_splits[2]+validation_splits[2]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax3.plot(datetime4, data4["y"], label="Observed", color='C0')
 ax3.xaxis.set_major_locator(mdates.YearLocator(base=4))
 ax3.set_ylim([ymin, ymax])
 ax3.set_yticks(yticks)
 ax3.set_yticklabels([])
+ax3.axvspan(datetime4[0],
+            datetime4[int(len(data4["y"])*(training_splits[3]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax3.axvspan(datetime4[int(len(data4["y"])*training_splits[3]+1)],
+            datetime4[int(len(data4["y"])*(training_splits[3]+validation_splits[3]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax4.plot(datetime5, data5["y"], label="Observed", color='C0')
 ax4.xaxis.set_major_locator(mdates.YearLocator(base=5))
 ax4.set_ylim([ymin, ymax])
 ax4.set_yticks(yticks)
 ax4.set_yticklabels([])
+ax4.axvspan(datetime5[0],
+            datetime5[int(len(data5["y"])*(training_splits[4]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax4.axvspan(datetime5[int(len(data5["y"])*training_splits[4]+1)],
+            datetime5[int(len(data5["y"])*(training_splits[4]+validation_splits[4]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax5.plot(datetime6, data6["y"], label="Observed", color='C0')
 ax5.xaxis.set_major_locator(mdates.YearLocator(base=4))
 ax5.set_ylim([ymin, ymax])
 ax5.set_yticks(yticks)
+ax5.axvspan(datetime6[0],
+            datetime6[int(len(data6["y"])*(training_splits[5]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax5.axvspan(datetime6[int(len(data6["y"])*training_splits[5]+1)],
+            datetime6[int(len(data6["y"])*(training_splits[5]+validation_splits[5]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax6.plot(datetime7, data7["y"], label="Observed", color='C0')
 ax6.xaxis.set_major_locator(mdates.YearLocator(base=5))
 ax6.set_ylim([ymin, ymax])
 ax6.set_yticks(yticks)
 ax6.set_yticklabels([])
+ax6.axvspan(datetime7[0],
+            datetime7[int(len(data7["y"])*(training_splits[6]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax6.axvspan(datetime7[int(len(data7["y"])*training_splits[6]+1)],
+            datetime7[int(len(data7["y"])*(training_splits[6]+validation_splits[6]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax7.plot(datetime8, data8["y"], label="Observed", color='C0')
 ax7.xaxis.set_major_locator(mdates.YearLocator(base=4))
 ax7.set_ylim([ymin, ymax])
 ax7.set_yticks(yticks)
 ax7.set_yticklabels([])
+ax7.axvspan(datetime8[0],
+            datetime8[int(len(data8["y"])*(training_splits[7]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax7.axvspan(datetime8[int(len(data8["y"])*training_splits[7]+1)],
+            datetime8[int(len(data8["y"])*(training_splits[7]+validation_splits[7]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax8.plot(datetime9, data9["y"], label="Observed", color='C0')
 ax8.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
 ax8.set_ylim([ymin, ymax])
 ax8.set_yticks(yticks)
 ax8.set_yticklabels([])
+ax8.axvspan(datetime9[0],
+            datetime9[int(len(data9["y"])*(training_splits[8]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax8.axvspan(datetime9[int(len(data9["y"])*training_splits[8]+1)],
+            datetime9[int(len(data9["y"])*(training_splits[8]+validation_splits[8]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 ax9.plot(datetime10, data10["y"], label="Observed", color='C0')
 ax9.xaxis.set_major_locator(mdates.YearLocator(base=4))
 ax9.set_ylim([ymin, ymax])
 ax9.set_yticks(yticks)
 ax9.set_yticklabels([])
+ax9.axvspan(datetime10[0],
+            datetime10[int(len(data10["y"])*(training_splits[9]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax9.axvspan(datetime10[int(len(data10["y"])*training_splits[9]+1)],
+            datetime10[int(len(data10["y"])*(training_splits[9]+validation_splits[9]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.6, wspace=0.15)

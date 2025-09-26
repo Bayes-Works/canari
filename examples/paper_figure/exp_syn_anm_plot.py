@@ -65,6 +65,19 @@ for j in range(int(len(restored_data)/10)):
 # ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
 # ax0.set_title("Data generation")
 
+ax0.axvspan(date_time[0],
+            date_time[int(len(df_raw["obs"])*0.3)],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax0.axvspan(date_time[int(len(df_raw["obs"])*0.3+1)],
+            date_time[int(len(df_raw["obs"])*(0.4))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
+
 ax0.xaxis.set_major_locator(mdates.YearLocator(base=3))
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
