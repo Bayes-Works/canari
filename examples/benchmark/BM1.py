@@ -22,9 +22,10 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 def main(
     num_trial_optim_model: int = 100,
-    num_trial_optim_skf: int = 100,
-    param_optimization: bool = False,
+    num_trial_optim_skf: int = 200,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
+    smoother: bool = False,
 ):
     ######### Data processing #########
     # Read data
@@ -59,6 +60,7 @@ def main(
                 infer_len=52 * 3,
                 num_hidden_unit=50,
                 manual_seed=1,
+                smoother=smoother,
             ),
             WhiteNoise(std_error=param["sigma_v"]),
         )
