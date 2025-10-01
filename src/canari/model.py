@@ -1693,7 +1693,7 @@ class Model:
         for time_step in reversed(range(0, num_time_steps - 1)):
             self.rts_smoother(time_step, matrix_inversion_tol, tol_type)
 
-        if self.lstm_net and self.lstm_net.smooth:
+        if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
             var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
