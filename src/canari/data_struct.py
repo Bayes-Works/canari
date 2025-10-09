@@ -63,58 +63,52 @@ class LstmOutputHistory:
 @dataclass
 class LstmEmbedding:
     """
-    Container for saving the LSTM embedding mean and variance.
+    Stores the current LSTM embedding mean and variance vectors.
 
     Attributes:
-        mu (np.ndarray): Mean of the LSTM embedding matrix (nb_ts x embedding_dim).
-        var (np.ndarray): Variance of the LSTM embedding matrix (nb_ts x embedding_dim).
+        mu (np.ndarray): Mean of the embedding with shape (1, embedding_dim).
+        var (np.ndarray): Variance of the embedding with shape (1, embedding_dim).
     """
 
     mu: np.ndarray = field(init=False)
     var: np.ndarray = field(init=False)
 
-    def initialize(self, embedding_dim: int, nb_ts: int = 1):
+    def initialize(self, embedding_dim: int):
         """
-        Initialize `mu` and `var` using Bayesian-appropriate initialization strategies.
+        Initialize the mean and variance of the embedding arrays.
+
+        The mean is sampled from a standard normal distribution and the variance
+        is initialized to ones. Both arrays have shape (1, embedding_dim).
 
         Args:
             embedding_dim (int): Dimension of the LSTM embedding.
-            nb_ts (int): Number of time steps. Defaults to 1.
         """
-        self.mu = np.random.normal(0, 1, (nb_ts, embedding_dim)).astype(np.float32)
-        self.var = np.ones((nb_ts, embedding_dim), dtype=np.float32)
+        self.mu = np.random.normal(0, 1, (1, embedding_dim)).astype(np.float32)
+        self.var = np.ones((1, embedding_dim), dtype=np.float32)
 
     def update(
         self,
         delta_mu: np.ndarray,
         delta_var: np.ndarray,
-        ts_idx: int = 0,
-        learning_rate: float = 1,
     ):
         """
-        Update the LSTM embedding mean and variance for a specific time series.
+        Update the LSTM embedding mean and variance in place.
 
         Args:
-            delta_mu (np.ndarray): Change in the mean of the LSTM embedding.
-            delta_var (np.ndarray): Change in the variance of the LSTM embedding.
-            i (int): Index of the time series to update.
-            learning_rate (float): Learning rate for the update. Defaults to 1.
+            delta_mu (np.ndarray): Relative change applied to the current mean.
+            delta_var (np.ndarray): Update term applied to the current variance.
         """
-        self.mu[ts_idx] += learning_rate * delta_mu * self.mu[ts_idx]
-        self.var[ts_idx] += (
-            learning_rate * self.var[ts_idx] * delta_var * self.var[ts_idx]
-        )
-    def __getitem__(self, ts_idx: int) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Get the mean and variance for a specific time series index.
+        self.mu += delta_mu * self.mu
+        self.var += self.var * delta_var * self.var
 
-        Args:
-            ts_idx (int): Index of the time series.
+    def __getitem__(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the mean and variance of the LSTM embedding.
 
         Returns:
-            tuple[np.ndarray, np.ndarray]: Mean and variance arrays for the specified index.
+            tuple[np.ndarray, np.ndarray]: Mean and variance arrays of the LSTM embedding.
         """
-        return self.mu[ts_idx], self.var[ts_idx]
+        return self.mu, self.var
 
 
 @dataclass

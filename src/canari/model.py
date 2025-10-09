@@ -27,7 +27,13 @@ import numpy as np
 from pytagi import Normalizer as normalizer
 from canari.component.base_component import BaseComponent
 from canari import common
-from canari.data_struct import LstmOutputHistory, StatesHistory, LstmEmbedding, OutputHistory, LstmEmbedding
+from canari.data_struct import (
+    LstmOutputHistory,
+    StatesHistory,
+    LstmEmbedding,
+    OutputHistory,
+    LstmEmbedding,
+)
 from canari.common import GMA
 from canari.data_process import DataProcess
 
@@ -185,7 +191,6 @@ class Model:
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
         self.lstm_embedding = LstmEmbedding()
-        self.ts_idx = 0  # Index of the time series being processed
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -288,9 +293,8 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            self.lstm_embedding.initialize(
-                self.lstm_net.embedding_dim, self.lstm_net.nb_ts
-            )
+            if self.lstm_net.embedding_dim > 0:
+                self.lstm_embedding.initialize(self.lstm_net.embedding_dim)
 
     def _initialize_autoregression(self):
         """
@@ -1147,18 +1151,33 @@ class Model:
         # LSTM prediction:
         lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
+            # Prepare LSTM input, handling embeddings if present
             if var_input_covariates is not None:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history,
-                input_covariates,
-                self.lstm_embedding[self.ts_idx],, var_input_covariates
-                )
+                if self.lstm_net.embedding_dim > 0 and self.lstm_embedding is not None:
+                    mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                        self.lstm_output_history,
+                        input_covariates,
+                        var_input_covariates,
+                        self.lstm_embedding,
+                    )
+                else:
+                    mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                        self.lstm_output_history,
+                        input_covariates,
+                        var_input_covariates,
+                    )
             else:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history,
-                input_covariates,
-                self.lstm_embedding[self.ts_idx],
-                )
+                if self.lstm_net.embedding_dim > 0 and self.lstm_embedding is not None:
+                    mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                        self.lstm_output_history,
+                        input_covariates,
+                        self.lstm_embedding,
+                    )
+                else:
+                    mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                        self.lstm_output_history,
+                        input_covariates,
+                    )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
@@ -1471,19 +1490,12 @@ class Model:
             if self.lstm_net:
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
+                    # Update embedding
                     if self.lstm_net.embedding_dim:
-                        delta_e_mu, delta_e_var = self.lstm_net.get_input_states()
-                    )
-                    if self.lstm_net.embedding_dim:
-                        delta_e_mu, delta_e_var = self.lstm_net.get_input_states()
+                        delta_emb_mu, delta_emb_var = self.lstm_net.get_input_states()
                         self.lstm_embedding.update(
-                            delta_e_mu[-self.lstm_net.embedding_dim :],
-                            delta_e_var[-self.lstm_net.embedding_dim :],
-                            self.ts_idx,
-                            self.lstm_embedding.update(
-                            delta_e_mu[-self.lstm_net.embedding_dim :],
-                            delta_e_var[-self.lstm_net.embedding_dim :],
-                            self.ts_idx,
+                            delta_emb_mu[-self.lstm_net.embedding_dim :],
+                            delta_emb_var[-self.lstm_net.embedding_dim :],
                         )
                 self.update_lstm_history(mu_states_posterior, var_states_posterior)
 
