@@ -93,6 +93,8 @@ class LstmNetwork(BaseComponent):
         self.look_back_len = look_back_len
         self.num_features = num_features
         self.embedding_dim = embedding_dim
+        self.embedding_dim = embedding_dim
+        self.nb_ts = nb_ts
         self.nb_ts = nb_ts
         self.device = device
         self.num_thread = num_thread
@@ -203,6 +205,10 @@ class LstmNetwork(BaseComponent):
         if self.embedding_dim > 0:
             lstm_network.input_state_update = True
         lstm_network.model_noise = self.model_noise
+        lstm_network.embedding_dim = self.embedding_dim
+        lstm_network.nb_ts = self.nb_ts
+        if self.embedding_dim > 0:
+            lstm_network.input_state_update = True
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
