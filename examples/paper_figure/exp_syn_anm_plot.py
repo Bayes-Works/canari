@@ -53,7 +53,7 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 
 # Plot generated time series
-fig = plt.figure(figsize=(5.5, 1.8), constrained_layout=True)
+fig = plt.figure(figsize=(5, 1.8), constrained_layout=True)
 gs = gridspec.GridSpec(1, 1)
 ax0 = plt.subplot(gs[0])
 for j in range(int(len(restored_data)/10)):
