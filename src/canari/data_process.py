@@ -241,7 +241,6 @@ class DataProcess:
                     self.validation_start : self.validation_end, self.covariates_col
                 ],
                 "y": data[self.validation_start : self.validation_end, self.output_col],
-                "start_date": self.data.index[self.validation_start],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
                 "freq": freq,
