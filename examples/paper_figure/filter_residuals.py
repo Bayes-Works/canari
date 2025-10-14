@@ -143,7 +143,7 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # #  Plot
 state_type = "prior"
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(5.5, 1.9), constrained_layout=True)
+fig = plt.figure(figsize=(5, 1.9), constrained_layout=True)
 gs = gridspec.GridSpec(3, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])

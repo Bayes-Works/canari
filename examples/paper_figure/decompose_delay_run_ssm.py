@@ -37,16 +37,16 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-# anm_mag = 0.010416667/10
-time_anomaly = 52*4
-anm_mag = 15/52
-# anm_baseline = np.linspace(0, 3, num=len(df_raw))
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LT anomaly
+# # anm_mag = 0.010416667/10
+# time_anomaly = 52*4
+# anm_mag = 15/52
+# # anm_baseline = np.linspace(0, 3, num=len(df_raw))
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 
 # Data pre-processing
@@ -116,7 +116,7 @@ pretrained_model.smoother()
 state_type = "prior"
 #  Plot states from pretrained model
 # fig = plt.figure(figsize=(8, 4.8))
-fig = plt.figure(figsize=(5.5, 2.2), constrained_layout=True)
+fig = plt.figure(figsize=(5, 2.2), constrained_layout=True)
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
@@ -145,7 +145,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_ylabel('$x^{\mathtt{LL}}$')
-ax0.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax0.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax0.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -156,7 +156,7 @@ plot_states(
     sub_plot=ax1,
 )
 ax1.set_ylabel('$x^{\mathtt{LT}}$')
-ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax1.yaxis.offsetText.set_fontsize(6)
 ax1.set_xticklabels([])
 plot_states(
@@ -168,7 +168,7 @@ plot_states(
     sub_plot=ax2,
 )
 ax2.set_ylabel('$x^{\mathtt{LSTM}}$')
-ax2.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax2.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax2.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -179,7 +179,7 @@ plot_states(
     sub_plot=ax3,
 )
 ax3.set_ylabel('$x^{\mathtt{AR}}$')
-ax3.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax3.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 
 # # Plot stationary AR
 # phi_ar = model_dict['states_optimal'].mu_prior[-1][phi_index].item()
@@ -190,5 +190,5 @@ ax3.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomal
 fig.align_ylabels([ax0, ax1, ax2, ax3])
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.4)
-plt.savefig('delay.png', dpi=300)
+plt.savefig('decompose.png', dpi=300)
 plt.show()

@@ -34,7 +34,7 @@ df_complex['ds'] = pd.to_datetime(df_complex['ds']).dt.date
 
 # #  Plot df_simple and df_complex
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(5.5, 2.3), constrained_layout=True)
+fig = plt.figure(figsize=(5, 2.3), constrained_layout=True)
 gs = gridspec.GridSpec(2, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
