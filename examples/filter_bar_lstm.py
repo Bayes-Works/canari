@@ -142,6 +142,12 @@ mu_AR = model_dict["memory"]["mu_states"][autoregression_index].item()
 var_AR = model_dict["memory"]["var_states"][
     autoregression_index, autoregression_index
 ].item()
+if model.lstm_net.smooth:
+    smoothed_look_back = (
+        model.early_stop_lstm_output_mu,
+        model.early_stop_lstm_output_var,
+    )
+    smoothed_lstm_states = model.early_stop_lstm_states[0] # first time step
 
 print("Learned phi_AR =", phi_AR_learn)
 print("Learned sigma_AR =", np.sqrt(mu_W2bar_learn))
@@ -164,6 +170,9 @@ pretrained_model = Model(
 
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+if pretrained_model.lstm_net.smooth:
+    pretrained_model.lstm_output_history.set(*smoothed_look_back)
+    pretrained_model.lstm_net.set_lstm_states(smoothed_lstm_states)
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)
