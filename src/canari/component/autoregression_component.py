@@ -1,7 +1,6 @@
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
-from canari import common
 
 
 class Autoregression(BaseComponent):
@@ -97,8 +96,11 @@ class Autoregression(BaseComponent):
         else:
             self._transition_matrix = np.array([[self.phi]])
         if self.std_error is None:
-            self._transition_matrix = common.create_block_diag(
-                self._transition_matrix, np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+            self._transition_matrix = np.block(
+                [
+                    [self._transition_matrix, np.zeros((self._num_states - 3, 3))],
+                    [np.zeros((3, self._num_states))],
+                ]
             )
 
     def initialize_observation_matrix(self):

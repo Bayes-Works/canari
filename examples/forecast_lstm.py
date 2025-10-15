@@ -7,7 +7,7 @@ from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend
 
-# Read data
+# # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 linear_space = np.linspace(0, 2, num=len(df_raw))
@@ -46,10 +46,11 @@ model = Model(
     LstmNetwork(
         look_back_len=12,
         num_features=2,
+        infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
         device="cpu",
-        manual_seed=235,
+        manual_seed=1,
     ),
     WhiteNoise(std_error=sigma_v),
 )
@@ -58,18 +59,10 @@ model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 # Training
 for epoch in range(num_epoch):
-
-    # set white noise decay
-    model.white_noise_decay(epoch, white_noise_max_std=5, white_noise_decay_factor=0.9)
-
-    # filter on train data
-    model.filter(train_data, train_lstm=True)
-
-    # smooth on train data
-    model.smoother()
-
-    # forecast on the validation set
-    mu_validation_preds, std_validation_preds, _ = model.forecast(validation_data)
+    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
+        train_data=train_data,
+        validation_data=validation_data,
+    )
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -92,24 +85,18 @@ for epoch in range(num_epoch):
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
         states_optim = copy.copy(
-            model.states
+            states
         )  # If we want to plot the states, plot those from optimal epoch
-        model_optim_dict = model.get_dict()
-        lstm_optim_states = model.lstm_net.get_lstm_states()
 
-    model.set_memory(states=model.states, time_step=0)
     if model.stop_training:
         break
+
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
-model.lstm_net.set_lstm_states(lstm_optim_states)
 model.set_memory(
-    states=states_optim,
-    time_step=data_processor.test_start,
+    time_step=data_processor.test_start - 1,
 )
 
 # forecat on the test set

@@ -6,14 +6,14 @@ from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
 from canari import DataProcess, Model, plot_data, plot_prediction
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
-import fire
+import pytest
 
 BASE_DIR = os.path.dirname(__file__)
 
 
 def model_test_runner(model: Model, plot: bool) -> float:
     """
-    Run training and forecasting for model
+    Run training and forecasting for time-series forecasting model
     """
 
     output_col = [0]
@@ -45,7 +45,6 @@ def model_test_runner(model: Model, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(states=states, time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -92,39 +91,64 @@ def model_test_runner(model: Model, plot: bool) -> float:
     return mse
 
 
-def test_model_forecast(run_mode, plot_mode):
-    """Test model forecasting"""
-    # Model
+@pytest.mark.parametrize("smoother", [(False), (True)], ids=["LSTM", "SLSTM"])
+def test_model_forecast(run_mode, plot_mode, smoother):
+    """Test model forecasting with LSTM and SLSTM"""
     model = Model(
         LocalTrend(),
         LstmNetwork(
             look_back_len=19,
             num_features=1,
             num_layer=1,
+            infer_len=24,
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
+            smoother=smoother,
         ),
         WhiteNoise(std_error=0.0032322250444898116),
     )
     mse = model_test_runner(model, plot=plot_mode)
+    mse = round(mse, 10)
 
     path_metric = os.path.join(
         BASE_DIR, "../test/saved_metric/test_model_forecast_metric.csv"
     )
     if run_mode == "save_threshold":
-        pd.DataFrame({"mse": [mse]}).to_csv(path_metric, index=False)
+        target_column = "SLSTM" if smoother else "LSTM"
+        columns = ["LSTM", "SLSTM"]
+
+        if os.path.exists(path_metric):
+            df = pd.read_csv(path_metric)
+        else:
+            df = pd.DataFrame()
+
+        for column in columns:
+            if column not in df.columns:
+                df[column] = np.nan
+
+        df = df[columns]
+
+        if df.empty:
+            df.loc[0] = {column: np.nan for column in columns}
+
+        df.loc[0, target_column] = mse
+        df.to_csv(path_metric, index=False)
         print(f"Saved MSE to {path_metric}: {mse}")
     else:
         # load threshold
         threshold = None
         if os.path.exists(path_metric):
             df = pd.read_csv(path_metric)
-            threshold = float(df["mse"].iloc[0])
+            target_column = "SLSTM" if smoother else "LSTM"
+            if target_column in df.columns:
+                value_series = df[target_column].dropna()
+                if not value_series.empty:
+                    threshold = float(value_series.iloc[0])
 
         assert (
             threshold is not None
         ), "No saved threshold found. Run with --mode=save_threshold first to save a threshold."
-        assert (
-            mse < threshold
-        ), f"MSE {mse} is smaller than the saved threshold {threshold}"
+        assert mse <= threshold or np.isclose(
+            mse, threshold, rtol=1e-8
+        ), f"MSE {mse} is not close enough to the saved threshold {threshold}"
