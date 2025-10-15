@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.component &#8212; canari v.0.2.0 documentation</title>
+    <title>Read .DAT data files &#8212; canari v.0.2.0 documentation</title>
   
   
   
@@ -30,6 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
@@ -41,11 +42,13 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'api/canari.component';</script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/read_DAT_file';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="canari.component.base_component" href="canari.component.base_component.html" />
-    <link rel="prev" title="canari.data_process" href="canari.data_process.html" />
+    <link rel="next" title="API Docs" href="../api.html" />
+    <link rel="prev" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -158,35 +161,35 @@
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Read .DAT data files</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="canari.data_process.html">canari.data_process</a></li>
-<li class="toctree-l2 current active has-children"><a class="current reference internal" href="#">canari.component</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
-<li class="toctree-l3"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_process.html">canari.data_process</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/canari.component.html">canari.component</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.base_component.html">canari.component.base_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.baseline_component.html">canari.component.baseline_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.periodic_component.html">canari.component.periodic_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.lstm_component.html">canari.component.lstm_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.model.html">canari.model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.model_assemble.html">canari.model_assemble</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_struct.html">canari.data_struct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_assemble.html">canari.model_assemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
 </ul>
 </details></li>
 </ul>
@@ -292,7 +295,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>canari.component</h1>
+    <h1>Read .DAT data files</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -306,20 +309,26 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="canari-component">
-<h1>canari.component<a class="headerlink" href="#canari-component" title="Link to this heading">#</a></h1>
-<p>The module contains a collection of modular components that users can use
-to build a structured states-space models.</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.base_component.html">canari.component.base_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.baseline_component.html">canari.component.baseline_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.periodic_component.html">canari.component.periodic_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.lstm_component.html">canari.component.lstm_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.autoregression_component.html">canari.component.autoregression_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.bounded_autoregression_component.html">canari.component.bounded_autoregression_component</a></li>
-<li class="toctree-l1"><a class="reference internal" href="canari.component.white_noise_component.html">canari.component.white_noise_component</a></li>
-</ul>
+  <section id="Read-.DAT-data-files">
+<h1>Read .DAT data files<a class="headerlink" href="#Read-.DAT-data-files" title="Link to this heading">#</a></h1>
+<p>This example show show how Canari read raw <code class="docutils literal notranslate"><span class="pre">.DAT</span></code> datasets using the Pandas external library and stores it into a dataframe.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">data_file</span> <span class="o">=</span> <span class="o">.</span><span class="n">DAT</span>
+<span class="n">df_raw</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span>
+                    <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">,</span>  <span class="c1"># Semicolon as delimiter</span>
+                    <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span>
+                    <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
+                    <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span>  <span class="c1"># Treat empty strings as NaN</span>
+                    <span class="n">skipinitialspace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;ISO-8859-1&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+</pre></div>
+</div>
 </div>
 </section>
 
@@ -335,20 +344,20 @@ to build a structured states-space models.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="canari.data_process.html"
+       href="parameter_tuning.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">canari.data_process</p>
+        <p class="prev-next-title">Swithing Kalman filter parameter tuning using synthetic anomalies</p>
       </div>
     </a>
     <a class="right-next"
-       href="canari.component.base_component.html"
+       href="../api.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">canari.component.base_component</p>
+        <p class="prev-next-title">API Docs</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
