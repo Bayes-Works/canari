@@ -35,12 +35,21 @@ class LstmNetwork(BaseComponent):
             initialized to zeros.
         var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:
             initialized to zeros.
+        smoother (Optional[bool]): if True using Smooth LSTM (SLSTM), if False using LSTM. Defaults to True.
+        infer_len (Optional[int]): Length of the window before the training set to be inferred when using SLSTM.
+        model_noise (Optional[bool]): if True, using the AGVI method to model heteroscedastic noise (See references).
+                                     Defaults to False.
 
     References:
         Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and
         state-space models through analytically tractable inference
         <https://www.sciencedirect.com/science/article/pii/S0169207024000335>`_.
         International Journal of Forecasting. Volume 41, Issue 1, Pages 128-140.
+
+        Deka, B., Nguyen, L.H. and Goulet, J.-A. (2024). `Analytically tractable heteroscedastic
+        uncertainty quantification in Bayesian neural networks for regression tasks
+        <https://www.sciencedirect.com/science/article/pii/S0925231223013061>`_.
+        Neurocomputing. Volume 572, pp.127183.
 
     Examples:
         >>> from canari.component import LstmNetwork

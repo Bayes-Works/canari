@@ -7,6 +7,7 @@
    canari.common
    canari.model
    canari.model_optimizer
+   canari.model_assemble
    canari.skf
    canari.skf_optimizer
    canari.data_visualization
