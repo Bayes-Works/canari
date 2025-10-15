@@ -4,8 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
-from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LstmNetwork, WhiteNoise, LocalTrend
+from canari import (
+    DataProcess,
+    Model,
+    plot_states,
+    plot_data,
+    plot_prediction,
+)
+from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -26,35 +32,33 @@ df = df_raw.resample("H").mean()
 # Define parameters
 output_col = [0]
 num_epoch = 50
+use_lstm_smoother = True
 
-# Build data processor
 data_processor = DataProcess(
     data=df,
-    time_covariates=["hour_of_day"],
     train_split=0.8,
-    validation_split=0.1,
+    validation_split=0.2,
     output_col=output_col,
 )
 
-# split data
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.003
+sigma_v = 1e-2
 model = Model(
     LocalTrend(),
     LstmNetwork(
         look_back_len=12,
-        num_features=2,
+        num_features=1,
+        infer_len=24 * 3,
         num_layer=1,
-        num_hidden_unit=40,
+        num_hidden_unit=50,
         device="cpu",
-        manual_seed=235,
+        smoother=use_lstm_smoother,
     ),
     WhiteNoise(std_error=sigma_v),
 )
-
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_baseline_states(train_data["y"][1:24])
 
 # Training
 for epoch in range(num_epoch):
@@ -62,7 +66,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -84,53 +87,67 @@ for epoch in range(num_epoch):
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
-        model_optim_dict = model.get_dict()
-        lstm_optim_states = model.lstm_net.get_lstm_states()
+        states_optim = copy.copy(states)
 
     if model.stop_training:
         break
 
-
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-# set memory and parameters to optimal epoch
-model.load_dict(model_optim_dict)
-model.lstm_net.set_lstm_states(lstm_optim_states)
-model.set_memory(
-    states=states_optim,
-    time_step=data_processor.test_start,
+
+# Saved the trained lstm network
+import os
+
+params_path = "saved_params/lstm_net_test.pth"
+os.makedirs(os.path.dirname(params_path), exist_ok=True)
+model.lstm_net.load_state_dict(model.early_stop_lstm_param)
+model.lstm_net.save(filename=params_path)
+
+# Define a new model that takes the trained lstm network
+model2 = Model(
+    LocalTrend(),
+    LstmNetwork(
+        look_back_len=12,
+        num_features=1,
+        infer_len=24 * 3,
+        num_layer=1,
+        num_hidden_unit=50,
+        device="cpu",
+        load_lstm_net=params_path,  # Load the pre-trained LSTM network
+        smoother=use_lstm_smoother,
+    ),
+    WhiteNoise(std_error=sigma_v),
 )
 
-# forecat on the test set
-mu_test_preds, std_test_preds, test_states = model.forecast(
-    data=test_data,
+# Provide model #2 the initial values from where model #1 stop
+memory = model.get_memory()
+model2.set_memory(memory=memory)
+lstm_params_before_filter = copy.deepcopy(model2.lstm_net.state_dict())
+
+# # #
+model2.filter(data=train_data, train_lstm=False)
+model2.smoother()
+mu_validation_preds2, std_validation_preds2, _ = model2.forecast(validation_data)
+
+lstm_params_after_filter = copy.deepcopy(model2.lstm_net.state_dict())
+assert lstm_params_before_filter == lstm_params_after_filter
+print(
+    "LSTM network parameters are the same before and after filtering, smoothing, and forecasting."
 )
 
 # Unstandardize the predictions
-mu_test_preds = normalizer.unstandardize(
-    mu_test_preds,
+mu_validation_preds2 = normalizer.unstandardize(
+    mu_validation_preds2,
     data_processor.scale_const_mean[output_col],
     data_processor.scale_const_std[output_col],
 )
-std_test_preds = normalizer.unstandardize_std(
-    std_test_preds,
+std_validation_preds2 = normalizer.unstandardize_std(
+    std_validation_preds2,
     data_processor.scale_const_std[output_col],
 )
 
-# calculate the test metrics
-test_obs = data_processor.get_data("test").flatten()
-mse = metric.mse(mu_test_preds, test_obs)
-log_lik = metric.log_likelihood(mu_test_preds, test_obs, std_test_preds)
-
-print(f"Test MSE            :{mse: 0.4f}")
-print(f"Test Log-Lik        :{log_lik: 0.2f}")
-
-# plot the test data
-fig, ax = plt.subplots(figsize=(10, 6))
+#  Plot
 plot_data(
     data_processor=data_processor,
     standardization=False,
@@ -139,17 +156,15 @@ plot_data(
 )
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds_optim,
-    std_validation_pred=std_validation_preds_optim,
-    validation_label=[r"$\mu$", r"$\pm\sigma$"],
+    mean_validation_pred=mu_validation_preds2,
+    std_validation_pred=std_validation_preds2,
+    validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
-plot_prediction(
+plt.legend(loc="upper left")  # Change "upper right" to your desired location
+
+plot_states(
     data_processor=data_processor,
-    mean_test_pred=mu_test_preds,
-    std_test_pred=std_test_preds,
-    test_label=[r"$\mu^{\prime}$", r"$\pm\sigma^{\prime}$"],
-    color="purple",
+    states=model2.states,
+    states_type="prior",
 )
-plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
-plt.tight_layout()
 plt.show()

@@ -73,8 +73,10 @@ LSTM = LstmNetwork(
     look_back_len=52,
     num_features=2,
     num_layer=1,
+    infer_len=52 * 3,
     num_hidden_unit=50,
     device="cpu",
+    # smoother=False,
 )
 
 # Define AR model
@@ -103,7 +105,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -142,7 +143,7 @@ for epoch in range(num_epoch):
 print(f"Optimal epoch       : {model.optimal_epoch}")
 print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 
-model_dict = model.get_dict()
+model_dict = model.get_dict(time_step=0)
 model_dict["states_optimal"] = states_optim
 
 # Save model_dict to local
@@ -177,8 +178,8 @@ train_val_data = np.concatenate(
 
 pretrained_model = Model(
     LocalTrend(
-        mu_states=pretrained_model_dict["mu_states"][0:2].reshape(-1),
-        var_states=np.diag(pretrained_model_dict["var_states"][0:2, 0:2]),
+        mu_states=pretrained_model_dict["memory"]["mu_states"][0:2].reshape(-1),
+        var_states=np.diag(pretrained_model_dict["memory"]["var_states"][0:2, 0:2]),
     ),
     LSTM,
     Autoregression(
@@ -186,9 +187,11 @@ pretrained_model = Model(
             pretrained_model_dict["states_optimal"].mu_prior[-1][W2bar_index].item()
         ),
         phi=pretrained_model_dict["states_optimal"].mu_prior[-1][phi_index].item(),
-        mu_states=[pretrained_model_dict["mu_states"][autoregression_index].item()],
+        mu_states=[
+            pretrained_model_dict["memory"]["mu_states"][autoregression_index].item()
+        ],
         var_states=[
-            pretrained_model_dict["var_states"][
+            pretrained_model_dict["memory"]["var_states"][
                 autoregression_index, autoregression_index
             ].item()
         ],

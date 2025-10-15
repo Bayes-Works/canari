@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 import numpy.testing as npt
-from canari import Model, common
+from canari import Model
 from canari.component import (
     LocalTrend,
     LocalLevel,
@@ -13,7 +13,6 @@ from canari.component import (
     Periodic,
     BaseComponent,
 )
-import fire
 
 
 def compute_observation_and_state_updates(
