@@ -36,10 +36,12 @@ model = Model(
         look_back_len=24,
         num_features=1,
         num_layer=1,
+        infer_len=24 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
         model_noise=True,
+        smoother=False,
     ),
 )
 model.auto_initialize_baseline_states(train_data["y"][0:24])
@@ -51,7 +53,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(

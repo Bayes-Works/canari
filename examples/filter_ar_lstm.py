@@ -12,7 +12,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, Autoregression
+from canari.component import LocalTrend, LstmNetwork, Autoregression, WhiteNoise
 
 
 ###########################
@@ -58,6 +58,7 @@ var_W2bar_prior = 1e4
 lstm = LstmNetwork(
     look_back_len=52,
     num_features=2,
+    infer_len=52 * 3,
     num_layer=1,
     num_hidden_unit=50,
     device="cpu",
@@ -89,7 +90,6 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         train_data=train_data,
         validation_data=val_data,
     )
-    model.set_memory(states=states, time_step=0)
 
     # Unstandardize the predictions
     mu_pred_unnorm = normalizer.unstandardize(
@@ -117,7 +117,7 @@ for epoch in tqdm(range(num_epochs), desc="Training Progress", unit="epoch"):
         break
 
 # save model
-model_dict = model.get_dict()
+model_dict = model.get_dict(time_step=0)
 model_dict["mu_states_optimal"] = states_optim.mu_prior[-1]
 
 print(f"Optimal epoch: {model.optimal_epoch}")
@@ -133,8 +133,16 @@ W2bar_index = model_dict["states_name"].index("W2bar")
 autoregression_index = model_dict["states_name"].index("autoregression")
 mu_W2bar_learn = model_dict["mu_states_optimal"][W2bar_index].item()
 phi_AR_learn = model_dict["mu_states_optimal"][phi_index].item()
-mu_AR = model_dict["mu_states"][autoregression_index].item()
-var_AR = model_dict["var_states"][autoregression_index, autoregression_index].item()
+mu_AR = model_dict["memory"]["mu_states"][autoregression_index].item()
+var_AR = model_dict["memory"]["var_states"][
+    autoregression_index, autoregression_index
+].item()
+if model.lstm_net.smooth:
+    smoothed_look_back = (
+        model.early_stop_lstm_output_mu,
+        model.early_stop_lstm_output_var,
+    )
+    smoothed_lstm_states = model.early_stop_lstm_states[0] # first time step
 
 print("Learned phi_AR =", phi_AR_learn)
 print("Learned sigma_AR =", np.sqrt(mu_W2bar_learn))
@@ -156,6 +164,9 @@ pretrained_model = Model(
 
 # load lstm's component
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
+if pretrained_model.lstm_net.smooth:
+    pretrained_model.lstm_output_history.set(*smoothed_look_back)
+    pretrained_model.lstm_net.set_lstm_states(smoothed_lstm_states)
 
 # filter and smoother
 pretrained_model.filter(standardized_data, train_lstm=False)

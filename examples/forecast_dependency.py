@@ -1,6 +1,7 @@
 import copy
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
@@ -15,9 +16,11 @@ from canari import (
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
 # # Read data
-data_file = "./data/toy_time_series/exp_sine_dependency_amp.csv"
+data_file = "./data/toy_time_series/exp_sine_dependency.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 df_raw.columns = ["exp_sine", "sine"]
+lags = [0, 9]
+df_raw = DataProcess.add_lagged_columns(df_raw, lags)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
 time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
@@ -58,13 +61,14 @@ plt.show()
 model_target = Model(
     LocalTrend(),
     LstmNetwork(
-        look_back_len=1,
-        num_features=2,
+        look_back_len=10,
+        num_features=11,
         num_layer=1,
+        infer_len=10 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        # model_noise=True,
+        smoother=False,
     ),
     WhiteNoise(std_error=1e-1),
 )
@@ -73,15 +77,16 @@ model_target.auto_initialize_baseline_states(train_data["y"][0:24])
 # Dependent model
 model_covar = Model(
     LstmNetwork(
-        look_back_len=1,
+        look_back_len=10,
         num_features=1,
         num_layer=1,
+        infer_len=10 * 3,
         num_hidden_unit=50,
         device="cpu",
         manual_seed=1,
-        # model_noise=True,
+        smoother=False,
     ),
-    WhiteNoise(std_error=1e-2),
+    WhiteNoise(std_error=3e-3),
 )
 model_covar.output_col = [1]
 
@@ -90,15 +95,12 @@ model = ModelAssemble(target_model=model_target, covariate_model=model_covar)
 
 # Training
 num_epoch = 50
-for epoch in range(num_epoch):
+for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
 
     (mu_validation_preds, std_validation_preds) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
-        use_val_posterior_covariate=False,
-        update_param_covar_model=False,
     )
-    model.set_memory(time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
@@ -113,6 +115,20 @@ for epoch in range(num_epoch):
     # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
+
+    # fig, ax = plot_states(
+    #     data_processor=data_processor,
+    #     states=model.covariate_model[0].states,
+    #     standardization=True,
+    # )
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     # plot_column=output_col,
+    #     plot_column=[1],
+    #     sub_plot=ax[0],
+    # )
+    # plt.show()
 
     # Early-stopping
     model_target.early_stopping(
