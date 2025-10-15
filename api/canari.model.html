@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="EN" data-content_root="../" >
+<html lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.model &#8212; canari v.0.1.0 documentation</title>
+    <title>canari.model &#8212; canari v0.2.0 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -49,7 +49,7 @@
     <link rel="next" title="canari.model_optimizer" href="canari.model_optimizer.html" />
     <link rel="prev" title="canari.common" href="canari.common.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="EN"/>
+  <meta name="docsearch:language" content="en"/>
   </head>
   
   
@@ -139,8 +139,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -160,13 +160,7 @@
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="simple">
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -185,6 +179,7 @@
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">canari.model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
@@ -323,11 +318,12 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.process_noise_matrix"><code class="docutils literal notranslate"><span class="pre">Model.process_noise_matrix</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_net"><code class="docutils literal notranslate"><span class="pre">Model.lstm_net</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_output_history"><code class="docutils literal notranslate"><span class="pre">Model.lstm_output_history</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_states_history"><code class="docutils literal notranslate"><span class="pre">Model.lstm_states_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_metric"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_metric</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_metric_history"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_metric_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_lstm_param"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_lstm_param</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_mu_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_mu_states</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_states</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_lstm_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_lstm_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
@@ -339,15 +335,21 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.forward"><code class="docutils literal notranslate"><span class="pre">Model.forward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.generate_time_series"><code class="docutils literal notranslate"><span class="pre">Model.generate_time_series()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_dict"><code class="docutils literal notranslate"><span class="pre">Model.get_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_memory"><code class="docutils literal notranslate"><span class="pre">Model.get_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_states_index"><code class="docutils literal notranslate"><span class="pre">Model.get_states_index()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.initialize_states_history"><code class="docutils literal notranslate"><span class="pre">Model.initialize_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.initialize_states_with_smoother_estimates"><code class="docutils literal notranslate"><span class="pre">Model.initialize_states_with_smoother_estimates()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.load_dict"><code class="docutils literal notranslate"><span class="pre">Model.load_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_train"><code class="docutils literal notranslate"><span class="pre">Model.lstm_train()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.pretraining_filter"><code class="docutils literal notranslate"><span class="pre">Model.pretraining_filter()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.rts_smoother"><code class="docutils literal notranslate"><span class="pre">Model.rts_smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.save_states_history"><code class="docutils literal notranslate"><span class="pre">Model.save_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_output_history"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_output_history()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_param"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_param()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_states_history"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>
@@ -604,6 +606,17 @@ It is a <code class="xref py py-class docutils literal notranslate"><span class=
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="canari.model.Model.lstm_states_history">
+<span class="sig-name descname"><span class="pre">lstm_states_history</span></span><a class="headerlink" href="#canari.model.Model.lstm_states_history" title="Link to this definition">#</a></dt>
+<dd><p>Container for saving the history for LSTM’s hidden and cell states for all time steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">#</span> <span class="pre">Early</span> <span class="pre">stopping</span> <span class="pre">attributes</span></span></dt>
 <dd><p>only being used when training a <a class="reference internal" href="canari.component.lstm_component.html#canari.component.lstm_component.LstmNetwork" title="canari.component.lstm_component.LstmNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">LstmNetwork</span></code></a> component.</p>
@@ -643,9 +656,9 @@ It is a <code class="xref py py-class docutils literal notranslate"><span class=
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="canari.model.Model.early_stop_init_mu_states">
-<span class="sig-name descname"><span class="pre">early_stop_init_mu_states</span></span><a class="headerlink" href="#canari.model.Model.early_stop_init_mu_states" title="Link to this definition">#</a></dt>
-<dd><p>Copy of <cite>mu_states</cite> at time step <cite>t=0</cite> of the optimal epoch .</p>
+<dt class="sig sig-object py" id="canari.model.Model.early_stop_states">
+<span class="sig-name descname"><span class="pre">early_stop_states</span></span><a class="headerlink" href="#canari.model.Model.early_stop_states" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a> at the optimal epoch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -654,9 +667,9 @@ It is a <code class="xref py py-class docutils literal notranslate"><span class=
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="canari.model.Model.early_stop_init_var_states">
-<span class="sig-name descname"><span class="pre">early_stop_init_var_states</span></span><a class="headerlink" href="#canari.model.Model.early_stop_init_var_states" title="Link to this definition">#</a></dt>
-<dd><p>Copy of <cite>var_states</cite> at time step <cite>t=0</cite> of the optimal epoch .</p>
+<dt class="sig sig-object py" id="canari.model.Model.early_stop_lstm_states">
+<span class="sig-name descname"><span class="pre">early_stop_lstm_states</span></span><a class="headerlink" href="#canari.model.Model.early_stop_lstm_states" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference internal" href="#canari.model.Model.lstm_states_history" title="canari.model.Model.lstm_states_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_states_history</span></code></a> at the optimal epoch</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>
@@ -766,17 +779,17 @@ from <a class="reference internal" href="canari.common.html#module-canari.common
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.early_stopping">
 <span class="sig-name descname"><span class="pre">early_stopping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">evaluate_metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'min'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patience</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.early_stopping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.early_stopping" title="Link to this definition">#</a></dt>
-<dd><p>Apply early stopping based on a monitored metric when training a LSTM neural network.</p>
+<dd><p>Apply early stopping based on the <cite>evaluate_metric</cite> when training a LSTM neural network.</p>
 <p>This method records <cite>evaluate_metric</cite> at each epoch,
 if there is an improvement on it,
-update <a class="reference internal" href="#canari.model.Model.early_stop_metric" title="canari.model.Model.early_stop_metric"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_metric</span></code></a>, <a class="reference internal" href="#canari.model.Model.early_stop_init_mu_states" title="canari.model.Model.early_stop_init_mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_init_mu_states</span></code></a>,
-<a class="reference internal" href="#canari.model.Model.early_stop_init_var_states" title="canari.model.Model.early_stop_init_var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_init_var_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.early_stop_lstm_param" title="canari.model.Model.early_stop_lstm_param"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_param</span></code></a>,
+update <a class="reference internal" href="#canari.model.Model.early_stop_metric" title="canari.model.Model.early_stop_metric"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_metric</span></code></a>, <a class="reference internal" href="#canari.model.Model.early_stop_lstm_param" title="canari.model.Model.early_stop_lstm_param"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_param</span></code></a>,
+<a class="reference internal" href="#canari.model.Model.early_stop_states" title="canari.model.Model.early_stop_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.early_stop_lstm_states" title="canari.model.Model.early_stop_lstm_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_states</span></code></a>,
 and <a class="reference internal" href="#canari.model.Model.optimal_epoch" title="canari.model.Model.optimal_epoch"><code class="xref py py-attr docutils literal notranslate"><span class="pre">optimal_epoch</span></code></a>.</p>
 <p>Sets the <cite>stop_training</cite> to <strong>True</strong> if <a class="reference internal" href="#canari.model.Model.optimal_epoch" title="canari.model.Model.optimal_epoch"><code class="xref py py-attr docutils literal notranslate"><span class="pre">optimal_epoch</span></code></a> = <cite>max_epoch</cite>, or
 (<cite>current_epoch</cite> - <a class="reference internal" href="#canari.model.Model.optimal_epoch" title="canari.model.Model.optimal_epoch"><code class="xref py py-attr docutils literal notranslate"><span class="pre">optimal_epoch</span></code></a>)&gt;= <cite>patience</cite>.</p>
-<p>When <cite>stop_training</cite> is <strong>True</strong>, set <a class="reference internal" href="#canari.model.Model.mu_states" title="canari.model.Model.mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu_states</span></code></a> = <a class="reference internal" href="#canari.model.Model.early_stop_init_mu_states" title="canari.model.Model.early_stop_init_mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_init_mu_states</span></code></a>,
-<a class="reference internal" href="#canari.model.Model.var_states" title="canari.model.Model.var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var_states</span></code></a> = <a class="reference internal" href="#canari.model.Model.early_stop_init_var_states" title="canari.model.Model.early_stop_init_var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_init_var_states</span></code></a>, and set LSTM parameters to
-<a class="reference internal" href="#canari.model.Model.early_stop_lstm_param" title="canari.model.Model.early_stop_lstm_param"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_param</span></code></a>.</p>
+<p>When <cite>stop_training</cite> is <strong>True</strong>, set <a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a> = <a class="reference internal" href="#canari.model.Model.early_stop_states" title="canari.model.Model.early_stop_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_states</span></code></a>,
+<a class="reference internal" href="#canari.model.Model.lstm_states_history" title="canari.model.Model.lstm_states_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_states_history</span></code></a> = <a class="reference internal" href="#canari.model.Model.early_stop_lstm_states" title="canari.model.Model.early_stop_lstm_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_states</span></code></a>, set LSTM parameters to
+<a class="reference internal" href="#canari.model.Model.early_stop_lstm_param" title="canari.model.Model.early_stop_lstm_param"><code class="xref py py-attr docutils literal notranslate"><span class="pre">early_stop_lstm_param</span></code></a>, and set <cite>memory</cite> to <cite>time_step=0</cite></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -900,7 +913,7 @@ if exists ‘y’ (real observations) will not be used.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_lstm_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_lstm_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.forward" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_input_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_lstm_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_lstm_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.forward" title="Link to this definition">#</a></dt>
 <dd><p>Make a one-step-ahead prediction using the prediction step of the Kalman filter.
 If no <cite>input_covariates</cite> for LSTM, use an empty <cite>np.ndarray</cite>.
 Recall <a class="reference internal" href="canari.common.html#canari.common.forward" title="canari.common.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> from <a class="reference internal" href="canari.common.html#module-canari.common" title="canari.common"><code class="xref py py-class docutils literal notranslate"><span class="pre">common</span></code></a>.</p>
@@ -1009,20 +1022,41 @@ starts, “level”: a constant shift after anomaly starts. Defaults to “trend
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.get_dict">
-<span class="sig-name descname"><span class="pre">get_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.get_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.get_dict" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.get_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.get_dict" title="Link to this definition">#</a></dt>
 <dd><p>Export model attributes into a serializable dictionary.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Serializable model dictionary containing neccessary attributes.</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time_step</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – the time step to get the model and memory at.
+If None export the model with the current memory.
+Defaults to None.</p>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>dict</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Serializable model dictionary containing neccessary attributes.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">saved_dict</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.get_memory">
+<span class="sig-name descname"><span class="pre">get_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/canari/model.html#Model.get_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.get_memory" title="Link to this definition">#</a></dt>
+<dd><p>Get memory which includes <a class="reference internal" href="#canari.model.Model.mu_states" title="canari.model.Model.mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.var_states" title="canari.model.Model.var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.lstm_output_history" title="canari.model.Model.lstm_output_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_output_history</span></code></a>,
+and <strong>lstm_states</strong> of <a class="reference internal" href="#canari.model.Model.lstm_net" title="canari.model.Model.lstm_net"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_net</span></code></a>. If <cite>time_step</cite> is provided, obtain the memory at that time step.
+Otherwise, obtain the memory at the current time step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time_step</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – time step to obtain the memory</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1051,7 +1085,7 @@ starts, “level”: a constant shift after anomaly starts. Defaults to “trend
 <dt class="sig sig-object py" id="canari.model.Model.initialize_states_history">
 <span class="sig-name descname"><span class="pre">initialize_states_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.initialize_states_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.initialize_states_history" title="Link to this definition">#</a></dt>
 <dd><p>Reinitialize prior, posterior, and smoothed values for hidden states in
-<a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a> with empty lists.</p>
+<a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a> as well as <a class="reference internal" href="#canari.model.Model.lstm_states_history" title="canari.model.Model.lstm_states_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_states_history</span></code></a> with empty lists.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1110,12 +1144,12 @@ deviation each epoch. Defaults to 0.9.</p></li>
 <dd class="field-even"><p><p>A tuple containing:</p>
 <ul class="simple">
 <li><dl class="simple">
-<dt><strong>mu_obs_preds</strong> (np.ndarray):</dt><dd><p>The means for multi-step-ahead predictions for the validation set.</p>
+<dt><strong>mu_validation_preds</strong> (np.ndarray):</dt><dd><p>The means for multi-step-ahead predictions for the validation set.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt><strong>std_obs_preds</strong> (np.ndarray):</dt><dd><p>The standard deviations for multi-step-ahead predictions for the validation set.</p>
+<dt><strong>std_validation_preds</strong> (np.ndarray):</dt><dd><p>The standard deviations for multi-step-ahead predictions for the validation set.</p>
 </dd>
 </dl>
 </li>
@@ -1138,6 +1172,14 @@ deviation each epoch. Defaults to 0.9.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.pretraining_filter">
+<span class="sig-name descname"><span class="pre">pretraining_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.pretraining_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.pretraining_filter" title="Link to this definition">#</a></dt>
+<dd><p>Run exactly <cite>lstm_look_back_len</cite> dummy steps through the LSTM so that the
+<cite>lstm_output_history</cite> gets filled with <cite>lstm_look_back_len</cite> predictions.
+Assumes <cite>self.lstm_net</cite> and <cite>self.lstm_output_history</cite> already exist.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.rts_smoother">
 <span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'relative'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.rts_smoother" title="Link to this definition">#</a></dt>
 <dd><p>Apply RTS smoothing equations for a specity timestep. As a result of this function,
@@ -1149,37 +1191,44 @@ from <a class="reference internal" href="canari.common.html#module-canari.common
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>time_step</strong> (<em>int</em>) – Target smoothing index.</p></li>
-<li><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
+<li><p><strong>matrix_inversion_tol</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Numerical stability threshold for matrix
 pseudoinversion (pinv). Defaults to 1E-12.</p></li>
+<li><p><strong>tol_type</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Tolerance type, “relative” or “absolute”.
+Defaults to “relative”.</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.save_states_history">
+<span class="sig-name descname"><span class="pre">save_states_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.save_states_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.save_states_history" title="Link to this definition">#</a></dt>
+<dd><p>Save current prior, posterior hidden states, and cross-covariaces between hidden states
+at two consecutive time steps for later use in Kalman’s smoother.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.set_memory">
-<span class="sig-name descname"><span class="pre">set_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.set_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.set_memory" title="Link to this definition">#</a></dt>
-<dd><p>Set <a class="reference internal" href="#canari.model.Model.mu_states" title="canari.model.Model.mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.var_states" title="canari.model.Model.var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var_states</span></code></a>, and
-<a class="reference internal" href="#canari.model.Model.lstm_output_history" title="canari.model.Model.lstm_output_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_output_history</span></code></a> with smoothed estimates from a specific
-time steps stored in <a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-class docutils literal notranslate"><span class="pre">states</span></code></a>. This is to prepare for the next
-analysis by ensuring the continuity of these variables, e.g., if the next analysis starts
-from time step <cite>t</cite>, should set the memory to the time step <cite>t</cite>.</p>
-<p>If <cite>t=0</cite>, also set the means and variances for cell and hidden states of
-<a class="reference internal" href="#canari.model.Model.lstm_net" title="canari.model.Model.lstm_net"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_net</span></code></a> to zeros. If <cite>t</cite> is not 0, need to set cell and hidden
-states outside in the code using <cite>Model.lstm_net.set_lstm_states(lstm_cell_hidden_states)</cite>.</p>
+<span class="sig-name descname"><span class="pre">set_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.set_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.set_memory" title="Link to this definition">#</a></dt>
+<dd><p>Set memory which includes <a class="reference internal" href="#canari.model.Model.mu_states" title="canari.model.Model.mu_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu_states</span></code></a>,
+<a class="reference internal" href="#canari.model.Model.var_states" title="canari.model.Model.var_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var_states</span></code></a>, <a class="reference internal" href="#canari.model.Model.lstm_output_history" title="canari.model.Model.lstm_output_history"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_output_history</span></code></a>
+and <strong>lstm_states</strong> in <a class="reference internal" href="#canari.model.Model.lstm_net" title="canari.model.Model.lstm_net"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_net</span></code></a> with smoothed estimates to a specific time step.
+This is to prepare for the next analysis by ensuring the continuity of these variables,
+e.g., if the next analysis starts from time step <cite>t</cite>, should set the memory to the
+time step <cite>t-1</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>states</strong> (<a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><em>StatesHistory</em></a>) – Full history of hidden states over time.</p></li>
-<li><p><strong>time_step</strong> (<em>int</em>) – Index of timestep to restore.</p></li>
+<li><p><strong>time_step</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Time step to set the memory.</p></li>
+<li><p><strong>memory</strong> (<em>Optional</em><em>[</em><em>dict</em><em>]</em>) – memory to be set.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># If the next analysis starts from the beginning of the time series</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># If the next analysis starts from t = 200</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">200</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">time_step</span><span class="o">=</span><span class="mi">199</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1208,8 +1257,12 @@ RTS smoothing equation over multiple time steps.</p>
 <a class="reference internal" href="#canari.model.Model.rts_smoother" title="canari.model.Model.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> at one-time-step level from <a class="reference internal" href="#canari.model.Model" title="canari.model.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
-pseudoinversion (pinv). Defaults to 1E-12.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
+pseudoinversion (pinv). Defaults to 1E-12.</p></li>
+<li><p><strong>tol_type</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Tolerance type, “relative” or “absolute”.
+Defaults to “relative”.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#canari.model.Model.states" title="canari.model.Model.states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">states</span></code></a>: The history of hidden states over time.</p>
@@ -1226,10 +1279,52 @@ pseudoinversion (pinv). Defaults to 1E-12.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.update_lstm_output_history">
+<span class="sig-name descname"><span class="pre">update_lstm_output_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.update_lstm_output_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.update_lstm_output_history" title="Link to this definition">#</a></dt>
+<dd><p>Update the rolling history of LSTM output means and variances with the mu_states and var_states</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mu_states</strong> (<em>np.ndarray</em>) – mean value to be updated to LSTM output history.</p></li>
+<li><p><strong>var_states</strong> (<em>np.ndarray</em>) – variance value to be updated to LSTM output history.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.update_lstm_param">
+<span class="sig-name descname"><span class="pre">update_lstm_param</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delta_mu_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta_var_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.update_lstm_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.update_lstm_param" title="Link to this definition">#</a></dt>
+<dd><p>Obtain the posteriors for the LSTM neural network’s parameters in <a class="reference internal" href="#canari.model.Model.lstm_net" title="canari.model.Model.lstm_net"><code class="xref py py-attr docutils literal notranslate"><span class="pre">lstm_net</span></code></a> by adding <cite>delta</cite>
+to their priors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delta_mu_states</strong> (<em>np.ndarray</em>) – Delta mean for states.</p></li>
+<li><p><strong>delta_var_states</strong> (<em>np.ndarray</em>) – Delta variance states.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.model.Model.update_lstm_states_history">
+<span class="sig-name descname"><span class="pre">update_lstm_states_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.update_lstm_states_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.update_lstm_states_history" title="Link to this definition">#</a></dt>
+<dd><p>Store LSTM states at specific time steps. Currently only save states the first and last time steps of
+the train, validation, and test sets. For other time steps, save None.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>int</em>) – time step to save the lstm states at</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="canari.model.Model.white_noise_decay">
 <span class="sig-name descname"><span class="pre">white_noise_decay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_max_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">white_noise_decay_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/model.html#Model.white_noise_decay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.model.Model.white_noise_decay" title="Link to this definition">#</a></dt>
 <dd><p>Apply exponential decay to white noise standard deviation over epochs, and modify
-the variance for the white noise component in <a class="reference internal" href="#canari.model.Model.process_noise_matrix" title="canari.model.Model.process_noise_matrix"><code class="xref py py-attr docutils literal notranslate"><span class="pre">process_noise_matrix</span></code></a>.
+the variance for the white noise component in
+<a class="reference internal" href="#canari.model.Model.process_noise_matrix" title="canari.model.Model.process_noise_matrix"><code class="xref py py-attr docutils literal notranslate"><span class="pre">process_noise_matrix</span></code></a>.
 This decaying noise structure is intended to improve the training performance
 of TAGI-LSTM.</p>
 <dl class="field-list simple">
@@ -1310,11 +1405,12 @@ of TAGI-LSTM.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.process_noise_matrix"><code class="docutils literal notranslate"><span class="pre">Model.process_noise_matrix</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_net"><code class="docutils literal notranslate"><span class="pre">Model.lstm_net</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_output_history"><code class="docutils literal notranslate"><span class="pre">Model.lstm_output_history</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_states_history"><code class="docutils literal notranslate"><span class="pre">Model.lstm_states_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_metric"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_metric</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_metric_history"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_metric_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_lstm_param"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_lstm_param</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_mu_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_mu_states</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_init_var_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_init_var_states</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_states</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.early_stop_lstm_states"><code class="docutils literal notranslate"><span class="pre">Model.early_stop_lstm_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">Model.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.stop_training"><code class="docutils literal notranslate"><span class="pre">Model.stop_training</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.metric_optim"><code class="docutils literal notranslate"><span class="pre">Model.metric_optim</span></code></a></li>
@@ -1326,15 +1422,21 @@ of TAGI-LSTM.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.forward"><code class="docutils literal notranslate"><span class="pre">Model.forward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.generate_time_series"><code class="docutils literal notranslate"><span class="pre">Model.generate_time_series()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_dict"><code class="docutils literal notranslate"><span class="pre">Model.get_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_memory"><code class="docutils literal notranslate"><span class="pre">Model.get_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.get_states_index"><code class="docutils literal notranslate"><span class="pre">Model.get_states_index()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.initialize_states_history"><code class="docutils literal notranslate"><span class="pre">Model.initialize_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.initialize_states_with_smoother_estimates"><code class="docutils literal notranslate"><span class="pre">Model.initialize_states_with_smoother_estimates()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.load_dict"><code class="docutils literal notranslate"><span class="pre">Model.load_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.lstm_train"><code class="docutils literal notranslate"><span class="pre">Model.lstm_train()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.pretraining_filter"><code class="docutils literal notranslate"><span class="pre">Model.pretraining_filter()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.rts_smoother"><code class="docutils literal notranslate"><span class="pre">Model.rts_smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.save_states_history"><code class="docutils literal notranslate"><span class="pre">Model.save_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_memory"><code class="docutils literal notranslate"><span class="pre">Model.set_memory()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.set_states"><code class="docutils literal notranslate"><span class="pre">Model.set_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.smoother"><code class="docutils literal notranslate"><span class="pre">Model.smoother()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_output_history"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_output_history()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_param"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_param()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.update_lstm_states_history"><code class="docutils literal notranslate"><span class="pre">Model.update_lstm_states_history()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.model.Model.white_noise_decay"><code class="docutils literal notranslate"><span class="pre">Model.white_noise_decay()</span></code></a></li>
 </ul>
 </li>

@@ -2,12 +2,12 @@
 <!DOCTYPE html>
 
 
-<html lang="EN" data-content_root="./" >
+<html lang="en" data-content_root="./" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; canari v.0.1.0 documentation</title>
+    <title>Index &#8212; canari v0.2.0 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=773eff52"></script>
+    <script src="_static/documentation_options.js?v=0a6a6ad3"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -44,7 +44,7 @@
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="EN"/>
+  <meta name="docsearch:language" content="en"/>
   </head>
   
   
@@ -136,8 +136,8 @@
       
     
     
-    <img src="_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -157,13 +157,7 @@
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="installation_guide.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="theory.html">Theory</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="simple">
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Docs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -182,6 +176,7 @@
 <li class="toctree-l2"><a class="reference internal" href="api/canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.model.html">canari.model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.skf.html">canari.skf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/canari.data_visualization.html">canari.data_visualization</a></li>
@@ -357,6 +352,8 @@ document.write(`
       <li><a href="api/canari.model.html#canari.model.Model.backward">backward() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.backward">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.backward">(canari.skf.SKF method)</a>
 </li>
         <li><a href="api/canari.common.html#canari.common.backward">(in module canari.common)</a>
@@ -463,6 +460,13 @@ document.write(`
 </li>
       </ul></li>
       <li>
+    canari.model_assemble
+
+      <ul>
+        <li><a href="api/canari.model_assemble.html#module-canari.model_assemble">module</a>
+</li>
+      </ul></li>
+      <li>
     canari.model_optimizer
 
       <ul>
@@ -489,7 +493,7 @@ document.write(`
 </li>
       <li><a href="api/canari.skf.html#canari.skf.SKF.conditional_likelihood">conditional_likelihood (canari.skf.SKF attribute)</a>
 </li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.cov_states">cov_states (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id2">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.cov_states">cov_states (canari.data_struct.StatesHistory attribute)</a>
 </li>
       <li><a href="api/canari.common.html#canari.common.create_block_diag">create_block_diag() (in module canari.common)</a>
 </li>
@@ -519,11 +523,9 @@ document.write(`
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/canari.model.html#canari.model.Model.early_stop_init_mu_states">early_stop_init_mu_states (canari.model.Model attribute)</a>
-</li>
-      <li><a href="api/canari.model.html#canari.model.Model.early_stop_init_var_states">early_stop_init_var_states (canari.model.Model attribute)</a>
-</li>
       <li><a href="api/canari.model.html#canari.model.Model.early_stop_lstm_param">early_stop_lstm_param (canari.model.Model attribute)</a>
+</li>
+      <li><a href="api/canari.model.html#canari.model.Model.early_stop_lstm_states">early_stop_lstm_states (canari.model.Model attribute)</a>
 </li>
       <li><a href="api/canari.model.html#canari.model.Model.early_stop_metric">early_stop_metric (canari.model.Model attribute)</a>
 
@@ -539,6 +541,8 @@ document.write(`
         <li><a href="api/canari.skf.html#canari.skf.SKF.early_stop_metric_history">(canari.skf.SKF attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/canari.model.html#canari.model.Model.early_stop_states">early_stop_states (canari.model.Model attribute)</a>
+</li>
       <li><a href="api/canari.model.html#canari.model.Model.early_stopping">early_stopping() (canari.model.Model method)</a>
 
       <ul>
@@ -556,6 +560,8 @@ document.write(`
       <li><a href="api/canari.model.html#canari.model.Model.filter">filter() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.filter">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.filter">(canari.skf.SKF method)</a>
 </li>
       </ul></li>
@@ -564,10 +570,16 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.model.html#canari.model.Model.forecast">forecast() (canari.model.Model method)</a>
+
+      <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.forecast">(canari.model_assemble.ModelAssemble method)</a>
 </li>
+      </ul></li>
       <li><a href="api/canari.model.html#canari.model.Model.forward">forward() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.forward">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.forward">(canari.skf.SKF method)</a>
 </li>
         <li><a href="api/canari.common.html#canari.common.forward">(in module canari.common)</a>
@@ -607,6 +619,8 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.get_mean">get_mean() (canari.data_struct.StatesHistory method)</a>
 </li>
+      <li><a href="api/canari.model.html#canari.model.Model.get_memory">get_memory() (canari.model.Model method)</a>
+</li>
       <li><a href="api/canari.common.html#canari.common.GMA.get_results">get_results() (canari.common.GMA method)</a>
 </li>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.get_split_indices">get_split_indices() (canari.data_process.DataProcess method)</a>
@@ -630,6 +644,8 @@ document.write(`
       <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.initialize">initialize() (canari.data_struct.LstmOutputHistory method)</a>
 
       <ul>
+        <li><a href="api/canari.data_struct.html#canari.data_struct.OutputHistory.initialize">(canari.data_struct.OutputHistory method)</a>
+</li>
         <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.initialize">(canari.data_struct.StatesHistory method)</a>
 </li>
       </ul></li>
@@ -839,9 +855,13 @@ document.write(`
         <li><a href="api/canari.skf.html#canari.skf.SKF.lstm_output_history">(canari.skf.SKF attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/canari.model.html#canari.model.Model.lstm_states_history">lstm_states_history (canari.model.Model attribute)</a>
+</li>
       <li><a href="api/canari.model.html#canari.model.Model.lstm_train">lstm_train() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.lstm_train">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.lstm_train">(canari.skf.SKF method)</a>
 </li>
       </ul></li>
@@ -864,6 +884,8 @@ document.write(`
       <li><a href="api/canari.model.html#canari.model.Model">Model (class in canari.model)</a>
 </li>
       <li><a href="api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer.model_optim">model_optim (canari.model_optimizer.ModelOptimizer attribute)</a>
+</li>
+      <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble">ModelAssemble (class in canari.model_assemble)</a>
 </li>
       <li><a href="api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer">ModelOptimizer (class in canari.model_optimizer)</a>
 </li>
@@ -895,6 +917,8 @@ document.write(`
 </li>
         <li><a href="api/canari.model.html#module-canari.model">canari.model</a>
 </li>
+        <li><a href="api/canari.model_assemble.html#module-canari.model_assemble">canari.model_assemble</a>
+</li>
         <li><a href="api/canari.model_optimizer.html#module-canari.model_optimizer">canari.model_optimizer</a>
 </li>
         <li><a href="api/canari.skf.html#module-canari.skf">canari.skf</a>
@@ -907,16 +931,16 @@ document.write(`
       <li><a href="api/canari.common.html#canari.common.GMA.mu">mu (canari.common.GMA attribute)</a>
 
       <ul>
-        <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.mu">(canari.data_struct.LstmOutputHistory attribute)</a>, <a href="api/canari.data_struct.html#id0">[1]</a>
+        <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.mu">(canari.data_struct.LstmOutputHistory attribute)</a>
 </li>
       </ul></li>
       <li><a href="api/canari.model.html#canari.model.Model.mu_obs_predict">mu_obs_predict (canari.model.Model attribute)</a>
 </li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_posterior">mu_posterior (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id3">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_posterior">mu_posterior (canari.data_struct.StatesHistory attribute)</a>
 </li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_prior">mu_prior (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id4">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_prior">mu_prior (canari.data_struct.StatesHistory attribute)</a>
 </li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_smooth">mu_smooth (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id5">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.mu_smooth">mu_smooth (canari.data_struct.StatesHistory attribute)</a>
 </li>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.mu_states">mu_states (canari.component.base_component.BaseComponent property)</a>
 
@@ -924,8 +948,6 @@ document.write(`
         <li><a href="api/canari.model.html#canari.model.Model.mu_states">(canari.model.Model attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api/canari.skf.html#canari.skf.SKF.mu_states_init">mu_states_init (canari.skf.SKF attribute)</a>
-</li>
       <li><a href="api/canari.model.html#canari.model.Model.mu_states_posterior">mu_states_posterior (canari.model.Model attribute)</a>
 
       <ul>
@@ -970,6 +992,12 @@ document.write(`
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/canari.model_optimizer.html#canari.model_optimizer.ModelOptimizer.objective">objective() (canari.model_optimizer.ModelOptimizer method)</a>
+
+      <ul>
+        <li><a href="api/canari.skf_optimizer.html#canari.skf_optimizer.SKFOptimizer.objective">(canari.skf_optimizer.SKFOptimizer method)</a>
+</li>
+      </ul></li>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.observation_matrix">observation_matrix (canari.component.base_component.BaseComponent property)</a>
 
       <ul>
@@ -991,6 +1019,8 @@ document.write(`
 </li>
       </ul></li>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.output_col">output_col (canari.data_process.DataProcess attribute)</a>
+</li>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.OutputHistory">OutputHistory (class in canari.data_struct)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1022,6 +1052,8 @@ document.write(`
 </li>
       <li><a href="api/canari.common.html#canari.common.prepare_lstm_input">prepare_lstm_input() (in module canari.common)</a>
 </li>
+      <li><a href="api/canari.model.html#canari.model.Model.pretraining_filter">pretraining_filter() (canari.model.Model method)</a>
+</li>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.process_noise_matrix">process_noise_matrix (canari.component.base_component.BaseComponent property)</a>
 
       <ul>
@@ -1050,13 +1082,21 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.skf.html#canari.skf.SKF.save_initial_states">save_initial_states() (canari.skf.SKF method)</a>
 </li>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.OutputHistory.save_output_history">save_output_history() (canari.data_struct.OutputHistory method)</a>
+</li>
+      <li><a href="api/canari.model.html#canari.model.Model.save_states_history">save_states_history() (canari.model.Model method)</a>
+</li>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.scale_const_mean">scale_const_mean (canari.data_process.DataProcess attribute)</a>
 </li>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.scale_const_std">scale_const_std (canari.data_process.DataProcess attribute)</a>
 </li>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.set">set() (canari.data_struct.LstmOutputHistory method)</a>
+</li>
       <li><a href="api/canari.model.html#canari.model.Model.set_memory">set_memory() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.set_memory">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.set_memory">(canari.skf.SKF method)</a>
 </li>
       </ul></li>
@@ -1074,14 +1114,16 @@ document.write(`
 </li>
       <li><a href="api/canari.skf.html#canari.skf.SKF.smooth_marginal_prob_history">smooth_marginal_prob_history (canari.skf.SKF attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.model.html#canari.model.Model.smoother">smoother() (canari.model.Model method)</a>
 
       <ul>
+        <li><a href="api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.smoother">(canari.model_assemble.ModelAssemble method)</a>
+</li>
         <li><a href="api/canari.skf.html#canari.skf.SKF.smoother">(canari.skf.SKF method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.standardization">standardization (canari.data_process.DataProcess attribute)</a>
 </li>
       <li><a href="api/canari.data_process.html#canari.data_process.DataProcess.standardize_data">standardize_data() (canari.data_process.DataProcess method)</a>
@@ -1095,7 +1137,7 @@ document.write(`
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.states_name">states_name (canari.component.base_component.BaseComponent property)</a>
 
       <ul>
-        <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.states_name">(canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id6">[1]</a>
+        <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.states_name">(canari.data_struct.StatesHistory attribute)</a>
 </li>
       </ul></li>
       <li><a href="api/canari.model.html#canari.model.Model.states_names">states_names (canari.model.Model attribute)</a>
@@ -1152,6 +1194,14 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.update">update() (canari.data_struct.LstmOutputHistory method)</a>
 </li>
+      <li><a href="api/canari.model.html#canari.model.Model.update_lstm_output_history">update_lstm_output_history() (canari.model.Model method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/canari.model.html#canari.model.Model.update_lstm_param">update_lstm_param() (canari.model.Model method)</a>
+</li>
+      <li><a href="api/canari.model.html#canari.model.Model.update_lstm_states_history">update_lstm_states_history() (canari.model.Model method)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1167,18 +1217,18 @@ document.write(`
       <li><a href="api/canari.common.html#canari.common.GMA.var">var (canari.common.GMA attribute)</a>
 
       <ul>
-        <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.var">(canari.data_struct.LstmOutputHistory attribute)</a>, <a href="api/canari.data_struct.html#id1">[1]</a>
+        <li><a href="api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.var">(canari.data_struct.LstmOutputHistory attribute)</a>
 </li>
       </ul></li>
       <li><a href="api/canari.model.html#canari.model.Model.var_obs_predict">var_obs_predict (canari.model.Model attribute)</a>
 </li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_posterior">var_posterior (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id7">[1]</a>
-</li>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_prior">var_prior (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id8">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_posterior">var_posterior (canari.data_struct.StatesHistory attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_smooth">var_smooth (canari.data_struct.StatesHistory attribute)</a>, <a href="api/canari.data_struct.html#id9">[1]</a>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_prior">var_prior (canari.data_struct.StatesHistory attribute)</a>
+</li>
+      <li><a href="api/canari.data_struct.html#canari.data_struct.StatesHistory.var_smooth">var_smooth (canari.data_struct.StatesHistory attribute)</a>
 </li>
       <li><a href="api/canari.component.base_component.html#canari.component.base_component.BaseComponent.var_states">var_states (canari.component.base_component.BaseComponent property)</a>
 
@@ -1186,8 +1236,6 @@ document.write(`
         <li><a href="api/canari.model.html#canari.model.Model.var_states">(canari.model.Model attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api/canari.skf.html#canari.skf.SKF.var_states_init">var_states_init (canari.skf.SKF attribute)</a>
-</li>
       <li><a href="api/canari.model.html#canari.model.Model.var_states_posterior">var_states_posterior (canari.model.Model attribute)</a>
 
       <ul>
