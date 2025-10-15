@@ -49,8 +49,8 @@ jobs:
           twine upload --verbose --repository pypi dist/*
 
   unit-test:
-    name: Unit Tests on macOS
-    runs-on: macos-latest
+    name: Unit Tests
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
