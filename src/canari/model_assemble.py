@@ -2,6 +2,7 @@
 Emsemble of model
 """
 
+import copy
 import numpy as np
 from typing import Optional, List, Tuple, Dict, Union
 from canari.model import Model
@@ -163,7 +164,7 @@ class ModelAssemble:
             model.initialize_states_history()
             model.output_history.initialize()
 
-        for x, y in zip(data["x"], data["y"]):
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             (
                 mu_obs_pred,
                 var_obs_pred,
@@ -173,6 +174,9 @@ class ModelAssemble:
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
+                    model.update_lstm_states_history(
+                        index, last_step=len(data["y"]) - 1
+                    )
                     model.update_lstm_history(
                         model.mu_states_posterior, model.var_states_posterior
                     )
@@ -230,11 +234,30 @@ class ModelAssemble:
                         )
                         break
 
+        if self.target_model.lstm_net.smooth:
+            self.target_model.pretraining_filter(train_data)
+
+        for model in self.covariate_model:
+            if model.lstm_net.smooth:
+                pretrain_data = copy.copy(train_data)
+                # pretrain_data["cov_names"] = [
+                #     pretrain_data["cov_names"][model.input_col[0]]
+                # ]
+                selected_names = [
+                    pretrain_data["cov_names"][i] for i in model.input_col
+                ]
+                pretrain_data["cov_names"] = selected_names
+                model.pretraining_filter(pretrain_data)
+
         self.filter(train_data)
-        self.smoother()
         mu_validation_preds, std_validation_preds = self.forecast(
             validation_data, use_val_posterior_covariate, update_param_covar_model
         )
+        self.smoother()
+
+        for model in [self.target_model] + self.covariate_model:
+            model.set_memory(time_step=0)
+            model._current_epoch += 1
 
         return (
             np.array(mu_validation_preds),

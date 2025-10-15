@@ -1,38 +1,9 @@
 import numpy.testing as npt
+import pytest
 from canari import Model
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 
-# Components
 lstm_look_back_len = 10
-lstm_network_1 = LstmNetwork(
-    look_back_len=lstm_look_back_len,
-    num_features=2,
-    num_layer=1,
-    num_hidden_unit=50,
-    device="cpu",
-    manual_seed=1,
-)
-lstm_network_2 = LstmNetwork(
-    look_back_len=lstm_look_back_len,
-    num_features=2,
-    num_layer=1,
-    num_hidden_unit=50,
-    device="cpu",
-    manual_seed=2,
-)
-
-# Model
-model1 = Model(
-    LocalTrend(),
-    lstm_network_1,
-    WhiteNoise(),
-)
-
-model2 = Model(
-    LocalTrend(),
-    lstm_network_2,
-    WhiteNoise(),
-)
 
 
 def compare_model_dict(model_1_dict, model_2_dict):
@@ -54,8 +25,12 @@ def compare_model_dict(model_1_dict, model_2_dict):
         )
         assert component_1.states_name == component_2.states_name
 
-    npt.assert_allclose(model_1_dict["mu_states"], model_2_dict["mu_states"])
-    npt.assert_allclose(model_1_dict["var_states"], model_2_dict["var_states"])
+    npt.assert_allclose(
+        model_1_dict["memory"]["mu_states"], model_2_dict["memory"]["mu_states"]
+    )
+    npt.assert_allclose(
+        model_1_dict["memory"]["var_states"], model_2_dict["memory"]["var_states"]
+    )
 
     if "lstm_network_params" in model_1_dict and "lstm_network_params" in model_2_dict:
         assert (
@@ -70,8 +45,34 @@ def compare_lstm_dict(model_1_dict, model_2_dict):
     )
 
 
-def test_model_save_load():
+@pytest.mark.parametrize("smoother", [False, True], ids=["LSTM", "SLSTM"])
+def test_model_save_load(smoother):
     """Test save/load for model.py"""
+
+    lstm_network_1 = LstmNetwork(
+        look_back_len=lstm_look_back_len,
+        num_features=2,
+        num_layer=1,
+        infer_len=24,
+        num_hidden_unit=50,
+        device="cpu",
+        manual_seed=1,
+        smoother=smoother,
+    )
+    lstm_network_2 = LstmNetwork(
+        look_back_len=lstm_look_back_len,
+        num_features=2,
+        num_layer=1,
+        infer_len=24,
+        num_hidden_unit=50,
+        device="cpu",
+        manual_seed=2,
+        smoother=smoother,
+    )
+
+    model1 = Model(LocalTrend(), lstm_network_1, WhiteNoise())
+    model2 = Model(LocalTrend(), lstm_network_2, WhiteNoise())
+
     model1_dict = model1.get_dict()
     model1_loaded = Model.load_dict(model1_dict)
     model1_loaded_dict = model1_loaded.get_dict()
