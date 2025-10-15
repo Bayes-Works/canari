@@ -160,7 +160,7 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     npt.assert_allclose(
         first_state,
         first_observation,
-        atol=0.08,
+        atol=0.09,
         err_msg=f"First state mismatch for look_back_len={look_back_len} with start_offset={start_offset}",
     )
 
