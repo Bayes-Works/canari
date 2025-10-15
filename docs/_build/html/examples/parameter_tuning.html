@@ -550,6 +550,7 @@ change point in a time series.</p>
             <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
             <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
             <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">smoother</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;sigma_v&quot;</span><span class="p">])</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">local_trend</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">residual</span><span class="p">)</span>

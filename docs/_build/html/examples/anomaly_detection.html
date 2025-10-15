@@ -487,7 +487,7 @@ document.write(`
 <p>We instantiatiate each component from their corresponding class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white
 noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">()</span>
@@ -499,6 +499,7 @@ noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
     <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
     <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
     <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">smoother</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">5e-2</span><span class="p">)</span>
 </pre></div>
