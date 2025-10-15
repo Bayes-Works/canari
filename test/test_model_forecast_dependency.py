@@ -50,7 +50,6 @@ def model_test_runner(model: ModelAssemble, plot: bool) -> float:
             train_data=train_data,
             validation_data=validation_data,
         )
-        model.set_memory(time_step=0)
 
         # Unstandardize
         mu_validation_preds = normalizer.unstandardize(
@@ -110,6 +109,7 @@ def test_model_forecast(run_mode, plot_mode):
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
+            smoother=False,
         ),
         WhiteNoise(std_error=1e-1),
     )
@@ -123,6 +123,7 @@ def test_model_forecast(run_mode, plot_mode):
             num_hidden_unit=50,
             device="cpu",
             manual_seed=1,
+            smoother=False,
         ),
         WhiteNoise(std_error=3e-3),
     )
