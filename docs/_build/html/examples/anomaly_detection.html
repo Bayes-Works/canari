@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="en" data-content_root="../" >
+<html lang="EN" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Anomaly detection using the switching Kalman filter &#8212; canari v0.2.0 documentation</title>
+    <title>Anomaly detection using the switching Kalman filter &#8212; canari v.0.2.0 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
+    <script src="../_static/documentation_options.js?v=a921a727"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -50,7 +50,7 @@
     <link rel="next" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
     <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:language" content="EN"/>
   </head>
   
   
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -340,8 +340,7 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
@@ -354,7 +353,7 @@ document.write(`
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
 <p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baselines, we the SKF will build two competing models using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> component.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -370,6 +369,17 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LocalAcceleration</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+2025-10-15 15:18:56,224 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+2025-10-15 15:18:56,362 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+</pre></div></div>
 </div>
 </section>
 <section id="Read-data">
@@ -455,27 +465,27 @@ document.write(`
     <tr>
       <th>2000-01-03 00:00:00</th>
       <td>0.00</td>
-      <td>0.0</td>
+      <td>0</td>
     </tr>
     <tr>
       <th>2000-01-03 01:00:00</th>
       <td>-0.26</td>
-      <td>1.0</td>
+      <td>1</td>
     </tr>
     <tr>
       <th>2000-01-03 02:00:00</th>
       <td>-0.50</td>
-      <td>2.0</td>
+      <td>2</td>
     </tr>
     <tr>
       <th>2000-01-03 03:00:00</th>
       <td>-0.71</td>
-      <td>3.0</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>2000-01-03 04:00:00</th>
       <td>-0.87</td>
-      <td>4.0</td>
+      <td>4</td>
     </tr>
   </tbody>
 </table>
@@ -487,7 +497,7 @@ document.write(`
 <p>We instantiatiate each component from their corresponding class. Both the <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> and <code class="docutils literal notranslate"><span class="pre">local_acceleration</span></code> baseline components will rely on default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 10. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. The <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white
 noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">()</span>
@@ -550,7 +560,6 @@ trend-stationnary.</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">num_epoch</span> <span class="o">=</span> <span class="mi">50</span>
-<span class="n">states_optim</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -559,7 +568,6 @@ trend-stationnary.</p>
         <span class="n">train_data</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
         <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_data</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">skf</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s2">&quot;norm_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="c1"># Unstandardize the predictions</span>
     <span class="n">mu_validation_preds_unnorm</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span>
@@ -585,7 +593,6 @@ trend-stationnary.</p>
     <span class="k">if</span> <span class="n">epoch</span> <span class="o">==</span> <span class="n">skf</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">:</span>
         <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="n">mu_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">skf</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
         <span class="k">break</span>

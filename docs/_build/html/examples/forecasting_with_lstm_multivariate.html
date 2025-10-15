@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="en" data-content_root="../" >
+<html lang="EN" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Forecasting with LSTM and explanatory time series &#8212; canari v0.2.0 documentation</title>
+    <title>Forecasting with LSTM and explanatory time series &#8212; canari v.0.2.0 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
+    <script src="../_static/documentation_options.js?v=a921a727"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -50,7 +50,7 @@
     <link rel="next" title="Anomaly detection using the switching Kalman filter" href="anomaly_detection.html" />
     <link rel="prev" title="Univariate time series forecasting with LSTM" href="forecasting_with_lstm_univariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:language" content="EN"/>
   </head>
   
   
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -337,11 +337,10 @@ document.write(`
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
 <p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -354,7 +353,7 @@ document.write(`
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
 <p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we use the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -368,6 +367,17 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+2025-10-10 12:29:37,889 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+2025-10-10 12:29:37,949 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
+</pre></div></div>
 </div>
 </section>
 <section id="Read-data">
@@ -569,7 +579,7 @@ document.write(`
 <code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
 <p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialize the baseline hidden states based on the first day of data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_trend</span> <span class="o">=</span> <span class="n">LocalTrend</span><span class="p">()</span>
@@ -578,9 +588,7 @@ document.write(`
         <span class="n">num_features</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>  <span class="c1"># number of data&#39;s columns + time covariates</span>
         <span class="n">num_layer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">num_hidden_unit</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
         <span class="n">manual_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">smoother</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 
@@ -624,12 +632,7 @@ document.write(`
     <span class="k">if</span> <span class="n">epoch</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">optimal_epoch</span><span class="p">:</span>
         <span class="n">mu_validation_preds_optim</span> <span class="o">=</span> <span class="n">mu_validation_preds</span>
         <span class="n">std_validation_preds_optim</span> <span class="o">=</span> <span class="n">std_validation_preds</span>
-        <span class="n">states_optim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span>
-            <span class="n">states</span>
-        <span class="p">)</span>
-        <span class="n">lstm_optim_states</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">get_lstm_states</span><span class="p">()</span>
 
-    <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">stop_training</span><span class="p">:</span>
         <span class="k">break</span>
 </pre></div>
@@ -643,11 +646,8 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">set_lstm_states</span><span class="p">(</span><span class="n">lstm_optim_states</span><span class="p">)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">states_optim</span>
-<span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span>
-    <span class="n">states</span><span class="o">=</span><span class="n">states_optim</span><span class="p">,</span>
-    <span class="n">time_step</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">test_start</span><span class="p">,</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span>
+    <span class="n">time_step</span><span class="o">=</span><span class="n">data_processor</span><span class="o">.</span><span class="n">test_start</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
