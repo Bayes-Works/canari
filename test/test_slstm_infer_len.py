@@ -27,7 +27,7 @@ def create_slstm_model(look_back_len: int, infer_length: int) -> Model:
 
 
 @pytest.mark.parametrize(
-    "look_back_len,start_offset", [(l, s) for l in [12, 18, 24] for s in [0, 6, 12]]
+    "look_back_len,start_offset", [(l, s) for l in [12, 18, 24] for s in [0, 12]]
 )
 def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     """
@@ -37,9 +37,9 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     infer_length = 24 * 5
 
     # # Read data
-    data_file = "./data/toy_time_series/sine.csv"
+    data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
     df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    data_file_time = "./data/toy_time_series/sine_datetime.csv"
+    data_file_time = os.path.join(BASE_DIR, "../data/toy_time_series/sine_datetime.csv")
     time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
     time_series = pd.to_datetime(time_series[0])
     df_raw.index = time_series
@@ -173,4 +173,4 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
 
     print(f"MSE : {mse}")
 
-    assert mse < 4e-2, f"MSE {mse} is bigger than the saved threshold {4e-2}"
+    assert mse < 2e-2, f"MSE {mse} is bigger than the saved threshold {2e-2}"

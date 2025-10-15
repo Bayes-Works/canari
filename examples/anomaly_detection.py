@@ -44,7 +44,7 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
-sigma_v = 0.024112372902053345
+sigma_v = 5e-2
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 lstm_network = LstmNetwork(

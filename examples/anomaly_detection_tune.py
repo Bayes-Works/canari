@@ -22,7 +22,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 def main(
     num_trial_optimization: int = 10,
-    param_optimization: bool = False,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
 ):
     ######### Data processing #########
