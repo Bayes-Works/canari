@@ -352,7 +352,7 @@ document.write(`
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
 <p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we use the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -366,17 +366,6 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.component</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalTrend</span><span class="p">,</span> <span class="n">LstmNetwork</span><span class="p">,</span> <span class="n">WhiteNoise</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-2025-10-10 12:30:50,253 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-2025-10-10 12:30:50,314 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-</pre></div></div>
 </div>
 </section>
 <section id="Read-data">
