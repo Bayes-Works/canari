@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="EN" data-content_root="../" >
+<html lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.skf &#8212; canari v.0.1.0 documentation</title>
+    <title>canari.skf &#8212; canari v0.2.0 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -47,9 +47,9 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="canari.skf_optimizer" href="canari.skf_optimizer.html" />
-    <link rel="prev" title="canari.model_optimizer" href="canari.model_optimizer.html" />
+    <link rel="prev" title="canari.model_assemble" href="canari.model_assemble.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="EN"/>
+  <meta name="docsearch:language" content="en"/>
   </head>
   
   
@@ -139,8 +139,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -160,13 +160,7 @@
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="simple">
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -185,6 +179,7 @@
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model.html">canari.model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">canari.skf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
@@ -309,8 +304,6 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.model"><code class="docutils literal notranslate"><span class="pre">SKF.model</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.num_states"><code class="docutils literal notranslate"><span class="pre">SKF.num_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.states_names"><code class="docutils literal notranslate"><span class="pre">SKF.states_names</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_init"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_init</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.var_states_init"><code class="docutils literal notranslate"><span class="pre">SKF.var_states_init</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_prior"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_prior</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.var_states_prior"><code class="docutils literal notranslate"><span class="pre">SKF.var_states_prior</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_posterior"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_posterior</span></code></a></li>
@@ -450,28 +443,6 @@ transition models including
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[str]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="canari.skf.SKF.mu_states_init">
-<span class="sig-name descname"><span class="pre">mu_states_init</span></span><a class="headerlink" href="#canari.skf.SKF.mu_states_init" title="Link to this definition">#</a></dt>
-<dd><p>Mean vector for the hidden states <span class="math notranslate nohighlight">\(X_0\)</span> at the time step <cite>t=0</cite>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="canari.skf.SKF.var_states_init">
-<span class="sig-name descname"><span class="pre">var_states_init</span></span><a class="headerlink" href="#canari.skf.SKF.var_states_init" title="Link to this definition">#</a></dt>
-<dd><p>Covariance matrix for the hidden states <span class="math notranslate nohighlight">\(X_0\)</span> at the time step <cite>t=0</cite>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -752,16 +723,16 @@ synthetic anomalies, and compute the detection/false-alarm rates.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>np.ndarray</em><em>]</em>) – Original time series data.</p></li>
-<li><p><strong>threshold</strong> (<em>float</em>) – Threshold for the maximal target anomaly detection rate.
+<li><p><strong>threshold</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Threshold for the maximal target anomaly detection rate.
 Defauls to 0.5.</p></li>
-<li><p><strong>max_timestep_to_detect</strong> (<em>int</em>) – Maximum number of timesteps to allow detection.
+<li><p><strong>max_timestep_to_detect</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Maximum number of timesteps to allow detection.
 Defauls to None (to the end of time series).</p></li>
-<li><p><strong>num_anomaly</strong> (<em>int</em>) – Number of synthetic anomalies to add. This will create as
+<li><p><strong>num_anomaly</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of synthetic anomalies to add. This will create as
 many time series, because one time series contains only one
 anomaly.</p></li>
-<li><p><strong>slope_anomaly</strong> (<em>float</em>) – Magnitude of the anomaly slope.</p></li>
-<li><p><strong>anomaly_start</strong> (<em>float</em>) – Fractional start position of anomaly.</p></li>
-<li><p><strong>anomaly_end</strong> (<em>float</em>) – Fractional end position of anomaly.</p></li>
+<li><p><strong>slope_anomaly</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Magnitude of the anomaly slope.</p></li>
+<li><p><strong>anomaly_start</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Fractional start position of anomaly. Defaults to 0.33.</p></li>
+<li><p><strong>anomaly_end</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Fractional end position of anomaly. Defaults to 0.66.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -885,14 +856,19 @@ It is a mixture prediction from all transition models in <a class="reference int
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.get_dict">
-<span class="sig-name descname"><span class="pre">get_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.get_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.get_dict" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.get_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.get_dict" title="Link to this definition">#</a></dt>
 <dd><p>Export an SKF object into a dictionary.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Serializable model dictionary containing neccessary attributes.</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time_step</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – the time step to get the model and memory at.
+If None export the model with the current memory.
+Defaults to None.</p>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>dict</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Serializable model dictionary containing neccessary attributes.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -933,7 +909,7 @@ It is a mixture prediction from all transition models in <a class="reference int
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.load_initial_states">
 <span class="sig-name descname"><span class="pre">load_initial_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.load_initial_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.load_initial_states" title="Link to this definition">#</a></dt>
-<dd><p>Restore saved initial states into the transition model ‘norm_norm’ stored in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
+<dd><p>Restore saved memory into the transition model ‘norm_norm’ in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -988,7 +964,7 @@ deviation each epoch. Defaults to 0.9.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.rts_smoother">
-<span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'relative'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'absolute'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
 <dd><p>Smoother for the Switching Kalman filter at a given time step.</p>
 <p>Recall <a class="reference internal" href="canari.common.html#canari.common.rts_smoother" title="canari.common.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> for all transition models in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
 <p>This function is used at the one-time-step level.</p>
@@ -997,11 +973,10 @@ deviation each epoch. Defaults to 0.9.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>time_step</strong> (<em>int</em>) – Index at which to perform smoothing.</p></li>
 <li><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
-pseudoinversion (pinv). Defaults to 1E-4.</p></li>
+pseudoinversion (pinv). Defaults to 1E-2.</p></li>
+<li><p><strong>tol_type</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Tolerance type, “relative” or “absolute”.
+Defaults to “relative”.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1009,14 +984,13 @@ pseudoinversion (pinv). Defaults to 1E-4.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.save_initial_states">
 <span class="sig-name descname"><span class="pre">save_initial_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.save_initial_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.save_initial_states" title="Link to this definition">#</a></dt>
-<dd><p>Save initial SKF hidden states (mean/variance) for reuse in subsequent runs.</p>
-<p>Set <a class="reference internal" href="#canari.skf.SKF.mu_states_init" title="canari.skf.SKF.mu_states_init"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu_states_init</span></code></a> and <a class="reference internal" href="#canari.skf.SKF.var_states_init" title="canari.skf.SKF.var_states_init"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var_states_init</span></code></a> using the
-mu_states and var_states from the transition model ‘norm_norm’ stored in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.</p>
+<dd><p>Save current memory from the transition model ‘norm_norm’ in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>
+for reuse in subsequent runs.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.set_memory">
-<span class="sig-name descname"><span class="pre">set_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.set_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.set_memory" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">set_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.set_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.set_memory" title="Link to this definition">#</a></dt>
 <dd><p>Apply <a class="reference internal" href="canari.model.html#canari.model.Model.set_memory" title="canari.model.Model.set_memory"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_memory()</span></code></a> for the transition model ‘norm_norm’ stored in <a class="reference internal" href="#canari.skf.SKF.model" title="canari.skf.SKF.model"><code class="xref py py-attr docutils literal notranslate"><span class="pre">model</span></code></a>.
 If <cite>time_step=0</cite>, reset <a class="reference internal" href="#canari.skf.SKF.marginal_prob" title="canari.skf.SKF.marginal_prob"><code class="xref py py-attr docutils literal notranslate"><span class="pre">marginal_prob</span></code></a> using <a class="reference internal" href="#canari.skf.SKF.norm_model_prior_prob" title="canari.skf.SKF.norm_model_prior_prob"><code class="xref py py-attr docutils literal notranslate"><span class="pre">norm_model_prior_prob</span></code></a>.</p>
 <dl class="field-list simple">
@@ -1044,14 +1018,18 @@ If <cite>time_step=0</cite>, reset <a class="reference internal" href="#canari.s
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.smoother">
-<span class="sig-name descname"><span class="pre">smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'relative'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.smoother" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'absolute'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="canari.data_struct.html#canari.data_struct.StatesHistory" title="canari.data_struct.StatesHistory"><span class="pre">StatesHistory</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.smoother" title="Link to this definition">#</a></dt>
 <dd><p>Run the Kalman smoother over an entire time series data.</p>
 <p>This function is used at the entire-dataset-level. Recall repeatedly the function
 <a class="reference internal" href="#canari.skf.SKF.rts_smoother" title="canari.skf.SKF.rts_smoother"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rts_smoother()</span></code></a> at one-time-step level from <a class="reference internal" href="#canari.skf.SKF" title="canari.skf.SKF"><code class="xref py py-class docutils literal notranslate"><span class="pre">SKF</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
-pseudoinversion (pinv). Defaults to 1E-4.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>matrix_inversion_tol</strong> (<em>float</em>) – Numerical stability threshold for matrix
+pseudoinversion (pinv). Defaults to 1E-2.</p></li>
+<li><p><strong>tol_type</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Tolerance type, “relative” or “absolute”.
+Defaults to “relative”.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><p>A tuple containing:</p>
@@ -1091,12 +1069,12 @@ pseudoinversion (pinv). Defaults to 1E-4.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="canari.model_optimizer.html"
+       href="canari.model_assemble.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">canari.model_optimizer</p>
+        <p class="prev-next-title">canari.model_assemble</p>
       </div>
     </a>
     <a class="right-next"
@@ -1128,8 +1106,6 @@ pseudoinversion (pinv). Defaults to 1E-4.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.model"><code class="docutils literal notranslate"><span class="pre">SKF.model</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.num_states"><code class="docutils literal notranslate"><span class="pre">SKF.num_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.states_names"><code class="docutils literal notranslate"><span class="pre">SKF.states_names</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_init"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_init</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.var_states_init"><code class="docutils literal notranslate"><span class="pre">SKF.var_states_init</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_prior"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_prior</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.var_states_prior"><code class="docutils literal notranslate"><span class="pre">SKF.var_states_prior</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.mu_states_posterior"><code class="docutils literal notranslate"><span class="pre">SKF.mu_states_posterior</span></code></a></li>

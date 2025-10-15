@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="EN" data-content_root="../" >
+<html lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.data_struct &#8212; canari v.0.1.0 documentation</title>
+    <title>canari.data_struct &#8212; canari v0.2.0 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -47,7 +47,7 @@
     <link rel="next" title="canari.common" href="canari.common.html" />
     <link rel="prev" title="canari.component.white_noise_component" href="canari.component.white_noise_component.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="EN"/>
+  <meta name="docsearch:language" content="en"/>
   </head>
   
   
@@ -137,8 +137,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -158,13 +158,7 @@
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../installation_guide.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../theory.html">Theory</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the swithing Kalman filter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="simple">
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../api.html">API Docs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -183,6 +177,7 @@
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model.html">canari.model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.skf.html">canari.skf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
@@ -307,9 +302,8 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.mu"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.mu</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.var"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.var</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.initialize"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.initialize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.mu</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.set"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.set()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.update"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.update()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.var</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory"><code class="docutils literal notranslate"><span class="pre">StatesHistory</span></code></a><ul class="visible nav section-nav flex-column">
@@ -321,17 +315,14 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.var_smooth"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_smooth</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.cov_states"><code class="docutils literal notranslate"><span class="pre">StatesHistory.cov_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.states_name"><code class="docutils literal notranslate"><span class="pre">StatesHistory.states_name</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2"><code class="docutils literal notranslate"><span class="pre">StatesHistory.cov_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.get_mean"><code class="docutils literal notranslate"><span class="pre">StatesHistory.get_mean()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.get_std"><code class="docutils literal notranslate"><span class="pre">StatesHistory.get_std()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.initialize"><code class="docutils literal notranslate"><span class="pre">StatesHistory.initialize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_posterior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_prior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_smooth</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6"><code class="docutils literal notranslate"><span class="pre">StatesHistory.states_name</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_posterior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_prior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_smooth</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory"><code class="docutils literal notranslate"><span class="pre">OutputHistory</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory.initialize"><code class="docutils literal notranslate"><span class="pre">OutputHistory.initialize()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory.save_output_history"><code class="docutils literal notranslate"><span class="pre">OutputHistory.save_output_history()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -356,13 +347,13 @@ document.write(`
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_struct.</span></span><span class="sig-name descname"><span class="pre">LstmOutputHistory</span></span><a class="reference internal" href="../_modules/canari/data_struct.html#LstmOutputHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.LstmOutputHistory" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Container for saving a rolling history of LSTM output means and variances
+<dd><p>Container for saving a rolling history of LSTM output means and variances
 over a fixed lookback window.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_history</span> <span class="o">=</span> <span class="n">LstmOutputHistory</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">look_back_len</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_history</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">mu_lstm</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">]),</span> <span class="n">var_lstm</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_history</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]),</span> <span class="n">var</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">]))</span>
 </pre></div>
 </div>
 <dl class="py attribute">
@@ -390,7 +381,7 @@ over a fixed lookback window.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">look_back_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_struct.html#LstmOutputHistory.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.LstmOutputHistory.initialize" title="Link to this definition">#</a></dt>
-<dd><p>Initialize <a class="reference internal" href="#id0" title="canari.data_struct.LstmOutputHistory.mu"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu</span></code></a> and <a class="reference internal" href="#id1" title="canari.data_struct.LstmOutputHistory.var"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var</span></code></a> with a specified lookback length.</p>
+<dd><p>Initialize <a class="reference internal" href="#canari.data_struct.LstmOutputHistory.mu" title="canari.data_struct.LstmOutputHistory.mu"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mu</span></code></a> and <a class="reference internal" href="#canari.data_struct.LstmOutputHistory.var" title="canari.data_struct.LstmOutputHistory.var"><code class="xref py py-attr docutils literal notranslate"><span class="pre">var</span></code></a> with a specified lookback length.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>look_back_len</strong> (<em>int</em>) – Number of time steps to keep in history.</p>
@@ -398,10 +389,22 @@ over a fixed lookback window.</p>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id0">
-<span class="sig-name descname"><span class="pre">mu</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#id0" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_struct.html#LstmOutputHistory.set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.LstmOutputHistory.set" title="Link to this definition">#</a></dt>
+<dd><p>Set the entire rolling window directly with new values for <cite>mu</cite> and <cite>var</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mu</strong> (<em>np.ndarray</em>) – Array of mean values to set.</p></li>
+<li><p><strong>var</strong> (<em>np.ndarray</em>) – Array of variance values to set.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the shapes of <cite>mu</cite> and <cite>var</cite> do not match the initialized window size.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.LstmOutputHistory.update">
@@ -418,18 +421,12 @@ over a fixed lookback window.</p>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id1">
-<span class="sig-name descname"><span class="pre">var</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#id1" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_struct.</span></span><span class="sig-name descname"><span class="pre">StatesHistory</span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Save estimates of hidden states over time.</p>
+<dd><p>Save estimates of hidden states over time.</p>
 <p>Stores the evolution of prior, posterior, and smoothed values for hidden states over time,
 along with cross-covariances between hidden states at two consecutive timesteps <cite>t</cite> and <cite>t+1</cite>.</p>
 <dl class="py attribute">
@@ -522,11 +519,6 @@ at two consecutive timesteps <cite>t</cite> and <cite>t+1</cite>.</p>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id2">
-<span class="sig-name descname"><span class="pre">cov_states</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id2" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.data_struct.StatesHistory.get_mean">
 <span class="sig-name descname"><span class="pre">get_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'posterior'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_const_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_const_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/canari/data_struct.html#StatesHistory.get_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.StatesHistory.get_mean" title="Link to this definition">#</a></dt>
@@ -593,40 +585,23 @@ Defaults to True.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id3">
-<span class="sig-name descname"><span class="pre">mu_posterior</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id3" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+</dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id4">
-<span class="sig-name descname"><span class="pre">mu_prior</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id4" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="canari.data_struct.OutputHistory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">canari.data_struct.</span></span><span class="sig-name descname"><span class="pre">OutputHistory</span></span><a class="reference internal" href="../_modules/canari/data_struct.html#OutputHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.OutputHistory" title="Link to this definition">#</a></dt>
+<dd><p>Save output history mean and variance</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.data_struct.OutputHistory.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_struct.html#OutputHistory.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.OutputHistory.initialize" title="Link to this definition">#</a></dt>
+<dd><p>Initialize <cite>mu</cite> and <cite>var</cite>  as empty lists.</p>
+</dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id5">
-<span class="sig-name descname"><span class="pre">mu_smooth</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id5" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id6">
-<span class="sig-name descname"><span class="pre">states_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id6" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id7">
-<span class="sig-name descname"><span class="pre">var_posterior</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id7" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id8">
-<span class="sig-name descname"><span class="pre">var_prior</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id8" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="id9">
-<span class="sig-name descname"><span class="pre">var_smooth</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#id9" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="canari.data_struct.OutputHistory.save_output_history">
+<span class="sig-name descname"><span class="pre">save_output_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/data_struct.html#OutputHistory.save_output_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.data_struct.OutputHistory.save_output_history" title="Link to this definition">#</a></dt>
+<dd><p>Add <cite>mu</cite> and <cite>var</cite> to the saved history</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -681,9 +656,8 @@ Defaults to True.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.mu"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.mu</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.var"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.var</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.initialize"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.initialize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.mu</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.set"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.set()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.LstmOutputHistory.update"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.update()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">LstmOutputHistory.var</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory"><code class="docutils literal notranslate"><span class="pre">StatesHistory</span></code></a><ul class="visible nav section-nav flex-column">
@@ -695,17 +669,14 @@ Defaults to True.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.var_smooth"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_smooth</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.cov_states"><code class="docutils literal notranslate"><span class="pre">StatesHistory.cov_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.states_name"><code class="docutils literal notranslate"><span class="pre">StatesHistory.states_name</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2"><code class="docutils literal notranslate"><span class="pre">StatesHistory.cov_states</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.get_mean"><code class="docutils literal notranslate"><span class="pre">StatesHistory.get_mean()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.get_std"><code class="docutils literal notranslate"><span class="pre">StatesHistory.get_std()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.StatesHistory.initialize"><code class="docutils literal notranslate"><span class="pre">StatesHistory.initialize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_posterior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_prior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5"><code class="docutils literal notranslate"><span class="pre">StatesHistory.mu_smooth</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6"><code class="docutils literal notranslate"><span class="pre">StatesHistory.states_name</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_posterior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_prior</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9"><code class="docutils literal notranslate"><span class="pre">StatesHistory.var_smooth</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory"><code class="docutils literal notranslate"><span class="pre">OutputHistory</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory.initialize"><code class="docutils literal notranslate"><span class="pre">OutputHistory.initialize()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.data_struct.OutputHistory.save_output_history"><code class="docutils literal notranslate"><span class="pre">OutputHistory.save_output_history()</span></code></a></li>
 </ul>
 </li>
 </ul>
