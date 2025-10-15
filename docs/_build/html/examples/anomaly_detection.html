@@ -2,13 +2,13 @@
 <!DOCTYPE html>
 
 
-<html lang="EN" data-content_root="../" >
+<html lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Anomaly detection using the swithing Kalman filter &#8212; canari v.0.1.0 documentation</title>
+    <title>Anomaly detection using the switching Kalman filter &#8212; canari v0.2.0 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=773eff52"></script>
+    <script src="../_static/documentation_options.js?v=0a6a6ad3"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -50,7 +50,7 @@
     <link rel="next" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
     <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="EN"/>
+  <meta name="docsearch:language" content="en"/>
   </head>
   
   
@@ -140,8 +140,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.1.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.1.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v0.2.0 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v0.2.0 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -165,7 +165,7 @@
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the swithing Kalman filter</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
 </ul>
@@ -186,6 +186,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.model.html">canari.model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.skf.html">canari.skf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/canari.data_visualization.html">canari.data_visualization</a></li>
@@ -296,7 +297,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Anomaly detection using the swithing Kalman filter</h1>
+    <h1>Anomaly detection using the switching Kalman filter</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -327,8 +328,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Anomaly-detection-using-the-swithing-Kalman-filter">
-<h1>Anomaly detection using the swithing Kalman filter<a class="headerlink" href="#Anomaly-detection-using-the-swithing-Kalman-filter" title="Link to this heading">#</a></h1>
+  <section id="Anomaly-detection-using-the-switching-Kalman-filter">
+<h1>Anomaly detection using the switching Kalman filter<a class="headerlink" href="#Anomaly-detection-using-the-switching-Kalman-filter" title="Link to this heading">#</a></h1>
 <p>This tutorial example presents how to detect anomalies that take the form of change points. The model relies on the switching Kalman filter (SKF) that estimates the probability of the local trend regime versus a local acceleration regime, whereas a high probability for the later indicates the presence of a change point in a time series.</p>
 <p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be stationnary and the SKF hyperparameters are estimated using synthetic anomalies that are added on the raw traning set.</p>
 <p>In this example, we use a simple sine-like signal onto which we add a synthetic regime change marking the time series swithcing from a stationnary regime to a trend-statinnary one.</p>
