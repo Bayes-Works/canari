@@ -349,7 +349,7 @@ change point in a time series.</p>
 <h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
 <p>Import the various libraries that will be employed in this example.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
@@ -376,21 +376,18 @@ change point in a time series.</p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/opt/miniconda3/envs/canari/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-2025-10-10 13:42:59,881 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-2025-10-10 13:43:00,495 INFO worker.py:1951 -- Started a local Ray instance.
-2025-10-10 13:43:00,539 INFO packaging.py:588 -- Creating a file package for local module &#39;/Users/vuongdai/GitHub/canari&#39;.
-2025-10-10 13:43:00,564 INFO packaging.py:380 -- Pushing file package &#39;gcs://_ray_pkg_3ddb49733015ba09.zip&#39; (6.99MiB) to Ray cluster...
-2025-10-10 13:43:00,577 INFO packaging.py:393 -- Successfully pushed file package &#39;gcs://_ray_pkg_3ddb49733015ba09.zip&#39;.
+2025-10-15 15:42:29,607 INFO worker.py:1951 -- Started a local Ray instance.
+2025-10-15 15:42:29,644 INFO packaging.py:588 -- Creating a file package for local module &#39;/Users/vuongdai/GitHub/canari&#39;.
+2025-10-15 15:42:29,673 INFO packaging.py:380 -- Pushing file package &#39;gcs://_ray_pkg_0871d592f8fc1249.zip&#39; (6.91MiB) to Ray cluster...
+2025-10-15 15:42:29,694 INFO packaging.py:393 -- Successfully pushed file package &#39;gcs://_ray_pkg_0871d592f8fc1249.zip&#39;.
 </pre></div></div>
 </div>
 </section>
 <section id="Import-from-Canari">
 <h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
 <p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we the SKF will build two competing models using respectively the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and <code class="docutils literal notranslate"><span class="pre">LocalAcceleration</span></code> components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -408,20 +405,12 @@ change point in a time series.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-10-10 13:43:01,953 INFO util.py:154 -- Missing packages: [&#39;ipywidgets&#39;]. Run `pip install -U ipywidgets`, then restart the notebook server for rich notebook output.
-</pre></div></div>
-</div>
 </section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
 <p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Pandas external library.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -448,7 +437,7 @@ change point in a time series.</p>
 <h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
 <p>In terms of pre-processsing, we want to add the <em>hour-of-the-day</em> as time-covariate for the LSTM network. Moreover we define here our choice of using the first 40% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 50% are the implicitely defined as the test set.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_col</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -465,7 +454,7 @@ change point in a time series.</p>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -534,7 +523,7 @@ change point in a time series.</p>
 <h3>A.1. Parameter space<a class="headerlink" href="#A.1.-Parameter-space" title="Link to this heading">#</a></h3>
 <p>First, we need to define which hyperparameters will be optimized and for each of them what is the range of values to be searched. In this example, we search for the optimal look-back window length between 10 and 30 time steps, and the residual component’s standard deviation between 0.001 and 0.2.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_space</span> <span class="o">=</span> <span class="p">{</span>
@@ -549,7 +538,7 @@ change point in a time series.</p>
 <h3>A.2. Model as a function of parameters<a class="headerlink" href="#A.2.-Model-as-a-function-of-parameters" title="Link to this heading">#</a></h3>
 <p>We need to create a function that makes our model depends on the parameters to be search over.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">model_with_parameters</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">validation_data</span><span class="p">):</span>
@@ -617,7 +606,7 @@ change point in a time series.</p>
 <h3>A.3. Define optimizer<a class="headerlink" href="#A.3.-Define-optimizer" title="Link to this heading">#</a></h3>
 <p>We instantiate and run the optimizer for our example. The results is a set of optimal hyperparameters for our model.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model_optimizer</span> <span class="o">=</span> <span class="n">ModelOptimizer</span><span class="p">(</span>
@@ -642,15 +631,15 @@ change point in a time series.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-#  1/10 - Metric: -1.123 - Parameter: {&#39;look_back_len&#39;: 18, &#39;sigma_v&#39;: 0.116961356836417}
-#  2/10 - Metric: -1.295 - Parameter: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.02438803318639435}
-#  3/10 - Metric: -0.772 - Parameter: {&#39;look_back_len&#39;: 27, &#39;sigma_v&#39;: 0.18029395813337584}
-#  4/10 - Metric: -0.980 - Parameter: {&#39;look_back_len&#39;: 27, &#39;sigma_v&#39;: 0.12006720133556392}
-#  5/10 - Metric: -1.062 - Parameter: {&#39;look_back_len&#39;: 18, &#39;sigma_v&#39;: 0.13087526635796395}
-#  6/10 - Metric: -1.222 - Parameter: {&#39;look_back_len&#39;: 28, &#39;sigma_v&#39;: 0.006094707624772829}
-#  7/10 - Metric: -0.908 - Parameter: {&#39;look_back_len&#39;: 12, &#39;sigma_v&#39;: 0.17664931368829198}
-#  8/10 - Metric: -0.910 - Parameter: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.14223580810111214}
-#  9/10 - Metric: -1.050 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.12528823294032054}
+#  1/10 - Metric: -0.833 - Parameter: {&#39;look_back_len&#39;: 24, &#39;sigma_v&#39;: 0.16330939348976586}
+#  2/10 - Metric: -0.786 - Parameter: {&#39;look_back_len&#39;: 27, &#39;sigma_v&#39;: 0.17615339134459385}
+#  3/10 - Metric: -1.337 - Parameter: {&#39;look_back_len&#39;: 21, &#39;sigma_v&#39;: 0.028413114832550792}
+#  4/10 - Metric: -0.863 - Parameter: {&#39;look_back_len&#39;: 14, &#39;sigma_v&#39;: 0.18920710038466607}
+#  5/10 - Metric: -1.019 - Parameter: {&#39;look_back_len&#39;: 15, &#39;sigma_v&#39;: 0.14129671643702657}
+#  6/10 - Metric: -1.285 - Parameter: {&#39;look_back_len&#39;: 27, &#39;sigma_v&#39;: 0.017762535547598626}
+#  7/10 - Metric: -0.833 - Parameter: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.1642017159226723}
+#  8/10 - Metric: -1.081 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.15090860037345524}
+#  9/10 - Metric: -1.637 - Parameter: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.05259133513166628}
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -658,7 +647,7 @@ change point in a time series.</p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2025-10-10 13:43:13,003 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/Model_optimizer&#39; in 0.0050s.
+2025-10-15 15:42:43,770 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/Model_optimizer&#39; in 0.0058s.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -666,9 +655,9 @@ change point in a time series.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-# 10/10 - Metric: -1.266 - Parameter: {&#39;look_back_len&#39;: 19, &#39;sigma_v&#39;: 0.0738538043523169}
+# 10/10 - Metric: -0.847 - Parameter: {&#39;look_back_len&#39;: 26, &#39;sigma_v&#39;: 0.15770266155926593}
 -----
-Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;: 0.02438803318639435}
+Optimal parameters at trial #9: {&#39;look_back_len&#39;: 10, &#39;sigma_v&#39;: 0.05259133513166628}
 -----
 </pre></div></div>
 </div>
@@ -677,7 +666,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 <h3>A.4 Get optimal model hyperparameters<a class="headerlink" href="#A.4-Get-optimal-model-hyperparameters" title="Link to this heading">#</a></h3>
 <p>We then get the best model parameters and set them for our model.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">model_optimizer</span><span class="o">.</span><span class="n">get_best_param</span><span class="p">()</span>
@@ -692,7 +681,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 <p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is caracterised by the <em>trend</em> and <em>acceleration</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component.</p>
 <p>Note that in this first trainig phase, the results are only presented for the training and validation sets.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
@@ -738,7 +727,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 <h3>B.1. hyparameter space<a class="headerlink" href="#B.1.-hyparameter-space" title="Link to this heading">#</a></h3>
 <p>First, we need to define which hyperparameters will be optimized, and for each of them what is the range of values to be searched. In this example, we search for 1) the standard deviation of the process error that is added when transiting from the normal to the abnormal model, 2) the prior probability of having a regime switch fron normal to abnormal, and 3) the slope of the synthetic anomalies that will lead to a 50% detection rate.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">slope_upper_bound</span> <span class="o">=</span> <span class="mf">5e-2</span>
@@ -756,7 +745,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 <h3>B.2. SKF model as a function of parameters<a class="headerlink" href="#B.2.-SKF-model-as-a-function-of-parameters" title="Link to this heading">#</a></h3>
 <p>We create a function that will make our model depend on the hyperparameters defined above.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">skf_with_parameters</span><span class="p">(</span><span class="n">skf_param</span><span class="p">,</span> <span class="n">model_param</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
@@ -793,7 +782,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 <h3>B.3. Optimizer<a class="headerlink" href="#B.3.-Optimizer" title="Link to this heading">#</a></h3>
 <p>We instantiate the optimizer and run it over 40 optimization runs. This procedure will return the optimized hyperparameter values in order to maximize the detectability of the smallest anomalies having a detection rate of 50% while not causing any false detection.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">skf_optimizer</span> <span class="o">=</span> <span class="n">SKFOptimizer</span><span class="p">(</span>
@@ -818,25 +807,25 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-#  1/20 - Metric: 0.035 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.000935222548486482, &#39;norm_to_abnorm_prob&#39;: 3.804464441092584e-05, &#39;slope&#39;: 0.03507546692537408}
-#  2/20 - Metric: 0.050 - Detection rate: 0.42 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.0887691162331392e-05, &#39;norm_to_abnorm_prob&#39;: 0.0001281208290175262, &#39;slope&#39;: 0.031294737942577096}
-#  3/20 - Metric: 0.007 - Detection rate: 0.94 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0004980819168687677, &#39;norm_to_abnorm_prob&#39;: 1.402148963980893e-06, &#39;slope&#39;: 0.0074798438734731245}
-#  4/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.175722559259837e-06, &#39;norm_to_abnorm_prob&#39;: 1.445878253876676e-06, &#39;slope&#39;: 0.004223614732098402}
-#  5/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.7360896941101057e-06, &#39;norm_to_abnorm_prob&#39;: 2.1747943088485127e-05, &#39;slope&#39;: 0.0015750293833091831}
-#  6/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0007053036382342822, &#39;norm_to_abnorm_prob&#39;: 1.5023345157164702e-05, &#39;slope&#39;: 0.002804694485284642}
-#  7/20 - Metric: 0.050 - Detection rate: 0.28 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 7.609591159749607e-05, &#39;norm_to_abnorm_prob&#39;: 0.0003156793073029671, &#39;slope&#39;: 0.003450056376403838}
-#  8/20 - Metric: 0.041 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00017619785989103143, &#39;norm_to_abnorm_prob&#39;: 1.2305030521615815e-06, &#39;slope&#39;: 0.040574647652020186}
-#  9/20 - Metric: 0.050 - Detection rate: 0.24 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.094535963343836e-05, &#39;norm_to_abnorm_prob&#39;: 9.972299932462219e-06, &#39;slope&#39;: 0.036902291653322934}
-# 10/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.136631021785901e-06, &#39;norm_to_abnorm_prob&#39;: 1.7854967135434023e-05, &#39;slope&#39;: 0.0023844938221655944}
-# 11/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0008632853829910184, &#39;norm_to_abnorm_prob&#39;: 2.3642678486931586e-06, &#39;slope&#39;: 0.0018940318557419465}
-# 12/20 - Metric: 0.011 - Detection rate: 0.64 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.3257112682897495e-05, &#39;norm_to_abnorm_prob&#39;: 0.00029321451519541967, &#39;slope&#39;: 0.01109000068867008}
-# 13/20 - Metric: 0.012 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00021206687029991944, &#39;norm_to_abnorm_prob&#39;: 4.693961530558148e-06, &#39;slope&#39;: 0.012193103456058476}
-# 14/20 - Metric: 0.011 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00024362565559679286, &#39;norm_to_abnorm_prob&#39;: 8.441988300380613e-05, &#39;slope&#39;: 0.010541370020870154}
-# 15/20 - Metric: 0.013 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00020237940646148294, &#39;norm_to_abnorm_prob&#39;: 0.0009721442965966651, &#39;slope&#39;: 0.012855074116863298}
-# 16/20 - Metric: 0.010 - Detection rate: 0.54 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.6594146617382836e-05, &#39;norm_to_abnorm_prob&#39;: 0.0008911138905944309, &#39;slope&#39;: 0.0101251578397062}
-# 17/20 - Metric: 0.007 - Detection rate: 0.90 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0002444593820375515, &#39;norm_to_abnorm_prob&#39;: 7.616539829019957e-05, &#39;slope&#39;: 0.007303200415038664}
-# 18/20 - Metric: 0.006 - Detection rate: 0.52 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0003811873300577666, &#39;norm_to_abnorm_prob&#39;: 6.26192074762963e-05, &#39;slope&#39;: 0.0058390566778541075}
-# 19/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.3508180713972768e-05, &#39;norm_to_abnorm_prob&#39;: 4.615522505445728e-06, &#39;slope&#39;: 0.006652917074263173}
+#  1/20 - Metric: 0.050 - Detection rate: 0.04 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 6.262464671412413e-06, &#39;norm_to_abnorm_prob&#39;: 7.954246722071615e-06, &#39;slope&#39;: 0.036341763978233}
+#  2/20 - Metric: 0.004 - Detection rate: 0.50 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0001652152868333173, &#39;norm_to_abnorm_prob&#39;: 3.619564459281087e-06, &#39;slope&#39;: 0.004075561687726222}
+#  3/20 - Metric: 0.010 - Detection rate: 0.74 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.4589282402653024e-05, &#39;norm_to_abnorm_prob&#39;: 3.2265827212687894e-06, &#39;slope&#39;: 0.00956250443427166}
+#  4/20 - Metric: 0.008 - Detection rate: 0.90 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 4.346988879841294e-05, &#39;norm_to_abnorm_prob&#39;: 0.0006883839443247778, &#39;slope&#39;: 0.008100056969693936}
+#  5/20 - Metric: 0.026 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 2.5198003139837357e-05, &#39;norm_to_abnorm_prob&#39;: 4.39428575780752e-06, &#39;slope&#39;: 0.025586138534072402}
+#  6/20 - Metric: 0.050 - Detection rate: 0.08 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 1.539599504898947e-05, &#39;norm_to_abnorm_prob&#39;: 4.7778298724838915e-05, &#39;slope&#39;: 0.007092167028094079}
+#  7/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.6467398049519635e-06, &#39;norm_to_abnorm_prob&#39;: 0.0006724530521330767, &#39;slope&#39;: 0.0018730182586804338}
+#  8/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.260722216540065e-06, &#39;norm_to_abnorm_prob&#39;: 1.7416500465776535e-05, &#39;slope&#39;: 0.008611088725334322}
+#  9/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 5.838170780299598e-06, &#39;norm_to_abnorm_prob&#39;: 8.792157288117799e-06, &#39;slope&#39;: 0.029711565937492926}
+# 10/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.3866732926544363e-05, &#39;norm_to_abnorm_prob&#39;: 1.5575902149853716e-06, &#39;slope&#39;: 0.0033455244422491374}
+# 11/20 - Metric: 0.011 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 6.386930696782889e-05, &#39;norm_to_abnorm_prob&#39;: 7.397991546229408e-06, &#39;slope&#39;: 0.010995305882638631}
+# 12/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 3.5449808242643537e-06, &#39;norm_to_abnorm_prob&#39;: 4.8303904216679506e-05, &#39;slope&#39;: 0.0014462151419952786}
+# 13/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0005032059667652314, &#39;norm_to_abnorm_prob&#39;: 7.687851381318755e-05, &#39;slope&#39;: 0.0010942230249885803}
+# 14/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0003669233938746162, &#39;norm_to_abnorm_prob&#39;: 0.0001270070996203327, &#39;slope&#39;: 0.003244229145364663}
+# 15/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0003498461094929194, &#39;norm_to_abnorm_prob&#39;: 0.0005249702034646614, &#39;slope&#39;: 0.003790282436441244}
+# 16/20 - Metric: 0.050 - Detection rate: 0.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0001798382583369428, &#39;norm_to_abnorm_prob&#39;: 0.0009907506862446252, &#39;slope&#39;: 0.003475256829310426}
+# 17/20 - Metric: 0.050 - Detection rate: 0.34 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.00013502583143318504, &#39;norm_to_abnorm_prob&#39;: 0.0004528717953408868, &#39;slope&#39;: 0.004143309889196741}
+# 18/20 - Metric: 0.019 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0001315912998668856, &#39;norm_to_abnorm_prob&#39;: 0.00021429868120863182, &#39;slope&#39;: 0.01852017637590142}
+# 19/20 - Metric: 0.015 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.0001032503883839339, &#39;norm_to_abnorm_prob&#39;: 0.00018770755259130598, &#39;slope&#39;: 0.01464497070339444}
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -844,7 +833,7 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2025-10-10 13:45:55,487 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/SKF_optimizer&#39; in 0.0069s.
+2025-10-15 15:43:10,491 INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to &#39;/Users/vuongdai/ray_results/SKF_optimizer&#39; in 0.0101s.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -852,9 +841,9 @@ Optimal parameters at trial #2: {&#39;look_back_len&#39;: 25, &#39;sigma_v&#39;:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-# 20/20 - Metric: 0.050 - Detection rate: 0.36 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 0.000434172178723401, &#39;norm_to_abnorm_prob&#39;: 5.569942420461185e-05, &#39;slope&#39;: 0.005317060630912833}
+# 20/20 - Metric: 0.013 - Detection rate: 1.00 - False rate: 0.00 - False alarm in train: No - Parameter: {&#39;std_transition_error&#39;: 9.849528645139968e-05, &#39;norm_to_abnorm_prob&#39;: 0.0002206028625292635, &#39;slope&#39;: 0.013477375890075567}
 -----
-Optimal parameters at trial #18: {&#39;std_transition_error&#39;: 0.0003811873300577666, &#39;norm_to_abnorm_prob&#39;: 6.26192074762963e-05, &#39;slope&#39;: 0.0058390566778541075}
+Optimal parameters at trial #2: {&#39;std_transition_error&#39;: 0.0001652152868333173, &#39;norm_to_abnorm_prob&#39;: 3.619564459281087e-06, &#39;slope&#39;: 0.004075561687726222}
 -----
 </pre></div></div>
 </div>
@@ -863,7 +852,7 @@ Optimal parameters at trial #18: {&#39;std_transition_error&#39;: 0.000381187330
 <h3>B.4. Get optimal SKF<a class="headerlink" href="#B.4.-Get-optimal-SKF" title="Link to this heading">#</a></h3>
 <p>Set the optimized hyperparameters into the model in order to process the data from the test set.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get optimal model</span>
@@ -877,7 +866,7 @@ Optimal parameters at trial #18: {&#39;std_transition_error&#39;: 0.000381187330
 <h3>B.5. Anomaly detection<a class="headerlink" href="#B.5.-Anomaly-detection" title="Link to this heading">#</a></h3>
 <p>Once the training is complete, we perform the changepoint detection by using the SKF <code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">smoother</span></code>. The <code class="docutils literal notranslate"><span class="pre">filter</span></code> represents the results obtained during online data processing and the <code class="docutils literal notranslate"><span class="pre">smoother</span></code> those obtained during offline processing.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="n">skf_optim</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">all_data</span><span class="p">)</span>
@@ -892,7 +881,7 @@ Optimal parameters at trial #18: {&#39;std_transition_error&#39;: 0.000381187330
 a stationnary regime to a trend-stationnary one.</p>
 <p>Note that in this second optimization phase the results now extend into the test set.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_skf_states</span><span class="p">(</span>
