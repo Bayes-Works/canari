@@ -14,6 +14,7 @@ from ray.tune import Callback
 from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
+from canari import SKF
 
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
@@ -39,13 +40,9 @@ class SKFOptimizer:
                                                 Defaults to 0.0.
         max_timestep_to_detect (int, optional): Maximum number of timesteps to allow detection.
                                                 Defaults to None (to the end of time series).
-        num_synthetic_anomaly (int, optional): Number of synthetic anomalies to add. This will create as
-                            many time series, because one time series contains only one
-                            anomaly. Defaults to 50.
         num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
         grid_search (bool, optional): If True, perform grid search. Defaults to False.
-        algorithm (str, optional): Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
-        Defaults to 'OptunaSearch'.
+        algorithm (str, optional): Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler). Defaults to 'OptunaSearch'.
 
     Attributes:
         skf_optim: Best SKF instance after optimization.
@@ -63,7 +60,6 @@ class SKFOptimizer:
         detection_threshold: Optional[float] = 0.5,
         false_rate_threshold: Optional[float] = 0.0,
         max_timestep_to_detect: Optional[int] = None,
-        num_synthetic_anomaly: Optional[int] = 50,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
@@ -80,7 +76,6 @@ class SKFOptimizer:
         self.false_rate_threshold = false_rate_threshold
         self._max_timestep_to_detect = max_timestep_to_detect
         self._num_optimization_trial = num_optimization_trial
-        self._num_synthetic_anomaly = num_synthetic_anomaly
         self._grid_search = grid_search
         self._algorithm = algorithm
         self.skf_optim = None
@@ -88,13 +83,16 @@ class SKFOptimizer:
         self._trial_count = 0
         self._backend = "optuna" if platform.system() == "Windows" else "ray"
 
-    def _objective(
+    def objective(
         self,
         config,
         model_param: dict,
     ):
         """
-        objective: returns a metric that is used for optimization
+        Returns a metric that is used for optimization.
+
+        Returns:
+            dict: Metric used for optimization.
         """
 
         skf = self.skf(
@@ -133,7 +131,7 @@ class SKFOptimizer:
         elif self._backend == "optuna":
             self._optuna_optimizer()
 
-    def get_best_model(self):
+    def get_best_model(self) -> SKF:
         """
         Retrieves the SKF instance initialized with the best parameters.
 
@@ -142,7 +140,7 @@ class SKFOptimizer:
         """
         return self.skf_optim
 
-    def get_best_param(self):
+    def get_best_param(self) -> Dict:
         """
         Retrieve the optimized parameters after running optimization.
 
@@ -169,7 +167,7 @@ class SKFOptimizer:
 
             optimizer_runner = tune.run(
                 tune.with_parameters(
-                    self._objective,
+                    self.objective,
                     model_param=self._model_param,
                 ),
                 config=search_config,
@@ -186,7 +184,7 @@ class SKFOptimizer:
             if self._algorithm == "default":
                 optimizer_runner = tune.run(
                     tune.with_parameters(
-                        self._objective,
+                        self.objective,
                         model_param=self._model_param,
                     ),
                     config=search_config,
@@ -201,7 +199,7 @@ class SKFOptimizer:
                 scheduler = ASHAScheduler(metric="metric", mode="min")
                 optimizer_runner = tune.run(
                     tune.with_parameters(
-                        self._objective,
+                        self.objective,
                         model_param=self._model_param,
                     ),
                     config=search_config,
@@ -328,7 +326,7 @@ class SKFOptimizer:
         """
 
         param = self._optuna_build_search_space(trial)
-        metric = self._objective(param, model_param=self._model_param)
+        metric = self.objective(param, model_param=self._model_param)
 
         # Save extra info for callback
         trial.set_user_attr("detection_rate", metric["detection_rate"])
