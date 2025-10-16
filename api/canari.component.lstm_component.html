@@ -349,7 +349,8 @@ Defaults to 1.</p></li>
 <li><p><strong>num_features</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of input features. Defaults to 1.</p></li>
 <li><p><strong>num_output</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of output features predicted by the network.
 Defaults to 1.</p></li>
-<li><p><strong>device</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Device used for computation, either “cpu” or “cuda”. Defaults to “cpu”.</p></li>
+<li><p><strong>device</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Device used for computation, either “cpu” or “cuda”.
+Defaults to “cpu”.</p></li>
 <li><p><strong>num_thread</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of CPU threads for computation. Defaults to 1.</p></li>
 <li><p><strong>manual_seed</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Initial seed for reproducing random number generation,
 i.e. intializing LSTM’s weights and biases.
@@ -362,10 +363,12 @@ LSTM’s weights and biases. Defaults to None.</p></li>
 initialized to zeros.</p></li>
 <li><p><strong>var_states</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>float</em><em>]</em><em>]</em>) – Initial variance of the hidden state. Defaults:
 initialized to zeros.</p></li>
-<li><p><strong>smoother</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – if True using Smooth LSTM (SLSTM), if False using LSTM. Defaults to True.</p></li>
-<li><p><strong>infer_len</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Length of the window before the training set to be inferred when using SLSTM.</p></li>
-<li><p><strong>model_noise</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – if True, using the AGVI method to model heteroscedastic noise (See references).
-Defaults to False.</p></li>
+<li><p><strong>smoother</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – if True using Smooth LSTM (SLSTM), if False LSTM is used.
+Defaults to True.</p></li>
+<li><p><strong>infer_len</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Length of the window before the training set to be inferred
+when SLSTM is used. Defaults to 1.</p></li>
+<li><p><strong>model_noise</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – if True, using the AGVI method to model heteroscedastic noise
+(See references). Defaults to False.</p></li>
 </ul>
 </dd>
 </dl>
