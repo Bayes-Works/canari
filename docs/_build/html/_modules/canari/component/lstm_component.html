@@ -332,7 +332,8 @@ document.write(`
 <span class="sd">        num_features (Optional[int]): Number of input features. Defaults to 1.</span>
 <span class="sd">        num_output (Optional[int]): Number of output features predicted by the network.</span>
 <span class="sd">                                    Defaults to 1.</span>
-<span class="sd">        device (Optional[str]): Device used for computation, either &quot;cpu&quot; or &quot;cuda&quot;. Defaults to &quot;cpu&quot;.</span>
+<span class="sd">        device (Optional[str]): Device used for computation, either &quot;cpu&quot; or &quot;cuda&quot;.</span>
+<span class="sd">                                Defaults to &quot;cpu&quot;.</span>
 <span class="sd">        num_thread (Optional[int]): Number of CPU threads for computation. Defaults to 1.</span>
 <span class="sd">        manual_seed (Optional[int]): Initial seed for reproducing random number generation,</span>
 <span class="sd">                                    i.e. intializing LSTM&#39;s weights and biases.</span>
@@ -345,10 +346,12 @@ document.write(`
 <span class="sd">            initialized to zeros.</span>
 <span class="sd">        var_states (Optional[list[float]]): Initial variance of the hidden state. Defaults:</span>
 <span class="sd">            initialized to zeros.</span>
-<span class="sd">        smoother (Optional[bool]): if True using Smooth LSTM (SLSTM), if False using LSTM. Defaults to True.</span>
-<span class="sd">        infer_len (Optional[int]): Length of the window before the training set to be inferred when using SLSTM.</span>
-<span class="sd">        model_noise (Optional[bool]): if True, using the AGVI method to model heteroscedastic noise (See references).</span>
-<span class="sd">                                     Defaults to False.</span>
+<span class="sd">        smoother (Optional[bool]): if True using Smooth LSTM (SLSTM), if False LSTM is used.</span>
+<span class="sd">                                    Defaults to True.</span>
+<span class="sd">        infer_len (Optional[int]): Length of the window before the training set to be inferred</span>
+<span class="sd">                                    when SLSTM is used. Defaults to 1.</span>
+<span class="sd">        model_noise (Optional[bool]): if True, using the AGVI method to model heteroscedastic noise</span>
+<span class="sd">                                    (See references). Defaults to False.</span>
 
 <span class="sd">    References:</span>
 <span class="sd">        Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and</span>
