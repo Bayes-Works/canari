@@ -39,14 +39,14 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-time_anomaly = 52*4
-anm_mag = 12/52
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LT anomaly
+# time_anomaly = 52*4
+# anm_mag = 12/52
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # LL anomaly
 # time_anomaly = 52*4
@@ -81,6 +81,7 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
+# # Phi_ar = 0.612, sigma_ar = 0.196, higher LSTM uncertainty
 # Load model_dict from local
 with open("saved_params/paper_example.pkl", "rb") as f:
     model_dict = pickle.load(f)
@@ -92,6 +93,19 @@ LSTM = LstmNetwork(
         num_hidden_unit=50,
         device="cpu",
     )
+
+# # Phi_ar = 0.375, sigma_ar = 0.0438, lower LSTM uncertainty
+# with open("saved_params/syn_simple_ts_tsmodel.pkl", "rb") as f:
+#     model_dict = pickle.load(f)
+
+# LSTM = LstmNetwork(
+#         look_back_len=13,
+#         num_features=2,
+#         num_layer=1,
+#         num_hidden_unit=50,
+#         device="cpu",
+#     )
+
 
 phi_index = model_dict["states_name"].index("phi")
 W2bar_index = model_dict["states_name"].index("W2bar")
@@ -241,7 +255,7 @@ plot_states(
     sub_plot=ax4,
     color='tab:orange',
 )
-ax4.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax4.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax4.set_ylabel('$x^{\mathtt{LLd}}$')
 ax4.set_xticklabels([])
 plot_states(
@@ -255,7 +269,7 @@ plot_states(
 )
 ax5.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 ax5.yaxis.offsetText.set_fontsize(6)
-ax5.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax5.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax5.set_ylabel('$x^{\mathtt{LTd}}$')
 ax5.set_xticklabels([])
 # plot_states(
@@ -272,7 +286,7 @@ ax5.set_xticklabels([])
 # ax7.set_ylabel('$x^{\mathtt{ARd}}$')
 
 ax6.plot(time[:len(mp)], mp, label="MP metric", color="C1")
-ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax6.set_ylabel('MP')
 _add_dynamic_grids(ax6, time)
 
