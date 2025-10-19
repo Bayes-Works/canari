@@ -1,5 +1,7 @@
 """
-Emsemble of model
+Assemble of multiple :class:~canari.model.Model instances. This class is
+used when the target model depends on a covariate that is itself modeled
+by another :class:`~canari.model.Model`.
 """
 
 import copy
@@ -11,7 +13,11 @@ import canari.common as common
 
 class ModelAssemble:
     """
-    Assemble of models for modelling dependencies.
+    Assemble of :class:`~canari.model.Model` instances.
+
+    Args:
+        target_model (Model): the target (dependent) model.
+        covariate_model(List[Model]): the independent model used as input for the target one.
     """
 
     def __init__(
@@ -33,6 +39,27 @@ class ModelAssemble:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
+        If no `input_covariates` for LSTM, use an empty `np.ndarray`.
+        Recall :meth:`~canari.model.Model.forward` for each model.
+
+        This function is used at the one-time-step level.
+
+        Args:
+            input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.
+            posterior_covariate (Optional[bool]): Estimate the posterior for covariate model or not.
+                        If True, the posteriors for covariates are used as input for the target model.
+                        Otherwise, priors are used. Defaults to True.
+            update_param_covar_model (Optional[bool]): Update the network parameters for the covariate models
+                                                        or not. Defaults to True.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                A tuple containing:
+
+                - :attr:`mu_pred` (np.ndarray):
+                    The predictive mean of the observation at `t+1`.
+                - :attr:`var_pred` (np.ndarray):
+                    The predictive variance of the observation at `t+1`.
         """
 
         mu_pred = []
@@ -117,6 +144,24 @@ class ModelAssemble:
         Perform multi-step-ahead forecast over an entire dataset by recursively making
         one-step-ahead predictions, i.e., reapeatly apply the
         Kalman prediction step over multiple time steps.
+
+        Args:
+            data (Dict[str, np.ndarray]): A dictionary containing key 'x' as input covariates,
+                                            if exists 'y' (real observations) will not be used.
+            posterior_covariate (Optional[bool]): Estimate the posterior for covariate model or not.
+                        If True, the posteriors for covariates are used as input for the target model.
+                        Otherwise, priors are used. Defaults to False.
+            update_param_covar_model (Optional[bool]): Update the network parameters for the covariate models
+                                                        or not. Defaults to False.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                A tuple containing:
+
+                - **mu_obs_preds** (np.ndarray):
+                    The means for forecasts.
+                - **std_obs_preds** (np.ndarray):
+                    The standard deviations for forecasts.
         """
 
         mu_obs_preds = []
@@ -130,7 +175,7 @@ class ModelAssemble:
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
-                    model.update_lstm_history(
+                    model.update_lstm_output_history(
                         model.mu_states_prior, model.var_states_prior
                     )
 
@@ -155,6 +200,18 @@ class ModelAssemble:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
         update steps over multiple time steps.
+
+        Args:
+            data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                A tuple containing:
+
+                - **mu_obs_preds** (np.ndarray):
+                    The means for forecasts.
+                - **std_obs_preds** (np.ndarray):
+                    The standard deviations for forecasts.
         """
 
         mu_obs_preds = []
@@ -177,7 +234,7 @@ class ModelAssemble:
                     model.update_lstm_states_history(
                         index, last_step=len(data["y"]) - 1
                     )
-                    model.update_lstm_history(
+                    model.update_lstm_output_history(
                         model.mu_states_posterior, model.var_states_posterior
                     )
                 model.save_states_history()
@@ -199,6 +256,12 @@ class ModelAssemble:
         """
         Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
         RTS smoothing equation over multiple time steps.
+
+        Args:
+            matrix_inversion_tol (float): Numerical stability threshold for matrix
+                                            pseudoinversion (pinv). Defaults to 1E-12.
+            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".
+                                        Defaults to "relative".
         """
 
         for model in [self.target_model] + self.covariate_model:
@@ -215,8 +278,38 @@ class ModelAssemble:
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Train both the target model and covariate models on the provided
-        training set, then evaluate on the validation set.
+        Train the :class:`~canari.component.lstm_component.LstmNetwork` component for each model
+        on the provided training set, then evaluate on the validation set.
+        Optionally apply exponential decay on the white noise standard deviation over epochs.
+
+        Args:
+            train_data (Dict[str, np.ndarray]):
+                Dictionary with keys `'x'` and `'y'` for training inputs and targets.
+            validation_data (Dict[str, np.ndarray]):
+                Dictionary with keys `'x'` and `'y'` for validation inputs and targets.
+            posterior_covariate (Optional[bool]): Estimate the posterior for covariate model or not.
+                        If True, the posteriors for covariates are used as input for the target model.
+                        Otherwise, priors are used. Defaults to False.
+            update_param_covar_model (Optional[bool]): Update the network parameters for the covariate models
+                                                        or not. Defaults to False.
+            white_noise_decay (bool, optional):
+                If True, apply an exponential decay on the white noise standard deviation
+                over epochs, if a white noise component exists. Defaults to True.
+            white_noise_max_std (float, optional):
+                Upper bound on the white-noise standard deviation when decaying.
+                Defaults to 5.
+            white_noise_decay_factor (float, optional):
+                Multiplicative decay factor applied to the white‐noise standard
+                deviation each epoch. Defaults to 0.9.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, StatesHistory]:
+                A tuple containing:
+
+                - **mu_validation_preds** (np.ndarray):
+                    The means for multi-step-ahead predictions for the validation set.
+                - **std_validation_preds** (np.ndarray):
+                    The standard deviations for multi-step-ahead predictions for the validation set.
         """
 
         self._recal_covariates_col(
@@ -266,11 +359,15 @@ class ModelAssemble:
 
     def set_memory(self, time_step: int):
         """
-        Set memory
+        Set memory for each model to a specific time step.
+        Recall :meth:`~canari.model.Model.set_memory` for each model.
+
+        Args:
+            time_step (int): Time step to set the memory.
         """
-        if time_step == 0:
-            for model in [self.target_model] + self.covariate_model:
-                model.set_memory(states=model.states, time_step=time_step)
+
+        for model in [self.target_model] + self.covariate_model:
+            model.set_memory(time_step=time_step)
 
     def _recal_covariates_col(self, covariates_col: np.ndarray, data_col_names: list):
         """
