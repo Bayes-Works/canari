@@ -172,6 +172,8 @@ def rts_smoother(
         var_states_posterior (np.ndarray): Posterior covariance matrix.
         cross_cov_states (np.ndarray): Cross-covariance matrix between hidden states at two consecutive time steps.
         matrix_inversion_tol (Optional[float]): Regularization tolerance.
+        matrix_inversion_tol (Optional[float]): Regularization tolerance. Defaults to 1e-12.
+        tol_type (Optional[str]): Tolerance type, "relative" or "absolute". Defaults to "relative".
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: Updated smoothed mean and covariance.
@@ -222,10 +224,11 @@ def prepare_lstm_input(
 
     Args:
         lstm_output_history (LstmOutputHistory): Historical LSTM mean/variance.
-        input_covariates (np.ndarray): Input covariates.
+        input_covariates (np.ndarray): Means for input covariates.
+        var_input_covariates (Optional[np.ndarray]): Variances for input covariates.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: LSTM input mean and variance vectors.
+        Tuple[np.ndarray, np.ndarray]: LSTM input means and variances.
     """
     mu_lstm_input = np.concatenate((lstm_output_history.mu, input_covariates))
     mu_lstm_input = np.nan_to_num(mu_lstm_input, nan=0.0)
