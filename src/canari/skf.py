@@ -70,10 +70,6 @@ class SKF:
             Number of hidden states.
         states_names (list[str]):
             Names of hidden states.
-        mu_states_init (np.ndarray):
-            Mean vector for the hidden states :math:`X_0` at the time step `t=0`.
-        var_states_init (np.ndarray):
-            Covariance matrix for the hidden states :math:`X_0` at the time step `t=0`.
         mu_states_prior (np.ndarray):
             Prior mean vector for the marginal hidden states :math:`X_{t+1|t}` at the time step `t+1`.
         var_states_prior (np.ndarray):
@@ -666,19 +662,15 @@ class SKF:
 
     def save_initial_states(self):
         """
-        Save initial SKF hidden states (mean/variance) for reuse in subsequent runs.
-
-        Set :attr:`.mu_states_init` and :attr:`.var_states_init` using the
-        mu_states and var_states from the transition model 'norm_norm' stored in :attr:`.model`.
-
+        Save current memory from the transition model 'norm_norm' in :attr:`.model`
+        for reuse in subsequent runs.
         """
 
         self._memory_init = self.model["norm_norm"].get_memory()
 
     def load_initial_states(self):
         """
-        Restore saved initial states into the transition model 'norm_norm' stored in :attr:`.model`.
-
+        Restore saved memory into the transition model 'norm_norm' in :attr:`.model`.
         """
 
         self.model["norm_norm"].set_memory(memory=self._memory_init)
@@ -729,6 +721,11 @@ class SKF:
     def get_dict(self, time_step: Optional[int] = None) -> dict:
         """
         Export an SKF object into a dictionary.
+
+        Args:
+            time_step (Optional[int]): the time step to get the model and memory at.
+                                        If None export the model with the current memory.
+                                        Defaults to None.
 
         Returns:
             dict: Serializable model dictionary containing neccessary attributes.
@@ -1062,10 +1059,9 @@ class SKF:
         Args:
             time_step (int): Index at which to perform smoothing.
             matrix_inversion_tol (float): Numerical stability threshold for matrix
-                                            pseudoinversion (pinv). Defaults to 1E-4.
-
-        Returns:
-            None
+                                            pseudoinversion (pinv). Defaults to 1E-2.
+            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".
+                                        Defaults to "relative".
         """
 
         epsilon = 0 * 1e-20
@@ -1200,7 +1196,7 @@ class SKF:
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
-                self.model["norm_norm"].update_lstm_history(
+                self.model["norm_norm"].update_lstm_output_history(
                     mu_states_posterior, var_states_posterior
                 )
                 self.model["norm_norm"].update_lstm_states_history(
@@ -1235,7 +1231,9 @@ class SKF:
 
         Args:
             matrix_inversion_tol (float): Numerical stability threshold for matrix
-                                            pseudoinversion (pinv). Defaults to 1E-4.
+                                            pseudoinversion (pinv). Defaults to 1E-2.
+            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".
+                                        Defaults to "relative".
 
         Returns:
             Tuple[np.ndarray, StatesHistory]:
@@ -1274,16 +1272,16 @@ class SKF:
 
         Args:
             data (Dict[str, np.ndarray]): Original time series data.
-            threshold (float): Threshold for the maximal target anomaly detection rate.
+            threshold (Optional[float] ): Threshold for the maximal target anomaly detection rate.
                                 Defauls to 0.5.
-            max_timestep_to_detect (int): Maximum number of timesteps to allow detection.
+            max_timestep_to_detect (Optional[int]): Maximum number of timesteps to allow detection.
                                         Defauls to None (to the end of time series).
-            num_anomaly (int): Number of synthetic anomalies to add. This will create as
+            num_anomaly (Optional[int]): Number of synthetic anomalies to add. This will create as
                                 many time series, because one time series contains only one
                                 anomaly.
-            slope_anomaly (float): Magnitude of the anomaly slope.
-            anomaly_start (float): Fractional start position of anomaly.
-            anomaly_end (float): Fractional end position of anomaly.
+            slope_anomaly (Optional[float]): Magnitude of the anomaly slope.
+            anomaly_start (Optional[float]): Fractional start position of anomaly. Defaults to 0.33.
+            anomaly_end (Optional[float]): Fractional end position of anomaly. Defaults to 0.66.
 
         Returns:
             Tuple(detection_rate, false_rate, false_alarm_train):
