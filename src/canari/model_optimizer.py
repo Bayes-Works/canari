@@ -1,7 +1,6 @@
 """
 This module automates the search for optimal hyperparameters of a
-:class:`~canari.model.Model` instance by leveraging the Optuna
-external library.
+:class:`~canari.model.Model` instance by leveraging external libraries.
 """
 
 import platform
@@ -13,6 +12,7 @@ from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
+from canari import Model
 
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
@@ -80,9 +80,12 @@ class ModelOptimizer:
         self._algorithm = algorithm
         self._backend = "optuna" if platform.system() == "Windows" else "ray"
 
-    def _objective(self, config: Dict):
+    def objective(self, config: Dict) -> Dict:
         """
-        objective: returns a metric that is used for optimization
+        Returns a metric that is used for optimization
+
+        Returns:
+            dict: Metric used for optimization.
         """
         trained_model, *_ = self.model(config, self._train_data, self._validation_data)
         _metric = trained_model.metric_optim
@@ -101,18 +104,18 @@ class ModelOptimizer:
         elif self._backend == "optuna":
             self._optuna_optimizer()
 
-    def get_best_model(self):
+    def get_best_model(self) -> Model:
         """
         Retrieve the optimized model instance after running optimization.
 
         Returns:
-            :class:`~canari.model.Model`:: Model instance initialized with the best
+            :class:`~canari.model.Model`: Model instance initialized with the best
                                             hyperparameter values.
 
         """
         return self.model_optim
 
-    def get_best_param(self):
+    def get_best_param(self) -> Dict:
         """
         Retrieve the optimized parameters after running optimization.
 
@@ -135,7 +138,7 @@ class ModelOptimizer:
             custom_logger = self._ray_progress_callback(total_samples=total_trials)
 
             optimizer_runner = tune.run(
-                self._objective,
+                self.objective,
                 config=search_config,
                 name="Model_optimizer",
                 num_samples=1,
@@ -149,7 +152,7 @@ class ModelOptimizer:
             )
             if self._algorithm == "default":
                 optimizer_runner = tune.run(
-                    self._objective,
+                    self.objective,
                     config=search_config,
                     search_alg=OptunaSearch(metric="metric", mode=self._mode),
                     name="Model_optimizer",
@@ -161,7 +164,7 @@ class ModelOptimizer:
             elif self._algorithm == "parallel":
                 scheduler = ASHAScheduler(metric="metric", mode=self._mode)
                 optimizer_runner = tune.run(
-                    self._objective,
+                    self.objective,
                     config=search_config,
                     name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
@@ -288,7 +291,7 @@ class ModelOptimizer:
         """
 
         param = self._optuna_build_search_space(trial)
-        metric = self._objective(param)
+        metric = self.objective(param)
         return metric["metric"]
 
     def _optuna_build_search_space(self, trial: optuna.Trial) -> Dict:

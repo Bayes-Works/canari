@@ -96,6 +96,8 @@ class Model:
             It is a :class:`pytagi.Sequential` instance.
         lstm_output_history (LstmOutputHistory):
             Container for saving a rolling history of LSTM output over a fixed look-back window.
+        lstm_states_history (list):
+            Container for saving the history for LSTM's hidden and cell states for all time steps.
 
         # Early stopping attributes: only being used when training a :class:`~canari.component.lstm_component.LstmNetwork` component.
 
@@ -105,10 +107,10 @@ class Model:
             Logged history of metric values across epochs.
         early_stop_lstm_param (Dict):
             LSTM's weight and bias parameters at the optimal epoch for :class:`pytagi.Sequential`.
-        early_stop_init_mu_states (np.ndarray):
-            Copy of `mu_states` at time step `t=0` of the optimal epoch .
-        early_stop_init_var_states (np.ndarray):
-            Copy of `var_states` at time step `t=0` of the optimal epoch .
+        early_stop_states (np.ndarray):
+            :attr:`states` at the optimal epoch.
+        early_stop_lstm_states (np.ndarray):
+           :attr:`lstm_states_history` at the optimal epoch
         optimal_epoch (int):
             Epoch at which the metric being monitored was best.
         stop_training (bool):
@@ -837,7 +839,11 @@ class Model:
 
     def update_lstm_states_history(self, index: int, last_step: int):
         """
-        Store LSTM states at specific time steps for later use.
+        Store LSTM states at specific time steps. Currently only save states the first and last time steps of
+        the train, validation, and test sets. For other time steps, save None.
+
+        Args:
+            index (int): time step to save the lstm states at
         """
 
         if index == 0 or index == last_step:
@@ -931,7 +937,7 @@ class Model:
             )
 
         # prepare lookback covariates
-        lookback_covariates = self.generate_look_back_covariates(train_data)
+        lookback_covariates = self._generate_look_back_covariates(train_data)
 
         self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
         # reset LSTM states to zeros
@@ -978,11 +984,11 @@ class Model:
 
             self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
 
-    def generate_look_back_covariates(self, train_data):
+    def _generate_look_back_covariates(self, train_data):
         """
         Generate standardized look-back covariates for the LSTM by re-using
         Model._prepare_covariates_generation.
-        Supports both time covariates and lagged features, including periods before the first observation.
+        Supports only time covariates, otherwise Nan is used for other covariates.
         """
         # Get indices and look-back length
         train_idx = 0
@@ -1019,9 +1025,13 @@ class Model:
 
         return dummy
 
-    def update_lstm_history(self, mu_states: np.ndarray, var_states: np.ndarray):
+    def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
-        Update LSTM history
+        Update the rolling history of LSTM output means and variances with the mu_states and var_states
+
+        Args:
+            mu_states (np.ndarray): mean value to be updated to LSTM output history.
+            var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
         lstm_index = self.get_states_index("lstm")
@@ -1034,6 +1044,10 @@ class Model:
         """
         Export model attributes into a serializable dictionary.
 
+        Args:
+            time_step (Optional[int]): the time step to get the model and memory at.
+                                        If None export the model with the current memory.
+                                        Defaults to None.
         Returns:
             dict: Serializable model dictionary containing neccessary attributes.
 
@@ -1169,14 +1183,24 @@ class Model:
     def initialize_states_history(self):
         """
         Reinitialize prior, posterior, and smoothed values for hidden states in
-        :attr:`~canari.model.Model.states` with empty lists.
+        :attr:`~canari.model.Model.states` as well as :attr:`lstm_states_history` with empty lists.
         """
 
         self.states.initialize(self.states_name)
         self.lstm_states_history = []
 
     def get_memory(self, time_step: Optional[int] = None) -> dict:
-        """ "get memory for model"""
+        """
+        Get memory which includes :attr:`mu_states`, :attr:`var_states`, :attr:`lstm_output_history`,
+        and **lstm_states** of :attr:`lstm_net`. If `time_step` is provided, obtain the memory at that time step.
+        Otherwise, obtain the memory at the current time step.
+
+        Args:
+            time_step (Optional[int]): time step to obtain the memory
+
+        Returns:
+            Dict
+        """
 
         memory = {}
         lstm_states = None
@@ -1259,25 +1283,22 @@ class Model:
         memory: Optional[dict] = None,
     ):
         """
-        Set :attr:`~canari.model.Model.mu_states`, :attr:`~canari.model.Model.var_states`, and
-        :attr:`~canari.model.Model.lstm_output_history` with smoothed estimates from a specific
-        time steps stored in :class:`~canari.model.Model.states`. This is to prepare for the next
-        analysis by ensuring the continuity of these variables, e.g., if the next analysis starts
-        from time step `t`, should set the memory to the time step `t`.
-
-        If `t=0`, also set the means and variances for cell and hidden states of
-        :attr:`~canari.model.Model.lstm_net` to zeros. If `t` is not 0, need to set cell and hidden
-        states outside in the code using `Model.lstm_net.set_lstm_states(lstm_cell_hidden_states)`.
+        Set memory which includes :attr:`~canari.model.Model.mu_states`,
+        :attr:`~canari.model.Model.var_states`, :attr:`~canari.model.Model.lstm_output_history`
+        and **lstm_states** in :attr:`lstm_net` with smoothed estimates to a specific time step.
+        This is to prepare for the next analysis by ensuring the continuity of these variables,
+        e.g., if the next analysis starts from time step `t`, should set the memory to the
+        time step `t-1`.
 
         Args:
-            states (StatesHistory): Full history of hidden states over time.
-            time_step (int): Index of timestep to restore.
+            time_step (Optional[int]): Time step to set the memory.
+            memory (Optional[dict]): memory to be set.
 
         Examples:
             >>> # If the next analysis starts from the beginning of the time series
-            >>> model.set_memory(states=model.states, time_step=0))
+            >>> model.set_memory(time_step=0)
             >>> # If the next analysis starts from t = 200
-            >>> model.set_memory(states=model.states, time_step=200))
+            >>> model.set_memory(time_step=199)
         """
 
         if time_step is not None:
@@ -1458,12 +1479,12 @@ class Model:
         delta_var_states: np.ndarray,
     ):
         """
-        TODO: update
-        Update the LSTM neural network's parameters.
+        Obtain the posteriors for the LSTM neural network's parameters in :attr:`lstm_net` by adding `delta`
+        to their priors.
 
         Args:
-            delta_mu_lstm (np.ndarray): Delta mean update for LSTM's output.
-            delta_var_lstm (np.ndarray): Delta variance for LSTM's output.
+            delta_mu_states (np.ndarray): Delta mean for states.
+            delta_var_states (np.ndarray): Delta variance states.
         """
 
         lstm_index = self.get_states_index("lstm")
@@ -1503,8 +1524,10 @@ class Model:
 
         Args:
             time_step (int): Target smoothing index.
-            matrix_inversion_tol (float): Numerical stability threshold for matrix
+            matrix_inversion_tol (Optional[float]): Numerical stability threshold for matrix
                                             pseudoinversion (pinv). Defaults to 1E-12.
+            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".
+                                        Defaults to "relative".
         """
 
         (
@@ -1579,7 +1602,7 @@ class Model:
 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
-                self.update_lstm_history(mu_states_prior, var_states_prior)
+                self.update_lstm_output_history(mu_states_prior, var_states_prior)
 
             # Store variables
             self._set_posterior_states(mu_states_prior, var_states_prior)
@@ -1650,7 +1673,9 @@ class Model:
 
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
-                self.update_lstm_history(mu_states_posterior, var_states_posterior)
+                self.update_lstm_output_history(
+                    mu_states_posterior, var_states_posterior
+                )
 
             # Store variables
             self.save_states_history()
@@ -1679,6 +1704,8 @@ class Model:
         Args:
             matrix_inversion_tol (float): Numerical stability threshold for matrix
                                             pseudoinversion (pinv). Defaults to 1E-12.
+            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".
+                                        Defaults to "relative".
 
         Returns:
             StatesHistory:
@@ -1744,9 +1771,9 @@ class Model:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
                 A tuple containing:
 
-                - **mu_obs_preds** (np.ndarray):
+                - **mu_validation_preds** (np.ndarray):
                     The means for multi-step-ahead predictions for the validation set.
-                - **std_obs_preds** (np.ndarray):
+                - **std_validation_preds** (np.ndarray):
                     The standard deviations for multi-step-ahead predictions for the validation set.
                 - :attr:`~canari.model.Model.states`:
                     The history of hidden states over time.
@@ -1791,20 +1818,20 @@ class Model:
         skip_epoch: Optional[int] = 5,
     ) -> Tuple[bool, int, float, list]:
         """
-        Apply early stopping based on a monitored metric when training a LSTM neural network.
+        Apply early stopping based on the `evaluate_metric` when training a LSTM neural network.
 
         This method records `evaluate_metric` at each epoch,
         if there is an improvement on it,
-        update :attr:`.early_stop_metric`, :attr:`.early_stop_init_mu_states`,
-        :attr:`.early_stop_init_var_states`, :attr:`.early_stop_lstm_param`,
+        update :attr:`.early_stop_metric`, :attr:`.early_stop_lstm_param`,
+        :attr:`.early_stop_states`, :attr:`.early_stop_lstm_states`,
         and :attr:`.optimal_epoch`.
 
         Sets the `stop_training` to **True** if :attr:`.optimal_epoch` = `max_epoch`, or
         (`current_epoch` - :attr:`.optimal_epoch`)>= `patience`.
 
-        When `stop_training` is **True**, set :attr:`.mu_states` = :attr:`.early_stop_init_mu_states`,
-        :attr:`.var_states` = :attr:`.early_stop_init_var_states`, and set LSTM parameters to
-        :attr:`.early_stop_lstm_param`.
+        When `stop_training` is **True**, set :attr:`.states` = :attr:`.early_stop_states`,
+        :attr:`.lstm_states_history` = :attr:`.early_stop_lstm_states`, set LSTM parameters to
+        :attr:`.early_stop_lstm_param`, and set `memory` to `time_step=0`
 
         Args:
             current_epoch (int):
