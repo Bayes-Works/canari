@@ -89,17 +89,6 @@ LSTM = LstmNetwork(
         device="cpu",
     )
 
-# with open("saved_params/syn_simple_ts_tsmodel.pkl", "rb") as f:
-#     model_dict = pickle.load(f)
-
-# LSTM = LstmNetwork(
-#         look_back_len=13,
-#         num_features=2,
-#         num_layer=1,
-#         num_hidden_unit=50,
-#         device="cpu",
-#     )
-
 phi_index = model_dict["states_name"].index("phi")
 W2bar_index = model_dict["states_name"].index("W2bar")
 autoregression_index = model_dict["states_name"].index("autoregression")
