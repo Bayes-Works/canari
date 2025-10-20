@@ -815,6 +815,267 @@ class hsl_classification:
         drift_model_prior['mu'][1] = self.mu_LTd
         return base_model_prior, drift_model_prior
     
+    def collect_anmtype_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
+        # Collect samples from synthetic time series
+        samples = {'LTd_history': [], 'MP_history': [], 'anm_type': [], 'p_anm': []}
+        # # # Anomaly type: no_anomaly = 0, LT = 1, LL = 2, PD = 3
+
+        # Anomly feature range define
+        ts_len = 52*8
+        anm_type_log = []
+        anm_mag_list = []
+        anm_begin_list = []
+
+        # # Generate synthetic time series
+        covariate_col = self.data_processor.covariates_col
+        train_index, val_index, test_index = self.data_processor.get_split_indices()
+        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
+                                'mu': self.data_processor.scale_const_mean[covariate_col], 
+                                'std': self.data_processor.scale_const_std[covariate_col]}
+        gen_model_copy = copy.deepcopy(self.generate_model)
+        if "lstm" in self.generate_model.states_name:
+            gen_model_copy.lstm_net = self.generate_model.lstm_net
+            gen_model_copy.lstm_output_history = copy.deepcopy(self.generate_model.lstm_output_history)
+            gen_model_copy.lstm_net.set_lstm_states(copy.deepcopy(self.generate_model.lstm_net.get_lstm_states()))
+        generated_ts, time_covariate, _, _ = gen_model_copy.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
+                                                                time_covariates=self.data_processor.time_covariates, 
+                                                                time_covariate_info=time_covariate_info,
+                                                                add_anomaly=False, sample_from_lstm_pred=False) 
+                                                                # anomaly_mag_range=anm_mag_range, 
+                                                                # anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False
+        # Apply anomalies to the generated time series
+        for j in range(len(generated_ts)):
+            anm_type = np.random.choice(['LT', 'LL', 'PD'])
+            if anm_type == 'LT':
+                anm_begin = np.random.randint(int(52*2), int(52*5))
+                anm_mag = np.random.uniform(-1/52, 1/52)
+                anm_baseline = np.arange(ts_len) * anm_mag
+                anm_baseline[anm_begin:] -= anm_baseline[anm_begin]
+                anm_baseline[:anm_begin] = 0
+                generated_ts[j] += anm_baseline
+                anm_type_log.append(1)
+                anm_mag_list.append(anm_mag)
+                anm_begin_list.append(anm_begin)
+            elif anm_type == 'LL':
+                anm_begin = np.random.randint(int(52*2), int(52*5))
+                anm_mag = np.random.uniform(-2, 2)
+                anm_baseline = np.ones(ts_len) * anm_mag
+                anm_baseline[:anm_begin] = 0
+                generated_ts[j] += anm_baseline
+                anm_type_log.append(2)
+                anm_mag_list.append(anm_mag)
+                anm_begin_list.append(anm_begin)
+            elif anm_type == 'PD':
+                anm_begin = np.random.randint(int(52*4), int(52*5))
+                anm_mag = np.random.uniform(-1, 2)
+                sine_wave = anm_mag * np.sin(np.arange(ts_len) * 2 * np.pi / 52)
+                sine_wave[:anm_begin] = 0
+                generated_ts[j] += sine_wave
+                anm_type_log.append(3)
+                anm_mag_list.append(anm_mag)
+                anm_begin_list.append(anm_begin)
+        # Plot generated time series
+        fig = plt.figure(figsize=(10, 6))
+        gs = gridspec.GridSpec(1, 1)
+        ax0 = plt.subplot(gs[0])
+        norm_data = self.data_processor.standardize_data()
+        for j in range(len(generated_ts)):
+            ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
+                                        norm_data[val_index, self.data_processor.output_col].reshape(-1), 
+                                        generated_ts[j])))
+        ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
+        ax0.set_title("Data generation")
+        print(anm_type_log)
+        print(anm_mag_list)
+        print(anm_begin_list)
+        plt.show()
+
+        # # Run the current model on the synthetic time series
+        if "lstm" in self.base_model.states_name:
+            lstm_index = self.base_model.get_states_index("lstm")
+            lstm_cell_states = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
+            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
+        for k in tqdm(range(len(generated_ts))):
+            base_model_copy = copy.deepcopy(self.base_model)
+            if "lstm" in self.base_model.states_name:
+                base_model_copy.lstm_net = self.base_model.lstm_net
+                base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+                base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
+            drift_model_copy = copy.deepcopy(self.drift_model)
+
+            mu_obs_preds, std_obs_preds = [], []
+            mu_ar_preds, std_ar_preds = [], []
+            p_anm_one_syn_ts = []
+            y_likelihood_a_one_ts, y_likelihood_na_one_ts = [], []
+            x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
+            syn_mp_all = []
+            base_model_copy.initialize_states_history()
+            drift_model_copy.initialize_states_history()
+
+            for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
+                # Estimate likelihood without intervention
+                y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                                obs=y, input_covariates=x, state_dist=self.LTd_pdf)
+                # Estimate likelihood with intervention
+                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=base_model_copy, drift_model=drift_model_copy,)
+                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(
+                                                                            base_model=base_model_copy, drift_model=drift_model_copy,
+                                                                            obs=y, input_covariates=x, state_dist=self.LTd_pdf,
+                                                                            base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
+                                                                            )
+                p_yt_I_Yt1 = np.maximum(y_likelihood_na * x_likelihood_na * self.prior_na, 1e-12) + y_likelihood_a * x_likelihood_a * self.prior_a
+                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
+                p_anm_one_syn_ts.append(p_a_I_Yt)
+                y_likelihood_a_one_ts.append(y_likelihood_a)
+                y_likelihood_na_one_ts.append(y_likelihood_na)
+                x_likelihood_a_one_ts.append(x_likelihood_a)
+                x_likelihood_na_one_ts.append(x_likelihood_na)
+
+                # Collect sample input
+                if i > 129:
+                    LTd_mu_prior = np.array(drift_model_copy.states.mu_prior)[:, 1].flatten()
+                    mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior, step_look_back=128)
+                    mp_history = self._hidden_states_collector(i - 1, syn_mp_all, step_look_back=128)
+                    samples['LTd_history'].append(mu_LTd_history.tolist())
+                    samples['MP_history'].append(mp_history.tolist())
+                if i > 129 and i < anm_begin_list[k]:
+                    samples['anm_type'].append(0)  # No anomaly
+                    samples['p_anm'].append(0.)
+                elif i >= anm_begin_list[k]:
+                    samples['anm_type'].append(anm_type_log[k])
+                    samples['p_anm'].append(p_a_I_Yt)
+
+                # if p_a_I_Yt > self.detection_threshold:
+                #     anomaly_detected = True
+                #     break
+                #     # Intervene the model using true anomaly features
+                #     LL_index = base_model_copy.states_name.index("local level")
+                #     LT_index = base_model_copy.states_name.index("local trend")
+                #     base_model_copy.mu_states[LT_index] += anm_mag_list[k]
+                #     base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
+                #     base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
+                #     drift_model_copy.mu_states[0] = 0
+                #     drift_model_copy.mu_states[1] = self.mu_LTd
+
+                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x)
+                (
+                    _, _,
+                    mu_states_posterior,
+                    var_states_posterior,
+                ) = base_model_copy.backward(y)
+
+                if "lstm" in base_model_copy.states_name:
+                    base_model_copy.lstm_output_history.update(
+                        mu_states_posterior[lstm_index],
+                        var_states_posterior[lstm_index, lstm_index],
+                    )
+
+                base_model_copy._save_states_history()
+                base_model_copy.set_states(mu_states_posterior, var_states_posterior)
+                mu_obs_preds.append(mu_obs_pred)
+                std_obs_preds.append(var_obs_pred**0.5)
+
+                mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
+                _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+                    obs=base_model_copy.mu_states_posterior[self.AR_index], 
+                    obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
+                drift_model_copy._save_states_history()
+                drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+                mu_ar_preds.append(mu_ar_pred)
+                std_ar_preds.append(var_ar_pred**0.5)
+
+                # Compute MP at the current time step
+                mu_lstm = base_model_copy.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+                std_lstm = base_model_copy.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+                if i >= self.start_idx_mp:
+                    T = np.array(mu_lstm).flatten().astype("float64")
+                    Q = T[i - self.m_mp:i]
+                    D = stumpy.mass(Q, T[:i - self.m_mp], normalize=False)
+                    min_idx = np.argmin(D)
+                    mp_value = D[min_idx]
+                    if mp_value == np.inf or np.isnan(mp_value):
+                        mp_value = np.nan
+                else:
+                    mp_value = 0.0  # No anomaly score before enough history
+                syn_mp_all.append(mp_value)
+
+            states_mu_posterior = np.array(base_model_copy.states.mu_posterior)
+            states_var_posterior = np.array(base_model_copy.states.var_posterior)
+            states_drift_mu_posterior = np.array(drift_model_copy.states.mu_posterior)
+            states_drift_var_posterior = np.array(drift_model_copy.states.var_posterior)
+
+            fig = plt.figure(figsize=(10, 9))
+            gs = gridspec.GridSpec(10, 1)
+            ax0 = plt.subplot(gs[0])
+            ax1 = plt.subplot(gs[1])
+            ax2 = plt.subplot(gs[2])
+            ax3 = plt.subplot(gs[3])
+            ax4 = plt.subplot(gs[4])
+            ax5 = plt.subplot(gs[5])
+            ax6 = plt.subplot(gs[6])
+            ax7 = plt.subplot(gs[7])
+            ax8 = plt.subplot(gs[8])
+            ax9 = plt.subplot(gs[9])
+            # print(base_model_copy.states.mu_prior)
+            ax0.plot(states_mu_posterior[:, 0].flatten(), label='local level')
+            ax0.fill_between(np.arange(len(states_mu_posterior[:, 0])),
+                            states_mu_posterior[:, 0].flatten() - states_var_posterior[:, 0, 0]**0.5,
+                            states_mu_posterior[:, 0].flatten() + states_var_posterior[:, 0, 0]**0.5,
+                            alpha=0.5)
+            ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            ax0.plot(generated_ts[k])
+
+            ax1.plot(states_mu_posterior[:, 1].flatten(), label='local trend')
+            ax1.fill_between(np.arange(len(states_mu_posterior[:, 1])),
+                            states_mu_posterior[:, 1].flatten() - states_var_posterior[:, 1, 1]**0.5,
+                            states_mu_posterior[:, 1].flatten() + states_var_posterior[:, 1, 1]**0.5,
+                            alpha=0.5)
+            
+            ax2.plot(states_mu_posterior[:, 2].flatten(), label='lstm')
+            ax2.fill_between(np.arange(len(states_mu_posterior[:, 2])),
+                            states_mu_posterior[:, 2].flatten() - states_var_posterior[:, 2, 2]**0.5,
+                            states_mu_posterior[:, 2].flatten() + states_var_posterior[:, 2, 2]**0.5,
+                            alpha=0.5)
+            
+            ax3.plot(states_mu_posterior[:, 3].flatten(), label='autoregression')
+            ax3.fill_between(np.arange(len(states_mu_posterior[:, 3])),
+                            states_mu_posterior[:, 3].flatten() - states_var_posterior[:, 3, 3]**0.5,
+                            states_mu_posterior[:, 3].flatten() + states_var_posterior[:, 3, 3]**0.5,
+                            alpha=0.5)
+            ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
+            ax4.fill_between(np.arange(len(mu_ar_preds)),
+                            np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
+                            np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
+                            alpha=0.5)
+            ax4.plot(states_drift_mu_posterior[:, 0].flatten())
+            ax4.fill_between(np.arange(len(states_drift_mu_posterior[:, 0])),
+                            states_drift_mu_posterior[:, 0].flatten() - states_drift_var_posterior[:, 0, 0]**0.5,
+                            states_drift_mu_posterior[:, 0].flatten() + states_drift_var_posterior[:, 0, 0]**0.5,
+                            alpha=0.5)
+            ax4.set_ylabel('LLd')
+            ax5.plot(states_drift_mu_posterior[:, 1].flatten(), color='r')
+            ax5.fill_between(np.arange(len(states_drift_mu_posterior[:, 1])),
+                            states_drift_mu_posterior[:, 1].flatten() - states_drift_var_posterior[:, 1, 1]**0.5,
+                            states_drift_mu_posterior[:, 1].flatten() + states_drift_var_posterior[:, 1, 1]**0.5,
+                            alpha=0.2, color='r')
+            ax5.set_ylabel('LTd')
+            ax6.plot(states_drift_mu_posterior[:, 2].flatten())
+            ax6.fill_between(np.arange(len(states_drift_mu_posterior[:, 2])),
+                            states_drift_mu_posterior[:, 2].flatten() - states_drift_var_posterior[:, 2, 2]**0.5,
+                            states_drift_mu_posterior[:, 2].flatten() + states_drift_var_posterior[:, 2, 2]**0.5,
+                            alpha=0.5)
+            ax6.set_ylabel('ARd')
+            ax7.plot(np.arange(len(syn_mp_all)), syn_mp_all, color='r')
+            ax7.set_ylabel('MP')
+            ax8.plot(p_anm_one_syn_ts)
+            ax8.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            ax8.set_ylim(-0.05, 1.05)
+            ax8.set_ylabel('p_anm')
+            plt.show()
+        
+        samples_df = pd.DataFrame(samples)
+        samples_df.to_csv(save_to_path, index=False)
+    
     def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
         samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
@@ -1047,9 +1308,9 @@ class hsl_classification:
         look_back_step_list = [current_step - i for i in look_back_step_list]
         return look_back_step_list
 
-    def _hidden_states_collector(self, current_step, hidden_states_all_step):
+    def _hidden_states_collector(self, current_step, hidden_states_all_step, step_look_back = 64):
         hidden_states_all_step_numpy = np.array(np.copy(hidden_states_all_step))
-        look_back_steps_list = self._get_look_back_time_steps(current_step)
+        look_back_steps_list = self._get_look_back_time_steps(current_step, step_look_back)
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
     
