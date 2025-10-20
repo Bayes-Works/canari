@@ -53,9 +53,9 @@ df_raw.columns = ["obs"]
 # sine_curve[:time_anomaly] = 0
 # df_raw = df_raw.add(sine_curve, axis=0)
 
-# # Outlier
-time_anomaly = 52*7
-df_raw.iloc[time_anomaly] += 50
+# # # Outlier
+# time_anomaly = 52*7
+# df_raw.iloc[time_anomaly] += 50
 
 # Data pre-processing
 output_col = [0]
