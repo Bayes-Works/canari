@@ -19,6 +19,7 @@ import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import torch
+import stumpy
 
 
 class hsl_classification:
@@ -33,6 +34,8 @@ class hsl_classification:
             data_processor: DataProcess,
             drift_model_process_error_std: Optional[float] = 1e-5,
             y_std_scale: Optional[float] = 1.0,
+            start_idx_mp: Optional[int] = 52*2+1,
+            m_mp: Optional[int] = 52,
             ):
         self.base_model = base_model
         self.generate_model = generate_model
@@ -56,6 +59,9 @@ class hsl_classification:
         self.mean_train, self.std_train, self.mean_target, self.std_target = None, None, None, None
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
+        self.start_idx_mp = start_idx_mp
+        self.m_mp = m_mp
+        self.mp_all = []
 
     def _copy_initial_models(self):
         """
@@ -147,6 +153,21 @@ class hsl_classification:
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
             std_ar_preds.append(var_ar_pred**0.5)
+
+            # Compute MP at the current time step
+            mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+            std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+            if self.current_time_step >= self.start_idx_mp:
+                T = np.array(mu_lstm).flatten().astype("float64")
+                Q = T[self.current_time_step - self.m_mp:self.current_time_step]
+                D = stumpy.mass(Q, T[:self.current_time_step - self.m_mp], normalize=False)
+                min_idx = np.argmin(D)
+                mp_value = D[min_idx]
+                if mp_value == np.inf or np.isnan(mp_value):
+                    mp_value = np.nan
+            else:
+                mp_value = 0.0  # No anomaly score before enough history
+            self.mp_all.append(mp_value)
 
             if buffer_LTd:
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
@@ -704,6 +725,21 @@ class hsl_classification:
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             self.mu_ar_preds.append(mu_ar_pred)
             self.std_ar_preds.append(var_ar_pred**0.5)
+
+            # Compute MP at the current time step
+            mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+            std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+            if self.current_time_step >= self.start_idx_mp:
+                T = np.array(mu_lstm).flatten().astype("float64")
+                Q = T[self.current_time_step - self.m_mp:self.current_time_step]
+                D = stumpy.mass(Q, T[:self.current_time_step - self.m_mp], normalize=False)
+                min_idx = np.argmin(D)
+                mp_value = D[min_idx]
+                if mp_value == np.inf or np.isnan(mp_value):
+                    mp_value = np.nan
+            else:
+                mp_value = 0.0  # No anomaly score before enough history
+            self.mp_all.append(mp_value)
 
             self.current_time_step += 1
             i += 1
