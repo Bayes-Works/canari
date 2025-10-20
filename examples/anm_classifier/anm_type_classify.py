@@ -149,15 +149,6 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(t
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
-# mu_lstm = hsl_tsad_agent.base_model.states.get_mean(
-#     states_type="posterior", states_name="lstm", standardization=True
-# )
-# std_lstm = hsl_tsad_agent.base_model.states.get_std(
-#     states_type="posterior", states_name="lstm", standardization=True
-# )
-# start_idx=52*2+1
-# mp, mpi = past_only_matrix_profile(np.array(mu_lstm).flatten().astype("float64"), m=52, start_idx=start_idx, normalize=False)
-
 # #  Plot
 state_type = "posterior"
 #  Plot states from pretrained model
@@ -268,23 +259,4 @@ ax8.set_xlim(ax0.get_xlim())
 ax8.set_ylim(-0.05, 1.05)
 _add_dynamic_grids(ax8, time)
 
-
-
-# mu_itv_all = np.array(hsl_tsad_agent.mu_itv_all)
-# std_itv_all = np.array(hsl_tsad_agent.std_itv_all)
-
-# ax8.plot(time, mu_itv_all[:, 0])
-# ax8.fill_between(time, mu_itv_all[:, 0] - std_itv_all[:, 0], mu_itv_all[:, 0] + std_itv_all[:, 0], alpha=0.5)
-# ax8.set_ylabel("itv_LT")
-# ax8.set_xlim(ax0.get_xlim())
-
-# ax9.plot(time, mu_itv_all[:, 1])
-# ax9.fill_between(time, mu_itv_all[:, 1] - std_itv_all[:, 1], mu_itv_all[:, 1] + std_itv_all[:, 1], alpha=0.5)
-# ax9.set_ylabel("itv_LL")
-# ax9.set_xlim(ax0.get_xlim())
-
-# ax10.plot(time, mu_itv_all[:, 2])
-# ax10.fill_between(time, mu_itv_all[:, 2] - std_itv_all[:, 2], mu_itv_all[:, 2] + std_itv_all[:, 2], alpha=0.5)
-# ax10.set_ylabel("itv_time")
-# ax10.set_xlim(ax0.get_xlim())
 plt.show()
