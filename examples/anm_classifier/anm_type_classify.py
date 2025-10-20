@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -145,8 +145,8 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 4.147154365190288e-06
-hsl_tsad_agent.LTd_std = 9.647166712623918e-05
+hsl_tsad_agent.mu_LTd = 8.881274575122074e-06
+hsl_tsad_agent.LTd_std = 0.00010250327431417399
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
@@ -160,14 +160,14 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(t
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
-mu_lstm = hsl_tsad_agent.base_model.states.get_mean(
-    states_type="posterior", states_name="lstm", standardization=True
-)
-std_lstm = hsl_tsad_agent.base_model.states.get_std(
-    states_type="posterior", states_name="lstm", standardization=True
-)
-start_idx=52*2+1
-mp, mpi = past_only_matrix_profile(np.array(mu_lstm).flatten().astype("float64"), m=52, start_idx=start_idx, normalize=False)
+# mu_lstm = hsl_tsad_agent.base_model.states.get_mean(
+#     states_type="posterior", states_name="lstm", standardization=True
+# )
+# std_lstm = hsl_tsad_agent.base_model.states.get_std(
+#     states_type="posterior", states_name="lstm", standardization=True
+# )
+# start_idx=52*2+1
+# mp, mpi = past_only_matrix_profile(np.array(mu_lstm).flatten().astype("float64"), m=52, start_idx=start_idx, normalize=False)
 
 # #  Plot
 state_type = "posterior"
@@ -264,9 +264,10 @@ plot_states(
 )
 ax6.set_xticklabels([])
 
-ax7.plot(time[:len(mp)], mp, label="MP metric", color="blue")
+ax7.plot(time, hsl_tsad_agent.mp_all, label="MP metric", color="blue")
 # ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 ax7.set_ylabel('MP')
+ax7.set_xticklabels([])
 _add_dynamic_grids(ax7, time)
 
 ax8.plot(time, hsl_tsad_agent.p_anm_all)
@@ -276,6 +277,7 @@ for i in range(len(detection_time)):
 ax8.set_ylabel("p_anm")
 ax8.set_xlim(ax0.get_xlim())
 ax8.set_ylim(-0.05, 1.05)
+_add_dynamic_grids(ax8, time)
 
 
 
