@@ -708,14 +708,6 @@ class hsl_classification:
             #             self.drift_model.mu_states[1] = self.mu_LTd
             #             trigger = True
 
-            # if trigger is False:
-            #     if i == len(data["x"]) - 1:
-            #         self._retract_agent(time_step_back=len(data["x"]) - 1 - 100)
-            #         # current_step_before_retract = copy.copy(i)
-            #         i = 100
-            #         self.current_time_step = self.current_time_step - (len(data["x"]) - 1 - 100)
-            #         trigger = True
-
             # Base model filter process, same as in model.py
             # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
             mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
