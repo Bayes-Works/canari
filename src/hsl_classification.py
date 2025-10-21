@@ -847,7 +847,7 @@ class hsl_classification:
         for j in range(len(generated_ts)):
             anm_type = np.random.choice(['LT', 'LL', 'PD'])
             if anm_type == 'LT':
-                anm_begin = np.random.randint(int(52*2), int(52*5))
+                anm_begin = np.random.randint(130, int(52*5))
                 anm_mag = np.random.uniform(-1/52, 1/52)
                 anm_baseline = np.arange(ts_len) * anm_mag
                 anm_baseline[anm_begin:] -= anm_baseline[anm_begin]
@@ -857,7 +857,7 @@ class hsl_classification:
                 anm_mag_list.append(anm_mag)
                 anm_begin_list.append(anm_begin)
             elif anm_type == 'LL':
-                anm_begin = np.random.randint(int(52*2), int(52*5))
+                anm_begin = np.random.randint(130, int(52*5))
                 anm_mag = np.random.uniform(-2, 2)
                 anm_baseline = np.ones(ts_len) * anm_mag
                 anm_baseline[:anm_begin] = 0
@@ -999,79 +999,79 @@ class hsl_classification:
                     mp_value = 0.0  # No anomaly score before enough history
                 syn_mp_all.append(mp_value)
 
-            states_mu_posterior = np.array(base_model_copy.states.mu_posterior)
-            states_var_posterior = np.array(base_model_copy.states.var_posterior)
-            states_drift_mu_posterior = np.array(drift_model_copy.states.mu_posterior)
-            states_drift_var_posterior = np.array(drift_model_copy.states.var_posterior)
+            # states_mu_posterior = np.array(base_model_copy.states.mu_posterior)
+            # states_var_posterior = np.array(base_model_copy.states.var_posterior)
+            # states_drift_mu_posterior = np.array(drift_model_copy.states.mu_posterior)
+            # states_drift_var_posterior = np.array(drift_model_copy.states.var_posterior)
 
-            fig = plt.figure(figsize=(10, 9))
-            gs = gridspec.GridSpec(10, 1)
-            ax0 = plt.subplot(gs[0])
-            ax1 = plt.subplot(gs[1])
-            ax2 = plt.subplot(gs[2])
-            ax3 = plt.subplot(gs[3])
-            ax4 = plt.subplot(gs[4])
-            ax5 = plt.subplot(gs[5])
-            ax6 = plt.subplot(gs[6])
-            ax7 = plt.subplot(gs[7])
-            ax8 = plt.subplot(gs[8])
-            ax9 = plt.subplot(gs[9])
-            # print(base_model_copy.states.mu_prior)
-            ax0.plot(states_mu_posterior[:, 0].flatten(), label='local level')
-            ax0.fill_between(np.arange(len(states_mu_posterior[:, 0])),
-                            states_mu_posterior[:, 0].flatten() - states_var_posterior[:, 0, 0]**0.5,
-                            states_mu_posterior[:, 0].flatten() + states_var_posterior[:, 0, 0]**0.5,
-                            alpha=0.5)
-            ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            ax0.plot(generated_ts[k])
+            # fig = plt.figure(figsize=(10, 9))
+            # gs = gridspec.GridSpec(10, 1)
+            # ax0 = plt.subplot(gs[0])
+            # ax1 = plt.subplot(gs[1])
+            # ax2 = plt.subplot(gs[2])
+            # ax3 = plt.subplot(gs[3])
+            # ax4 = plt.subplot(gs[4])
+            # ax5 = plt.subplot(gs[5])
+            # ax6 = plt.subplot(gs[6])
+            # ax7 = plt.subplot(gs[7])
+            # ax8 = plt.subplot(gs[8])
+            # ax9 = plt.subplot(gs[9])
+            # # print(base_model_copy.states.mu_prior)
+            # ax0.plot(states_mu_posterior[:, 0].flatten(), label='local level')
+            # ax0.fill_between(np.arange(len(states_mu_posterior[:, 0])),
+            #                 states_mu_posterior[:, 0].flatten() - states_var_posterior[:, 0, 0]**0.5,
+            #                 states_mu_posterior[:, 0].flatten() + states_var_posterior[:, 0, 0]**0.5,
+            #                 alpha=0.5)
+            # ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            # ax0.plot(generated_ts[k])
 
-            ax1.plot(states_mu_posterior[:, 1].flatten(), label='local trend')
-            ax1.fill_between(np.arange(len(states_mu_posterior[:, 1])),
-                            states_mu_posterior[:, 1].flatten() - states_var_posterior[:, 1, 1]**0.5,
-                            states_mu_posterior[:, 1].flatten() + states_var_posterior[:, 1, 1]**0.5,
-                            alpha=0.5)
+            # ax1.plot(states_mu_posterior[:, 1].flatten(), label='local trend')
+            # ax1.fill_between(np.arange(len(states_mu_posterior[:, 1])),
+            #                 states_mu_posterior[:, 1].flatten() - states_var_posterior[:, 1, 1]**0.5,
+            #                 states_mu_posterior[:, 1].flatten() + states_var_posterior[:, 1, 1]**0.5,
+            #                 alpha=0.5)
             
-            ax2.plot(states_mu_posterior[:, 2].flatten(), label='lstm')
-            ax2.fill_between(np.arange(len(states_mu_posterior[:, 2])),
-                            states_mu_posterior[:, 2].flatten() - states_var_posterior[:, 2, 2]**0.5,
-                            states_mu_posterior[:, 2].flatten() + states_var_posterior[:, 2, 2]**0.5,
-                            alpha=0.5)
+            # ax2.plot(states_mu_posterior[:, 2].flatten(), label='lstm')
+            # ax2.fill_between(np.arange(len(states_mu_posterior[:, 2])),
+            #                 states_mu_posterior[:, 2].flatten() - states_var_posterior[:, 2, 2]**0.5,
+            #                 states_mu_posterior[:, 2].flatten() + states_var_posterior[:, 2, 2]**0.5,
+            #                 alpha=0.5)
             
-            ax3.plot(states_mu_posterior[:, 3].flatten(), label='autoregression')
-            ax3.fill_between(np.arange(len(states_mu_posterior[:, 3])),
-                            states_mu_posterior[:, 3].flatten() - states_var_posterior[:, 3, 3]**0.5,
-                            states_mu_posterior[:, 3].flatten() + states_var_posterior[:, 3, 3]**0.5,
-                            alpha=0.5)
-            ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
-            ax4.fill_between(np.arange(len(mu_ar_preds)),
-                            np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
-                            np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
-                            alpha=0.5)
-            ax4.plot(states_drift_mu_posterior[:, 0].flatten())
-            ax4.fill_between(np.arange(len(states_drift_mu_posterior[:, 0])),
-                            states_drift_mu_posterior[:, 0].flatten() - states_drift_var_posterior[:, 0, 0]**0.5,
-                            states_drift_mu_posterior[:, 0].flatten() + states_drift_var_posterior[:, 0, 0]**0.5,
-                            alpha=0.5)
-            ax4.set_ylabel('LLd')
-            ax5.plot(states_drift_mu_posterior[:, 1].flatten(), color='r')
-            ax5.fill_between(np.arange(len(states_drift_mu_posterior[:, 1])),
-                            states_drift_mu_posterior[:, 1].flatten() - states_drift_var_posterior[:, 1, 1]**0.5,
-                            states_drift_mu_posterior[:, 1].flatten() + states_drift_var_posterior[:, 1, 1]**0.5,
-                            alpha=0.2, color='r')
-            ax5.set_ylabel('LTd')
-            ax6.plot(states_drift_mu_posterior[:, 2].flatten())
-            ax6.fill_between(np.arange(len(states_drift_mu_posterior[:, 2])),
-                            states_drift_mu_posterior[:, 2].flatten() - states_drift_var_posterior[:, 2, 2]**0.5,
-                            states_drift_mu_posterior[:, 2].flatten() + states_drift_var_posterior[:, 2, 2]**0.5,
-                            alpha=0.5)
-            ax6.set_ylabel('ARd')
-            ax7.plot(np.arange(len(syn_mp_all)), syn_mp_all, color='r')
-            ax7.set_ylabel('MP')
-            ax8.plot(p_anm_one_syn_ts)
-            ax8.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            ax8.set_ylim(-0.05, 1.05)
-            ax8.set_ylabel('p_anm')
-            plt.show()
+            # ax3.plot(states_mu_posterior[:, 3].flatten(), label='autoregression')
+            # ax3.fill_between(np.arange(len(states_mu_posterior[:, 3])),
+            #                 states_mu_posterior[:, 3].flatten() - states_var_posterior[:, 3, 3]**0.5,
+            #                 states_mu_posterior[:, 3].flatten() + states_var_posterior[:, 3, 3]**0.5,
+            #                 alpha=0.5)
+            # ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
+            # ax4.fill_between(np.arange(len(mu_ar_preds)),
+            #                 np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
+            #                 np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
+            #                 alpha=0.5)
+            # ax4.plot(states_drift_mu_posterior[:, 0].flatten())
+            # ax4.fill_between(np.arange(len(states_drift_mu_posterior[:, 0])),
+            #                 states_drift_mu_posterior[:, 0].flatten() - states_drift_var_posterior[:, 0, 0]**0.5,
+            #                 states_drift_mu_posterior[:, 0].flatten() + states_drift_var_posterior[:, 0, 0]**0.5,
+            #                 alpha=0.5)
+            # ax4.set_ylabel('LLd')
+            # ax5.plot(states_drift_mu_posterior[:, 1].flatten(), color='r')
+            # ax5.fill_between(np.arange(len(states_drift_mu_posterior[:, 1])),
+            #                 states_drift_mu_posterior[:, 1].flatten() - states_drift_var_posterior[:, 1, 1]**0.5,
+            #                 states_drift_mu_posterior[:, 1].flatten() + states_drift_var_posterior[:, 1, 1]**0.5,
+            #                 alpha=0.2, color='r')
+            # ax5.set_ylabel('LTd')
+            # ax6.plot(states_drift_mu_posterior[:, 2].flatten())
+            # ax6.fill_between(np.arange(len(states_drift_mu_posterior[:, 2])),
+            #                 states_drift_mu_posterior[:, 2].flatten() - states_drift_var_posterior[:, 2, 2]**0.5,
+            #                 states_drift_mu_posterior[:, 2].flatten() + states_drift_var_posterior[:, 2, 2]**0.5,
+            #                 alpha=0.5)
+            # ax6.set_ylabel('ARd')
+            # ax7.plot(np.arange(len(syn_mp_all)), syn_mp_all, color='r')
+            # ax7.set_ylabel('MP')
+            # ax8.plot(p_anm_one_syn_ts)
+            # ax8.axvline(x=anm_begin_list[k], color='r', linestyle='--')
+            # ax8.set_ylim(-0.05, 1.05)
+            # ax8.set_ylabel('p_anm')
+            # plt.show()
         
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)

@@ -19,3 +19,4 @@ docs/_build/*
 !saved_results/time_series_toy.png
 !docs/_static/**
 /saved_params
+/data/anm_type_class_train_samples
