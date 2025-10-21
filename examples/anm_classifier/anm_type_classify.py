@@ -142,7 +142,7 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
 
-hsl_tsad_agent.collect_anmtype_samples(num_time_series=10, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts.csv')
+# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_v2.csv')
 # hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
