@@ -145,8 +145,11 @@ hsl_tsad_agent.detection_threshold = 0.1
 # hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_v2.csv')
 # hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
-                                  load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -3.0772888e-05, 0.0004556137, 3.1387298, 1.321072
+hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts.csv', 
+                                  load_model_path='saved_params/NN_classification_model_syn_simple_ts.pkl', max_training_epoch=50)
+# hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
+#                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
@@ -155,7 +158,7 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(9, 1)
+gs = gridspec.GridSpec(10, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -165,6 +168,7 @@ ax5 = plt.subplot(gs[5])
 ax6 = plt.subplot(gs[6])
 ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
+ax9 = plt.subplot(gs[9])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -260,5 +264,13 @@ ax8.set_ylabel("p_anm")
 ax8.set_xlim(ax0.get_xlim())
 ax8.set_ylim(-0.05, 1.05)
 _add_dynamic_grids(ax8, time)
+
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+# Convert to numpy array
+all_probs = np.array(hsl_tsad_agent.pred_class_probs)
+print(all_probs.shape)
+ax9.stackplot(time, all_probs.T, labels=[f'Class {i}' for i in range(all_probs.shape[1])], colors=colors, alpha=0.7)
+ax9.legend(loc='upper left', ncol=2)
+ax9.set_ylabel("Class Probabilities")
 
 plt.show()
