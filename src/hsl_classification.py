@@ -57,6 +57,8 @@ class hsl_classification:
         self.lstm_history = []
         self.lstm_cell_states = []
         self.mean_train, self.std_train, self.mean_target, self.std_target = None, None, None, None
+        self.mean_LTd_class, self.std_LTd_class, self.mean_MP_class, self.std_MP_class = None, None, None, None
+        self.pred_class_probs = []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
@@ -176,6 +178,7 @@ class hsl_classification:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
+            self.pred_class_probs.append([1, 0, 0, 0])
 
             self.current_time_step += 1
 
@@ -634,31 +637,49 @@ class hsl_classification:
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
                 self.p_anm_all.append(p_a_I_Yt)
 
-                # Track what NN learns
+                # # Track what classifier learns
                 LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
                 # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
-                LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
-                LTd_history = (LTd_history - self.mean_train) / self.std_train
-                if self.nn_train_with == 'tagiv':
-                    LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+                LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior, step_look_back=128)
+                mp_history = self._hidden_states_collector(self.current_time_step - 1, self.mp_all, step_look_back=128)
 
-                    output_pred_mu, output_pred_var = self.model.net(LTd_history)
-                    output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                    output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                    itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                    itv_pred_var = output_pred_mu[0, [1, 3, 5]]
-                elif self.nn_train_with == 'backprop':
-                    LTd_history = torch.tensor(LTd_history)
-                    itv_pred_mu = self.model(LTd_history)
-                    itv_pred_mu = itv_pred_mu.detach().numpy()
-                    itv_pred_var = np.zeros_like(itv_pred_mu)
+                # Normalize the histories
+                LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
+                mp_history = (mp_history - self.mean_MP_class) / self.std_MP_class
+
+                input_history = torch.tensor(LTd_history.tolist()+mp_history.tolist())
+                pred_logits = self.model_class(input_history)
+                
+                # Convert the logits to probabilities
+                pred_probs = torch.nn.functional.softmax(pred_logits, dim=0).detach().numpy()
+                self.pred_class_probs.append(pred_probs.tolist())
+                
+
+                # # Track what NN learns
+                # LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                # # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                # LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
+                # LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
+                # LTd_history = (LTd_history - self.mean_train) / self.std_train
+                # if self.nn_train_with == 'tagiv':
+                #     LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
+
+                #     output_pred_mu, output_pred_var = self.model.net(LTd_history)
+                #     output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
+                #     output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
+                #     itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
+                #     itv_pred_var = output_pred_mu[0, [1, 3, 5]]
+                # elif self.nn_train_with == 'backprop':
+                #     LTd_history = torch.tensor(LTd_history)
+                #     itv_pred_mu = self.model(LTd_history)
+                #     itv_pred_mu = itv_pred_mu.detach().numpy()
+                #     itv_pred_var = np.zeros_like(itv_pred_mu)
                     
-                itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-                itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+                # itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                # itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-                self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
-                self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
+                # self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
+                # self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
 
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
@@ -1314,6 +1335,128 @@ class hsl_classification:
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
     
+    def learn_classification(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
+        samples = pd.read_csv(training_samples_path)
+        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        n_samples = len(samples)
+        n_train = int(n_samples * 0.8)
+
+        # Get the moments of samples['LTd_history'] and samples['MP_history'] for normalization
+        train_LTd = np.array(samples['LTd_history'].values.tolist()[:n_train], dtype=np.float32)
+        train_MP =  np.array(samples['MP_history'].values.tolist()[:n_train], dtype=np.float32)
+        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_MP_class is None or self.std_MP_class is None:
+            self.mean_LTd_class = np.mean(train_LTd)
+            self.std_LTd_class = np.std(train_LTd)
+            self.mean_MP_class = np.mean(train_MP)
+            self.std_MP_class = np.std(train_MP)
+        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_MP_class, self.std_MP_class)
+        # Normalize the two columns
+        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: [(val - self.mean_LTd_class) / self.std_LTd_class for val in x])
+        samples['MP_history'] = samples['MP_history'].apply(lambda x: [(val - self.mean_MP_class) / self.std_MP_class for val in x])
+        # Combine the two columns for input feature
+        samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['MP_history'], axis=1)
+
+        # Shuffle samples
+        samples = samples.sample(frac=1).reset_index(drop=True)
+        samples_input = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
+        samples_target = np.array(samples['anm_type'].values, dtype=np.int64)
+        samples_p_anm = np.array(samples['p_anm'].values.tolist(), dtype=np.float32)
+
+        # Train the model using 80% of the samples
+        train_X = samples_input[:n_train]
+        train_y = samples_target[:n_train]
+
+        # Validation set 10% of the samples
+        n_val = int(n_samples * 0.1)
+        val_X = samples_input[n_train:n_train+n_val]
+        val_y = samples_target[n_train:n_train+n_val]
+
+        # Test the model using 10% of the samples
+        n_test = int(n_samples * 0.1)
+        test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
+        test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
+
+        self.model_class = NN_Classification(input_size = len(samples['input_feature'][0]), output_size = len(np.unique(samples_target)))
+        # Compute class weights to handle class imbalance
+        class_sample_counts = np.bincount(train_y)
+        class_weights = 1. / class_sample_counts
+        class_weights = torch.tensor(class_weights, dtype=torch.float32)
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
+        optimizer = torch.optim.Adam(self.model_class.parameters(), lr=0.001)
+        train_X = torch.tensor(train_X)
+        train_y = torch.tensor(train_y)
+        val_X = torch.tensor(val_X)
+        val_y = torch.tensor(val_y)
+        test_X = torch.tensor(test_X)
+        test_y = torch.tensor(test_y)
+
+        self.batch_size = 20
+
+        if load_model_path is not None:
+            # Load the local pytorch model
+            self.model_class.load_state_dict(torch.load(load_model_path))
+            self.model_class.eval()
+        else:
+            # Train the model with batch size 20
+            n_batch_train = n_train // self.batch_size
+            n_batch_val = n_val // self.batch_size
+            patience = 10
+            best_loss = float('inf')
+            for epoch in range(max_training_epoch):
+                for i in range(n_batch_train):
+                    batch_X = train_X[i*self.batch_size:(i+1)*self.batch_size]
+                    batch_y = train_y[i*self.batch_size:(i+1)*self.batch_size]
+                    optimizer.zero_grad()
+                    outputs = self.model_class(batch_X)
+                    loss = loss_fn(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+
+                # Validate the model
+                val_loss = 0.0
+                with torch.no_grad():
+                    for i in range(n_batch_val):
+                        batch_X = val_X[i*self.batch_size:(i+1)*self.batch_size]
+                        batch_y = val_y[i*self.batch_size:(i+1)*self.batch_size]
+                        outputs = self.model_class(batch_X)
+                        loss = loss_fn(outputs, batch_y)
+                        val_loss += loss.item()
+                val_loss /= n_batch_val
+                print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
+                # Early stopping
+                if val_loss < best_loss:
+                    best_loss = val_loss
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                    if patience_counter >= patience:
+                        print('Early stopping')
+                        break
+            
+            # Test the model
+            test_loss = 0.0
+            correct = 0
+            total = 0
+            n_batch_test = n_test // self.batch_size
+            with torch.no_grad():
+                for i in range(n_batch_test):
+                    batch_X = test_X[i*self.batch_size:(i+1)*self.batch_size]
+                    batch_y = test_y[i*self.batch_size:(i+1)*self.batch_size]
+                    outputs = self.model_class(batch_X)
+                    loss = loss_fn(outputs, batch_y)
+                    test_loss += loss.item()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += batch_y.size(0)
+                    correct += (predicted == batch_y).sum().item()
+            test_loss /= n_batch_test
+            accuracy = 100 * correct / total
+            print(f'Test Loss: {test_loss}, Test Accuracy: {accuracy}%')
+
+        if save_model_path is not None:
+            # Save the local pytorch model
+            torch.save(self.model_class.state_dict(), save_model_path)
+
     def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
@@ -1564,6 +1707,19 @@ class TAGI_Net():
 class NN(torch.nn.Module):
     def __init__(self, input_size, output_size):
         super(NN, self).__init__()
+        self.fc1 = torch.nn.Linear(input_size, 64)
+        self.fc2 = torch.nn.Linear(64, 32)
+        self.fc3 = torch.nn.Linear(32, output_size)
+
+    def forward(self, x):
+        x = torch.nn.functional.relu(self.fc1(x))
+        x = torch.nn.functional.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+    
+class NN_Classification(torch.nn.Module):
+    def __init__(self, input_size, output_size):
+        super(NN_Classification, self).__init__()
         self.fc1 = torch.nn.Linear(input_size, 64)
         self.fc2 = torch.nn.Linear(64, 32)
         self.fc3 = torch.nn.Linear(32, output_size)
