@@ -684,29 +684,29 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            if apply_intervention:
-                if rerun_kf is False:
-                    if p_a_I_Yt > self.detection_threshold:
-                        rerun_kf = True
-                        # To control that during the rerun from the past, the agent cannnot trigger again
-                        i_before_retract = copy.copy(i)
-                        # Retract agent
-                        step_back = max(int(itv_pred_mu_denorm[2]), 1) if max(int(itv_pred_mu_denorm[2]), 1) < i else i - 2
-                        self._retract_agent(time_step_back=step_back)
-                        i = i - step_back
-                        self.current_time_step = self.current_time_step - step_back
+            # if apply_intervention:
+            #     if rerun_kf is False:
+            #         if p_a_I_Yt > self.detection_threshold:
+            #             rerun_kf = True
+            #             # To control that during the rerun from the past, the agent cannnot trigger again
+            #             i_before_retract = copy.copy(i)
+            #             # Retract agent
+            #             step_back = max(int(itv_pred_mu_denorm[2]), 1) if max(int(itv_pred_mu_denorm[2]), 1) < i else i - 2
+            #             self._retract_agent(time_step_back=step_back)
+            #             i = i - step_back
+            #             self.current_time_step = self.current_time_step - step_back
 
-                        # Apply intervention on base_model hidden states
-                        LL_index = self.base_model.states_name.index("level")
-                        LT_index = self.base_model.states_name.index("trend")
-                        # self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-                        self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-                        self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-                        self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+            #             # Apply intervention on base_model hidden states
+            #             LL_index = self.base_model.states_name.index("level")
+            #             LT_index = self.base_model.states_name.index("trend")
+            #             # self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
+            #             self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
+            #             self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
+            #             self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
 
-                        self.drift_model.mu_states[0] = 0
-                        self.drift_model.mu_states[1] = self.mu_LTd
-                        trigger = True
+            #             self.drift_model.mu_states[0] = 0
+            #             self.drift_model.mu_states[1] = self.mu_LTd
+            #             trigger = True
 
             # if trigger is False:
             #     if i == len(data["x"]) - 1:
