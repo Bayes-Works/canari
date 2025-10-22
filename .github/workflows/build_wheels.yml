@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -54,18 +54,36 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Install OpenMPI runtime (APT)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenmpi-dev build-essential libnccl-dev
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
         with:
+          auto-activate-base: true
+          auto-update-conda: true
+          channels: conda-forge
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Create test_env
+        shell: bash -l {0}
+        run: conda create -y -n test_env python=3.10 -c conda-forge
+
+      - name: Install Python deps
+        shell: bash -l {0}
         run: |
+          conda activate test_env
+          python -V
+          pip -V
           pip install -r requirements.txt
           pip install -e .
 
       - name: Run unit tests
-        run: pytest canari/test
-        working-directory: ${{ github.workspace }}/..
+        shell: bash -l {0}
+        run: |
+          conda activate test_env
+          pytest test
