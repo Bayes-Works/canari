@@ -858,8 +858,12 @@ class hsl_classification:
                                                                 # anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False
         # Apply anomalies to the generated time series
         for j in range(len(generated_ts)):
-            anm_type = np.random.choice(['LT', 'LL', 'PD'])
-            if anm_type == 'LT':
+            anm_type = np.random.choice(['no_anm', 'LT', 'LL', 'PD'])
+            if anm_type == 'no_anm':
+                anm_type_log.append(0)
+                anm_mag_list.append(0)
+                anm_begin_list.append(len(generated_ts[j]))
+            elif anm_type == 'LT':
                 anm_begin = np.random.randint(130, int(52*5))
                 anm_mag = np.random.uniform(-1/52, 1/52)
                 anm_baseline = np.arange(ts_len) * anm_mag
