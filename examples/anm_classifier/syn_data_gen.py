@@ -16,6 +16,7 @@ from canari.component import LocalTrend, LstmNetwork, Autoregression, Periodic
 
 # Set numpy seeds
 np.random.seed(6)
+# np.random.seed(56)
 
 # Define SSM
 model = Model(
