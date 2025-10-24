@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2 import hsl_classification
+from src.hsl_classification_mp2_3classes import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -150,7 +150,7 @@ hsl_tsad_agent.detection_threshold = 0.1
 # MP2 models:
 hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class =  -2.0798647e-05, 0.00038297276, 4.118408, 1.6993207
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_mp2.csv', 
-                                  load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2.pkl', max_training_epoch=50)
+                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_3classes.pkl', max_training_epoch=50)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
@@ -272,7 +272,7 @@ colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
 # Convert to numpy array
 all_probs = np.array(hsl_tsad_agent.pred_class_probs)
 print(all_probs.shape)
-ax9.stackplot(time, all_probs.T, labels=['no_anm', 'LT', 'LL', 'PD'], colors=colors, alpha=0.7)
+ax9.stackplot(time, all_probs.T, labels=['LT', 'LL', 'PD'], colors=colors, alpha=0.7)
 ax9.legend(loc='upper left', ncol=2)
 ax9.set_ylabel("Class Probabilities")
 
