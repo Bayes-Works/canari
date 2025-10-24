@@ -50,7 +50,7 @@ df = pd.DataFrame({
     'timestamp': time_stamps,
     'value': gen_ts[0]
 })
-df.to_csv('data/toy_time_series/syn_data_anmtype_simple_phi05.csv', index=False)
+df.to_csv('data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv', index=False)
 
 # Plot gen_ts
 fig, ax = plt.subplots(1, 1, figsize=(10, 6))
