@@ -46,12 +46,12 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# PD anomaly
-time_anomaly = 52*7
-anm_mag = 17
-sine_curve = anm_mag * np.sin(np.arange(len(df_raw)) * 2 * np.pi / 52)
-sine_curve[:time_anomaly] = 0
-df_raw = df_raw.add(sine_curve, axis=0)
+# # PD anomaly
+# time_anomaly = 52*7
+# anm_mag = 35
+# sine_curve = anm_mag * np.sin(np.arange(len(df_raw)) * 2 * np.pi / 52)
+# sine_curve[:time_anomaly] = 0
+# df_raw = df_raw.add(sine_curve, axis=0)
 
 # # # Outlier
 # time_anomaly = 52*7
@@ -142,14 +142,15 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
 
-hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_mp2.csv')
+# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_mp2.csv')
 # hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -3.0772888e-05, 0.0004556137, 3.1387298, 1.321072
-# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.4802439e-05, 0.000404261, 2.988104, 1.2404884
-# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.4802439e-05, 0.000404261, 2.988104, 1.2404884
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.4802439e-05, 0.000404261, 2.988104, 1.2404884    # V2 training
+# MP2 models:
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class =  -2.0798647e-05, 0.00038297276, 4.118408, 1.6993207
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_mp2.csv', 
-                                  save_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2.pkl', max_training_epoch=50)
+                                  load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2.pkl', max_training_epoch=50)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
