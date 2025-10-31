@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_3classes_tagiv import hsl_classification
+from src.hsl_classification_mp2_3classes_tagiv_hiersm import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -46,12 +46,12 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# PD anomaly
-time_anomaly = 52*7
-anm_mag = 8
-sine_curve = anm_mag * np.sin(np.arange(len(df_raw)) * 2 * np.pi / 52)
-sine_curve[:time_anomaly] = 0
-df_raw = df_raw.add(sine_curve, axis=0)
+# # PD anomaly
+# time_anomaly = 52*7
+# anm_mag = 35
+# sine_curve = anm_mag * np.sin(np.arange(len(df_raw)) * 2 * np.pi / 52)
+# sine_curve[:time_anomaly] = 0
+# df_raw = df_raw.add(sine_curve, axis=0)
 
 # # # Outlier
 # time_anomaly = 52*7
@@ -150,7 +150,7 @@ hsl_tsad_agent.detection_threshold = 0.1
 # MP2 models:
 hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class =  -2.0798647e-05, 0.00038297276, 4.118408, 1.6993207
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_mp2.csv', 
-                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_3classes_tagi_learnlogit.pkl', max_training_epoch=50)
+                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_3classes_tagi_hiersm.pkl', max_training_epoch=50)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
@@ -161,7 +161,7 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(10, 1)
+gs = gridspec.GridSpec(11, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -172,6 +172,7 @@ ax6 = plt.subplot(gs[6])
 ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
+ax10 = plt.subplot(gs[10])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -191,7 +192,6 @@ plot_states(
 )
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
-ax0.set_title("HSL Detection & Intervention agent")
 plot_states(
     data_processor=data_processor,
     standardization=True,
@@ -269,37 +269,59 @@ ax8.set_ylim(-0.05, 1.05)
 _add_dynamic_grids(ax8, time)
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
-# Convert to numpy array
-# all_probs = np.array(hsl_tsad_agent.pred_class_probs) - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
-all_probs = np.array(hsl_tsad_agent.pred_class_probs)
-anm_prob_lower = np.array(hsl_tsad_agent.pred_class_probs) - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
-# ax9.stackplot(time, all_probs.T, labels=['LT', 'LL', 'PD'], colors=colors, alpha=0.7)
-for class_idx in range(all_probs.shape[1]):
-    ax9.plot(time, all_probs[:, class_idx], color=colors[class_idx])
+
+m_logits = np.array(hsl_tsad_agent.pred_class_probs)
+std_logits = np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
+## ReMax(logits)
+from src.convert_to_class import hierachical_softmax
+m_probs, std_probs = [], []
+for t in range(m_logits.shape[0]):
+    pr_classes = hierachical_softmax(m_logits[t], std_logits[t])
+    m_probs.append(pr_classes.tolist())
+    # std_probs.append(std_p.tolist())
+m_probs = np.array(m_probs)
+# std_probs = np.array(std_probs)
+
+# anm_prob_lower = np.array(hsl_tsad_agent.pred_class_probs) - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
+for class_idx in range(m_logits.shape[1]):
+    ax9.plot(time, m_logits[:, class_idx], color=colors[class_idx])
     ax9.fill_between(time,
-                    all_probs[:, class_idx] - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var)[:, class_idx]),
-                    all_probs[:, class_idx] + np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var)[:, class_idx]),
+                    m_logits[:, class_idx] - std_logits[:, class_idx],
+                    m_logits[:, class_idx] + std_logits[:, class_idx],
                     color=colors[class_idx],
                     alpha=0.3, label="_nolegend_")
 # Set legend labels to ['LT', 'LL', 'PD']
-ax9.legend(['LT', 'LL', 'PD'],loc='upper left', ncol=2)
-# Find the anm_flags that is 0.5 greater than the other two class flags
-anm_type_flags = []
-for t in range(anm_prob_lower.shape[0]):
-    max_flag = np.max(anm_prob_lower[t, :])
-    max_idx = np.argmax(anm_prob_lower[t, :])
-    other_anm = np.delete(anm_prob_lower[t, :], max_idx)
-    if max_flag - np.max(other_anm) < 0.5:
-        pass
-    else:
-        anm_type_flags.append((t, max_idx, anm_prob_lower[t, max_idx]))
-# Plot vertical lines for the anm_type_flags
-for flag in anm_type_flags:
-    ax9.axvline(x=time[flag[0]], color=colors[flag[1]], linestyle=':')
-
+ax9.legend(['gate1', 'gate2'],loc='upper left', ncol=2)
 # ax9.legend = ['LT', 'LL', 'PD']
-ax9.set_ylim(-0.05, 1.05)
+ax9.set_ylim(-5, 5)
 # ax9.legend(loc='upper left', ncol=2)
-ax9.set_ylabel("Class Probabilities")
+ax9.set_ylabel("logits")
+
+# Plot class probabilities with ReMax
+for class_idx in range(m_probs.shape[1]):
+    ax10.plot(time, m_probs[:, class_idx], color=colors[class_idx])
+    # ax10.fill_between(time,
+    #                 m_probs[:, class_idx] - std_probs[:, class_idx],
+    #                 m_probs[:, class_idx] + std_probs[:, class_idx],
+    #                 color=colors[class_idx],
+    #                 alpha=0.3, label="_nolegend_")
+# Set legend labels to ['LT', 'LL', 'PD']
+ax10.legend(['LT', 'LL', 'PD'],loc='upper left', ncol=2)
+ax10.set_ylim(-0.05, 1.05)
+ax10.set_ylabel("probs")
+
+# Find the anm_flags that is 0.5 greater than the other two class flags
+# anm_type_flags = []
+# for t in range(anm_prob_lower.shape[0]):
+#     max_flag = np.max(anm_prob_lower[t, :])
+#     max_idx = np.argmax(anm_prob_lower[t, :])
+#     other_anm = np.delete(anm_prob_lower[t, :], max_idx)
+#     if max_flag - np.max(other_anm) < 0.5:
+#         pass
+#     else:
+#         anm_type_flags.append((t, max_idx, anm_prob_lower[t, max_idx]))
+# # Plot vertical lines for the anm_type_flags
+# for flag in anm_type_flags:
+#     ax9.axvline(x=time[flag[0]], color=colors[flag[1]], linestyle=':')
 
 plt.show()
