@@ -63,10 +63,8 @@ def hierachical_softmax(mZ, sZ):
     """
     # First gate
     pr_gate1 = norm.cdf(mZ[0]/np.sqrt(1+sZ[0]**2))
-    # Second gate
-    pr_gate2 = norm.cdf(mZ[1]/np.sqrt(1+sZ[1]**2))
 
     # Probabilities for three classes
-    pr_all_classes = np.array([pr_gate1*pr_gate2, pr_gate1*(1 - pr_gate2), 1 - pr_gate1])
+    pr_all_classes = np.array([pr_gate1, 1 - pr_gate1])
 
     return pr_all_classes
