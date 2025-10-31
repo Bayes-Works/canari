@@ -183,8 +183,8 @@ class hsl_classification:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
-            self.pred_class_probs.append([0.4307273, 0])
-            self.pred_class_probs_var.append([0, 0])
+            self.pred_class_probs.append([0])
+            self.pred_class_probs_var.append([0])
 
             self.current_time_step += 1
 
@@ -870,7 +870,7 @@ class hsl_classification:
                                                                 # anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False
         # Apply anomalies to the generated time series
         for j in range(len(generated_ts)):
-            anm_type = np.random.choice(['no_anm', 'LT', 'LL', 'PD'])
+            anm_type = np.random.choice(['no_anm', 'LT', 'LL'])
             if anm_type == 'no_anm':
                 anm_type_log.append(0)
                 anm_mag_list.append(0)
@@ -892,15 +892,6 @@ class hsl_classification:
                 anm_baseline[:anm_begin] = 0
                 generated_ts[j] += anm_baseline
                 anm_type_log.append(2)
-                anm_mag_list.append(anm_mag)
-                anm_begin_list.append(anm_begin)
-            elif anm_type == 'PD':
-                anm_begin = np.random.randint(int(52*4), int(52*5))
-                anm_mag = np.random.uniform(-1, 2)
-                sine_wave = anm_mag * np.sin(np.arange(ts_len) * 2 * np.pi / 52)
-                sine_wave[:anm_begin] = 0
-                generated_ts[j] += sine_wave
-                anm_type_log.append(3)
                 anm_mag_list.append(anm_mag)
                 anm_begin_list.append(anm_begin)
         # Plot generated time series
@@ -1343,20 +1334,15 @@ class hsl_classification:
         return hidden_states_collected
     
     def soft_target_encode(self, target):
-        samples_target = np.zeros((len(target), 2), dtype=np.float32)
+        samples_target = np.zeros((len(target), 1), dtype=np.float32)
         for i, c in enumerate(target):
             if c == 0:
-                samples_target[i, 0] = 0.4307273 # Logits that correspond to a CDF = 2/6
+                samples_target[i, 0] = 0 # Logits that correspond to a CDF = 2/6
             else:
                 if c == 1:
                     samples_target[i, 0] = 3
-                    samples_target[i, 1] = 3
                 elif c == 2:
-                    samples_target[i, 0] = 3
-                    samples_target[i, 1] = -3
-                if c == 3:
                     samples_target[i, 0] = -3
-                    samples_target[i, 1] = 3
         return samples_target
 
     def learn_classification(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
@@ -1406,7 +1392,7 @@ class hsl_classification:
                                     ReLU(),
                                     Linear(64, 32, gain_weight=0.2, gain_bias=0.2),
                                     ReLU(),
-                                    Linear(32, 2*2, gain_weight=0.2, gain_bias=0.2),
+                                    Linear(32, 1*2, gain_weight=0.2, gain_bias=0.2),
                                     # Remax(),
                                     EvenExp(),
                                     )
@@ -1477,8 +1463,8 @@ class hsl_classification:
                     # pred = m_pred[::2] - np.sqrt(m_pred[1::2])
                     pred = m_pred[::2]
                     s_pred = np.sqrt(m_pred[1::2])
-                    pred = np.reshape(pred, (self.batch_size, 2))
-                    s_pred = np.reshape(s_pred, (self.batch_size, 2))
+                    pred = np.reshape(pred, (self.batch_size, 1))
+                    s_pred = np.reshape(s_pred, (self.batch_size, 1))
                     m_probs = []
                     true_target = target.numpy()
                     num_no_anm = 0
@@ -1534,8 +1520,8 @@ class hsl_classification:
                     # pred = m_pred[::2] - np.sqrt(m_pred[1::2])
                     pred = m_pred[::2]
                     s_pred = np.sqrt(m_pred[1::2])
-                    pred = np.reshape(pred, (self.batch_size, 2))
-                    s_pred = np.reshape(s_pred, (self.batch_size, 2))
+                    pred = np.reshape(pred, (self.batch_size, 1))
+                    s_pred = np.reshape(s_pred, (self.batch_size, 1))
                     m_probs = []
                     true_target = target.numpy()
                     num_no_anm = 0
@@ -1576,8 +1562,8 @@ class hsl_classification:
                 # Calculate test error
                 pred = m_pred[::2]
                 s_pred = np.sqrt(m_pred[1::2])
-                pred = np.reshape(pred, (self.batch_size, 2))
-                s_pred = np.reshape(s_pred, (self.batch_size, 2))
+                pred = np.reshape(pred, (self.batch_size, 1))
+                s_pred = np.reshape(s_pred, (self.batch_size, 1))
                 m_probs = []
                 true_target = target.numpy()
                 num_no_anm = 0
