@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_2classes_2driftmodels import hsl_classification
+from src.hsl_classification_mp2_2classes_2driftmodels_datall import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -39,12 +39,12 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# # LL anomaly
-# time_anomaly = 52*7
-# anm_mag = 35
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
+# LL anomaly
+time_anomaly = 52*7
+anm_mag = 17
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
