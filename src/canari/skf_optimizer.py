@@ -113,7 +113,7 @@ class SKFOptimizer:
             or false_rate > self.false_rate_threshold
             or false_alarm_train == "Yes"
         ):
-            _metric = np.abs(self._param_space["slope"][1])  # upper bound of slope
+            _metric = np.max(np.abs(self._param_space["slope"]))
         else:
             _metric = np.abs(config["slope"])
 
