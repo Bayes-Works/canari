@@ -21,7 +21,7 @@ from matplotlib import gridspec
 import torch
 import stumpy
 from src.convert_to_class import hierachical_softmax
-
+from typing import List
 
 
 class hsl_classification:
@@ -63,6 +63,7 @@ class hsl_classification:
         self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
         self.pred_class_probs = []
         self.pred_class_probs_var = []
+        self.data_loglikelihoods = []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
@@ -211,6 +212,7 @@ class hsl_classification:
             self.std_itv_all.append([np.nan, np.nan, np.nan])
             self.pred_class_probs.append([0])
             self.pred_class_probs_var.append([0])
+            self.data_loglikelihoods.append([None, None])
 
             self.current_time_step += 1
 
@@ -635,6 +637,9 @@ class hsl_classification:
     def detect(
             self, 
             data,
+            anm_type: Optional[str] = "LL",
+            anm_magnitude: Optional[float] = 17,
+            anm_begin: Optional[int] = 52*7,
             apply_intervention: Optional[bool] = False,
             ):
 
@@ -724,7 +729,38 @@ class hsl_classification:
                 self._save_lstm_input()
 
             # Apply intervention to estimate data likelihood
-            # TODO
+            # Get the true values of anomaly
+            if p_a_I_Yt > self.detection_threshold:
+                if anm_type == "LL":
+                    level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
+                    num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                    trend_itv = level_itv / max(num_steps_retract, 1)
+                if anm_type == "LT":
+                    trend_itv = anm_magnitude / self.data_processor.scale_const_std[self.data_processor.output_col]
+                    num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                    level_itv = trend_itv * num_steps_retract / 2
+                data_likelihoods_ll = self._estimate_likelihoods_with_intervention(
+                    ssm=self.base_model,
+                    level_intervention = [level_itv, 0],
+                    trend_intervention = [0, 0],
+                    num_steps_retract = num_steps_retract,
+                    data = data,
+                )
+                data_likelihoods_lt = self._estimate_likelihoods_with_intervention(
+                    ssm=self.base_model,
+                    level_intervention = [0, 0],
+                    trend_intervention = [trend_itv, 0],
+                    num_steps_retract = num_steps_retract,
+                    data = data,
+                )
+                # Take the logsum of each list data_likelihoods_ll and data_likelihoods_lt
+                log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
+                log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+
+                # Store the log-likelihoods
+                self.data_loglikelihoods.append([log_likelihood_lt, log_likelihood_ll])
+            else:
+                self.data_loglikelihoods.append([None, None])
 
             # if apply_intervention:
             #     if rerun_kf is False:
@@ -810,6 +846,97 @@ class hsl_classification:
 
         return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(self.mu_ar_preds).flatten(), np.array(self.std_ar_preds).flatten()
 
+    def _estimate_likelihoods_with_intervention(self, ssm: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data):
+        """
+        Compute the likelihood of observation and hidden states given action
+        """
+        ssm_copy = copy.deepcopy(ssm)
+        data_all = copy.deepcopy(data)
+        original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
+        original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
+
+        mu_y_preds = copy.deepcopy(self.mu_obs_preds)
+        std_y_preds = copy.deepcopy(self.std_obs_preds)
+        current_preds_num = len(mu_y_preds)
+        if "lstm" in ssm.states_name:
+            output_history_temp = copy.deepcopy(ssm.lstm_output_history)
+            cell_states_temp = copy.deepcopy(ssm.lstm_net.get_lstm_states())
+            ssm_copy.lstm_net = ssm.lstm_net
+            ssm_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+            ssm_copy.lstm_net.set_lstm_states(cell_states_temp)
+        
+
+        # Retract SSM to the time of intervention
+        remove_until_index = -(num_steps_retract)
+        ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
+        ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
+        ssm_copy.states.mu_posterior = ssm_copy.states.mu_posterior[:remove_until_index]
+        ssm_copy.states.var_posterior = ssm_copy.states.var_posterior[:remove_until_index]
+        ssm_copy.states.cov_states = ssm_copy.states.cov_states[:remove_until_index]
+        ssm_copy.states.mu_smooth = ssm_copy.states.mu_smooth[:remove_until_index]
+        ssm_copy.states.var_smooth = ssm_copy.states.var_smooth[:remove_until_index]
+        mu_y_preds = mu_y_preds[:remove_until_index]
+        std_y_preds = std_y_preds[:remove_until_index]
+        lstm_history_copy = copy.deepcopy(self.lstm_history)
+        lstm_cell_states_copy = copy.deepcopy(self.lstm_cell_states)
+        if "lstm" in ssm.states_name:
+            retracted_lstm_history = lstm_history_copy[:remove_until_index]
+            retracted_lstm_cell_states = lstm_cell_states_copy[:remove_until_index]
+        # Keep the data after intervention time
+        data_all["y"] = data_all["y"][current_preds_num-num_steps_retract:]
+        data_all["x"] = data_all["x"][current_preds_num-num_steps_retract:]
+
+        ssm_copy.set_states(ssm_copy.states.mu_posterior[-1], ssm_copy.states.var_posterior[-1])
+        ssm_copy.lstm_output_history = retracted_lstm_history[-1]
+        ssm_copy.lstm_net.set_lstm_states(retracted_lstm_cell_states[-1])
+        
+
+        # Apply intervention
+        LL_index = ssm_copy.states_name.index("level")
+        LT_index = ssm_copy.states_name.index("trend")
+        ssm_copy.mu_states[LL_index] += level_intervention[0]
+        ssm_copy.mu_states[LT_index] += trend_intervention[0]
+        ssm_copy.var_states[LL_index, LL_index] += level_intervention[1]
+        ssm_copy.var_states[LT_index, LT_index] += trend_intervention[1]
+        y_likelihood_all = []
+        for i in range(num_steps_retract):
+            mu_obs_pred, var_obs_pred, _, _ = ssm_copy.forward(data_all["x"][i])
+            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            if "lstm" in ssm_copy.states_name:
+                lstm_index = ssm_copy.get_states_index("lstm")
+                ssm_copy.lstm_output_history.update(
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
+                )
+            ssm_copy._save_states_history()
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+            mu_y_preds.append(mu_obs_pred)
+            std_y_preds.append(var_obs_pred**0.5)
+            y_likelihood = likelihood(mu_obs_pred, 
+                                    np.sqrt(var_obs_pred), 
+                                    data_all["y"][i])
+            y_likelihood_all.append(y_likelihood.item())
+        
+        # # Plot retracted states after intervention
+        # plt.figure(figsize=(10, 5))
+        # plt.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
+        # plt.fill_between(range(len(mu_y_preds)),
+        #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
+        #                  np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
+        #                  color='gray', alpha=0.5)
+        # plt.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
+        # plt.fill_between(range(len(original_mu_obs_preds)),
+        #                  np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
+        #                  np.array(original_mu_obs_preds).flatten() + np.array(original_std_obs_preds).flatten(),
+        #                  color='gray', alpha=0.5)
+        # plt.plot(range(len(data["y"])), data["y"], label='Observed Data', color='k')
+        # plt.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
+        # plt.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
+        # plt.legend()
+        # plt.title('Predictions w/wo intervention')
+
+        return y_likelihood_all
+    
     def _estimate_likelihoods(
             self, 
             base_model: Model,
@@ -1399,7 +1526,7 @@ class hsl_classification:
         samples_target = np.zeros((len(target), 1), dtype=np.float32)
         for i, c in enumerate(target):
             if c == 0:
-                samples_target[i, 0] = 0 # Logits that correspond to a CDF = 2/6
+                samples_target[i, 0] = 0
             else:
                 if c == 1:
                     samples_target[i, 0] = 3
