@@ -31,6 +31,7 @@ df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
 # # LT anomaly
+# anm_type = 'LT'
 # time_anomaly = 52*7
 # anm_mag = 12/52
 # anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -39,12 +40,13 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# LL anomaly
-time_anomaly = 52*7
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*7
+# anm_mag = 35
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -153,7 +155,7 @@ hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_t
                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_2classes_2dmodels.pkl', max_training_epoch=50)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False, anm_type=anm_type, anm_magnitude=anm_mag, anm_begin=time_anomaly)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
@@ -161,7 +163,7 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(11, 1)
+gs = gridspec.GridSpec(12, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
@@ -173,6 +175,7 @@ ax7 = plt.subplot(gs[7])
 ax8 = plt.subplot(gs[8])
 ax9 = plt.subplot(gs[9])
 ax10 = plt.subplot(gs[10])
+ax11 = plt.subplot(gs[11])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -336,6 +339,28 @@ for class_idx in range(m_probs.shape[1]):
 ax10.legend(['LT', 'LL'],loc='upper left', ncol=2)
 ax10.set_ylim(-0.05, 1.05)
 ax10.set_ylabel("probs")
+
+# Combine the m_probs with self.data_loglikelihoods to get final class probabilities
+final_class_log_probs = []
+for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
+    if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
+        final_class_log_probs.append([0.5, 0.5])
+    else:
+        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t]
+        log_prior_probs = np.log(m_probs[t])
+        combined_log_probs = log_likelihoods + log_prior_probs
+        # Normalize to get probabilities
+        probs = np.exp(combined_log_probs)
+        probs /= np.sum(probs)
+        final_class_log_probs.append(probs)
+final_class_log_probs = np.array(final_class_log_probs)
+# Plot final class probabilities
+for class_idx in range(final_class_log_probs.shape[1]):
+    ax11.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+# Set legend labels to ['LT', 'LL', 'PD']
+ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
+ax11.set_ylim(-0.05, 1.05)
+ax11.set_ylabel("final probs")
 
 # Find the anm_flags that is 0.5 greater than the other two class flags
 # anm_type_flags = []
