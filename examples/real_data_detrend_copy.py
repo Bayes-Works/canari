@@ -91,8 +91,8 @@ train_data_original, _, _, all_data = data_processor.get_splits()
 
 plot_data(
      data_processor=data_processor_,
-    #  plot_test_data=True,
-     standardization=False,
+     plot_test_data=False,
+     standardization=True,
 )
 plt.show()
 
@@ -160,27 +160,11 @@ def model_with_parameters(param, train_data, validation_data):
     )
 
 # Define optimizer
-param_space = {
-                "look_back_len": [12, 26, 52],
-                "sigma_v": [1e-2, 5e-2, 1e-1, 2e-1, 3e-1, 4e-1],
-            }
-# param_space = {
-#     "look_back_len": [12, 52],
-#     "sigma_v": [1e-3, 2e-1],
-# }
 
-model_optimizer = ModelOptimizer(
-    model=model_with_parameters,
-    param_space=param_space,
-    train_data=train_data,
-    validation_data=validation_data,
-    num_optimization_trial=100,
-    grid_search=True,
-    algorithm="parallel",
-)
-model_optimizer.optimize()
-# Get best model
-param = model_optimizer.get_best_param()
+param= {
+    "look_back_len": 52,
+    "sigma_v": 0.1,
+}
 
 # Train best model
 model_optim, mu_validation_preds, std_validation_preds = model_with_parameters(
@@ -233,40 +217,23 @@ def skf_with_parameters(skf_param_space, model_param: dict, train_data):
         )
         skf.save_initial_states()
 
-        detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
-            data=train_data,
-            num_anomaly=50,
-            slope_anomaly=skf_param_space["slope"],
-        )
-        skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate
-        skf.metric_optim["false_alarm_train"] = false_alarm_train
+        # detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
+        #     data=train_data,
+        #     num_anomaly=50,
+        #     slope_anomaly=skf_param_space["slope"],
+        # )
+        # skf.metric_optim["detection_rate"] = detection_rate
+        # skf.metric_optim["false_rate"] = false_rate
+        # skf.metric_optim["false_alarm_train"] = false_alarm_train
 
         return skf
 
-skf_param_space = {
-    "std_transition_error": [1e-6, 1e-5, 1e-4],
-    "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
-    "slope": [0.002, 0.004, 0.008, 0.01, 0.05, 0.09],
+skf_param = {
+    "std_transition_error": 1e-5,
+    "norm_to_abnorm_prob": 1e-6,
+    "slope": 5e-3,
 }
-# skf_param_space = {
-#     "std_transition_error": [1e-6, 1e-4],
-#     "norm_to_abnorm_prob": [1e-6, 1e-4],
-#     "slope": [1e-3, 5e-2],
-# }
 
-skf_optimizer = SKFOptimizer(
-    skf=skf_with_parameters,
-    model_param=model_optim_dict,
-    param_space=skf_param_space,
-    data=train_data_,
-    num_optimization_trial=300,
-    grid_search=True,
-    algorithm="parallel",
-)
-skf_optimizer.optimize()
-# Get parameters
-skf_param = skf_optimizer.get_best_param()
 skf_optim = skf_with_parameters(skf_param, model_optim_dict, train_data_)
 
 skf_optim_dict = skf_optim.get_dict()
@@ -277,13 +244,20 @@ print("Model parameters used:", skf_optim_dict["model_param"])
 print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
 
-filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
+synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+    train_data_,
+    num_samples=1,
+    slope=[0],
+)
+
+filter_marginal_abnorm_prob, states = skf_optim.filter(data=synthetic_anomaly_data[0])
 smooth_marginal_abnorm_prob, states = skf_optim.smoother()
 
 fig, ax = plot_skf_states(
-    data_processor=data_processor,
+    data_processor=data_processor_,
     states=states,
     model_prob=filter_marginal_abnorm_prob,
+    standardization=True,
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.savefig("./saved_results/BM4.png")
