@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_2classes_tagiv_hiersm import hsl_classification
+from src.hsl_classification_mp2_2classes_2driftmodels import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -142,15 +142,15 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
 
-# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes.csv')
+hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels.csv')
 # hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -3.0772888e-05, 0.0004556137, 3.1387298, 1.321072
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.4802439e-05, 0.000404261, 2.988104, 1.2404884    # V2 training
 # MP2 models:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.3044238e-05, 0.00045001786, 4.1623816, 1.7729385
-hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes.csv', 
-                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_2classes_tagi_hiersm.pkl', max_training_epoch=50)
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -0.00018729146, 0.00046186743, -0.00054984936, 0.00361614, 4.2066813, 1.9359117
+hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels.csv', 
+                                    save_model_path='saved_params/NN_classification_model_syn_simple_ts_mp2_2classes_2dmodels.pkl', max_training_epoch=50)
 # hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
 #                                   load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
@@ -233,6 +233,15 @@ plot_states(
     states_to_plot=['level'],
     sub_plot=ax4,
 )
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model2.states,
+    states_type=state_type,
+    states_to_plot=['level'],
+    sub_plot=ax4,
+    color='tab:green',
+)
 ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -242,6 +251,15 @@ plot_states(
     states_to_plot=['trend'],
     sub_plot=ax5,
 )
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model2.states,
+    states_type=state_type,
+    states_to_plot=['trend'],
+    sub_plot=ax5,
+    color='tab:green',
+)
 ax5.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -250,6 +268,15 @@ plot_states(
     states_type=state_type,
     states_to_plot=['autoregression'],
     sub_plot=ax6,
+)
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.drift_model2.states,
+    states_type=state_type,
+    states_to_plot=['autoregression'],
+    sub_plot=ax6,
+    color='tab:green',
 )
 ax6.set_xticklabels([])
 
