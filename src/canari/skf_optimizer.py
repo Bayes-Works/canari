@@ -43,6 +43,8 @@ class SKFOptimizer:
         num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
         grid_search (bool, optional): If True, perform grid search. Defaults to False.
         algorithm (str, optional): Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler). Defaults to 'OptunaSearch'.
+        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna 
+                                    for optimization. Default to "ray". 
 
     Attributes:
         skf_optim: Best SKF instance after optimization.
@@ -63,6 +65,7 @@ class SKFOptimizer:
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
+        back_end: Optional[str] = "ray",
     ):
         """
         Initializes the SKFOptimizer.
@@ -81,7 +84,7 @@ class SKFOptimizer:
         self.skf_optim = None
         self.param_optim = None
         self._trial_count = 0
-        self._backend = "optuna" if platform.system() == "Windows" else "ray"
+        self._backend = back_end
 
     def objective(
         self,
