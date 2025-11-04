@@ -239,3 +239,63 @@ class OutputHistory:
 
         self.mu.append(mu.item())
         self.var.append(var.item())
+
+
+@dataclass
+class LstmEmbedding:
+    """
+    Stores the current LSTM embedding mean and variance vectors.
+
+    Attributes:
+        mu (np.ndarray): Mean of the embedding with shape (1, embedding_dim).
+        var (np.ndarray): Variance of the embedding with shape (1, embedding_dim).
+    """
+
+    mu: np.ndarray = field(init=False)
+    var: np.ndarray = field(init=False)
+
+    def initialize(self, embedding_len: int):
+        """
+        Initialize the mean and variance of the embedding vector.
+
+        The mean is sampled from a standard normal distribution and the variance
+        is initialized to ones. Both arrays have shape (1, embedding_len).
+
+        Args:
+            embedding_len (int): Length of the LSTM embedding.
+        """
+        self.mu = np.random.normal(0, 1, (1, embedding_len)).astype(np.float32)
+        self.var = np.ones((1, embedding_len), dtype=np.float32)
+
+    def update(
+        self,
+        delta_mu: np.ndarray,
+        delta_var: np.ndarray,
+    ):
+        """
+        Update the LSTM embedding mean and variance in place.
+
+        Args:
+            delta_mu (np.ndarray): Update term applied to the current mean.
+            delta_var (np.ndarray): Update term applied to the current variance.
+        """
+        self.mu += delta_mu * self.mu
+        self.var += self.var * delta_var * self.var
+
+    def __getitem__(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the mean and variance of the LSTM embedding.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Mean and variance arrays of the LSTM embedding.
+        """
+        return self.mu, self.var
+
+    def __setitem__(self, value: tuple[np.ndarray, np.ndarray]):
+        """
+        Set the mean and variance of the LSTM embedding.
+
+        Args:
+            value (tuple[np.ndarray, np.ndarray]): New mean and variance arrays to set.
+        """
+        self.mu, self.var = value
