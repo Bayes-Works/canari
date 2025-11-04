@@ -118,7 +118,7 @@ class LstmNetwork(BaseComponent):
         self.smoother = smoother
         self.model_noise = model_noise
         self.num_output = 2 * num_output if self.model_noise else num_output
-        self.embed_len = embed_len if embedding is None else embedding[0].shape[1]
+        self.embed_len = embed_len if embedding is None else embedding[0].flatten().shape[0]
         self.embedding = embedding
         super().__init__()
 
@@ -240,6 +240,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.lstm_infer_len = self.infer_len
         lstm_network.model_noise = self.model_noise
+        lstm_network.embed_len = self.embed_len
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)

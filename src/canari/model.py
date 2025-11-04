@@ -298,12 +298,17 @@ class Model:
         )
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
+            self.lstm_net.embed_len = lstm_component.embed_len
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-            if lstm_component.embed_len > 0:
+            embed_len = lstm_component.embed_len
+            if embed_len > 0:
                 if lstm_component.embedding is None:
-                    self.lstm_embedding.initialize(lstm_component.embed_len)
+                    self.lstm_embedding.initialize(embed_len)
                 else:
-                    self.lstm_embedding.embedding = lstm_component.embedding
+                    self.lstm_embedding.set_values(
+                        *lstm_component.embedding,
+                    )
+                lstm_component.embedding = self.lstm_embedding.as_tuple()
 
     def _initialize_autoregression(self):
         """
@@ -968,7 +973,9 @@ class Model:
         for i in range(self.lstm_net.lstm_infer_len):
             dummy_covariates = lookback_covariates[i]
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, dummy_covariates
+                self.lstm_output_history,
+                dummy_covariates,
+                lstm_embedding=self.lstm_embedding,
             )
 
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
@@ -1363,11 +1370,16 @@ class Model:
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             if var_input_covariates is not None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, input_covariates, var_input_covariates
+                    self.lstm_output_history,
+                    input_covariates,
+                    var_input_covariates,
+                    lstm_embedding=self.lstm_embedding,
                 )
             else:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, input_covariates
+                    self.lstm_output_history,
+                    input_covariates,
+                    lstm_embedding=self.lstm_embedding,
                 )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1631,6 +1643,7 @@ class Model:
         self,
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
+        update_embedding: Optional[bool] = False,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1644,6 +1657,7 @@ class Model:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
             train_lstm (bool): Whether to update LSTM's parameter weights and biases.
                 Defaults to True.
+            update_embedding (bool): Whether to update the input embedding in LSTM. Defaults to False.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1687,6 +1701,18 @@ class Model:
                 self.update_lstm_output_history(
                     mu_states_posterior, var_states_posterior
                 )
+
+                if update_embedding and getattr(self.lstm_net, "embed_len", 0) > 0:
+                    embed_len = self.lstm_net.embed_len
+                    if getattr(self.lstm_embedding, "length", 0) == 0:
+                        self.lstm_embedding.initialize(embed_len)
+                    delta_input_mu, delta_input_var = self.lstm_net.get_input_states()
+                    embed_mu = np.asarray(delta_input_mu)[..., -embed_len:].copy()
+                    embed_var = np.asarray(delta_input_var)[..., -embed_len:].copy()
+                    self.lstm_embedding.update(embed_mu, embed_var)
+                    self.lstm_net.embedding = (
+                        self.lstm_embedding.as_tuple()
+                    )  # Update embedding in lstm_net
 
             # Store variables
             self.save_states_history()
