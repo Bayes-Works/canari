@@ -29,7 +29,12 @@ from pytagi import Normalizer as normalizer
 from pytagi.nn import OutputUpdater
 from canari.component.base_component import BaseComponent
 from canari import common
-from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
+from canari.data_struct import (
+    LstmOutputHistory,
+    StatesHistory,
+    OutputHistory,
+    LstmEmbedding,
+)
 from canari.common import GMA
 from canari.data_process import DataProcess
 
@@ -189,6 +194,7 @@ class Model:
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
         self.lstm_states_history = []
+        self.lstm_embedding = LstmEmbedding()
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -293,6 +299,11 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            if lstm_component.embed_len > 0:
+                if lstm_component.embedding is None:
+                    self.lstm_embedding.initialize(lstm_component.embed_len)
+                else:
+                    self.lstm_embedding.embedding = lstm_component.embedding
 
     def _initialize_autoregression(self):
         """
