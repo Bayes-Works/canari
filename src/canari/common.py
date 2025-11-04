@@ -240,7 +240,7 @@ def prepare_lstm_input(
         var_lstm_input = np.concatenate(
             (lstm_output_history.var, np.zeros(len(input_covariates)))
         )
-    if lstm_embedding is not None:
+    if lstm_embedding is not None and getattr(lstm_embedding, "length", 0) > 0:
         mu_lstm_input = np.concatenate((mu_lstm_input, lstm_embedding.mu))
         var_lstm_input = np.concatenate((var_lstm_input, lstm_embedding.var))
     return mu_lstm_input, var_lstm_input
