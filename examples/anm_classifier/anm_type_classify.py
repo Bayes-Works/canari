@@ -40,13 +40,13 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# # LL anomaly
-# anm_type = 'LL'
-# time_anomaly = 52*7
-# anm_mag = 35
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*7
+anm_mag = 17
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
