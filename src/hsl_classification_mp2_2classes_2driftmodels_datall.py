@@ -729,19 +729,40 @@ class hsl_classification:
                 self._save_lstm_input()
 
             # Apply intervention to estimate data likelihood
+            # Bias and variance simulation
+            cov = 10
+
             # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
                 if anm_type == "LL":
                     level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
                     num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                    num_steps_retract = int(np.random.normal(loc=num_steps_retract, scale=10))
                     trend_itv = level_itv / max(num_steps_retract, 1)
+
+                    var_level_itv = (cov * abs(level_itv)) ** 2
+                    var_trend_itv = (cov * abs(trend_itv)) ** 2
+
+                    # Biased mean and variance
+                    level_itv = np.random.normal(loc=level_itv, scale=cov * abs(level_itv))
+                    trend_itv = np.random.normal(loc=trend_itv, scale=cov * abs(trend_itv))
+                    
                 if anm_type == "LT":
                     trend_itv = anm_magnitude / self.data_processor.scale_const_std[self.data_processor.output_col]
                     num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-                    level_itv = trend_itv * num_steps_retract / 2
+                    num_steps_retract = int(np.random.normal(loc=num_steps_retract, scale=50))
+                    level_itv = trend_itv * max(num_steps_retract, 1) / 2
+
+                    var_level_itv = (cov * abs(level_itv)) ** 2
+                    var_trend_itv = (cov * abs(trend_itv)) ** 2
+
+                    # Biased mean and variance
+                    level_itv = np.random.normal(loc=level_itv, scale=cov * abs(level_itv))
+                    trend_itv = np.random.normal(loc=trend_itv, scale=cov * abs(trend_itv))
+
                 data_likelihoods_ll = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
-                    level_intervention = [level_itv, 0],
+                    level_intervention = [level_itv, var_level_itv],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
                     data = data,
@@ -749,7 +770,7 @@ class hsl_classification:
                 data_likelihoods_lt = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     level_intervention = [0, 0],
-                    trend_intervention = [trend_itv, 0],
+                    trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
                 )
@@ -867,6 +888,8 @@ class hsl_classification:
         
 
         # Retract SSM to the time of intervention
+        # Constrain num_steps_retract to be no larger than current_preds_num
+        num_steps_retract = min(num_steps_retract, current_preds_num - 1)
         remove_until_index = -(num_steps_retract)
         ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
         ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
@@ -890,7 +913,6 @@ class hsl_classification:
         ssm_copy.lstm_output_history = retracted_lstm_history[-1]
         ssm_copy.lstm_net.set_lstm_states(retracted_lstm_cell_states[-1])
         
-
         # Apply intervention
         LL_index = ssm_copy.states_name.index("level")
         LT_index = ssm_copy.states_name.index("trend")
