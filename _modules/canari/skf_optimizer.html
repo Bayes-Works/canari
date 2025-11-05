@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.skf_optimizer &#8212; canari v.0.2.2 documentation</title>
+    <title>canari.skf_optimizer &#8212; canari v.0.2.3 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=05a9a55c"></script>
+    <script src="../../_static/documentation_options.js?v=be552741"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.2 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.2 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.3 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -353,6 +353,8 @@ document.write(`
 <span class="sd">        num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.</span>
 <span class="sd">        grid_search (bool, optional): If True, perform grid search. Defaults to False.</span>
 <span class="sd">        algorithm (str, optional): Search algorithm: &#39;default&#39; (OptunaSearch) or &#39;parallel&#39; (ASHAScheduler). Defaults to &#39;OptunaSearch&#39;.</span>
+<span class="sd">        back_end(str, optional): &quot;ray&quot; or &quot;optuna&quot;. Using the external library Ray or Optuna </span>
+<span class="sd">                                    for optimization. Default to &quot;ray&quot;. </span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        skf_optim: Best SKF instance after optimization.</span>
@@ -373,6 +375,7 @@ document.write(`
         <span class="n">num_optimization_trial</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
         <span class="n">grid_search</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
+        <span class="n">back_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;ray&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the SKFOptimizer.</span>
@@ -391,7 +394,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">skf_optim</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_trial_count</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_backend</span> <span class="o">=</span> <span class="s2">&quot;optuna&quot;</span> <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span> <span class="k">else</span> <span class="s2">&quot;ray&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_backend</span> <span class="o">=</span> <span class="n">back_end</span>
 
 <div class="viewcode-block" id="SKFOptimizer.objective">
 <a class="viewcode-back" href="../../api/canari.skf_optimizer.html#canari.skf_optimizer.SKFOptimizer.objective">[docs]</a>
@@ -422,7 +425,7 @@ document.write(`
             <span class="ow">or</span> <span class="n">false_rate</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">false_rate_threshold</span>
             <span class="ow">or</span> <span class="n">false_alarm_train</span> <span class="o">==</span> <span class="s2">&quot;Yes&quot;</span>
         <span class="p">):</span>
-            <span class="n">_metric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_space</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># upper bound of slope</span>
+            <span class="n">_metric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_space</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">]))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">_metric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">])</span>
 
