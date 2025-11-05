@@ -728,37 +728,40 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            # Apply intervention to estimate data likelihood
-            # Bias and variance simulation
-            cov = 10
+            
 
+            # Apply intervention to estimate data likelihood
             # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
-                if anm_type == "LL":
-                    level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
-                    num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-                    num_steps_retract = int(np.random.normal(loc=num_steps_retract, scale=10))
-                    trend_itv = level_itv / max(num_steps_retract, 1)
+                # Get interventions predicted by the model
+                output_pred_mu, output_pred_var = self.model.net(input_history)
+                itv_pred_mu = output_pred_mu[::2]
+                itv_pred_var = output_pred_mu[1::2]
 
-                    var_level_itv = (cov * abs(level_itv)) ** 2
-                    var_trend_itv = (cov * abs(trend_itv)) ** 2
-
-                    # Biased mean and variance
-                    level_itv = np.random.normal(loc=level_itv, scale=cov * abs(level_itv))
-                    trend_itv = np.random.normal(loc=trend_itv, scale=cov * abs(trend_itv))
+                num_steps_retract = max(int(itv_pred_mu[2]), 1)
+                level_itv = itv_pred_mu[1]
+                trend_itv = itv_pred_mu[0]
+                var_level_itv = itv_pred_var[1]
+                var_trend_itv = itv_pred_var[0]
                     
-                if anm_type == "LT":
-                    trend_itv = anm_magnitude / self.data_processor.scale_const_std[self.data_processor.output_col]
-                    num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-                    num_steps_retract = int(np.random.normal(loc=num_steps_retract, scale=50))
-                    level_itv = trend_itv * max(num_steps_retract, 1) / 2
+                # itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                # itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-                    var_level_itv = (cov * abs(level_itv)) ** 2
-                    var_trend_itv = (cov * abs(trend_itv)) ** 2
+                # if anm_type == "LL":
+                    # level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
+                    # num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                    # trend_itv = level_itv / max(num_steps_retract, 1)
 
-                    # Biased mean and variance
-                    level_itv = np.random.normal(loc=level_itv, scale=cov * abs(level_itv))
-                    trend_itv = np.random.normal(loc=trend_itv, scale=cov * abs(trend_itv))
+                    # var_level_itv = 0
+                    # var_trend_itv = 0
+                    
+                # if anm_type == "LT":
+                    # trend_itv = anm_magnitude / self.data_processor.scale_const_std[self.data_processor.output_col]
+                    # num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                    # level_itv = trend_itv * max(num_steps_retract, 1) / 2
+
+                    # var_level_itv = 0
+                    # var_trend_itv = 0
 
                 data_likelihoods_ll = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
@@ -1030,7 +1033,7 @@ class hsl_classification:
     
     def collect_anmtype_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
-        samples = {'LTd_history': [], 'LTd2_history': [], 'MP_history': [], 'anm_type': [], 'p_anm': []}
+        samples = {'LTd_history': [], 'LTd2_history': [], 'MP_history': [], 'anm_type': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
         # # # Anomaly type: no_anomaly = 0, LT = 1, LL = 2, PD = 3
 
         # Anomly feature range define
@@ -1151,9 +1154,22 @@ class hsl_classification:
                 if i > 129 and i < anm_begin_list[k]:
                     samples['anm_type'].append(0)  # No anomaly
                     samples['p_anm'].append(0.)
+                    samples['itv_LT'].append(0.)
+                    samples['itv_LL'].append(0.)
+                    samples['anm_develop_time'].append(0.)
                 elif i >= anm_begin_list[k]:
                     samples['anm_type'].append(anm_type_log[k])
                     samples['p_anm'].append(p_a_I_Yt)
+                    if anm_type_log[k] == 1:
+                        samples['itv_LT'].append(anm_mag_list[k])
+                        samples['itv_LL'].append(0.)
+                    elif anm_type_log[k] == 2:
+                        samples['itv_LT'].append(0.)
+                        samples['itv_LL'].append(anm_mag_list[k])
+                    elif anm_type_log[k] == 0:
+                        samples['itv_LT'].append(0.)
+                        samples['itv_LL'].append(0.)
+                    samples['anm_develop_time'].append(i - anm_begin_list[k])
 
                 # if p_a_I_Yt > self.detection_threshold:
                 #     anomaly_detected = True
@@ -1561,6 +1577,9 @@ class hsl_classification:
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        # Shuffle samples
+        samples = samples.sample(frac=1).reset_index(drop=True)
+
         n_samples = len(samples)
         n_train = int(n_samples * 0.8)
 
@@ -1583,8 +1602,6 @@ class hsl_classification:
         # Combine the two columns for input feature
         samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'] + row['MP_history'], axis=1)
 
-        # Shuffle samples
-        samples = samples.sample(frac=1).reset_index(drop=True)
         samples_input = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
         samples_target = np.array(samples['anm_type'].values, dtype=np.int64)
         samples_p_anm = np.array(samples['p_anm'].values.tolist(), dtype=np.float32)
@@ -1867,73 +1884,69 @@ class hsl_classification:
     def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
 
         # Shuffle samples
         samples = samples.sample(frac=1).reset_index(drop=True)
 
+        n_samples = len(samples)
+        n_train = int(n_samples * 0.8)
+
+        # Get the moments of samples['LTd_history'] and samples['MP_history'] for normalization
+        train_LTd = np.array(samples['LTd_history'].values.tolist()[:n_train], dtype=np.float32)
+        train_LTd2 = np.array(samples['LTd2_history'].values.tolist()[:n_train], dtype=np.float32)
+        train_MP =  np.array(samples['MP_history'].values.tolist()[:n_train], dtype=np.float32)
+        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_LTd2_class is None or self.std_LTd2_class is None or self.mean_MP_class is None or self.std_MP_class is None:
+            self.mean_LTd_class = np.mean(train_LTd)
+            self.std_LTd_class = np.std(train_LTd)
+            self.mean_LTd2_class = np.mean(train_LTd2)
+            self.std_LTd2_class = np.std(train_LTd2)
+            self.mean_MP_class = np.mean(train_MP)
+            self.std_MP_class = np.std(train_MP)
+        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class)
+        # Normalize the two columns
+        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: [(val - self.mean_LTd_class) / self.std_LTd_class for val in x])
+        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: [(val - self.mean_LTd2_class) / self.std_LTd2_class for val in x])
+        samples['MP_history'] = samples['MP_history'].apply(lambda x: [(val - self.mean_MP_class) / self.std_MP_class for val in x])
+        # Combine the two columns for input feature
+        samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'] + row['MP_history'], axis=1)
+
         # Target list
         self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
 
-        samples_input = np.array(samples['LTd_history'].values.tolist(), dtype=np.float32)
+        samples_input = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
         samples_target = np.array(samples[self.target_list].values, dtype=np.float32)
         samples_p_anm = np.array(samples['p_anm'].values.tolist(), dtype=np.float32)
 
-        # Find where samples_p_anm is 0
-        zero_indices = np.where(samples_p_anm == 0)[0]
-        # Remove those samples
-        samples_input = np.delete(samples_input, zero_indices, axis=0)
-        samples_target = np.delete(samples_target, zero_indices, axis=0)
-        samples_p_anm = np.delete(samples_p_anm, zero_indices, axis=0)
-
-        # panm_b5_indices = np.where(samples_p_anm > 0.5)[0]
-        # samples_p_anm = np.delete(samples_p_anm, panm_b5_indices, axis=0)
-        # samples_input = np.delete(samples_input, panm_b5_indices, axis=0)
-        # samples_target = np.delete(samples_target, panm_b5_indices, axis=0)
-
-        # Train the model using 80% of the samples
-        n_samples = len(samples_input)
-        n_train = int(n_samples * 0.8)
-        # train_samples = samples.iloc[:n_train]
         train_X = samples_input[:n_train]
         train_y = samples_target[:n_train]
         # Get the moments of training set, and use them to normalize the validation set and test set
         if self.mean_train is None or self.std_train is None or self.mean_target is None or self.std_target is None:
-            self.mean_train = train_X.mean()
-            self.std_train = train_X.std()
             self.mean_target = train_y.mean(axis=0)
             self.std_target = train_y.std(axis=0)
-        print('mean and std of training input', self.mean_train, self.std_train)
         print('mean and std of training target', self.mean_target, self.std_target)
 
-        train_X = (train_X - self.mean_train) / self.std_train
-
-        # # Remove when using time series with different anomaly magnitude
-        # self.mean_target[0] = 0
-        # self.std_target[0] = 1
-        # self.mean_target = np.zeros_like(self.mean_target)
-        # self.std_target = np.ones_like(self.std_target)
         train_y = (train_y - self.mean_target) / self.std_target
 
         # Validation set 10% of the samples
         n_val = int(n_samples * 0.1)
         val_X = samples_input[n_train:n_train+n_val]
         val_y = samples_target[n_train:n_train+n_val]
-        val_X = (val_X - self.mean_train) / self.std_train
         val_y = (val_y - self.mean_target) / self.std_target
 
         # Test the model using 10% of the samples
         n_test = int(n_samples * 0.1)
         test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
         test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
-        test_X = (test_X - self.mean_train) / self.std_train
         test_y = (test_y - self.mean_target) / self.std_target
 
         if self.nn_train_with == 'tagiv':
-            self.model = TAGI_Net(len(samples['LTd_history'][0]), len(self.target_list))
+            self.model = TAGI_Net(len(samples['input_feature'][0]), len(self.target_list))
         elif self.nn_train_with == 'backprop':
-            self.model = NN(input_size = len(samples['LTd_history'][0]), output_size = len(self.target_list))
+            self.model = NN(input_size = len(samples['input_feature'][0]), output_size = len(self.target_list))
             loss_fn = torch.nn.MSELoss()
             optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
             train_X = torch.tensor(train_X)
