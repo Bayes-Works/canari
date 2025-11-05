@@ -44,6 +44,8 @@ class ModelOptimizer:
             Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
             Defaults to 'OptunaSearch'.
         mode (str, optional): Direction for optimization stopping: 'min' (default).
+        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna 
+                                    for optimization. Default to "ray". 
 
     Attributes:
         model_optim :
@@ -62,6 +64,7 @@ class ModelOptimizer:
         grid_search: Optional[bool] = False,
         mode: Optional[str] = "min",
         algorithm: Optional[str] = "default",
+        back_end: Optional[str] = "ray",
     ):
         """
         Initialize the ModelOptimizer.
@@ -78,7 +81,7 @@ class ModelOptimizer:
         self._mode = mode
         self._trial_count = 0
         self._algorithm = algorithm
-        self._backend = "optuna" if platform.system() == "Windows" else "ray"
+        self._backend = back_end
 
     def objective(self, config: Dict) -> Dict:
         """
