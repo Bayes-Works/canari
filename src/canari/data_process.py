@@ -80,6 +80,8 @@ class DataProcess:
         time_covariates: Optional[List[str]] = None,
         output_col: list[int] = [0],
         standardization: Optional[bool] = True,
+        scale_const_mean: Optional[list[float]] = None,
+        scale_const_std: Optional[list[float]] = None,
     ) -> None:
         self.train_start = train_start
         self.train_end = train_end
@@ -93,10 +95,10 @@ class DataProcess:
         self.test_split = test_split
         self.time_covariates = time_covariates
         self.output_col = output_col
+        self.scale_const_mean = scale_const_mean
+        self.scale_const_std = scale_const_std
 
         self.data = data.copy()
-        self.scale_const_mean, self.scale_const_std = None, None
-
         self._add_time_covariates()
         self._get_split_start_end_indices()
         self._compute_standardization_constants()
@@ -168,12 +170,16 @@ class DataProcess:
 
     def _compute_standardization_constants(self):
         """
-        Compute standardization statistics (mean, std) based on training data.
+        Compute standardization statistics (mean, std) based on training data or user-defined values.
         """
-        if self.standardization:
+            
+        if self.standardization and self.scale_const_mean is None and self.scale_const_std is None:
             self.scale_const_mean, self.scale_const_std = Normalizer.compute_mean_std(
                 self.data.iloc[self.train_start : self.train_end].values
             )
+        elif self.standardization and self.scale_const_mean is not None and self.scale_const_std is not None:
+            self.scale_const_mean = np.array(self.scale_const_mean)
+            self.scale_const_std = np.array(self.scale_const_std)
         else:
             self.scale_const_mean = np.zeros(self.data.shape[1])
             self.scale_const_std = np.ones(self.data.shape[1])
