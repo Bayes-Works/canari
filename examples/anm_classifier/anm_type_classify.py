@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_2classes_2driftmodels_datall import hsl_classification
+from src.hsl_classification_mp2_2classes_2driftmodels_datall_MPs import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# # LT anomaly
-# anm_type = 'LT'
-# time_anomaly = 52*7
-# anm_mag = 12/52
-# anm_baseline = np.arange(len(df_raw)) * anm_mag
-# # Set the first 52*12 values in anm_baseline to be 0
-# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
-
-# LL anomaly
-anm_type = 'LL'
+# LT anomaly
+anm_type = 'LT'
 time_anomaly = 52*7
-anm_mag = 8
-anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_mag = 6/52
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)
+
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*7
+# anm_mag = 35
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -144,7 +144,7 @@ hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = h
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
 
-# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_continuous.csv')
+# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv')
 # hsl_tsad_agent.nn_train_with = 'tagiv'
 # hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -3.0772888e-05, 0.0004556137, 3.1387298, 1.321072
@@ -152,18 +152,22 @@ hsl_tsad_agent.detection_threshold = 0.1
 
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.1853131e-05, 0.00045217096, -5.1776482e-05, 0.003471423, 4.198408, 1.8218131
 
-# Classification + intervention models:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.8887205e-05, 0.00045540265, -9.227837e-05, 0.0034822284, 4.2108073, 1.8548799
-hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([-2.3099042e-04, 1.1933503e-02, 5.7366203e+01]), np.array([5.7640807e-03, 5.9275675e-01, 7.4977921e+01])
+# # Classification + intervention models:
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -2.8887205e-05, 0.00045540265, -9.227837e-05, 0.0034822284, 4.2108073, 1.8548799
+# hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([-2.3099042e-04, 1.1933503e-02, 5.7366203e+01]), np.array([5.7640807e-03, 5.9275675e-01, 7.4977921e+01])
 
 # # Classification + intervention models + continuous history:
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = 3.0531803e-06, 0.0003885695, -7.6621116e-05, 0.0034827138, 3.8428175, 2.1701705
 # hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([2.2853521e-04, 2.1895172e-02, 5.9053360e+01]), np.array([5.3996309e-03, 6.2583315e-01, 7.5614799e+01])
 
-hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels.csv', 
-                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall.pkl', max_training_epoch=50)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv.csv', 
-                                  load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall.pkl', max_training_epoch=50)
+# # Classification + intervention models + new MP:
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3441674e-05, 0.0004603353, -4.2705156e-05, 0.003506228, 5.272658, 3.560844
+hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04, 5.2052871e-03, 5.9214630e+01]), np.array([5.2153803e-03, 6.3000584e-01, 7.5671562e+01])
+
+hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
+                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
+                                  load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
