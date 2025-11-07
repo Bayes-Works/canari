@@ -737,15 +737,15 @@ class hsl_classification:
                 output_pred_mu, output_pred_var = self.model.net(input_history)
                 itv_pred_mu = output_pred_mu[::2]
                 itv_pred_var = output_pred_mu[1::2]
-                    
-                itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-                itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-                num_steps_retract = max(int(itv_pred_mu_denorm[2]), 1)
-                level_itv = itv_pred_mu_denorm[1]
-                trend_itv = itv_pred_mu_denorm[0]
-                var_level_itv = itv_pred_var_denorm[1]
-                var_trend_itv = itv_pred_var_denorm[0]
+                num_steps_retract = max(int(itv_pred_mu[2]), 1)
+                level_itv = itv_pred_mu[1]
+                trend_itv = itv_pred_mu[0]
+                var_level_itv = itv_pred_var[1]
+                var_trend_itv = itv_pred_var[0]
+                    
+                # itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+                # itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
                 # if anm_type == "LL":
                     # level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
@@ -925,30 +925,16 @@ class hsl_classification:
         ssm_copy.var_states[LT_index, LT_index] += trend_intervention[1]
         y_likelihood_all = []
         for i in range(num_steps_retract):
-            # mu_obs_pred, var_obs_pred, _, _ = ssm_copy.forward(data_all["x"][i])
-            # _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
-            # if "lstm" in ssm_copy.states_name:
-            #     lstm_index = ssm_copy.get_states_index("lstm")
-            #     ssm_copy.lstm_output_history.update(
-            #         mu_states_posterior[lstm_index],
-            #         var_states_posterior[lstm_index, lstm_index],
-            #     )
-            # ssm_copy._save_states_history()
-            # ssm_copy.set_states(mu_states_posterior, var_states_posterior)
-
-            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
-            # _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            mu_obs_pred, var_obs_pred, _, _ = ssm_copy.forward(data_all["x"][i])
+            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
                 ssm_copy.lstm_output_history.update(
-                    # mu_states_posterior[lstm_index],
-                    # var_states_posterior[lstm_index, lstm_index],
-                    mu_states_prior[lstm_index],
-                    var_states_prior[lstm_index, lstm_index],
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
                 )
             ssm_copy._save_states_history()
-            ssm_copy.set_states(mu_states_prior, var_states_prior)
-
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
             y_likelihood = likelihood(mu_obs_pred, 
@@ -973,11 +959,6 @@ class hsl_classification:
         # plt.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
         # plt.legend()
         # plt.title('Predictions w/wo intervention')
-
-        if "lstm" in ssm.states_name:
-            # Set the base_model back to the original state
-            ssm.lstm_output_history = copy.deepcopy(output_history_temp)
-            ssm.lstm_net.set_lstm_states(cell_states_temp)
 
         return y_likelihood_all
     
@@ -1569,7 +1550,7 @@ class hsl_classification:
         current = 1
         while current <=  step_look_back:
             look_back_step_list.append(current)
-            current *= 2
+            current += 1
         look_back_step_list = [current_step - i for i in look_back_step_list]
         return look_back_step_list
 
@@ -1638,6 +1619,8 @@ class hsl_classification:
         n_test = int(n_samples * 0.1)
         test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
         test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
+
+        print(f"Classification input length: {len(samples['input_feature'][0])}")
 
         self.model_class = Sequential(
                                     Linear(len(samples['input_feature'][0]), 64, gain_weight=0.2, gain_bias=0.2),
@@ -1961,6 +1944,8 @@ class hsl_classification:
         test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
         test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
         test_y = (test_y - self.mean_target) / self.std_target
+
+        print(f"Intervention input length: {len(samples['input_feature'][0])}")
 
         if self.nn_train_with == 'tagiv':
             self.model = TAGI_Net(len(samples['input_feature'][0]), len(self.target_list))
