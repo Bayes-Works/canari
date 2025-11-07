@@ -654,6 +654,7 @@ class hsl_classification:
         i_before_retract = 0
         trigger = False
         rerun_kf = False
+        len_train_val = len(self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True))
         while i < len(data["x"]):
             if i > i_before_retract:
                 rerun_kf = False
@@ -860,7 +861,8 @@ class hsl_classification:
             if self.current_time_step >= self.start_idx_mp:
                 T = np.array(mp_input).flatten().astype("float64")
                 Q = T[self.current_time_step - self.m_mp:self.current_time_step]
-                stationary_space_stop = self.current_time_step - self.m_mp if self.current_time_step - self.m_mp < anm_start_global else anm_start_global
+                stationary_space_stop = len_train_val - self.m_mp
+                # stationary_space_stop = self.current_time_step - self.m_mp if self.current_time_step - self.m_mp < anm_start_global else anm_start_global
                 D = stumpy.mass(Q, T[:stationary_space_stop], normalize=False)
                 min_idx = np.argmin(D)
                 mp_value = D[min_idx]
