@@ -165,9 +165,9 @@ hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_
 hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04, 5.2052871e-03, 5.9214630e+01]), np.array([5.2153803e-03, 6.3000584e-01, 7.5671562e+01])
 
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+                                    save_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP_1dm.pkl', max_training_epoch=50)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                  load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+                                  save_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP_1dm.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
