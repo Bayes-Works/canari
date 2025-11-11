@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_2classes_2driftmodels_datall_MPs import hsl_classification
+from src.hsl_classification_mp2_2classes_2driftmodels_innovation import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# # LT anomaly
-# anm_type = 'LT'
-# time_anomaly = 52*7
-# anm_mag = 12/52
-# anm_baseline = np.arange(len(df_raw)) * anm_mag
-# # Set the first 52*12 values in anm_baseline to be 0
-# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
-
-# LL anomaly
-anm_type = 'LL'
+# LT anomaly
+anm_type = 'LT'
 time_anomaly = 52*7
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_mag = 3/52
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)
+
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*7
+# anm_mag = 35
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -172,6 +172,9 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(t
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
+innovation_mu = np.array(hsl_tsad_agent.innovation_mu_all)
+innovation_std = np.array(hsl_tsad_agent.innovation_std_all)
+
 # #  Plot
 state_type = "posterior"
 #  Plot states from pretrained model
@@ -208,57 +211,96 @@ plot_states(
 )
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.base_model.states,
-    states_type=state_type,
-    states_to_plot=['trend'],
-    sub_plot=ax1,
-)
-ax1.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.base_model.states,
-    states_type=state_type,
-    states_to_plot=['lstm'],
-    sub_plot=ax2,
-)
-ax2.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.base_model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax3,
-)
-ax3.set_xticklabels([])
-ax4.plot(time, np.array(mu_ar_preds_all), label='obs', color='tab:red')
-ax4.fill_between(time,
-                np.array(mu_ar_preds_all) - np.array(std_ar_preds_all),
-                np.array(mu_ar_preds_all) + np.array(std_ar_preds_all),
-                color='tab:red',
+
+############# Plot innovation #############
+ax1.plot(time, innovation_mu[:, 0].flatten(), color="blue")
+ax1.fill_between(time,
+                innovation_mu[:, 0].flatten() - innovation_std[:, 0].flatten(),
+                innovation_mu[:, 0].flatten() + innovation_std[:, 0].flatten(),
+                color='tab:blue',
                 alpha=0.5)
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['level'],
-    sub_plot=ax4,
-)
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model2.states,
-    states_type=state_type,
-    states_to_plot=['level'],
-    sub_plot=ax4,
-    color='tab:green',
-)
-ax4.set_xticklabels([])
+ax1.axhline(y=0, color='red', linestyle='--')
+ax1.set_ylabel('ll_inn')
+
+ax2.plot(time, innovation_mu[:, 1].flatten(), color="blue")
+ax2.fill_between(time,
+                innovation_mu[:, 1].flatten() - innovation_std[:, 1].flatten(),
+                innovation_mu[:, 1].flatten() + innovation_std[:, 1].flatten(),
+                color='tab:blue',
+                alpha=0.5)
+ax2.axhline(y=0, color='red', linestyle='--')
+ax2.set_ylabel('lt_inn')
+
+ax3.plot(time, innovation_mu[:, 2].flatten(), color="blue")
+ax3.fill_between(time,
+                innovation_mu[:, 2].flatten() - innovation_std[:, 2].flatten(),
+                innovation_mu[:, 2].flatten() + innovation_std[:, 2].flatten(),
+                color='tab:blue',
+                alpha=0.5)
+ax3.axhline(y=0, color='red', linestyle='--')
+ax3.set_ylabel('lstm_inn')
+
+ax4.plot(time, innovation_mu[:, 3].flatten(), color="blue")
+ax4.fill_between(time,
+                innovation_mu[:, 3].flatten() - innovation_std[:, 3].flatten(),
+                innovation_mu[:, 3].flatten() + innovation_std[:, 3].flatten(),
+                color='tab:blue',
+                alpha=0.5)
+ax4.axhline(y=0, color='red', linestyle='--')
+ax4.set_ylabel('ar_inn')
+
+############# Original plots #############
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.base_model.states,
+#     states_type=state_type,
+#     states_to_plot=['trend'],
+#     sub_plot=ax1,
+# )
+# ax1.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.base_model.states,
+#     states_type=state_type,
+#     states_to_plot=['lstm'],
+#     sub_plot=ax2,
+# )
+# ax2.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.base_model.states,
+#     states_type=state_type,
+#     states_to_plot=['autoregression'],
+#     sub_plot=ax3,
+# )
+# ax3.set_xticklabels([])
+# ax4.plot(time, np.array(mu_ar_preds_all), label='obs', color='tab:red')
+# ax4.fill_between(time,
+#                 np.array(mu_ar_preds_all) - np.array(std_ar_preds_all),
+#                 np.array(mu_ar_preds_all) + np.array(std_ar_preds_all),
+#                 color='tab:red',
+#                 alpha=0.5)
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['level'],
+#     sub_plot=ax4,
+# )
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model2.states,
+#     states_type=state_type,
+#     states_to_plot=['level'],
+#     sub_plot=ax4,
+#     color='tab:green',
+# )
+# ax4.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
     standardization=True,
