@@ -69,6 +69,7 @@ class hsl_classification:
         self.start_idx_mp = start_idx_mp
         self.m_mp = m_mp
         self.mp_all = []
+        self.innovation_mu_all, self.innovation_std_all = [], []
 
     def _copy_initial_models(self):
         """
@@ -131,7 +132,7 @@ class hsl_classification:
                                                                       mu_lstm_pred=mu_lstm_pred,
                                                                       var_lstm_pred=var_lstm_pred,)
             (
-                _, _,
+                delta_mu_states, delta_var_states,
                 mu_states_posterior,
                 var_states_posterior,
             ) = self.base_model.backward(y)
@@ -213,6 +214,8 @@ class hsl_classification:
             self.pred_class_probs.append([0])
             self.pred_class_probs_var.append([0])
             self.data_loglikelihoods.append([None, None])
+            self.innovation_mu_all.append(delta_mu_states.flatten().tolist())
+            self.innovation_std_all.append(np.sqrt(-np.diag(delta_var_states)).flatten().tolist())
 
             self.current_time_step += 1
 
@@ -818,10 +821,13 @@ class hsl_classification:
             mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
 
             (
-                _, _,
+                delta_mu_states, delta_var_states,
                 mu_states_posterior,
                 var_states_posterior,
             ) = self.base_model.backward(data["y"][i])
+
+            self.innovation_mu_all.append(delta_mu_states.flatten().tolist())
+            self.innovation_std_all.append(np.sqrt(-np.diag(delta_var_states)).flatten().tolist())
 
             if self.base_model.lstm_net:
                 self.base_model.lstm_output_history.update(
