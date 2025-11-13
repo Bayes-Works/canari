@@ -3,6 +3,7 @@ build
 *.vscode
 *.json
 saved_results/
+saved_params/
 **/__pycache__/
 *.egg-info/
 *.png
