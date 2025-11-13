@@ -21,53 +21,48 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optim_model: int = 50,
-    num_trial_optim_skf: int = 300,
-    param_optimization: bool = False,
-    param_grid_search: bool = False,
+    num_trial_optim_model: int = 20,
+    num_trial_optim_skf: int = 30,
+    param_optimization: bool = True,
+    param_grid_search: bool = True,
     smoother: bool = True,
     plot: bool = False,
 ):
     ######### Data processing #########
     # Read data
-    data_file = "./data/benchmark_data/test_8_data.csv"
-    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-    time_series = pd.to_datetime(df_raw.iloc[:, 0])
-    df_raw = df_raw.iloc[:, 1:]
+    data_file = "./data/benchmark_data/test_2_data.csv"
+    df_raw = pd.read_csv(data_file, skiprows=1, delimiter=";", header=None)
+    time_series = pd.to_datetime(df_raw.iloc[:, 4])
+    df_raw = df_raw.iloc[:, 6].to_frame()
     df_raw.index = time_series
     df_raw.index.name = "date_time"
-    df_raw.columns = ["y", "water_level", "temp_min", "temp_max"]
+    df_raw.columns = ["values"]
+    df = df_raw.resample("W").mean()
+    df = df.iloc[30:, :]
     # Data pre-processing
     output_col = [0]
     data_processor = DataProcess(
-        data=df_raw,
+        data=df,
         time_covariates=["week_of_year"],
-        train_split=0.3,
-        validation_split=0.074,
+        train_split=0.25,
+        validation_split=0.08,
+        test_split=0.67,
         output_col=output_col,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
+    seed = np.random.randint(0, 100) 
 
-    plot_data(
-        data_processor=data_processor,
-        standardization=True,
-        plot_test_data=True,
-        plot_column=output_col,
-        validation_label="y",
-    )
-    plt.show()
-    
     ######### Define model with parameters #########
     def model_with_parameters(param, train_data, validation_data):
         model = Model(
-            LocalTrend(),
+            LocalTrend(var_states=[1e-1, 1e-1]),
             LstmNetwork(
                 look_back_len=int(param["look_back_len"]),
-                num_features=5,
+                num_features=2,
                 num_layer=1,
                 infer_len=52 * 3,
                 num_hidden_unit=50,
-                manual_seed=1,
+                manual_seed=seed,
                 smoother=smoother,
             ),
             WhiteNoise(std_error=param["sigma_v"]),
@@ -138,43 +133,55 @@ def main(
         )
         skf.save_initial_states()
 
+        num_anomaly = 50
         detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
             data=train_data,
-            num_anomaly=50,
-            slope_anomaly=skf_param_space["slope"],
+            num_anomaly=num_anomaly,
+            slope_anomaly=skf_param_space["slope"]/52,
         )
+
+        data_len_year = (data_processor.data.index[data_processor.train_end]-data_processor.data.index[data_processor.train_start]).days/365.25
         skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate
-        skf.metric_optim["false_alarm_train"] = false_alarm_train
+        skf.metric_optim["false_rate"] = false_rate/data_len_year
+        if false_alarm_train == "Yes":
+            skf.metric_optim["false_alarm_train"] = 1/data_len_year
+        else:
+            skf.metric_optim["false_alarm_train"] = 0
+        skf.metric_optim["anomaly_magnitude"] = skf_param_space["slope"]
 
         return skf
 
     ######### Parameter optimization #########
     if param_optimization:
         # # Optimize for model
-        # Define parameter search space
-        if param_optimization:
-            param_space = {
-                "look_back_len": [10, 65],
-                "sigma_v": [1e-3, 2e-1],
+        # # Define parameter search space
+        # if param_optimization:
+        #     param_space = {
+        #         "look_back_len": [12, 76],
+        #         "sigma_v": [1e-3, 2e-1],
+        #     }
+        # elif param_grid_search:
+        #     param_space = {
+        #         "look_back_len": [12, 26, 52],
+        #         "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
+        #     }
+        # # Define optimizer
+        # model_optimizer = ModelOptimizer(
+        #     model=model_with_parameters,
+        #     param_space=param_space,
+        #     train_data=train_data,
+        #     validation_data=validation_data,
+        #     num_optimization_trial=num_trial_optim_model,
+        #     grid_search=param_grid_search,
+        # )
+        # model_optimizer.optimize()
+        # # Get best model
+        # param = model_optimizer.get_best_param()
+
+        param = {
+                "look_back_len": 34,
+                "sigma_v": 0.021514866118117065,
             }
-        elif param_grid_search:
-            param_space = {
-                "look_back_len": [12, 26, 52],
-                "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
-            }
-        # Define optimizer
-        model_optimizer = ModelOptimizer(
-            model=model_with_parameters,
-            param_space=param_space,
-            train_data=train_data,
-            validation_data=validation_data,
-            num_optimization_trial=num_trial_optim_model,
-            grid_search=param_grid_search,
-        )
-        model_optimizer.optimize()
-        # Get best model
-        param = model_optimizer.get_best_param()
 
         # Train best model
         model_optim, mu_validation_preds, std_validation_preds = model_with_parameters(
@@ -213,9 +220,8 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 5e-2
-        slope_lower_bound = 1e-3
-
+        slope_upper_bound = 2/5
+        slope_lower_bound = 3/20
         if plot:
             # # Plot synthetic anomaly
             synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
@@ -248,14 +254,14 @@ def main(
 
         if param_grid_search:
             skf_param_space = {
-                "std_transition_error": [1e-6, 1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4, 1e-3],
-                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
+                "std_transition_error": [1e-6, 1e-5, 1e-4],
+                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4],
+                "slope": [0.52],
             }
         elif param_optimization:
             skf_param_space = {
-                "std_transition_error": [1e-6, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-3],
+                "std_transition_error": [1e-6, 1e-4],
+                "norm_to_abnorm_prob": [1e-6, 1e-4],
                 "slope": [slope_lower_bound, slope_upper_bound],
             }
         skf_optimizer = SKFOptimizer(
@@ -275,11 +281,11 @@ def main(
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
         skf_optim_dict["cov_names"] = train_data["cov_names"]
-        with open("saved_params/benchmark_8.pkl", "wb") as f:
+        with open("saved_params/benchmark_2.pkl", "wb") as f:
             pickle.dump(skf_optim_dict, f)
     else:
         # # Load saved skf model
-        with open("saved_params/benchmark_8.pkl", "rb") as f:
+        with open("saved_params/benchmark_2.pkl", "rb") as f:
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
 
@@ -296,7 +302,7 @@ def main(
         model_prob=filter_marginal_abnorm_prob,
     )
     fig.suptitle("SKF hidden states", fontsize=10, y=1)
-    plt.savefig("./saved_results/BM8.png")
+    plt.savefig("./saved_results/BM2.png")
     plt.show()
 
 

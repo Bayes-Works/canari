@@ -4,7 +4,6 @@ This module automates the search for optimal hyperparameters of a
 external library.
 """
 
-import platform
 from typing import Callable, Dict, Optional
 import numpy as np
 
@@ -15,6 +14,9 @@ from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
 from canari import SKF
+from scipy.stats import norm, lognorm
+from fractions import Fraction
+import matplotlib.pyplot as plt
 
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
@@ -66,6 +68,7 @@ class SKFOptimizer:
         grid_search: Optional[bool] = False,
         algorithm: Optional[str] = "default",
         back_end: Optional[str] = "ray",
+        mode: Optional[str] = "max",
     ):
         """
         Initializes the SKFOptimizer.
@@ -85,6 +88,7 @@ class SKFOptimizer:
         self.param_optim = None
         self._trial_count = 0
         self._backend = back_end
+        self._mode = mode
 
     def objective(
         self,
@@ -107,22 +111,64 @@ class SKFOptimizer:
         detection_rate = skf.metric_optim["detection_rate"]
         false_rate = skf.metric_optim["false_rate"]
         false_alarm_train = skf.metric_optim["false_alarm_train"]
+        anm_magnitude = skf.metric_optim["anomaly_magnitude"]
 
-        if (
-            detection_rate < self.detection_threshold
-            or false_rate > self.false_rate_threshold
-            or false_alarm_train == "Yes"
-        ):
-            _metric = np.max(np.abs(self._param_space["slope"]))
-        else:
-            _metric = np.abs(config["slope"])
+        mean = 0.5          # mean of normal
+        std_dev = 0.05       # std deviation of normal
+
+        # metric
+        j1 = norm.cdf(detection_rate, loc=mean, scale=std_dev)
+        j2 = 1 - lognorm.cdf(false_rate, s=0.2, scale=0.1)
+        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.2, scale=0.7)
+        # j3 = 1 - lognorm.cdf(anm_magnitude, s=0.3, scale=0.1) 
+        _metric = j1*j2*j3
 
         metric = {}
         metric["metric"] = _metric
         metric["detection_rate"] = detection_rate
         metric["false_rate"] = false_rate
-        metric["false_alarm_train"] = false_alarm_train
+        metric["false_alarm_train"] = anm_magnitude
+
+        
         return metric
+    
+    # def objective_save(
+    #     self,
+    #     config,
+    #     model_param: dict,
+    # ):
+    #     """
+    #     Returns a metric that is used for optimization.
+
+    #     Returns:
+    #         dict: Metric used for optimization.
+    #     """
+
+    #     skf = self.skf(
+    #         config,
+    #         model_param,
+    #         self._data,
+    #     )
+
+    #     detection_rate = skf.metric_optim["detection_rate"]
+    #     false_rate = skf.metric_optim["false_rate"]
+    #     false_alarm_train = skf.metric_optim["false_alarm_train"]
+
+    #     if (
+    #         detection_rate < self.detection_threshold
+    #         or false_rate > self.false_rate_threshold
+    #         or false_alarm_train == "Yes"
+    #     ):
+    #         _metric = np.max(np.abs(self._param_space["slope"]))
+    #     else:
+    #         _metric = np.abs(config["slope"])
+
+    #     metric = {}
+    #     metric["metric"] = _metric
+    #     metric["detection_rate"] = detection_rate
+    #     metric["false_rate"] = false_rate
+    #     metric["false_alarm_train"] = false_alarm_train
+    #     return metric
 
     def optimize(self):
         """
@@ -191,7 +237,7 @@ class SKFOptimizer:
                         model_param=self._model_param,
                     ),
                     config=search_config,
-                    search_alg=OptunaSearch(metric="metric", mode="min"),
+                    search_alg=OptunaSearch(metric="metric", mode=self._mode),
                     name="SKF_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,
@@ -199,7 +245,7 @@ class SKFOptimizer:
                     callbacks=[custom_logger],
                 )
             elif self._algorithm == "parallel":
-                scheduler = ASHAScheduler(metric="metric", mode="min")
+                scheduler = ASHAScheduler(metric="metric", mode=self._mode)
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         self.objective,
@@ -215,8 +261,8 @@ class SKFOptimizer:
                 )
 
         # Get the optimal parameters
-        self.param_optim = optimizer_runner.get_best_config(metric="metric", mode="min")
-        best_trial = optimizer_runner.get_best_trial(metric="metric", mode="min")
+        self.param_optim = optimizer_runner.get_best_config(metric="metric", mode=self._mode)
+        best_trial = optimizer_runner.get_best_trial(metric="metric", mode=self._mode)
         best_sample_number = custom_logger.trial_sample_map.get(
             best_trial.trial_id, "Unknown"
         )
@@ -280,7 +326,7 @@ class SKFOptimizer:
                     len(f"{self.total_samples}/{self.total_samples}")
                 )
                 print(
-                    f"# {sample_str} - Metric: {result['metric']:.3f} - Detection rate: {result['detection_rate']:.2f} - False rate: {result['false_rate']:.2f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
+                    f"# {sample_str} - Metric: {result['metric']:.8f} - Detection rate: {result['detection_rate']:.8f} - False rate: {result['false_rate']:.8f} - False alarm in train: {result['false_alarm_train']} - Parameter: {params}"
                 )
 
         return _Progress(total_samples)

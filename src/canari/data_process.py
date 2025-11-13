@@ -420,6 +420,7 @@ class DataProcess:
         len_data = len(data["y"])
         window_anomaly_start = int(np.ceil(len_data * anomaly_start))
         window_anomaly_end = int(np.ceil(len_data * anomaly_end))
+        np.random.seed(5) 
         anomaly_start_history = np.random.randint(
             window_anomaly_start, window_anomaly_end, size=num_samples * len(slope)
         )
