@@ -44,8 +44,8 @@ class ModelOptimizer:
             Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
             Defaults to 'OptunaSearch'.
         mode (str, optional): Direction for optimization stopping: 'min' (default).
-        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna 
-                                    for optimization. Default to "ray". 
+        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna
+                                    for optimization. Default to "ray".
 
     Attributes:
         model_optim :
@@ -154,10 +154,17 @@ class ModelOptimizer:
                 total_samples=self._num_optimization_trial
             )
             if self._algorithm == "default":
+                sampler = optuna.samplers.TPESampler(
+                    n_startup_trials=30,  # ⬅ random starts
+                    multivariate=True,
+                    group=True,
+                )
                 optimizer_runner = tune.run(
                     self.objective,
                     config=search_config,
-                    search_alg=OptunaSearch(metric="metric", mode=self._mode),
+                    search_alg=OptunaSearch(
+                        metric="metric", mode=self._mode, sampler=sampler
+                    ),
                     name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,

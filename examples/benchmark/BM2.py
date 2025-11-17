@@ -21,8 +21,8 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optim_model: int = 20,
-    num_trial_optim_skf: int = 30,
+    num_trial_optim_model: int = 40,
+    num_trial_optim_skf: int = 70,
     param_optimization: bool = True,
     param_grid_search: bool = False,
     smoother: bool = True,
@@ -50,7 +50,7 @@ def main(
         output_col=output_col,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
-    seed = np.random.randint(0, 100) 
+    seed = np.random.randint(0, 100)
 
     ######### Define model with parameters #########
     def model_with_parameters(param, train_data, validation_data):
@@ -133,18 +133,21 @@ def main(
         )
         skf.save_initial_states()
 
-        num_anomaly = 1
+        num_anomaly = 50
         detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
             data=train_data,
             num_anomaly=num_anomaly,
-            slope_anomaly=skf_param_space["slope"]/52,
+            slope_anomaly=skf_param_space["slope"] / 52,
         )
 
-        data_len_year = (data_processor.data.index[data_processor.train_end]-data_processor.data.index[data_processor.train_start]).days/365.25
+        data_len_year = (
+            data_processor.data.index[data_processor.train_end]
+            - data_processor.data.index[data_processor.train_start]
+        ).days / 365.25
         skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate/data_len_year
+        skf.metric_optim["false_rate"] = false_rate / data_len_year
         if false_alarm_train == "Yes":
-            skf.metric_optim["false_alarm_train"] = 1/data_len_year
+            skf.metric_optim["false_alarm_train"] = 1 / data_len_year
         else:
             skf.metric_optim["false_alarm_train"] = 0
         skf.metric_optim["anomaly_magnitude"] = skf_param_space["slope"]
@@ -153,35 +156,35 @@ def main(
 
     ######### Parameter optimization #########
     if param_optimization:
-        # # Optimize for model
-        # # Define parameter search space
-        # if param_optimization:
-        #     param_space = {
-        #         "look_back_len": [12, 76],
-        #         "sigma_v": [1e-3, 2e-1],
-        #     }
-        # elif param_grid_search:
-        #     param_space = {
-        #         "look_back_len": [12, 26, 52],
-        #         "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
-        #     }
-        # # Define optimizer
-        # model_optimizer = ModelOptimizer(
-        #     model=model_with_parameters,
-        #     param_space=param_space,
-        #     train_data=train_data,
-        #     validation_data=validation_data,
-        #     num_optimization_trial=num_trial_optim_model,
-        #     grid_search=param_grid_search,
-        # )
-        # model_optimizer.optimize()
-        # # Get best model
-        # param = model_optimizer.get_best_param()
-
-        param = {
-                "look_back_len": 34,
-                "sigma_v": 0.021514866118117065,
+        # Optimize for model
+        # Define parameter search space
+        if param_optimization:
+            param_space = {
+                "look_back_len": [12, 52],
+                "sigma_v": [1e-3, 2e-1],
             }
+        elif param_grid_search:
+            param_space = {
+                "look_back_len": [12, 26, 52],
+                "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
+            }
+        # Define optimizer
+        model_optimizer = ModelOptimizer(
+            model=model_with_parameters,
+            param_space=param_space,
+            train_data=train_data,
+            validation_data=validation_data,
+            num_optimization_trial=num_trial_optim_model,
+            grid_search=param_grid_search,
+        )
+        model_optimizer.optimize()
+        # Get best model
+        param = model_optimizer.get_best_param()
+
+        # param = {
+        #     "look_back_len": 22,
+        #     "sigma_v": 0.195,
+        # }
 
         # Train best model
         model_optim, mu_validation_preds, std_validation_preds = model_with_parameters(
@@ -220,8 +223,8 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 2/5
-        slope_lower_bound = 3/20
+        slope_upper_bound = 2.6
+        slope_lower_bound = 0.052
         if plot:
             # # Plot synthetic anomaly
             synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(

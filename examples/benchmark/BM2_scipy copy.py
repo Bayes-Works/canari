@@ -189,7 +189,7 @@ def main(
         # metric
         j1 = norm.cdf(detection_rate, loc=mean, scale=std_dev)
         j2 = 1 - lognorm.cdf(false_rate, s=0.2, scale=0.1)
-        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.2, scale=0.4)
+        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.2, scale=0.3)
         # j3 = 1 - lognorm.cdf(anm_magnitude, s=0.3, scale=0.1/4)
         _metric = j1 * j2 * j3
 
@@ -245,19 +245,19 @@ def main(
     # def skf_obj_logged(x_log):
     #     """Wraps skf_obj to record and print every evaluation for ANY number of parameters."""
     #     val = skf_obj(x_log)
-    #
+
     #     # convert log-space vector to linear for readability
     #     # x_lin = np.exp(np.asarray(x_log))
     #     x_lin = np.asarray(x_log)
-    #
+
     #     # store
     #     eval_history.append((x_lin.copy(), float(val)))
-    #
+
     #     # pretty print all parameters
     #     params_str = ", ".join([f"x{i}={p:.6g}" for i, p in enumerate(x_lin)])
-    #
+
     #     print(f"Eval #{len(eval_history):4d} | {params_str} | objective={val:.6f}")
-    #
+
     #     return val
 
     eval_history = []
@@ -319,22 +319,18 @@ def main(
 
     print("\n=== Optimization complete ===")
 
-    # Use global best parameters if available; fall back to SciPy result otherwise
-    if best_x is not None:
-        x_opt_lin = np.asarray(best_x, dtype=float)
-        opt_fun = float(best_val)
-    else:
-        x_opt_lin = res.x
-        opt_fun = res.fun
+    # convert all optimized parameters from log-space → linear
+    # x_opt_lin = np.exp(res.x)
+    x_opt_lin = res.x
 
-    # pretty print "optimal" parameters (global best)
+    # pretty print all parameters
     params_str = ", ".join([f"x{i}={p:.6g}" for i, p in enumerate(x_opt_lin)])
     print(f"Optimal: {params_str}")
-    print(f"Optimal objective value: {opt_fun:.6f}")
+
+    print(f"Optimal objective value: {res.fun:.6f}")
     print(f"Function evaluations: {res.nfev}, Iterations: {res.nit}")
 
-    # Use the global-best parameters for SKF, not res.x
-    skf_optim = skf_with_parameters(x_opt_lin, model_optim_dict, train_data)
+    skf_optim = skf_with_parameters(res.x, model_optim_dict, train_data)
 
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = skf_optim.smoother()

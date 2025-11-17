@@ -21,8 +21,8 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optim_model: int = 20,
-    num_trial_optim_skf: int = 30,
+    num_trial_optim_model: int = 50,
+    num_trial_optim_skf: int = 70,
     param_optimization: bool = True,
     param_grid_search: bool = False,
     smoother: bool = True,
@@ -49,7 +49,7 @@ def main(
         output_col=output_col,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
-    seed = np.random.randint(0, 100) 
+    seed = np.random.randint(0, 100)
 
     ######### Define model with parameters #########
     def model_with_parameters(param, train_data, validation_data):
@@ -147,27 +147,21 @@ def main(
         )
         skf.save_initial_states()
 
-        # detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
-        #     data=train_data,
-        #     num_anomaly=50,
-        #     slope_anomaly=skf_param_space["slope"],
-        # )
-        # skf.metric_optim["detection_rate"] = detection_rate
-        # skf.metric_optim["false_rate"] = false_rate
-        # skf.metric_optim["false_alarm_train"] = false_alarm_train
-
-        num_anomaly = 1
+        num_anomaly = 50
         detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
             data=train_data,
             num_anomaly=num_anomaly,
-            slope_anomaly=skf_param_space["slope"]/52,
+            slope_anomaly=skf_param_space["slope"] / 52,
         )
 
-        data_len_year = (data_processor.data.index[data_processor.train_end]-data_processor.data.index[data_processor.train_start]).days/365.25
+        data_len_year = (
+            data_processor.data.index[data_processor.train_end]
+            - data_processor.data.index[data_processor.train_start]
+        ).days / 365.25
         skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate/data_len_year
+        skf.metric_optim["false_rate"] = false_rate / data_len_year
         if false_alarm_train == "Yes":
-            skf.metric_optim["false_alarm_train"] = 1/data_len_year
+            skf.metric_optim["false_alarm_train"] = 1 / data_len_year
         else:
             skf.metric_optim["false_alarm_train"] = 0
         skf.metric_optim["anomaly_magnitude"] = skf_param_space["slope"]
@@ -237,8 +231,8 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 4/5
-        slope_lower_bound = 3/20
+        slope_upper_bound = 2.6
+        slope_lower_bound = 0.052
         if plot:
             # # Plot synthetic anomaly
             synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(

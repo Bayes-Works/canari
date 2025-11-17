@@ -13,6 +13,8 @@ from ray.tune import Callback
 from typing import Callable, Optional
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
+import nevergrad as ng
+from ray.tune.search.nevergrad import NevergradSearch
 from canari import SKF
 from scipy.stats import norm, lognorm
 from fractions import Fraction
@@ -45,8 +47,8 @@ class SKFOptimizer:
         num_optimization_trial (int, optional): Number of trials for optimizer. Defaults to 50.
         grid_search (bool, optional): If True, perform grid search. Defaults to False.
         algorithm (str, optional): Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler). Defaults to 'OptunaSearch'.
-        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna 
-                                    for optimization. Default to "ray". 
+        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna
+                                    for optimization. Default to "ray".
 
     Attributes:
         skf_optim: Best SKF instance after optimization.
@@ -66,7 +68,7 @@ class SKFOptimizer:
         max_timestep_to_detect: Optional[int] = None,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
-        algorithm: Optional[str] = "default",
+        algorithm: Optional[str] = "default",  # "default", "BOHB"
         back_end: Optional[str] = "ray",
         mode: Optional[str] = "max",
     ):
@@ -113,15 +115,15 @@ class SKFOptimizer:
         false_alarm_train = skf.metric_optim["false_alarm_train"]
         anm_magnitude = skf.metric_optim["anomaly_magnitude"]
 
-        mean = 0.5          # mean of normal
-        std_dev = 0.05       # std deviation of normal
+        mean = 0.5  # mean of normal
+        std_dev = 0.05  # std deviation of normal
 
         # metric
         j1 = norm.cdf(detection_rate, loc=mean, scale=std_dev)
         j2 = 1 - lognorm.cdf(false_rate, s=0.2, scale=0.1)
-        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.2, scale=0.7)
-        # j3 = 1 - lognorm.cdf(anm_magnitude, s=0.3, scale=0.1) 
-        _metric = j1*j2*j3
+        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.2, scale=0.4)
+        # j3 = 1 - lognorm.cdf(anm_magnitude, s=0.3, scale=0.1)
+        _metric = j1 * j2 * j3
 
         metric = {}
         metric["metric"] = _metric
@@ -129,46 +131,7 @@ class SKFOptimizer:
         metric["false_rate"] = false_rate
         metric["false_alarm_train"] = anm_magnitude
 
-        
         return metric
-    
-    # def objective_save(
-    #     self,
-    #     config,
-    #     model_param: dict,
-    # ):
-    #     """
-    #     Returns a metric that is used for optimization.
-
-    #     Returns:
-    #         dict: Metric used for optimization.
-    #     """
-
-    #     skf = self.skf(
-    #         config,
-    #         model_param,
-    #         self._data,
-    #     )
-
-    #     detection_rate = skf.metric_optim["detection_rate"]
-    #     false_rate = skf.metric_optim["false_rate"]
-    #     false_alarm_train = skf.metric_optim["false_alarm_train"]
-
-    #     if (
-    #         detection_rate < self.detection_threshold
-    #         or false_rate > self.false_rate_threshold
-    #         or false_alarm_train == "Yes"
-    #     ):
-    #         _metric = np.max(np.abs(self._param_space["slope"]))
-    #     else:
-    #         _metric = np.abs(config["slope"])
-
-    #     metric = {}
-    #     metric["metric"] = _metric
-    #     metric["detection_rate"] = detection_rate
-    #     metric["false_rate"] = false_rate
-    #     metric["false_alarm_train"] = false_alarm_train
-    #     return metric
 
     def optimize(self):
         """
@@ -177,8 +140,8 @@ class SKFOptimizer:
 
         if self._backend == "ray":
             self._ray_optimizer()
-        elif self._backend == "optuna":
-            self._optuna_optimizer()
+        # elif self._backend == "optuna":
+        #     self._optuna_optimizer()
 
     def get_best_model(self) -> SKF:
         """
@@ -231,13 +194,22 @@ class SKFOptimizer:
                 total_samples=self._num_optimization_trial
             )
             if self._algorithm == "default":
+                sampler = optuna.samplers.TPESampler(
+                    n_startup_trials=40,
+                    multivariate=True,
+                    group=True,
+                )
                 optimizer_runner = tune.run(
                     tune.with_parameters(
                         self.objective,
                         model_param=self._model_param,
                     ),
                     config=search_config,
-                    search_alg=OptunaSearch(metric="metric", mode=self._mode),
+                    search_alg=OptunaSearch(
+                        metric="metric",
+                        mode=self._mode,
+                        sampler=sampler,
+                    ),
                     name="SKF_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,
@@ -259,9 +231,31 @@ class SKFOptimizer:
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
                 )
+            elif self._algorithm == "Nevergrad":
+                search_alg = NevergradSearch(
+                    optimizer=ng.optimizers.OnePlusOne,  # or any other NG optimizer
+                    metric="metric",
+                    mode=self._mode,
+                )
+
+                optimizer_runner = tune.run(
+                    tune.with_parameters(
+                        self.objective,
+                        model_param=self._model_param,
+                    ),
+                    config=search_config,
+                    search_alg=search_alg,
+                    name="SKF_optimizer",
+                    num_samples=self._num_optimization_trial,
+                    verbose=0,
+                    raise_on_failed_trial=False,
+                    callbacks=[custom_logger],
+                )
 
         # Get the optimal parameters
-        self.param_optim = optimizer_runner.get_best_config(metric="metric", mode=self._mode)
+        self.param_optim = optimizer_runner.get_best_config(
+            metric="metric", mode=self._mode
+        )
         best_trial = optimizer_runner.get_best_trial(metric="metric", mode=self._mode)
         best_sample_number = custom_logger.trial_sample_map.get(
             best_trial.trial_id, "Unknown"
@@ -330,105 +324,3 @@ class SKFOptimizer:
                 )
 
         return _Progress(total_samples)
-
-    def _optuna_optimizer(self):
-        """
-        Optuna optimizer
-        """
-
-        if self._grid_search:
-            sampler = optuna.samplers.GridSampler(self._param_space)
-            self._num_optimization_trial = int(
-                np.prod([len(v) for v in self._param_space.values()])
-            )
-        else:
-            sampler = optuna.samplers.TPESampler()
-
-        print("-----")
-        print("SKF optimization starts")
-        study = optuna.create_study(direction="minimize", sampler=sampler)
-
-        study.optimize(
-            self._optuna_objective,
-            n_trials=self._num_optimization_trial,
-            callbacks=[self._optuna_log_trial],
-        )
-
-        self.param_optim = study.best_params
-        self.skf_optim = self.skf(
-            self.param_optim,
-            self._model_param,
-            self._data,
-        )
-
-        print("-----")
-        print(
-            f"Optimal parameters at trial #{study.best_trial.number + 1}: "
-            f"{self.param_optim}"
-        )
-        print(f"Best metric value: {study.best_value:.5f}")
-        print("-----")
-
-    def _optuna_objective(self, trial: optuna.Trial):
-        """
-        Objective function
-        """
-
-        param = self._optuna_build_search_space(trial)
-        metric = self.objective(param, model_param=self._model_param)
-
-        # Save extra info for callback
-        trial.set_user_attr("detection_rate", metric["detection_rate"])
-        trial.set_user_attr("false_rate", metric["false_rate"])
-        trial.set_user_attr("false_alarm_train", metric["false_alarm_train"])
-
-        return metric["metric"]
-
-    def _optuna_build_search_space(self, trial: optuna.Trial) -> Dict:
-        """
-        Build parameter suggestions for Optuna from self._param_space.
-
-        Args:
-            trial (optuna.Trial): Optuna trial object used to sample parameters.
-
-        Returns:
-            Dict[str, float | int]: Dictionary of parameter names mapped to suggested values.
-        """
-
-        param = {}
-        if self._grid_search:
-            for name, values in self._param_space.items():
-                param[name] = trial.suggest_categorical(name, values)
-        else:
-            for name, bounds in self._param_space.items():
-                low, high = bounds
-                if all(isinstance(x, int) for x in bounds):
-                    param[name] = trial.suggest_int(name, low, high)
-                else:
-                    log_uniform = low > 0 and high > 0
-                    param[name] = trial.suggest_float(name, low, high, log=log_uniform)
-        return param
-
-    def _optuna_log_trial(self, study: optuna.Study, trial: optuna.Trial):
-        """
-        Custom logging of trial progress.
-        """
-
-        self._trial_count += 1
-        trial_id = f"{self._trial_count}/{self._num_optimization_trial}".rjust(
-            len(f"{self._num_optimization_trial}/{self._num_optimization_trial}")
-        )
-
-        detection_rate = trial.user_attrs["detection_rate"]
-        false_rate = trial.user_attrs["false_rate"]
-        false_alarm_train = trial.user_attrs["false_alarm_train"]
-
-        print(
-            f"# {trial_id} - Metric: {trial.value:.5f} - Detection rate: {detection_rate:.2f} - "
-            f"False rate: {false_rate:.2f} - False alarm in training data: {false_alarm_train} - Param: {trial.params}"
-        )
-
-        if trial.number == study.best_trial.number:
-            print(
-                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.5f}"
-            )

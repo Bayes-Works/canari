@@ -22,8 +22,8 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 def main(
     num_trial_optim_model: int = 50,
-    num_trial_optim_skf: int = 300,
-    param_optimization: bool = False,
+    num_trial_optim_skf: int = 60,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
     smoother: bool = True,
     plot: bool = False,
@@ -131,14 +131,24 @@ def main(
         )
         skf.save_initial_states()
 
+        num_anomaly = 50
         detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
             data=train_data,
-            num_anomaly=50,
-            slope_anomaly=skf_param_space["slope"],
+            num_anomaly=num_anomaly,
+            slope_anomaly=skf_param_space["slope"] / 52,
         )
+
+        data_len_year = (
+            data_processor.data.index[data_processor.train_end]
+            - data_processor.data.index[data_processor.train_start]
+        ).days / 365.25
         skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate
-        skf.metric_optim["false_alarm_train"] = false_alarm_train
+        skf.metric_optim["false_rate"] = false_rate / data_len_year
+        if false_alarm_train == "Yes":
+            skf.metric_optim["false_alarm_train"] = 1 / data_len_year
+        else:
+            skf.metric_optim["false_alarm_train"] = 0
+        skf.metric_optim["anomaly_magnitude"] = skf_param_space["slope"]
 
         return skf
 
@@ -148,7 +158,7 @@ def main(
         # Define parameter search space
         if param_optimization:
             param_space = {
-                "look_back_len": [10, 65],
+                "look_back_len": [10, 52],
                 "sigma_v": [1e-3, 2e-1],
             }
         elif param_grid_search:
@@ -205,8 +215,8 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 5e-2
-        slope_lower_bound = 1e-3
+        slope_upper_bound = 0.7
+        slope_lower_bound = 0.25
 
         if plot:
             # # Plot synthetic anomaly
