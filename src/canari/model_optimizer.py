@@ -65,6 +65,7 @@ class ModelOptimizer:
         mode: Optional[str] = "min",
         algorithm: Optional[str] = "default",
         back_end: Optional[str] = "ray",
+        num_startup_trials: Optional[int] = 30,
     ):
         """
         Initialize the ModelOptimizer.
@@ -82,6 +83,7 @@ class ModelOptimizer:
         self._trial_count = 0
         self._algorithm = algorithm
         self._backend = back_end
+        self._num_startup_trials = num_startup_trials
 
     def objective(self, config: Dict) -> Dict:
         """
@@ -155,7 +157,7 @@ class ModelOptimizer:
             )
             if self._algorithm == "default":
                 sampler = optuna.samplers.TPESampler(
-                    n_startup_trials=30,  # ⬅ random starts
+                    n_startup_trials=self._num_startup_trials,
                     multivariate=True,
                     group=True,
                 )
