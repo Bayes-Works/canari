@@ -654,6 +654,9 @@ class hsl_classification:
         i_before_retract = 0
         trigger = False
         rerun_kf = False
+        first_time_trigger = False
+
+        self.num_before_detect = len(self.p_anm_all)
         while i < len(data["x"]):
             if i > i_before_retract:
                 rerun_kf = False
@@ -674,29 +677,29 @@ class hsl_classification:
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
                 self.p_anm_all.append(p_a_I_Yt)
 
-                # # Track what classifier learns
-                LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-                LTd2_mu_prior = np.array(self.drift_model2.states.mu_prior)[:, 1].flatten()
-                # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior, step_look_back=128)
-                LTd2_history = self._hidden_states_collector(self.current_time_step - 1, LTd2_mu_prior, step_look_back=128)
-                mp_history = self._hidden_states_collector(self.current_time_step - 1, self.mp_all, step_look_back=128)
+                # # # Track what classifier learns
+                # LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                # LTd2_mu_prior = np.array(self.drift_model2.states.mu_prior)[:, 1].flatten()
+                # # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
+                # LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior, step_look_back=128)
+                # LTd2_history = self._hidden_states_collector(self.current_time_step - 1, LTd2_mu_prior, step_look_back=128)
+                # mp_history = self._hidden_states_collector(self.current_time_step - 1, self.mp_all, step_look_back=128)
 
-                # Normalize the histories
-                LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
-                LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class
-                mp_history = (mp_history - self.mean_MP_class) / self.std_MP_class
+                # # Normalize the histories
+                # LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
+                # LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class
+                # mp_history = (mp_history - self.mean_MP_class) / self.std_MP_class
 
-                # input_history = torch.tensor(LTd_history.tolist()+mp_history.tolist())
-                input_history = np.array(LTd_history.tolist()+LTd2_history.tolist()+mp_history.tolist())
-                # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
-                input_history = input_history.astype(np.float32)
-                m_pred_logits, v_pred_logits = self.model_class.forward(input_history)
+                # # input_history = torch.tensor(LTd_history.tolist()+mp_history.tolist())
+                # input_history = np.array(LTd_history.tolist()+LTd2_history.tolist()+mp_history.tolist())
+                # # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
+                # input_history = input_history.astype(np.float32)
+                # m_pred_logits, v_pred_logits = self.model_class.forward(input_history)
                 
-                # Convert the logits to probabilities
-                # pred_probs = torch.nn.functional.softmax(pred_logits, dim=0).detach().numpy()
-                self.pred_class_probs.append(m_pred_logits[::2].tolist())
-                self.pred_class_probs_var.append(m_pred_logits[1::2].tolist())
+                # # Convert the logits to probabilities
+                # # pred_probs = torch.nn.functional.softmax(pred_logits, dim=0).detach().numpy()
+                # self.pred_class_probs.append(m_pred_logits[::2].tolist())
+                # self.pred_class_probs_var.append(m_pred_logits[1::2].tolist())
                 
 
                 # # Track what NN learns
@@ -728,27 +731,27 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            # Get interventions predicted by the model
-            class_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
-            # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
-            class_input_history = class_input_history.astype(np.float32)
-            output_pred_mu, output_pred_var = self.model.net(class_input_history)
-            itv_pred_mu = output_pred_mu[::2]
-            itv_pred_var = output_pred_mu[1::2] + output_pred_var[::2]
+            # # Get interventions predicted by the model
+            # class_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
+            # # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
+            # class_input_history = class_input_history.astype(np.float32)
+            # output_pred_mu, output_pred_var = self.model.net(class_input_history)
+            # itv_pred_mu = output_pred_mu[::2]
+            # itv_pred_var = output_pred_mu[1::2] + output_pred_var[::2]
                 
-            itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-            itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+            # itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
+            # itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
 
-            num_steps_retract = max(int(itv_pred_mu_denorm[2]), 1)
+            # num_steps_retract = max(int(itv_pred_mu_denorm[2]), 1)
 
             # Apply intervention to estimate data likelihood
             # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
                 
-                level_itv = itv_pred_mu_denorm[1]
-                trend_itv = itv_pred_mu_denorm[0]
-                var_level_itv = itv_pred_var_denorm[1]
-                var_trend_itv = itv_pred_var_denorm[0]
+                # level_itv = itv_pred_mu_denorm[1]
+                # trend_itv = itv_pred_mu_denorm[0]
+                # var_level_itv = itv_pred_var_denorm[1]
+                # var_trend_itv = itv_pred_var_denorm[0]
 
                 # if anm_type == "LL":
                     # level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
@@ -766,24 +769,29 @@ class hsl_classification:
                     # var_level_itv = 0
                     # var_trend_itv = 0
 
+                if first_time_trigger is False:
+                    trigger_time = self.current_time_step
+                    first_time_trigger = True
+
+                num_steps_retract = self.current_time_step - trigger_time + 1
+
                 data_likelihoods_ll = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
-                    level_intervention = [level_itv, var_level_itv],
+                    level_intervention = [0, 1],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
                     data = data,
                 )
-                gamma = 0.95
+                # gamma = 0.95
+                gamma = 1
                 decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
-                # plt.title('Predictions w/wo LL intervention, likelihoods = {}'.format(np.sum(decay_weights * data_likelihoods_ll).item()))
                 data_likelihoods_lt = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     level_intervention = [0, 0],
-                    trend_intervention = [trend_itv, var_trend_itv],
+                    trend_intervention = [0, 1/52/2],
                     num_steps_retract = num_steps_retract,
                     data = data,
                 )
-                # plt.title('Predictions w/wo LT intervention, likelihoods = {}'.format(np.sum(decay_weights * data_likelihoods_lt).item()))
                 # plt.show()
 
 
@@ -871,24 +879,24 @@ class hsl_classification:
             self.drift_model2._save_states_history()
             self.drift_model2.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
 
-            # Compute MP at the current time step
-            mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
-            std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
-            mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
-            mp_input = mu_ar + mu_lstm
-            anm_start_global = self.current_time_step - num_steps_retract
-            if self.current_time_step >= self.start_idx_mp:
-                T = np.array(mp_input).flatten().astype("float64")
-                Q = T[self.current_time_step - self.m_mp:self.current_time_step]
-                stationary_space_stop = self.current_time_step - self.m_mp if self.current_time_step - self.m_mp < anm_start_global else anm_start_global
-                D = stumpy.mass(Q, T[:stationary_space_stop], normalize=False)
-                min_idx = np.argmin(D)
-                mp_value = D[min_idx]
-                if mp_value == np.inf or np.isnan(mp_value):
-                    mp_value = np.nan
-            else:
-                mp_value = 0.0  # No anomaly score before enough history
-            self.mp_all.append(mp_value)
+            # # Compute MP at the current time step
+            # mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+            # std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+            # mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
+            # mp_input = mu_ar + mu_lstm
+            # anm_start_global = self.current_time_step - num_steps_retract
+            # if self.current_time_step >= self.start_idx_mp:
+            #     T = np.array(mp_input).flatten().astype("float64")
+            #     Q = T[self.current_time_step - self.m_mp:self.current_time_step]
+            #     stationary_space_stop = self.current_time_step - self.m_mp if self.current_time_step - self.m_mp < anm_start_global else anm_start_global
+            #     D = stumpy.mass(Q, T[:stationary_space_stop], normalize=False)
+            #     min_idx = np.argmin(D)
+            #     mp_value = D[min_idx]
+            #     if mp_value == np.inf or np.isnan(mp_value):
+            #         mp_value = np.nan
+            # else:
+            #     mp_value = 0.0  # No anomaly score before enough history
+            # self.mp_all.append(mp_value)
 
             self.current_time_step += 1
             i += 1
@@ -949,22 +957,14 @@ class hsl_classification:
         ssm_copy.var_states[LL_index, LL_index] += level_intervention[1]
         ssm_copy.var_states[LT_index, LT_index] += trend_intervention[1]
         y_likelihood_all = []
-        ssm_copy.transition_matrix[0, 1] = 0
+        # if trend_intervention[1] > 0:
+        #     ssm_copy.transition_matrix[0, 1] = 0
         for i in range(num_steps_retract):
-            # mu_obs_pred, var_obs_pred, _, _ = ssm_copy.forward(data_all["x"][i])
-            # _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
-            # if "lstm" in ssm_copy.states_name:
-            #     lstm_index = ssm_copy.get_states_index("lstm")
-            #     ssm_copy.lstm_output_history.update(
-            #         mu_states_posterior[lstm_index],
-            #         var_states_posterior[lstm_index, lstm_index],
-            #     )
-            # ssm_copy._save_states_history()
-            # ssm_copy.set_states(mu_states_posterior, var_states_posterior)
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
-            mu_states_prior[0] += mu_states_prior[1]
-            ssm_copy.mu_states_prior = mu_states_prior
+            # if trend_intervention[1] > 0:
+            #     mu_states_prior[0] += mu_states_prior[1]
+            #     ssm_copy.mu_states_prior = mu_states_prior
             _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
@@ -986,34 +986,137 @@ class hsl_classification:
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
 
-            # # Conditional likelihood
-            # num_noise_realization = 100
-            # ar_index = ssm_copy.states_name.index("autoregression")
-            # mu_ar = mu_states_prior[ar_index].item()
-            # var_ar = var_states_prior[ar_index, ar_index].item()
-            # residual_samples = np.random.normal(loc=mu_ar, scale=var_ar**0.5, size=(num_noise_realization,1))
-            # likelihood_samples = likelihood(mu_obs_pred - mu_ar + residual_samples,
-            #                                   (var_obs_pred - var_ar)**0.5,
-            #                                   data_all["y"][i])
-            # y_likelihood = np.mean(likelihood_samples)
-            # y_likelihood_all.append(y_likelihood.item())
+        # Perform smoother
+        ssm_copy.smoother()
+
+        # Get the smoothed value at -(num_steps_retract)
+        smoothed_mu_LL = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
+        smoothed_mu_LT = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
+
+        # Do the intervention again with the smoothed states
+        ssm_copy = copy.deepcopy(ssm)
+        data_all = copy.deepcopy(data)
+        original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
+        original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
+
+        mu_y_preds = copy.deepcopy(self.mu_obs_preds)
+        std_y_preds = copy.deepcopy(self.std_obs_preds)
+        current_preds_num = len(mu_y_preds)
+        if "lstm" in ssm.states_name:
+            output_history_temp = copy.deepcopy(ssm.lstm_output_history)
+            cell_states_temp = copy.deepcopy(ssm.lstm_net.get_lstm_states())
+            ssm_copy.lstm_net = ssm.lstm_net
+            ssm_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+            ssm_copy.lstm_net.set_lstm_states(cell_states_temp)
+        
+        # Retract SSM to the time of intervention
+        # Constrain num_steps_retract to be no larger than current_preds_num
+        num_steps_retract = min(num_steps_retract, current_preds_num - 1)
+        remove_until_index = -(num_steps_retract)
+        ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
+        ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
+        ssm_copy.states.mu_posterior = ssm_copy.states.mu_posterior[:remove_until_index]
+        ssm_copy.states.var_posterior = ssm_copy.states.var_posterior[:remove_until_index]
+        ssm_copy.states.cov_states = ssm_copy.states.cov_states[:remove_until_index]
+        ssm_copy.states.mu_smooth = ssm_copy.states.mu_smooth[:remove_until_index]
+        ssm_copy.states.var_smooth = ssm_copy.states.var_smooth[:remove_until_index]
+        mu_y_preds = mu_y_preds[:remove_until_index]
+        std_y_preds = std_y_preds[:remove_until_index]
+        lstm_history_copy = copy.deepcopy(self.lstm_history)
+        lstm_cell_states_copy = copy.deepcopy(self.lstm_cell_states)
+        if "lstm" in ssm.states_name:
+            retracted_lstm_history = lstm_history_copy[:remove_until_index]
+            retracted_lstm_cell_states = lstm_cell_states_copy[:remove_until_index]
+        # Keep the data after intervention time
+        data_all["y"] = data_all["y"][current_preds_num-num_steps_retract:]
+        data_all["x"] = data_all["x"][current_preds_num-num_steps_retract:]
+
+        ssm_copy.set_states(ssm_copy.states.mu_posterior[-1], ssm_copy.states.var_posterior[-1])
+        ssm_copy.lstm_output_history = retracted_lstm_history[-1]
+        ssm_copy.lstm_net.set_lstm_states(retracted_lstm_cell_states[-1])
+        
+        # Apply intervention
+        LL_index = ssm_copy.states_name.index("level")
+        LT_index = ssm_copy.states_name.index("trend")
+        ssm_copy.mu_states[LL_index] = smoothed_mu_LL
+        ssm_copy.mu_states[LT_index] = smoothed_mu_LT
+        y_likelihood_all = []
+        if trend_intervention[1] > 0:
+            ssm_copy.transition_matrix[0, 1] = 0
+        for i in range(num_steps_retract):
+
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
+            if trend_intervention[1] > 0:
+                mu_states_prior[0] += mu_states_prior[1]
+                ssm_copy.mu_states_prior = mu_states_prior
+            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            if "lstm" in ssm_copy.states_name:
+                lstm_index = ssm_copy.get_states_index("lstm")
+                ssm_copy.lstm_output_history.update(
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
+                    # mu_states_prior[lstm_index],
+                    # var_states_prior[lstm_index, lstm_index],
+                )
+            ssm_copy._save_states_history()
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+
+            mu_y_preds.append(mu_obs_pred)
+            std_y_preds.append(var_obs_pred**0.5)
+
+            # Regular likelihood
+            y_likelihood = likelihood(mu_obs_pred, 
+                                    np.sqrt(var_obs_pred), 
+                                    data_all["y"][i])
+            y_likelihood_all.append(y_likelihood.item())
         
         # # Plot retracted states after intervention
-        # plt.figure(figsize=(10, 3))
-        # plt.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
-        # plt.fill_between(range(len(mu_y_preds)),
+        # mu_level_plot = ssm_copy.states.get_mean(states_type="prior", states_name="level", standardization=True)
+        # std_level_plot = ssm_copy.states.get_std(states_type="prior", states_name="level", standardization=True)
+        # mu_trend_plot = ssm_copy.states.get_mean(states_type="prior", states_name="trend", standardization=True)
+        # std_trend_plot = ssm_copy.states.get_std(states_type="prior", states_name="trend", standardization=True)
+        # # Remove the first self.num_before_detect points to align with mu_y_preds
+        # mu_level_plot = mu_level_plot[self.num_before_detect:]
+        # std_level_plot = std_level_plot[self.num_before_detect:]
+        # mu_trend_plot = mu_trend_plot[self.num_before_detect:]
+        # std_trend_plot = std_trend_plot[self.num_before_detect:]
+
+        # fig = plt.figure(figsize=(10, 3))
+        # gs = gridspec.GridSpec(2, 1)
+        # ax0 = plt.subplot(gs[0])
+        # ax1 = plt.subplot(gs[1])
+        # ax0.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
+        # ax0.fill_between(range(len(mu_y_preds)),
         #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
         #                  np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
         #                  color='gray', alpha=0.5)
-        # plt.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
-        # plt.fill_between(range(len(original_mu_obs_preds)),
+        # ax0.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
+        # ax0.fill_between(range(len(original_mu_obs_preds)),
         #                  np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
         #                  np.array(original_mu_obs_preds).flatten() + np.array(original_std_obs_preds).flatten(),
         #                  color='gray', alpha=0.5)
-        # plt.plot(range(len(data["y"])), data["y"], label='Observed Data', color='k')
-        # plt.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
-        # plt.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
-        # plt.legend()
+        # ax0.plot(range(len(data["y"])), data["y"], color='k')
+        # ax0.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
+        # ax0.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
+        # # Plot hidden states at index 0
+        # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
+        # ax0.fill_between(range(len(mu_level_plot)),
+        #                  mu_level_plot.flatten() - std_level_plot.flatten(),
+        #                  mu_level_plot.flatten() + std_level_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax0.set_title('Level State with and without Intervention')
+        # ax0.legend(ncol=2, loc='upper left')
+        # if level_intervention[1] > 0:
+        #     ax0.set_title('LL itv')
+        # if trend_intervention[1] > 0:
+        #     ax0.set_title('LT itv')
+        # ax1.plot(range(len(mu_trend_plot)), np.array(mu_trend_plot).flatten(),color='tab:blue')
+        # ax1.fill_between(range(len(mu_trend_plot)),
+        #                  mu_trend_plot.flatten() - std_trend_plot.flatten(),
+        #                  mu_trend_plot.flatten() + std_trend_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax1.set_xlim(ax0.get_xlim())
+        # ax1.set_ylabel('LT')
 
         if "lstm" in ssm.states_name:
             # Set the base_model back to the original state
