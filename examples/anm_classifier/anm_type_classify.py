@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_mp2_2classes_2driftmodels_innovation import hsl_classification
+from src.hsl_classification_2classes_datadriven_smoother import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-anm_type = 'LT'
-time_anomaly = 52*7
-anm_mag = 3/52
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-# # LL anomaly
-# anm_type = 'LL'
+# # LT anomaly
+# anm_type = 'LT'
 # time_anomaly = 52*7
-# anm_mag = 35
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_mag = 12/52
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
+
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*7
+anm_mag = 8
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -164,34 +164,31 @@ hsl_tsad_agent.detection_threshold = 0.1
 hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3441674e-05, 0.0004603353, -4.2705156e-05, 0.003506228, 5.272658, 3.560844
 hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04, 5.2052871e-03, 5.9214630e+01]), np.array([5.2153803e-03, 6.3000584e-01, 7.5671562e+01])
 
-hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                    load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                  load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+# hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
+#                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+# hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
+#                                   load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
-
-innovation_mu = np.array(hsl_tsad_agent.innovation_mu_all)
-innovation_std = np.array(hsl_tsad_agent.innovation_std_all)
 
 # #  Plot
 state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(12, 1)
+gs = gridspec.GridSpec(8, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
-ax4 = plt.subplot(gs[4])
-ax5 = plt.subplot(gs[5])
-ax6 = plt.subplot(gs[6])
-ax7 = plt.subplot(gs[7])
-ax8 = plt.subplot(gs[8])
-ax9 = plt.subplot(gs[9])
-ax10 = plt.subplot(gs[10])
-ax11 = plt.subplot(gs[11])
+# ax4 = plt.subplot(gs[4])
+# ax5 = plt.subplot(gs[5])
+# ax6 = plt.subplot(gs[6])
+# ax7 = plt.subplot(gs[7])
+ax8 = plt.subplot(gs[4])
+ax9 = plt.subplot(gs[5])
+ax10 = plt.subplot(gs[6])
+ax11 = plt.subplot(gs[7])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -212,71 +209,34 @@ plot_states(
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
 
-############# Plot innovation #############
-ax1.plot(time, innovation_mu[:, 0].flatten(), color="blue")
-ax1.fill_between(time,
-                innovation_mu[:, 0].flatten() - innovation_std[:, 0].flatten(),
-                innovation_mu[:, 0].flatten() + innovation_std[:, 0].flatten(),
-                color='tab:blue',
-                alpha=0.5)
-ax1.axhline(y=0, color='red', linestyle='--')
-ax1.set_ylabel('ll_inn')
-
-ax2.plot(time, innovation_mu[:, 1].flatten(), color="blue")
-ax2.fill_between(time,
-                innovation_mu[:, 1].flatten() - innovation_std[:, 1].flatten(),
-                innovation_mu[:, 1].flatten() + innovation_std[:, 1].flatten(),
-                color='tab:blue',
-                alpha=0.5)
-ax2.axhline(y=0, color='red', linestyle='--')
-ax2.set_ylabel('lt_inn')
-
-ax3.plot(time, innovation_mu[:, 2].flatten(), color="blue")
-ax3.fill_between(time,
-                innovation_mu[:, 2].flatten() - innovation_std[:, 2].flatten(),
-                innovation_mu[:, 2].flatten() + innovation_std[:, 2].flatten(),
-                color='tab:blue',
-                alpha=0.5)
-ax3.axhline(y=0, color='red', linestyle='--')
-ax3.set_ylabel('lstm_inn')
-
-ax4.plot(time, innovation_mu[:, 3].flatten(), color="blue")
-ax4.fill_between(time,
-                innovation_mu[:, 3].flatten() - innovation_std[:, 3].flatten(),
-                innovation_mu[:, 3].flatten() + innovation_std[:, 3].flatten(),
-                color='tab:blue',
-                alpha=0.5)
-ax4.axhline(y=0, color='red', linestyle='--')
-ax4.set_ylabel('ar_inn')
-
-############# Original plots #############
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.base_model.states,
-#     states_type=state_type,
-#     states_to_plot=['trend'],
-#     sub_plot=ax1,
-# )
-# ax1.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.base_model.states,
-#     states_type=state_type,
-#     states_to_plot=['lstm'],
-#     sub_plot=ax2,
-# )
-# ax2.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.base_model.states,
-#     states_type=state_type,
-#     states_to_plot=['autoregression'],
-#     sub_plot=ax3,
-# )
-# ax3.set_xticklabels([])
+############ Original plots #############
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['trend'],
+    sub_plot=ax1,
+)
+ax1.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['lstm'],
+    sub_plot=ax2,
+)
+ax2.set_xticklabels([])
+plot_states(
+    data_processor=data_processor,
+    standardization=True,
+    states=hsl_tsad_agent.base_model.states,
+    states_type=state_type,
+    states_to_plot=['autoregression'],
+    sub_plot=ax3,
+)
+ax3.set_xticklabels([])
 # ax4.plot(time, np.array(mu_ar_preds_all), label='obs', color='tab:red')
 # ax4.fill_between(time,
 #                 np.array(mu_ar_preds_all) - np.array(std_ar_preds_all),
@@ -301,48 +261,48 @@ ax4.set_ylabel('ar_inn')
 #     color='tab:green',
 # )
 # ax4.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['trend'],
-    sub_plot=ax5,
-)
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model2.states,
-    states_type=state_type,
-    states_to_plot=['trend'],
-    sub_plot=ax5,
-    color='tab:green',
-)
-ax5.set_xticklabels([])
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax6,
-)
-plot_states(
-    data_processor=data_processor,
-    standardization=True,
-    states=hsl_tsad_agent.drift_model2.states,
-    states_type=state_type,
-    states_to_plot=['autoregression'],
-    sub_plot=ax6,
-    color='tab:green',
-)
-ax6.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['trend'],
+#     sub_plot=ax5,
+# )
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model2.states,
+#     states_type=state_type,
+#     states_to_plot=['trend'],
+#     sub_plot=ax5,
+#     color='tab:green',
+# )
+# ax5.set_xticklabels([])
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model.states,
+#     states_type=state_type,
+#     states_to_plot=['autoregression'],
+#     sub_plot=ax6,
+# )
+# plot_states(
+#     data_processor=data_processor,
+#     standardization=True,
+#     states=hsl_tsad_agent.drift_model2.states,
+#     states_type=state_type,
+#     states_to_plot=['autoregression'],
+#     sub_plot=ax6,
+#     color='tab:green',
+# )
+# ax6.set_xticklabels([])
 
-ax7.plot(time, hsl_tsad_agent.mp_all, label="MP metric", color="blue")
-# ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax7.set_ylabel('MP')
-ax7.set_xticklabels([])
-_add_dynamic_grids(ax7, time)
+# ax7.plot(time, hsl_tsad_agent.mp_all, label="MP metric", color="blue")
+# # ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+# ax7.set_ylabel('MP')
+# ax7.set_xticklabels([])
+# _add_dynamic_grids(ax7, time)
 
 ax8.plot(time, hsl_tsad_agent.p_anm_all)
 detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
@@ -355,17 +315,17 @@ _add_dynamic_grids(ax8, time)
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
 
-m_logits = np.array(hsl_tsad_agent.pred_class_probs)
-std_logits = np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
-## ReMax(logits)
-from src.convert_to_class import hierachical_softmax
-m_probs, std_probs = [], []
-for t in range(m_logits.shape[0]):
-    pr_classes = hierachical_softmax(m_logits[t], std_logits[t])
-    m_probs.append(pr_classes.tolist())
-    # std_probs.append(std_p.tolist())
-m_probs = np.array(m_probs)
-# std_probs = np.array(std_probs)
+# m_logits = np.array(hsl_tsad_agent.pred_class_probs)
+# std_logits = np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
+# ## ReMax(logits)
+# from src.convert_to_class import hierachical_softmax
+# m_probs, std_probs = [], []
+# for t in range(m_logits.shape[0]):
+#     pr_classes = hierachical_softmax(m_logits[t], std_logits[t])
+#     m_probs.append(pr_classes.tolist())
+#     # std_probs.append(std_p.tolist())
+# m_probs = np.array(m_probs)
+# # std_probs = np.array(std_probs)
 
 # # anm_prob_lower = np.array(hsl_tsad_agent.pred_class_probs) - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
 # for class_idx in range(m_logits.shape[1]):
@@ -382,18 +342,29 @@ m_probs = np.array(m_probs)
 # # ax9.legend(loc='upper left', ncol=2)
 # ax9.set_ylabel("logits")
 
-# Plot class probabilities with ReMax
-for class_idx in range(m_probs.shape[1]):
-    ax9.plot(time, m_probs[:, class_idx], color=colors[class_idx])
-    # ax10.fill_between(time,
-    #                 m_probs[:, class_idx] - std_probs[:, class_idx],
-    #                 m_probs[:, class_idx] + std_probs[:, class_idx],
-    #                 color=colors[class_idx],
-    #                 alpha=0.3, label="_nolegend_")
-# Set legend labels to ['LT', 'LL', 'PD']
-ax9.legend(['LT', 'LL'],loc='upper left', ncol=2)
-ax9.set_ylim(-0.05, 1.05)
-ax9.set_ylabel("priors")
+# # Plot class probabilities with ReMax
+# for class_idx in range(m_probs.shape[1]):
+#     ax9.plot(time, m_probs[:, class_idx], color=colors[class_idx])
+#     # ax10.fill_between(time,
+#     #                 m_probs[:, class_idx] - std_probs[:, class_idx],
+#     #                 m_probs[:, class_idx] + std_probs[:, class_idx],
+#     #                 color=colors[class_idx],
+#     #                 alpha=0.3, label="_nolegend_")
+# # Set legend labels to ['LT', 'LL', 'PD']
+# ax9.legend(['LT', 'LL'],loc='upper left', ncol=2)
+# ax9.set_ylim(-0.05, 1.05)
+# ax9.set_ylabel("priors")
+
+for class_idx in range(2):
+    log_likelihoods = []
+    for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
+        if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
+            log_likelihoods.append(0)
+        else:
+            log_likelihoods.append(hsl_tsad_agent.data_loglikelihoods[t][class_idx+2])
+    ax9.plot(time, log_likelihoods, color=colors[class_idx])
+ax9.set_ylabel("cuLL_op")
+ax9.set_xticklabels([])
 
 
 # Plot hsl_tsad_agent.data_loglikelihoods
@@ -414,13 +385,36 @@ for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
         final_class_log_probs.append([0.5, 0.5])
     else:
-        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t]
-        log_prior_probs = np.log(m_probs[t])
-        combined_log_probs = log_likelihoods + log_prior_probs
-        # Normalize to get probabilities
-        probs = np.exp(combined_log_probs)
+        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
+        log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:-1]
+        # # Combining log likelihoods
+        # log_prior_probs = np.log(m_probs[t])
+        # combined_log_probs = log_likelihoods + log_prior_probs
+        # # Normalize to get probabilities
+        # probs = np.exp(combined_log_probs)
+        # probs /= np.sum(probs)
+        # final_class_log_probs.append(probs)
+
+        # # Combining likelihoods
+        # prior_probs = m_probs[t]
+        # probs = np.array(log_likelihoods) * np.array(prior_probs)
+        # probs /= np.sum(probs)
+        # final_class_log_probs.append(probs)
+
+        # Set the smaller value in log_likelihoods to 0
+        probs = np.array(log_likelihoods) - np.min(log_likelihoods)
+        # probs = np.array(log_likelihoods)
+        # Softmax on log_likelihoods
+        probs = np.exp(log_likelihoods)
         probs /= np.sum(probs)
         final_class_log_probs.append(probs)
+        
+        # probs = (np.array(log_likelihoods) / np.sum(np.array(log_likelihoods)))
+        # Use max min normalization on log_likelihoods
+        # probs = (np.array(log_likelihoods) - np.min(np.array(log_likelihoods))) / (np.max(np.array(log_likelihoods)) - np.min(np.array(log_likelihoods)))
+        # probs /= np.sum(probs)
+        # final_class_log_probs.append(probs)
+
 final_class_log_probs = np.array(final_class_log_probs)
 # Plot final class probabilities
 for class_idx in range(final_class_log_probs.shape[1]):
