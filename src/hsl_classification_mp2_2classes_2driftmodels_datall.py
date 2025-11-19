@@ -937,17 +937,17 @@ class hsl_classification:
             # ssm_copy.set_states(mu_states_posterior, var_states_posterior)
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
-            # _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
                 ssm_copy.lstm_output_history.update(
-                    # mu_states_posterior[lstm_index],
-                    # var_states_posterior[lstm_index, lstm_index],
-                    mu_states_prior[lstm_index],
-                    var_states_prior[lstm_index, lstm_index],
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
+                    # mu_states_prior[lstm_index],
+                    # var_states_prior[lstm_index, lstm_index],
                 )
             ssm_copy._save_states_history()
-            ssm_copy.set_states(mu_states_prior, var_states_prior)
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
 
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
