@@ -68,3 +68,29 @@ def hierachical_softmax(mZ, sZ):
     pr_all_classes = np.array([pr_gate1, 1 - pr_gate1])
 
     return pr_all_classes
+
+def exponential_decay_with_halfpoint(array_len, start_decay, half_point):
+    """
+    Generate an array of length array_len:
+      - value = 1 before start_decay
+      - decays exponentially after start_decay
+      - value at half_point = 0.5
+    """
+    x = np.arange(array_len)
+
+    # Output array
+    y = np.ones(array_len)
+
+    # Only apply decay at indices >= start_decay
+    decay_idx = x >= start_decay
+    t = x[decay_idx] - start_decay  # time since decay start
+
+    # Determine scale so that y[half_point] = 0.5
+    # Form: y = exp(- discount_factor * scale * t)
+    # We want exp(-discount_factor * scale * (half_point - start_decay)) = 0.5
+    scale = np.log(2) / (half_point - start_decay)
+
+    # Apply decay
+    y[decay_idx] = np.exp(- scale * t)
+
+    return y
