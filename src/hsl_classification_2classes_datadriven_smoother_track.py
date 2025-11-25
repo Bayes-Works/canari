@@ -1091,11 +1091,22 @@ class hsl_classification:
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
 
-            # Regular likelihood
-            y_likelihood = likelihood(mu_obs_pred, 
-                                    np.sqrt(var_obs_pred), 
-                                    data_all["y"][i])
-            y_likelihood_all.append(y_likelihood.item())
+            # If current local level is in stationary AR, skip the likelihood calculation
+            gen_ar_phi = self.generate_model.components["autoregression 2"].phi
+            gen_ar_sigma = self.generate_model.components["autoregression 2"].std_error
+            stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
+
+            # Get the current local level in ssm_copy
+            current_LL = mu_states_prior[LL_index]
+            if abs(current_LL) < 2 * stationary_ar_std:
+                y_likelihood_all.append(1.0)
+            else:
+                # y_likelihood_all.append(1.0)
+                # Regular likelihood
+                y_likelihood = likelihood(mu_obs_pred, 
+                                        np.sqrt(var_obs_pred), 
+                                        data_all["y"][i])
+                y_likelihood_all.append(y_likelihood.item())
         
         # # Plot retracted states after intervention
         # mu_level_plot = ssm_copy.states.get_mean(states_type="prior", states_name="level", standardization=True)
