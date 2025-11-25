@@ -778,12 +778,14 @@ class hsl_classification:
 
                 num_steps_retract = self.current_time_step - trigger_time + 1
 
+                self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     level_intervention = [0, 1],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
                     data = data,
+                    make_mask=True
                 )
                 self.ll_itv_all.append(itv_LL)
                 # gamma = 0.95
@@ -795,6 +797,7 @@ class hsl_classification:
                     trend_intervention = [0, 1/52/2],
                     num_steps_retract = num_steps_retract,
                     data = data,
+                    make_mask=False
                 )
                 self.lt_itv_all.append(itv_LT * num_steps_retract)
                 # plt.show()
@@ -810,8 +813,10 @@ class hsl_classification:
                 # # # Take the average of each list data_likelihoods_ll and data_likelihoods_lt
                 # log_likelihood_ll = np.sum(decay_weights * data_likelihoods_ll)
                 # log_likelihood_lt = np.sum(decay_weights * data_likelihoods_lt)
-                log_likelihood_ll_op = np.sum(decay_weights_op * data_likelihoods_ll)
-                log_likelihood_lt_op = np.sum(decay_weights_op * data_likelihoods_lt)
+                # log_likelihood_ll_op = np.sum(decay_weights_op * data_likelihoods_ll)
+                # log_likelihood_lt_op = np.sum(decay_weights_op * data_likelihoods_lt)
+                log_likelihood_ll_op = None
+                log_likelihood_lt_op = None
 
                 # # Multivariate likelihood
                 # log_likelihood_ll = data_likelihoods_ll
@@ -913,7 +918,7 @@ class hsl_classification:
 
         return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(self.mu_ar_preds).flatten(), np.array(self.std_ar_preds).flatten()
 
-    def _estimate_likelihoods_with_intervention(self, ssm: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data):
+    def _estimate_likelihoods_with_intervention(self, ssm: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data, make_mask=False):
         """
         Compute the likelihood of observation and hidden states given action
         """
@@ -1096,9 +1101,14 @@ class hsl_classification:
             gen_ar_sigma = self.generate_model.components["autoregression 2"].std_error
             stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
 
-            # Get the current local level in ssm_copy
-            current_LL = mu_states_prior[LL_index]
-            if abs(current_LL) < 2 * stationary_ar_std:
+            if make_mask is True:
+                # Get the current local level in ssm_copy
+                current_LL = mu_states_prior[LL_index]
+                if abs(current_LL) < 2 * stationary_ar_std:
+                    self.likelihoods_log_mask.append(0)
+                else:
+                    self.likelihoods_log_mask.append(1)
+            if self.likelihoods_log_mask[i] == 0:
                 y_likelihood_all.append(1.0)
             else:
                 # y_likelihood_all.append(1.0)
@@ -1107,6 +1117,18 @@ class hsl_classification:
                                         np.sqrt(var_obs_pred), 
                                         data_all["y"][i])
                 y_likelihood_all.append(y_likelihood.item())
+
+            # current_LL = mu_states_prior[LL_index]
+            # if abs(current_LL) < 2 * stationary_ar_std:
+            #     # y_likelihood_all.append(1.0)
+            #     continue
+            # else:
+            #     # y_likelihood_all.append(1.0)
+            #     # Regular likelihood
+            #     y_likelihood = likelihood(mu_obs_pred, 
+            #                             np.sqrt(var_obs_pred), 
+            #                             data_all["y"][i])
+            #     y_likelihood_all.append(y_likelihood.item())
         
         # # Plot retracted states after intervention
         # mu_level_plot = ssm_copy.states.get_mean(states_type="prior", states_name="level", standardization=True)
