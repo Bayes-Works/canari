@@ -800,15 +800,24 @@ class hsl_classification:
                     make_mask=False
                 )
                 self.lt_itv_all.append(itv_LT * num_steps_retract)
+                # self.lt_itv_all.append(itv_LT)
                 # plt.show()
 
 
                 # Decay from the first value to the last value
                 decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
 
-                # Take the logsum of each list data_likelihoods_ll and data_likelihoods_lt
-                log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
-                log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+                # # Take the logsum of each list data_likelihoods_ll and data_likelihoods_lt
+                # log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
+                # log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+
+                # Compute the average of data_likelihoods_ll and data_likelihoods_lt
+                if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
+                    log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
+                    log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+                else:
+                    log_likelihood_ll = 1
+                    log_likelihood_lt = 1
 
                 # # # Take the average of each list data_likelihoods_ll and data_likelihoods_lt
                 # log_likelihood_ll = np.sum(decay_weights * data_likelihoods_ll)
@@ -825,7 +834,7 @@ class hsl_classification:
                 # Store the log-likelihoods
                 self.data_loglikelihoods.append([log_likelihood_lt, log_likelihood_ll, log_likelihood_lt_op, log_likelihood_ll_op])
             else:
-                self.data_loglikelihoods.append([None, None])
+                self.data_loglikelihoods.append([None, None, None, None])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
 
@@ -1081,17 +1090,17 @@ class hsl_classification:
             if trend_intervention[1] > 0:
                 mu_states_prior[0] += mu_states_prior[1]
                 ssm_copy.mu_states_prior = mu_states_prior
-            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            # _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
                 ssm_copy.lstm_output_history.update(
-                    mu_states_posterior[lstm_index],
-                    var_states_posterior[lstm_index, lstm_index],
-                    # mu_states_prior[lstm_index],
-                    # var_states_prior[lstm_index, lstm_index],
+                    # mu_states_posterior[lstm_index],
+                    # var_states_posterior[lstm_index, lstm_index],
+                    mu_states_prior[lstm_index],
+                    var_states_prior[lstm_index, lstm_index],
                 )
             ssm_copy._save_states_history()
-            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+            ssm_copy.set_states(mu_states_prior, var_states_prior)
 
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
@@ -1109,7 +1118,8 @@ class hsl_classification:
                 else:
                     self.likelihoods_log_mask.append(1)
             if self.likelihoods_log_mask[i] == 0:
-                y_likelihood_all.append(1.0)
+                # y_likelihood_all.append(1.0)
+                continue
             else:
                 # y_likelihood_all.append(1.0)
                 # Regular likelihood
