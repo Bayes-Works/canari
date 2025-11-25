@@ -807,7 +807,7 @@ class hsl_classification:
                 log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                 log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
 
-                # # Take the average of each list data_likelihoods_ll and data_likelihoods_lt
+                # # # Take the average of each list data_likelihoods_ll and data_likelihoods_lt
                 # log_likelihood_ll = np.sum(decay_weights * data_likelihoods_ll)
                 # log_likelihood_lt = np.sum(decay_weights * data_likelihoods_lt)
                 log_likelihood_ll_op = np.sum(decay_weights_op * data_likelihoods_ll)
@@ -995,6 +995,23 @@ class hsl_classification:
                                     np.sqrt(var_obs_pred), 
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
+
+            # # Conditional likelihood
+            # num_noise_realization = 100
+            # # ar_index = ssm_copy.states_name.index("autoregression")
+            # # mu_ar = mu_states_prior[ar_index].item()
+            # # var_ar = var_states_prior[ar_index, ar_index].item()
+
+            # phi_ar_gen = self.generate_model.components["autoregression 2"].phi
+            # error_var_ar_gen = self.generate_model.components["autoregression 2"].std_error
+            # stationary_ar_std = (error_var_ar_gen / (1 - phi_ar_gen**2))**0.5
+
+            # residual_samples = np.random.normal(loc=0, scale=stationary_ar_std, size=(num_noise_realization,1))
+            # likelihood_samples = likelihood(mu_obs_pred + residual_samples,
+            #                                   (var_obs_pred)**0.5,
+            #                                   data_all["y"][i])
+            # y_likelihood = np.mean(likelihood_samples)
+            # y_likelihood_all.append(y_likelihood.item())
 
         # Perform smoother
         ssm_copy.smoother()

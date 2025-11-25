@@ -32,7 +32,7 @@ df_raw.columns = ["obs"]
 
 # LT anomaly
 anm_type = 'LT'
-time_anomaly = 52*10
+time_anomaly = 52*7
 anm_mag = 6/52
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
@@ -43,7 +43,7 @@ df_raw = df_raw.add(anm_baseline, axis=0)
 # # LL anomaly
 # anm_type = 'LL'
 # time_anomaly = 52*7
-# anm_mag = 8
+# anm_mag = 17
 # anm_baseline = np.ones(len(df_raw)) * anm_mag
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
@@ -342,18 +342,18 @@ m_probs = np.array(m_probs)
 # # ax9.legend(loc='upper left', ncol=2)
 # ax9.set_ylabel("logits")
 
-# Plot class probabilities with ReMax
-for class_idx in range(m_probs.shape[1]):
-    ax9.plot(time, m_probs[:, class_idx], color=colors[class_idx])
-    # ax10.fill_between(time,
-    #                 m_probs[:, class_idx] - std_probs[:, class_idx],
-    #                 m_probs[:, class_idx] + std_probs[:, class_idx],
-    #                 color=colors[class_idx],
-    #                 alpha=0.3, label="_nolegend_")
-# Set legend labels to ['LT', 'LL', 'PD']
-ax9.legend(['LT', 'LL'],loc='upper left', ncol=2)
-ax9.set_ylim(-0.05, 1.05)
-ax9.set_ylabel("classifier")
+# # Plot class probabilities with ReMax
+# for class_idx in range(m_probs.shape[1]):
+#     ax9.plot(time, m_probs[:, class_idx], color=colors[class_idx])
+#     # ax10.fill_between(time,
+#     #                 m_probs[:, class_idx] - std_probs[:, class_idx],
+#     #                 m_probs[:, class_idx] + std_probs[:, class_idx],
+#     #                 color=colors[class_idx],
+#     #                 alpha=0.3, label="_nolegend_")
+# # Set legend labels to ['LT', 'LL', 'PD']
+# ax9.legend(['LT', 'LL'],loc='upper left', ncol=2)
+# ax9.set_ylim(-0.05, 1.05)
+# ax9.set_ylabel("classifier")
 
 # for class_idx in range(2):
 #     log_likelihoods = []
@@ -367,39 +367,39 @@ ax9.set_ylabel("classifier")
 # ax9.set_xticklabels([])
 
 
-# Plot hsl_tsad_agent.data_loglikelihoods
-itv_probs = []
-for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-    if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-        itv_probs.append([0.5, 0.5])
-    else:
-        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-        probs = np.exp(log_likelihoods)
-        probs /= np.sum(probs)
-        itv_probs.append(probs)
-itv_probs = np.array(itv_probs)
-for class_idx in range(m_probs.shape[1]):
-    ax10.plot(time, itv_probs[:, class_idx], color=colors[class_idx])
-ax10.set_ylabel("logsum itv")
-ax10.set_xticklabels([])
-
-# # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
-# final_class_log_probs = []
+# # Plot hsl_tsad_agent.data_loglikelihoods
+# itv_probs = []
 # for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
 #     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-#         final_class_log_probs.append([0.5, 0.5])
+#         itv_probs.append([0.5, 0.5])
 #     else:
 #         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-#         log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:-1]
+#         probs = np.exp(log_likelihoods)
+#         probs /= np.sum(probs)
+#         itv_probs.append(probs)
+# itv_probs = np.array(itv_probs)
+# for class_idx in range(m_probs.shape[1]):
+#     ax10.plot(time, itv_probs[:, class_idx], color=colors[class_idx])
+# ax10.set_ylabel("logsum itv")
+# ax10.set_xticklabels([])
+
+# # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
+final_class_log_probs = []
+for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
+    if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
+        final_class_log_probs.append([0.5, 0.5])
+    else:
+        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
+        log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:]
 #         # Combining log likelihoods
 #         # log_prior_probs = np.log(m_probs[t])
 #         # combined_log_probs = log_likelihoods + log_prior_probs
 #         # # Normalize to get probabilities
 #         # probs = np.exp(combined_log_probs)
 
-#         probs = np.exp(log_likelihoods)
-#         probs /= np.sum(probs)
-#         final_class_log_probs.append(probs)
+        probs = np.exp(log_likelihoods)
+        probs /= np.sum(probs)
+        final_class_log_probs.append(probs)
 
 #         # # Combining likelihoods
 #         # prior_probs = m_probs[t]
@@ -407,13 +407,13 @@ ax10.set_xticklabels([])
 #         # probs /= np.sum(probs)
 #         # final_class_log_probs.append(probs)
 
-#         # # Set the smaller value in log_likelihoods to 0
-#         # probs = np.array(log_likelihoods) - np.min(log_likelihoods)
-#         # # probs = np.array(log_likelihoods)
-#         # # Softmax on log_likelihoods
-#         # probs = np.exp(log_likelihoods)
-#         # probs /= np.sum(probs)
-#         # final_class_log_probs.append(probs)
+        # # Set the smaller value in log_likelihoods to 0
+        # probs = np.array(log_likelihoods) - np.min(log_likelihoods)
+        # # probs = np.array(log_likelihoods)
+        # # Softmax on log_likelihoods
+        # probs = np.exp(log_likelihoods)
+        # probs /= np.sum(probs)
+        # final_class_log_probs.append(probs)
         
 #         # probs = (np.array(log_likelihoods) / np.sum(np.array(log_likelihoods)))
 #         # Use max min normalization on log_likelihoods
@@ -421,38 +421,38 @@ ax10.set_xticklabels([])
 #         # probs /= np.sum(probs)
 #         # final_class_log_probs.append(probs)
 
-# final_class_log_probs = np.array(final_class_log_probs)
-# # Plot final class probabilities
-# for class_idx in range(final_class_log_probs.shape[1]):
-#     ax11.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
-# # Set legend labels to ['LT', 'LL', 'PD']
-# ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
-# ax11.set_ylim(-0.05, 1.05)
-# ax11.set_ylabel("posteriors")
-
-
-from src.convert_to_class import exponential_decay_with_halfpoint
-decay_classifier = exponential_decay_with_halfpoint(
-    array_len=len(time),
-    start_decay=detection_time[0],
-    half_point=detection_time[0] + 52*2
-)
-itv_probs = []
-for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-    if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-        itv_probs.append([0.5, 0.5])
-    else:
-        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-        probs = np.exp(log_likelihoods)
-        probs /= np.sum(probs)
-        itv_probs.append(probs)
-itv_probs = np.array(itv_probs)
-
-for class_idx in range(m_probs.shape[1]):
-    ax11.plot(time, itv_probs[:, class_idx] * (1-decay_classifier) + decay_classifier * m_probs[:, class_idx], color=colors[class_idx])
-ax11.set_ylabel("decay comb")
+final_class_log_probs = np.array(final_class_log_probs)
+# Plot final class probabilities
+for class_idx in range(final_class_log_probs.shape[1]):
+    ax11.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+# Set legend labels to ['LT', 'LL', 'PD']
 ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
 ax11.set_ylim(-0.05, 1.05)
+ax11.set_ylabel("posteriors")
+
+
+# from src.convert_to_class import exponential_decay_with_halfpoint
+# decay_classifier = exponential_decay_with_halfpoint(
+#     array_len=len(time),
+#     start_decay=detection_time[0],
+#     half_point=detection_time[0] + 52*2
+# )
+# itv_probs = []
+# for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
+#     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
+#         itv_probs.append([0.5, 0.5])
+#     else:
+#         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
+#         probs = np.exp(log_likelihoods)
+#         probs /= np.sum(probs)
+#         itv_probs.append(probs)
+# itv_probs = np.array(itv_probs)
+
+# for class_idx in range(m_probs.shape[1]):
+#     ax11.plot(time, itv_probs[:, class_idx] * (1-decay_classifier) + decay_classifier * m_probs[:, class_idx], color=colors[class_idx])
+# ax11.set_ylabel("decay comb")
+# ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
+# ax11.set_ylim(-0.05, 1.05)
 
 # Find the anm_flags that is 0.5 greater than the other two class flags
 # anm_type_flags = []
@@ -467,5 +467,29 @@ ax11.set_ylim(-0.05, 1.05)
 # # Plot vertical lines for the anm_type_flags
 # for flag in anm_type_flags:
 #     ax9.axvline(x=time[flag[0]], color=colors[flag[1]], linestyle=':')
+
+gen_ar_phi = model_dict['gen_phi_ar']
+gen_ar_sigma =model_dict['gen_sigma_ar']
+stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
+# ax9.fill_between(time, hsl_tsad_agent.ll_itv_all - 2 * stationary_ar_std, hsl_tsad_agent.ll_itv_all + 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
+ax9.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
+ax9.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:blue')
+ax9.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
+ax9.set_ylabel("itv")
+
+# Look up the index where hsl_tsad_agent.ll_itv_all is equal to - 2 * stationary_ar_std or 2 * stationary_ar_std
+masked_ll_itv = np.array(hsl_tsad_agent.ll_itv_all)
+# Set the first 26 values greater than 0 to be 0
+# Fine the values greater than 0
+non_zero_start_indices = np.where(masked_ll_itv != 0)[0][0]
+masked_ll_itv[non_zero_start_indices:non_zero_start_indices+26] = 0
+if np.any(masked_ll_itv > 2 * stationary_ar_std):
+    certain_zone_begin = np.where(masked_ll_itv > 2 * stationary_ar_std)[0][0]
+    ax11.fill_between(time, -0.05, 1.05, where=(time < time[certain_zone_begin]), color='gray', alpha=0.3, label='Uncertain zone')
+    ax11.fill_between(time, -0.05, 1.05, where=(time >= time[certain_zone_begin]), color='green', alpha=0.3, label='Certain zone')
+else:
+    ax11.fill_between(time, -0.05, 1.05, color='gray', alpha=0.3, label='Uncertain zone')
+
+
 
 plt.show()
