@@ -398,6 +398,7 @@ for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
 #         # probs = np.exp(combined_log_probs)
 
         probs = np.exp(log_likelihoods)
+        # probs = np.array(log_likelihoods).astype(np.float64)
         probs /= np.sum(probs)
         final_class_log_probs.append(probs)
 
