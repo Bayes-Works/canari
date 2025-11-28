@@ -2071,3 +2071,66 @@ class Model:
             self.lstm_net.set_lstm_states(lstm_cell_states)
 
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
+
+    def ad(self, data):
+
+        tol = 1e-3
+        mu_obs_preds = []
+        std_obs_preds = []
+        self.initialize_states_history()
+
+        # set lstm to train mode
+        if self.lstm_net:
+            self.lstm_net.eval()
+
+        level_pos_cur = self.mu_states[0]
+        level_pos_next = []
+        prob = []
+
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
+                x
+            )
+
+            (
+                delta_mu_states,
+                delta_var_states,
+                mu_states_posterior,
+                var_states_posterior,
+            ) = self.backward(y)
+
+            level_pos_next = mu_states_posterior[0]
+            trend_pos_next = mu_states_posterior[1]
+
+            diff = level_pos_next - level_pos_cur - trend_pos_next
+            if abs(diff) > tol:
+                #  Add delta to trend's mean
+                # delta_trend = diff**2
+                # mu_states_posterior[0] = mu_states_posterior[0] + delta_trend
+                # mu_states_posterior[1] = mu_states_posterior[1] + delta_trend
+                # self.mu_states_posterior = mu_states_posterior
+
+                #  Add delta to trend's variances
+                delta_trend = diff**2
+                var_states_posterior[1] = var_states_posterior[1] + delta_trend
+                self.var_states_posterior = var_states_posterior
+
+                prob.append(np.array(1))
+            else:
+                prob.append(np.array(0))
+
+            level_pos_cur = mu_states_posterior[0]
+
+            if self.lstm_net:
+                self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
+                self.update_lstm_output_history(
+                    mu_states_posterior, var_states_posterior
+                )
+
+            # Store variables
+            self.save_states_history()
+            self.set_states(mu_states_posterior, var_states_posterior)
+            mu_obs_preds.append(mu_obs_pred)
+            std_obs_preds.append(var_obs_pred**0.5)
+
+        return prob

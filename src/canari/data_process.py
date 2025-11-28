@@ -172,12 +172,20 @@ class DataProcess:
         """
         Compute standardization statistics (mean, std) based on training data or user-defined values.
         """
-            
-        if self.standardization and self.scale_const_mean is None and self.scale_const_std is None:
+
+        if (
+            self.standardization
+            and self.scale_const_mean is None
+            and self.scale_const_std is None
+        ):
             self.scale_const_mean, self.scale_const_std = Normalizer.compute_mean_std(
                 self.data.iloc[self.train_start : self.train_end].values
             )
-        elif self.standardization and self.scale_const_mean is not None and self.scale_const_std is not None:
+        elif (
+            self.standardization
+            and self.scale_const_mean is not None
+            and self.scale_const_std is not None
+        ):
             self.scale_const_mean = np.array(self.scale_const_mean)
             self.scale_const_std = np.array(self.scale_const_std)
         else:
@@ -271,8 +279,8 @@ class DataProcess:
             },
             # All data
             {
-                "x": data[: self.test_end, self.covariates_col],
-                "y": data[: self.test_end, self.output_col],
+                "x": data[:, self.covariates_col],
+                "y": data[:, self.output_col],
                 "start_date": self.data.index[self.train_start],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
