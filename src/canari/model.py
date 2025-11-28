@@ -2086,7 +2086,7 @@ class Model:
         level_pos_cur = self.mu_states[0]
         level_pos_next = []
         prob = []
-        trigger=0
+        trigger = 0
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -2103,7 +2103,7 @@ class Model:
             trend_pos_next = mu_states_posterior[1]
 
             diff = level_pos_next - level_pos_cur - trend_pos_next
-            if abs(diff) > tol & trigger == 0:
+            if abs(diff) > tol and trigger == 0:
                 trigger = 1
                 #  Add delta to trend's mean
                 # delta_trend = diff**2
@@ -2112,9 +2112,9 @@ class Model:
                 # self.mu_states_posterior = mu_states_posterior
 
                 #  Add delta to trend's variances
-                #delta_trend = 0.1#diff**2
-                #var_states_posterior[1] = var_states_posterior[1] + delta_trend
-                #self.var_states_posterior = var_states_posterior
+                # delta_trend = 0.1#diff**2
+                # var_states_posterior[1] = var_states_posterior[1] + delta_trend
+                # self.var_states_posterior = var_states_posterior
 
                 prob.append(np.array(1))
             else:
