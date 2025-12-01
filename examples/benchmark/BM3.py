@@ -39,16 +39,7 @@ def main(
     df_raw.columns = ["values"]
     df = df_raw.resample("W").mean()
 
-    # Data pre-processing
-    output_col = [0]
-    data_processor = DataProcess(
-        data=df,
-        time_covariates=["week_of_year"],
-        train_split=0.173,
-        validation_split=0.022,
-        output_col=output_col,
-    )
-    train_data, validation_data, test_data, all_data = data_processor.get_splits()
+
 
     ######### Define model with parameters #########
     def model_with_parameters(param, train_data, validation_data):
