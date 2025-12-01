@@ -2088,6 +2088,9 @@ class Model:
         prob = []
         trigger = 0
         count = 0
+        cumsum = 0
+        prev_trigger = 0
+        diff_list = []
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -2104,18 +2107,26 @@ class Model:
             trend_pos_next = mu_states_posterior[1]
 
             diff = level_pos_next - level_pos_cur - trend_pos_next
+            diff_list.append(diff)
+            #mu_states_posterior[1] += 0.5*diff
             #if trigger == 1 and abs(diff) < tol:
             #    trigger = 0
-            if abs(diff) > tol:# and trigger == 0:
+            cumsum += diff
+            if abs(diff) > tol:
                 count += 1
-                if count >= 3:
+                if count >= 1:
+                    #level_intervention = diff
+                    trend_intervention = np.sign(cumsum)*min(abs(cumsum),abs(np.sum(diff_list[-25:]))) * 0.25
+                    #mu_states_posterior[0] += level_intervention
+                    mu_states_posterior[1] += trend_intervention
+                    cumsum = 0
                     trigger += 1
                     #  Add delta to trend's mean
                     # delta_trend = diff**2
                     #mu_states_posterior[0] += 0.1926 #toy
                     #mu_states_posterior[1] += 0.015  #toy
                     #mu_states_posterior[0] +=  0.6 #toy
-                    if trigger == 1:
+                    #if trigger == 1:
                         #mu_states_posterior[1] += -0.002    #bench-4
                         #mu_states_posterior[1] += -0.001    #bench-5
                         #mu_states_posterior[0] += -0.4      #bench-6
@@ -2124,7 +2135,7 @@ class Model:
                         #mu_states_posterior[1] += 0.002     #bench-7
                         #mu_states_posterior[0] += 0.4       #bench-9
                         #mu_states_posterior[1] += 0.008     #bench-9
-                        mu_states_posterior[1] += -0.003    #bench-10
+                        #mu_states_posterior[1] += -0.003    #bench-10
                     #elif trigger == 2:
                         #mu_states_posterior[1] += -0.0001   #bench-5
                         #mu_states_posterior[0] += 0.5       #bench-9
@@ -2137,12 +2148,9 @@ class Model:
                     #elif trigger == 12:
                         #mu_states_posterior[0] += 2.4       #bench-4
                         #mu_states_posterior[1] += 0.003     #bench-4
-                    elif trigger == 17:
-                        mu_states_posterior[0] += 1.3       #bench-10
-                        mu_states_posterior[1] += -0.001    #bench-10
-
-
-                    self.mu_states_posterior = mu_states_posterior
+                    #elif trigger == 17:
+                        #mu_states_posterior[0] += 1.3       #bench-10
+                        #mu_states_posterior[1] += -0.001    #bench-10
 
                     #  Add delta to trend's variances
                     #var_states_posterior[1] += 1e-7
@@ -2150,6 +2158,8 @@ class Model:
                     count = 0
             else:
                 count = 0
+
+            self.mu_states_posterior = mu_states_posterior
 
             delta_trend = diff**2
             prob.append(diff)
