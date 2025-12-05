@@ -17,7 +17,7 @@ from pytagi import Normalizer as normalizer
 
 
 # # Read data
-data_file = "./data/toy_time_series/syn_data_complex_phi09.csv"
+data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -56,7 +56,7 @@ model = Model(
     Periodic(period=52, mu_states=[0, 5 * 5], var_states=[1e-12, 1e-12]),
     Periodic(period=13, mu_states=[0, 10], var_states=[1e-12, 1e-12]),
     Autoregression(
-        std_error=2, phi=0.9, mu_states=[-0.0621], var_states=[6.36e-05]
+        std_error=2, phi=0.5, mu_states=[-0.0621], var_states=[6.36e-05]
     ),
 )
 num_time_steps = 52 * 12
@@ -126,4 +126,4 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 # Save to CSV
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index"])
-df_time_series_all.to_csv("data/prob_eva_syn_time_series/syn_complex_ts_regen.csv", index=False)
+df_time_series_all.to_csv("data/prob_eva_syn_time_series/syn_simple_ts_regen2_val.csv", index=False)

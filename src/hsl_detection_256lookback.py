@@ -784,9 +784,9 @@ class hsl_detection:
         samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
 
         # Anomly feature range define
-        ts_len = 52*6
+        ts_len = 52*10
         anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
+        anm_begin_range = [int(ts_len*0.6), int(ts_len*0.75)]
 
         # # Generate synthetic time series
         covariate_col = self.data_processor.covariates_col
@@ -804,6 +804,8 @@ class hsl_detection:
                                                                 time_covariate_info=time_covariate_info,
                                                                 add_anomaly=True, anomaly_mag_range=anm_mag_range, 
                                                                 anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
+        
+
         # Plot generated time series
         fig = plt.figure(figsize=(10, 6))
         gs = gridspec.GridSpec(1, 1)
@@ -858,11 +860,11 @@ class hsl_detection:
                 x_likelihood_na_one_ts.append(x_likelihood_na)
 
                 # Collect sample input
-                if i > 65:
+                if i > 257:
                     LTd_mu_prior = np.array(drift_model_copy.states.mu_prior)[:, 1].flatten()
                     mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
                     samples['LTd_history'].append(mu_LTd_history.tolist())
-                if i > 65 and i < anm_begin_list[k]:
+                if i > 257 and i < anm_begin_list[k]:
                     samples['itv_LT'].append(0.)
                     samples['itv_LL'].append(0.)
                     samples['anm_develop_time'].append(0.)
@@ -1002,7 +1004,7 @@ class hsl_detection:
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)
 
-    def _get_look_back_time_steps(self, current_step, step_look_back = 64):
+    def _get_look_back_time_steps(self, current_step, step_look_back = 16):
         look_back_step_list = [0]
         current = 1
         while current <=  step_look_back:
@@ -1020,6 +1022,10 @@ class hsl_detection:
     def learn_intervention(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+
+        # Remove the last values in each row of samples['LTd_history']
+        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: x[:-4])
+
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
 

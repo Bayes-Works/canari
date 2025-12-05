@@ -44,7 +44,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 
 # # # Read test data
 # df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv")
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_ts_regen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_ts_regen2_val.csv")
 
 # Containers for restored data
 restored_data = []
@@ -127,6 +127,7 @@ hsl_tsad_agent.LTd_std = 5.909502346945472e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1.1)
 # hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
 hsl_tsad_agent.detection_threshold = 0.1638814757675824
+# hsl_tsad_agent.detection_threshold = 0.1638814757675824/1.1 * 10
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
@@ -308,4 +309,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_val.csv", index=False)
