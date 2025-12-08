@@ -21,7 +21,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 def main(
     num_trial_optim_model: int = 5,
     num_trial_optim_skf: int = 5,
-    param_optimization: bool = True,
+    param_optimization: bool = False,
     smoother: bool = True,
     plot: bool = False,
 ):
