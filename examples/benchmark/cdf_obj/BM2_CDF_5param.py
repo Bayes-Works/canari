@@ -9,9 +9,8 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelOptimizer,
+    Optimizer,
     SKF,
-    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -51,7 +50,7 @@ def main(
     seed = np.random.randint(0, 100)
 
     ######### Define model with parameters #########
-    def model_with_parameters(param, train_data, validation_data):
+    def model_with_parameters(param):
         model = Model(
             LocalTrend(),
             LstmNetwork(
@@ -138,7 +137,7 @@ def main(
 
         skf.metric_optim = metric_optim
 
-        return skf, detection_rate
+        return skf
 
     if param_optimization:
         param_space = {
@@ -149,11 +148,9 @@ def main(
             "slope": [0.1, 0.6],
         }
         # Define optimizer
-        model_optimizer = ModelOptimizer(
+        model_optimizer = Optimizer(
             model=model_with_parameters,
-            param_space=param_space,
-            train_data=train_data,
-            validation_data=validation_data,
+            param=param_space,
             num_optimization_trial=num_trial_optim_model,
             num_startup_trials=50,
             mode="max",
@@ -161,7 +158,7 @@ def main(
         model_optimizer.optimize()
         # Get best model
         param = model_optimizer.get_best_param()
-        skf_optim, _ = model_with_parameters(param, train_data, validation_data)
+        skf_optim = model_with_parameters(param)
 
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
@@ -173,7 +170,7 @@ def main(
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
 
-    filter_marginal_abnorm_prob, states, *_ = skf_optim.filter(data=all_data)
+    _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,

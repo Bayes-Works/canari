@@ -11,5 +11,4 @@ from canari.data_visualization import (
 from canari.model import Model
 from canari.model_assemble import ModelAssemble
 from canari.skf import SKF
-from canari.skf_optimizer import SKFOptimizer
-from canari.model_optimizer import ModelOptimizer
+from canari.optimizer import Optimizer

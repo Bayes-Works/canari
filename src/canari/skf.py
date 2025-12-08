@@ -225,6 +225,7 @@ class SKF:
 
         # Optimization
         self.metric_optim = None
+        self.print_metric = None
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
         """Initialize transition models and link SKF to these new models.
