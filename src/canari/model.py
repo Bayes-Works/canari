@@ -217,6 +217,7 @@ class Model:
 
         # Metric for optimization
         self.metric_optim = None
+        self.print_metric = None
 
     def _initialize_model(self):
         """

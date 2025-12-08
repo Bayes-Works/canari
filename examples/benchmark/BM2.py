@@ -1,17 +1,15 @@
 import fire
-import copy
 import pickle
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+from ray import tune
 from pytagi import metric
 from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelOptimizer,
+    Optimizer,
     SKF,
-    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -21,10 +19,9 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optim_model: int = 50,
-    num_trial_optim_skf: int = 300,
-    param_optimization: bool = False,
-    param_grid_search: bool = False,
+    num_trial_optim_model: int = 5,
+    num_trial_optim_skf: int = 5,
+    param_optimization: bool = True,
     smoother: bool = True,
     plot: bool = False,
 ):
@@ -52,7 +49,7 @@ def main(
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     ######### Define model with parameters #########
-    def model_with_parameters(param, train_data, validation_data):
+    def model_with_parameters(param):
         model = Model(
             LocalTrend(var_states=[1e-1, 1e-1]),
             LstmNetwork(
@@ -116,8 +113,8 @@ def main(
         )
 
     ######### Define SKF model with parameters #########
-    def skf_with_parameters(skf_param_space, model_param: dict, train_data):
-        norm_model = Model.load_dict(model_param)
+    def skf_with_parameters(skf_param_space, input):
+        norm_model = Model.load_dict(input["model_optim_dict"])
 
         abnorm_model = Model(
             LocalAcceleration(),
@@ -132,39 +129,45 @@ def main(
         )
         skf.save_initial_states()
 
-        detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
+        num_anomaly = 50
+        detection_rate, false_rate, _ = skf.detect_synthetic_anomaly(
             data=train_data,
-            num_anomaly=50,
-            slope_anomaly=skf_param_space["slope"],
+            num_anomaly=num_anomaly,
+            slope_anomaly=skf_param_space["slope"] / 52,
         )
-        skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate
-        skf.metric_optim["false_alarm_train"] = false_alarm_train
+
+        data_len_year = (
+            data_processor.data.index[data_processor.train_end]
+            - data_processor.data.index[data_processor.train_start]
+        ).days / 365.25
+
+        metric_optim = skf.objective(
+            detection_rate, false_rate / data_len_year, skf_param_space["slope"]
+        )
+
+        skf.load_initial_states()
+
+        skf.metric_optim = metric_optim.copy()
+        print_metric = {}
+        print_metric["detection_rate"] = detection_rate
+        print_metric["false_rate"] = false_rate
+        skf.print_metric = print_metric
 
         return skf
 
     ######### Parameter optimization #########
     if param_optimization:
-        # # Optimize for model
         # Define parameter search space
-        if param_optimization:
-            param_space = {
-                "look_back_len": [12, 76],
-                "sigma_v": [1e-3, 2e-1],
-            }
-        elif param_grid_search:
-            param_space = {
-                "look_back_len": [12, 26, 52],
-                "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
-            }
+        param_space = {
+            "look_back_len": [12, 76],
+            "sigma_v": [1e-3, 2e-1],
+        }
         # Define optimizer
-        model_optimizer = ModelOptimizer(
+        model_optimizer = Optimizer(
             model=model_with_parameters,
-            param_space=param_space,
-            train_data=train_data,
-            validation_data=validation_data,
+            param=param_space,
             num_optimization_trial=num_trial_optim_model,
-            grid_search=param_grid_search,
+            mode="min",
         )
         model_optimizer.optimize()
         # Get best model
@@ -172,7 +175,7 @@ def main(
 
         # Train best model
         model_optim, mu_validation_preds, std_validation_preds = model_with_parameters(
-            param, train_data, validation_data
+            param
         )
 
         if plot:
@@ -207,14 +210,14 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 5e-2
-        slope_lower_bound = 1e-3
+        slope_upper_bound = 0.6  # unit/year
+        slope_lower_bound = 0.1  # unit/year
         if plot:
             # # Plot synthetic anomaly
             synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
                 train_data,
                 num_samples=1,
-                slope=[slope_lower_bound, slope_upper_bound],
+                slope=[slope_lower_bound / 52, slope_upper_bound / 52],
             )
             plot_data(
                 data_processor=data_processor,
@@ -239,31 +242,25 @@ def main(
             plt.title("Train data with added synthetic anomalies")
             plt.show()
 
-        if param_grid_search:
-            skf_param_space = {
-                "std_transition_error": [1e-6, 1e-5, 1e-4, 1e-3],
-                "norm_to_abnorm_prob": [1e-6, 1e-5, 1e-4, 1e-3],
-                "slope": [0.002, 0.004, 0.006, 0.008, 0.01, 0.03, 0.05, 0.07, 0.09],
-            }
-        elif param_optimization:
-            skf_param_space = {
-                "std_transition_error": [1e-6, 1e-4],
-                "norm_to_abnorm_prob": [1e-6, 1e-4],
-                "slope": [slope_lower_bound, slope_upper_bound],
-            }
-        skf_optimizer = SKFOptimizer(
-            skf=skf_with_parameters,
-            model_param=model_optim_dict,
-            param_space=skf_param_space,
-            data=train_data,
+        skf_param_space = {
+            "std_transition_error": [1e-6, 1e-4],
+            "norm_to_abnorm_prob": [1e-6, 1e-4],
+            "slope": [slope_lower_bound, slope_upper_bound],
+        }
+        skf_input = {}
+        skf_input["model_optim_dict"] = model_optim_dict
+        skf_optimizer = Optimizer(
+            model=skf_with_parameters,
+            param=skf_param_space,
+            model_input=skf_input,
             num_optimization_trial=num_trial_optim_skf,
-            grid_search=param_grid_search,
+            mode="max",
         )
         skf_optimizer.optimize()
         # Get parameters
         skf_param = skf_optimizer.get_best_param()
 
-        skf_optim = skf_with_parameters(skf_param, model_optim_dict, train_data)
+        skf_optim = skf_with_parameters(skf_param, skf_input)
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
@@ -280,8 +277,7 @@ def main(
     print("Model parameters used:", skf_optim_dict["model_param"])
     print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
