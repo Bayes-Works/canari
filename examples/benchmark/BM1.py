@@ -1,11 +1,11 @@
 import fire
-import copy
 import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pytagi import metric
 from pytagi import Normalizer as normalizer
+from ray import tune
 from canari import (
     DataProcess,
     Model,
@@ -21,9 +21,9 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 
 def main(
-    num_trial_optim_model: int = 50,
-    num_trial_optim_skf: int = 300,
-    param_optimization: bool = False,
+    num_trial_optim_model: int = 5,
+    num_trial_optim_skf: int = 5,
+    param_optimization: bool = True,
     param_grid_search: bool = False,
     smoother: bool = True,
     plot: bool = False,
@@ -146,31 +146,43 @@ def main(
         )
         skf.save_initial_states()
 
-        detection_rate, false_rate, false_alarm_train = skf.detect_synthetic_anomaly(
+        num_anomaly = 50
+        detection_rate, false_rate, _ = skf.detect_synthetic_anomaly(
             data=train_data,
-            num_anomaly=50,
-            slope_anomaly=skf_param_space["slope"],
+            num_anomaly=num_anomaly,
+            slope_anomaly=skf_param_space["slope"] / 52,
         )
-        skf.metric_optim["detection_rate"] = detection_rate
-        skf.metric_optim["false_rate"] = false_rate
-        skf.metric_optim["false_alarm_train"] = false_alarm_train
+
+        data_len_year = (
+            data_processor.data.index[data_processor.train_end]
+            - data_processor.data.index[data_processor.train_start]
+        ).days / 365.25
+
+        metric_optim = skf.objective(
+            detection_rate, false_rate / data_len_year, skf_param_space["slope"]
+        )
+
+        skf.load_initial_states()
+
+        skf.metric_optim = metric_optim.copy()
 
         return skf
 
     ######### Parameter optimization #########
     if param_optimization:
-        # # Optimize for model
+        # Optimize for model
         # Define parameter search space
         if param_optimization:
             param_space = {
-                "look_back_len": [12, 52],
-                "sigma_v": [1e-1, 4e-1],
+                "look_back_len": [12, 53],
+                "sigma_v": tune.loguniform(1e-1, 4e-1),
             }
         elif param_grid_search:
             param_space = {
                 "look_back_len": [12, 26, 52],
                 "sigma_v": [1e-1, 2e-1, 3e-1, 4e-1],
             }
+
         # Define optimizer
         model_optimizer = ModelOptimizer(
             model=model_with_parameters,
@@ -220,8 +232,8 @@ def main(
 
         # # Optimize for skf
         # Define parameter search space
-        slope_upper_bound = 5e-2
-        slope_lower_bound = 1e-3
+        slope_upper_bound = 0.6
+        slope_lower_bound = 0.1
         if plot:
             # # Plot synthetic anomaly
             synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
@@ -293,8 +305,7 @@ def main(
     print("Model parameters used:", skf_optim_dict["model_param"])
     print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,
