@@ -3,13 +3,13 @@ build
 *.vscode
 *.json
 saved_results/
+saved_params/
 **/__pycache__/
 *.egg-info/
 *.png
 dist/
 data/demo_data
 data/benchmark_data/
-# saved_params/
 
 # Docs
 docs/_build/*
