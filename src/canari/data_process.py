@@ -138,6 +138,19 @@ class DataProcess:
         """
         num_data = len(self.data)
         if self.train_split is not None:
+            if abs(self.train_split + self.validation_split - 1.0) < 1e-12:
+                self.test_split = 0.0
+                self.train_start = 0
+                self.validation_start = int(np.floor(self.train_split * num_data))
+
+                self.train_end = self.validation_start
+                self.validation_end = num_data
+
+                # No test data
+                self.test_start = num_data
+                self.test_end = num_data
+                return
+
             self.test_split = 1 - self.train_split - self.validation_split
             self.train_start = 0
             self.validation_start = int(np.floor(self.train_split * num_data))
@@ -226,6 +239,7 @@ class DataProcess:
 
     def get_splits(
         self,
+        split: Optional[str] = None,
     ) -> Tuple[
         Dict[str, np.ndarray],
         Dict[str, np.ndarray],
@@ -245,48 +259,59 @@ class DataProcess:
         else:
             freq = self.data.index[1] - self.data.index[0]
 
-        return (
-            # Train split
-            {
-                "x": data[self.train_start : self.train_end, self.covariates_col],
-                "y": data[self.train_start : self.train_end, self.output_col],
+        if split is None:
+            return (
+                # Train split
+                {
+                    "x": data[self.train_start : self.train_end, self.covariates_col],
+                    "y": data[self.train_start : self.train_end, self.output_col],
+                    "covariates_col": self.covariates_col,
+                    "data_col_names": self.data.columns.tolist(),
+                    "start_date": self.data.index[self.train_start],
+                    "cov_names": self.data.columns[self.covariates_col].tolist(),
+                    "time_covariates": self.time_covariates,
+                    "scale_const_mean": self.scale_const_mean,
+                    "scale_const_std": self.scale_const_std,
+                    "freq": freq,
+                },
+                # Validation split
+                {
+                    "x": data[
+                        self.validation_start : self.validation_end, self.covariates_col
+                    ],
+                    "y": data[
+                        self.validation_start : self.validation_end, self.output_col
+                    ],
+                    "covariates_col": self.covariates_col,
+                    "data_col_names": self.data.columns.tolist(),
+                    "freq": freq,
+                },
+                # Test split
+                {
+                    "x": data[self.test_start : self.test_end, self.covariates_col],
+                    "y": data[self.test_start : self.test_end, self.output_col],
+                    "covariates_col": self.covariates_col,
+                    "data_col_names": self.data.columns.tolist(),
+                    "freq": freq,
+                },
+                # All data
+                {
+                    "x": data[self.train_start : self.test_end, self.covariates_col],
+                    "y": data[self.train_start : self.test_end, self.output_col],
+                    "start_date": self.data.index[self.train_start],
+                    "covariates_col": self.covariates_col,
+                    "data_col_names": self.data.columns.tolist(),
+                    "freq": freq,
+                },
+            )
+        elif split == "train_val":
+            return {
+                "x": data[self.train_start : self.validation_end, self.covariates_col],
+                "y": data[self.train_start : self.validation_end, self.output_col],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
-                "start_date": self.data.index[self.train_start],
-                "cov_names": self.data.columns[self.covariates_col].tolist(),
-                "time_covariates": self.time_covariates,
-                "scale_const_mean": self.scale_const_mean,
-                "scale_const_std": self.scale_const_std,
                 "freq": freq,
-            },
-            # Validation split
-            {
-                "x": data[
-                    self.validation_start : self.validation_end, self.covariates_col
-                ],
-                "y": data[self.validation_start : self.validation_end, self.output_col],
-                "covariates_col": self.covariates_col,
-                "data_col_names": self.data.columns.tolist(),
-                "freq": freq,
-            },
-            # Test split
-            {
-                "x": data[self.test_start : self.test_end, self.covariates_col],
-                "y": data[self.test_start : self.test_end, self.output_col],
-                "covariates_col": self.covariates_col,
-                "data_col_names": self.data.columns.tolist(),
-                "freq": freq,
-            },
-            # All data
-            {
-                "x": data[: self.test_end, self.covariates_col],
-                "y": data[: self.test_end, self.output_col],
-                "start_date": self.data.index[self.train_start],
-                "covariates_col": self.covariates_col,
-                "data_col_names": self.data.columns.tolist(),
-                "freq": freq,
-            },
-        )
+            }
 
     def get_data(
         self,
