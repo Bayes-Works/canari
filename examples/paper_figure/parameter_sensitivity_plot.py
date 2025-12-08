@@ -17,7 +17,7 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
+df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_val.csv")
 df_il2 = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_layer1_32.csv")
 df_il3 = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_layer2_256.csv")
 # df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv")
@@ -150,8 +150,8 @@ df_il3_mean = df_il3.groupby("anomaly_magnitude").agg(
 # )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-fig, ax = plt.subplots(3, 1, figsize=(3, 5), constrained_layout=True)
-# fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(3, 5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
 
 
 # Plot for detection_time
@@ -192,7 +192,7 @@ ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 # ax[0].legend(ncol=2)
 # Show the legend outside the plot
-ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=2)
+# ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=2)
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")

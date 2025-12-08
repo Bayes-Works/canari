@@ -132,7 +132,7 @@ hsl_tsad_agent.detection_threshold = 0.1638814757675824
 hsl_tsad_agent.nn_train_with = 'tagiv'
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.7583715e-05, 0.0004518164, np.array([-4.0172847e-04, -4.7810923e-02, 1.0713673e+02]), np.array([1.1112380e-02, 1.3762859e+00, 6.2584328e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/itv_learn_samples_syn_simple_ts.csv', 
-                                  load_model_path='saved_params/NN_detection_model_syn_simple_ts.pkl', max_training_epoch=50)
+                                  load_model_path='saved_params/NN_detection_model_syn_simple_ts_layer2_256.pkl', max_training_epoch=50)
 
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
@@ -309,4 +309,4 @@ for k in tqdm(range(len(restored_data))):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT",  "detection_time"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_val.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il_layer2_256.csv", index=False)
