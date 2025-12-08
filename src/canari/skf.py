@@ -15,6 +15,7 @@ from typing import Tuple, Dict, Optional
 import copy
 import numpy as np
 from pytagi import metric
+from scipy.stats import norm, lognorm
 from canari.model import Model
 from canari import common
 from canari.data_struct import StatesHistory
@@ -117,6 +118,9 @@ class SKF:
         stop_training (bool):
             Flag indicating whether training has been stopped due to
             early stopping or reaching the maximum number of epochs.
+
+        # Optimization attribute
+        metric_optim (float): metric used for optimization.
     """
 
     def __init__(
@@ -220,7 +224,7 @@ class SKF:
         self.early_stop_metric = None
 
         # Optimization
-        self.metric_optim = {}
+        self.metric_optim = None
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
         """Initialize transition models and link SKF to these new models.
@@ -1178,7 +1182,7 @@ class SKF:
         """
 
         mu_obs_preds = []
-        var_obs_preds = []
+        std_obs_preds = []
         self.filter_marginal_prob_history = self._prob_history()
 
         # Initialize hidden states
@@ -1206,7 +1210,7 @@ class SKF:
             self._save_states_history()
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
+            std_obs_preds.append(var_obs_pred**0.5)
             self.filter_marginal_prob_history["norm"].append(self.marginal_prob["norm"])
             self.filter_marginal_prob_history["abnorm"].append(
                 self.marginal_prob["abnorm"]
@@ -1214,8 +1218,10 @@ class SKF:
 
         self.set_memory(time_step=0)
         return (
-            np.array(self.filter_marginal_prob_history["abnorm"]),
+            np.array(mu_obs_preds).flatten(),
+            np.array(std_obs_preds).flatten(),
             self.states,
+            np.array(self.filter_marginal_prob_history["abnorm"]),
         )
 
     def smoother(
@@ -1303,7 +1309,7 @@ class SKF:
             anomaly_end=anomaly_end,
         )
 
-        filter_marginal_abnorm_prob, _ = self.filter(data=data)
+        _, _, _, filter_marginal_abnorm_prob = self.filter(data=data)
         self.load_initial_states()
 
         # Check false alarm in the training set
@@ -1312,7 +1318,7 @@ class SKF:
 
         # Iterate over data with synthetic anomalies
         for i in range(0, num_anomaly):
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+            _, _, _, filter_marginal_abnorm_prob = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:
@@ -1330,3 +1336,20 @@ class SKF:
         false_rate = num_false_alarm / num_anomaly
 
         return detection_rate, false_rate, false_alarm_train
+
+    def objective(self, detection_rate, false_rate, anm_magnitude):
+        """
+        Calculate the metric for SKF when optimizing for SKF's parameters
+
+        Args:
+            detection_rate (float): detection rate
+            false_rate (float): false alarm rate (No. false alarm / year)
+            anm_magnitude (float): anomaly slope [unit / year]
+        """
+
+        j1 = norm.cdf(detection_rate, loc=0.5, scale=0.5)
+        j2 = 1 - lognorm.cdf(false_rate, s=0.2, scale=0.1)
+        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.4, scale=0.3)
+        skf_metric = j1 * j2 * j3
+
+        return skf_metric

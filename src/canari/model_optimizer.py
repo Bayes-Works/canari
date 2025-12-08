@@ -3,22 +3,17 @@ This module automates the search for optimal hyperparameters of a
 :class:`~canari.model.Model` instance by leveraging external libraries.
 """
 
-import platform
 from typing import Callable, Dict, Optional
-import numpy as np
-
 import signal
 from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.sample import Domain
+import optuna
 from canari import Model
 
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
-
-import optuna
-
-optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 class ModelOptimizer:
@@ -44,8 +39,7 @@ class ModelOptimizer:
             Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
             Defaults to 'OptunaSearch'.
         mode (str, optional): Direction for optimization stopping: 'min' (default).
-        back_end(str, optional): "ray" or "optuna". Using the external library Ray or Optuna 
-                                    for optimization. Default to "ray". 
+        back_end(str, optional): "ray". Using the external library Ray for optimization.
 
     Attributes:
         model_optim :
@@ -63,8 +57,9 @@ class ModelOptimizer:
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
         mode: Optional[str] = "min",
-        algorithm: Optional[str] = "default",
+        algorithm: Optional[str] = "TPE",  # "TPE" or "random"
         back_end: Optional[str] = "ray",
+        num_startup_trials: Optional[int] = 20,
     ):
         """
         Initialize the ModelOptimizer.
@@ -82,6 +77,7 @@ class ModelOptimizer:
         self._trial_count = 0
         self._algorithm = algorithm
         self._backend = back_end
+        self._num_startup_trials = num_startup_trials
 
     def objective(self, config: Dict) -> Dict:
         """
@@ -90,7 +86,12 @@ class ModelOptimizer:
         Returns:
             dict: Metric used for optimization.
         """
-        trained_model, *_ = self.model(config, self._train_data, self._validation_data)
+        result = self.model(config, self._train_data, self._validation_data)
+
+        if not isinstance(result, tuple):
+            result = (result,)
+        trained_model, *_ = result
+
         _metric = trained_model.metric_optim
 
         metric = {}
@@ -104,8 +105,6 @@ class ModelOptimizer:
 
         if self._backend == "ray":
             self._ray_optimizer()
-        elif self._backend == "optuna":
-            self._optuna_optimizer()
 
     def get_best_model(self) -> Model:
         """
@@ -153,18 +152,25 @@ class ModelOptimizer:
             custom_logger = self._ray_progress_callback(
                 total_samples=self._num_optimization_trial
             )
-            if self._algorithm == "default":
+            if self._algorithm == "TPE":
+                sampler = optuna.samplers.TPESampler(
+                    n_startup_trials=self._num_startup_trials,
+                    multivariate=True,
+                    group=True,
+                )
                 optimizer_runner = tune.run(
                     self.objective,
                     config=search_config,
-                    search_alg=OptunaSearch(metric="metric", mode=self._mode),
+                    search_alg=OptunaSearch(
+                        metric="metric", mode=self._mode, sampler=sampler
+                    ),
                     name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
                 )
-            elif self._algorithm == "parallel":
+            elif self._algorithm == "random":
                 scheduler = ASHAScheduler(metric="metric", mode=self._mode)
                 optimizer_runner = tune.run(
                     self.objective,
@@ -177,9 +183,7 @@ class ModelOptimizer:
                     callbacks=[custom_logger],
                 )
             else:
-                raise ValueError(
-                    "algorithm must be 'default' (OptunaSearch) or 'parallel' (ASHAScheduler)"
-                )
+                raise ValueError("algorithm must be 'TPE' or 'random'")
 
         # Best params & model
         self.param_optim = optimizer_runner.get_best_config(
@@ -190,9 +194,11 @@ class ModelOptimizer:
             best_trial.trial_id, "Unknown"
         )
 
-        best_model, *_ = self.model(
-            self.param_optim, self._train_data, self._validation_data
-        )
+        result = self.model(self.param_optim, self._train_data, self._validation_data)
+        if not isinstance(result, tuple):
+            result = (result,)
+        best_model, *_ = result
+
         self.model_optim = best_model
 
         print("-----")
@@ -205,26 +211,25 @@ class ModelOptimizer:
         """
         search_config = {}
         for param_name, values in self._param_space.items():
-            # Grid search
             if self._grid_search:
                 search_config[param_name] = tune.grid_search(values)
+                print("here grid search")
                 continue
 
-            # Random search
+            if isinstance(values, Domain):
+                search_config[param_name] = values
+                continue
+
             if isinstance(values, list) and len(values) == 2:
                 low, high = values
+
                 if isinstance(low, int) and isinstance(high, int):
-                    search_config[param_name] = tune.randint(low, high)
-                elif isinstance(low, float) and isinstance(high, float):
+                    search_config[param_name] = tune.randint(low, high + 1)
+                    continue
+
+                if isinstance(low, float) and isinstance(high, float):
                     search_config[param_name] = tune.uniform(low, high)
-                else:
-                    raise ValueError(
-                        f"Unsupported type for parameter {param_name}: {values}"
-                    )
-            else:
-                raise ValueError(
-                    f"Parameter {param_name} should be a list of two values (min, max)."
-                )
+                    continue
 
         return search_config
 
@@ -249,89 +254,3 @@ class ModelOptimizer:
                 print(f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}")
 
         return _Progress(total_samples)
-
-    def _optuna_optimizer(self):
-        """
-        Optuna optimizer
-        """
-
-        direction = "minimize" if self._mode == "min" else "maximize"
-
-        if self._grid_search:
-            sampler = optuna.samplers.GridSampler(self._param_space)
-            self._num_optimization_trial = int(
-                np.prod([len(v) for v in self._param_space.values()])
-            )
-        else:
-            sampler = optuna.samplers.TPESampler()
-
-        print("-----")
-        print("Model optimization starts")
-        study = optuna.create_study(direction=direction, sampler=sampler)
-
-        study.optimize(
-            self._optuna_objective,
-            n_trials=self._num_optimization_trial,
-            callbacks=[self._optuna_log_trial],
-        )
-
-        self.param_optim = study.best_params
-        self.model_optim, *_ = self.model(
-            self.param_optim, self._train_data, self._validation_data
-        )
-
-        print("-----")
-        print(
-            f"Optimal parameters at trial #{study.best_trial.number + 1}: "
-            f"{self.param_optim}"
-        )
-        print(f"Best metric value: {study.best_value:.4f}")
-        print("-----")
-
-    def _optuna_objective(self, trial: optuna.Trial):
-        """
-        Objective function
-        """
-
-        param = self._optuna_build_search_space(trial)
-        metric = self.objective(param)
-        return metric["metric"]
-
-    def _optuna_build_search_space(self, trial: optuna.Trial) -> Dict:
-        """
-        Build parameter suggestions for Optuna from self._param_space.
-
-        Args:
-            trial (optuna.Trial): Optuna trial object used to sample parameters.
-
-        Returns:
-            Dict[str, float | int]: Dictionary of parameter names mapped to suggested values.
-        """
-        param = {}
-        if self._grid_search:
-            for name, values in self._param_space.items():
-                param[name] = trial.suggest_categorical(name, values)
-        else:
-            for name, bounds in self._param_space.items():
-                low, high = bounds
-                if all(isinstance(x, int) for x in bounds):
-                    param[name] = trial.suggest_int(name, low, high)
-                else:
-                    param[name] = trial.suggest_float(name, low, high)
-        return param
-
-    def _optuna_log_trial(self, study: optuna.Study, trial: optuna.Trial):
-        """
-        Custom logging of trial progress.
-        """
-
-        self._trial_count += 1
-        trial_id = f"{self._trial_count}/{self._num_optimization_trial}".rjust(
-            len(f"{self._num_optimization_trial}/{self._num_optimization_trial}")
-        )
-        print(f"# {trial_id} - Metric: {trial.value:.4f} - Parameter: {trial.params}")
-
-        if trial.number == study.best_trial.number:
-            print(
-                f" -> New best trial #{trial.number + 1} with metric: {trial.value:.4f}"
-            )
