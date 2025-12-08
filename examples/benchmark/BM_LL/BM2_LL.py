@@ -9,9 +9,8 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelOptimizer,
+    Optimizer,
     SKF,
-    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -51,7 +50,7 @@ def main(
     seed = np.random.randint(0, 100)
 
     ######### Define model with parameters #########
-    def model_with_parameters(param, train_data, validation_data):
+    def model_with_parameters(param):
         model = Model(
             LocalTrend(),
             LstmNetwork(
@@ -118,7 +117,7 @@ def main(
 
         skf.save_initial_states()
 
-        filter_marginal_abnorm_prob, states, mu_preds, std_preds = skf.filter(
+        mu_preds, std_preds, states, filter_marginal_abnorm_prob = skf.filter(
             data=all_data
         )
 
@@ -143,7 +142,7 @@ def main(
 
         skf.load_initial_states()
 
-        return skf, filter_marginal_abnorm_prob, states
+        return skf
 
     if param_optimization:
         param_space = {
@@ -153,19 +152,15 @@ def main(
             "norm_to_abnorm_prob": [1e-6, 1e-4],
         }
         # Define optimizer
-        model_optimizer = ModelOptimizer(
+        model_optimizer = Optimizer(
             model=model_with_parameters,
-            param_space=param_space,
-            train_data=train_data,
-            validation_data=validation_data,
+            param=param_space,
             num_optimization_trial=num_trial_optim_model,
         )
         model_optimizer.optimize()
         # Get best model
         param = model_optimizer.get_best_param()
-        skf_optim, filter_marginal_abnorm_prob, states = model_with_parameters(
-            param, train_data, validation_data
-        )
+        skf_optim = model_with_parameters(param)
 
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
@@ -177,8 +172,7 @@ def main(
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
 
-    filter_marginal_abnorm_prob, states, *_ = skf_optim.filter(data=all_data)
-    smooth_marginal_abnorm_prob, states = skf_optim.smoother()
+    _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
 
     fig, ax = plot_skf_states(
         data_processor=data_processor,

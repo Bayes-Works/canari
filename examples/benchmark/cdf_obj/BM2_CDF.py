@@ -9,9 +9,8 @@ from pytagi import Normalizer as normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelOptimizer,
+    Optimizer,
     SKF,
-    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -51,7 +50,7 @@ def main(
     seed = np.random.randint(0, 100)
 
     ######### Define model with parameters #########
-    def model_with_parameters(param, train_data, validation_data):
+    def model_with_parameters(param):
         model = Model(
             LocalTrend(),
             LstmNetwork(
@@ -139,6 +138,10 @@ def main(
         skf.load_initial_states()
 
         skf.metric_optim = metric_optim
+        print_metric = {}
+        print_metric["detection_rate"] = detection_rate
+        print_metric["false_rate"] = false_rate
+        skf.print_metric = print_metric
 
         return skf
 
@@ -146,16 +149,12 @@ def main(
         param_space = {
             "look_back_len": [12, 52],
             "sigma_v": [1e-3, 2e-1],
-            # "std_transition_error": [1e-6, 1e-4],
-            # "norm_to_abnorm_prob": [1e-6, 1e-4],
             "slope": [0.1, 0.6],
         }
         # Define optimizer
-        model_optimizer = ModelOptimizer(
+        model_optimizer = Optimizer(
             model=model_with_parameters,
-            param_space=param_space,
-            train_data=train_data,
-            validation_data=validation_data,
+            param=param_space,
             num_optimization_trial=num_trial_optim_model,
             num_startup_trials=30,
             mode="max",
@@ -163,7 +162,7 @@ def main(
         model_optimizer.optimize()
         # Get best model
         param = model_optimizer.get_best_param()
-        skf_optim = model_with_parameters(param, train_data, validation_data)
+        skf_optim = model_with_parameters(param)
 
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param

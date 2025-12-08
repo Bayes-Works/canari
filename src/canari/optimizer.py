@@ -16,7 +16,7 @@ from canari import Model
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 
-class ModelOptimizer:
+class Optimizer:
     """
     Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune
     external library using the metric :attr:`~canari.model.Model.metric_optim`.
@@ -24,7 +24,7 @@ class ModelOptimizer:
     Args:
         model (Callable):
             Function that returns a model instance given a model configuration.
-        param_space (Dict[str, list]):
+        param (Dict[str, list]):
             Parameter search space: two-value lists [min, max] for defining the
             bounds of the optimization.
         train_data (Dict[str, np.ndarray], optional):
@@ -51,9 +51,8 @@ class ModelOptimizer:
     def __init__(
         self,
         model: Callable,
-        param_space: dict,
-        train_data: Optional[dict] = None,
-        validation_data: Optional[dict] = None,
+        param: dict,
+        model_input: Optional[dict] = None,
         num_optimization_trial: Optional[int] = 50,
         grid_search: Optional[bool] = False,
         mode: Optional[str] = "min",
@@ -68,9 +67,8 @@ class ModelOptimizer:
         self.model = model
         self.model_optim = None
         self.param_optim = None
-        self._param_space = param_space
-        self._train_data = train_data
-        self._validation_data = validation_data
+        self._param = param
+        self._model_input = model_input
         self._num_optimization_trial = num_optimization_trial
         self._grid_search = grid_search
         self._mode = mode
@@ -86,16 +84,21 @@ class ModelOptimizer:
         Returns:
             dict: Metric used for optimization.
         """
-        result = self.model(config, self._train_data, self._validation_data)
+        if self._model_input is None:
+            result = self.model(config)
+        else:
+            result = self.model(config, self._model_input)
 
         if not isinstance(result, tuple):
             result = (result,)
         trained_model, *_ = result
 
         _metric = trained_model.metric_optim
+        _print_metric = trained_model.print_metric
 
         metric = {}
         metric["metric"] = _metric
+        metric["print_metric"] = _print_metric
         return metric
 
     def optimize(self):
@@ -135,14 +138,13 @@ class ModelOptimizer:
 
         if self._grid_search:
             total_trials = 1
-            for v in self._param_space.values():
+            for v in self._param.values():
                 total_trials *= len(v)
             custom_logger = self._ray_progress_callback(total_samples=total_trials)
 
             optimizer_runner = tune.run(
                 self.objective,
                 config=search_config,
-                name="Model_optimizer",
                 num_samples=1,
                 verbose=0,
                 raise_on_failed_trial=False,
@@ -164,7 +166,6 @@ class ModelOptimizer:
                     search_alg=OptunaSearch(
                         metric="metric", mode=self._mode, sampler=sampler
                     ),
-                    name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
                     verbose=0,
                     raise_on_failed_trial=False,
@@ -175,7 +176,6 @@ class ModelOptimizer:
                 optimizer_runner = tune.run(
                     self.objective,
                     config=search_config,
-                    name="Model_optimizer",
                     num_samples=self._num_optimization_trial,
                     scheduler=scheduler,
                     verbose=0,
@@ -194,7 +194,11 @@ class ModelOptimizer:
             best_trial.trial_id, "Unknown"
         )
 
-        result = self.model(self.param_optim, self._train_data, self._validation_data)
+        if self._model_input is None:
+            result = self.model(self.param_optim)
+        else:
+            result = self.model(self.param_optim, self._model_input)
+
         if not isinstance(result, tuple):
             result = (result,)
         best_model, *_ = result
@@ -202,15 +206,17 @@ class ModelOptimizer:
         self.model_optim = best_model
 
         print("-----")
-        print(f"Optimal parameters at trial #{best_sample_number}: {self.param_optim}")
+        print(
+            f"Optimal parameters at trial #{best_sample_number}. Best metric: {best_model.metric_optim:.4f}. Best print metric: {best_model.print_metric}. Best param: {self.param_optim}."
+        )
         print("-----")
 
     def _ray_build_search_space(self) -> Dict:
         """
-        Convert param_space to Ray Tune search space objects.
+        Convert param to Ray Tune search space objects.
         """
         search_config = {}
-        for param_name, values in self._param_space.items():
+        for param_name, values in self._param.items():
             if self._grid_search:
                 search_config[param_name] = tune.grid_search(values)
                 print("here grid search")
@@ -246,11 +252,19 @@ class ModelOptimizer:
                 self.current_sample += 1
                 metric = result["metric"]
                 params = trial.config
+                print_metric = result["print_metric"]
 
                 self.trial_sample_map[trial.trial_id] = self.current_sample
 
                 width = len(f"{self.total_samples}/{self.total_samples}")
                 sample_str = f"{self.current_sample}/{self.total_samples}".rjust(width)
-                print(f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}")
+                if print_metric is None:
+                    print(
+                        f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}"
+                    )
+                else:
+                    print(
+                        f"# {sample_str} - Metric: {metric:.3f} - Print metric: {print_metric} - Parameter: {params}"
+                    )
 
         return _Progress(total_samples)
