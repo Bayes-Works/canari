@@ -1338,7 +1338,18 @@ class SKF:
 
         return detection_rate, false_rate, false_alarm_train
 
-    def objective(self, detection_rate, false_rate, anm_magnitude):
+    def objective(
+        self,
+        detection_rate,
+        false_rate,
+        anm_magnitude,
+        detection_rate_cdf_mean: Optional[float] = 0.5,
+        detection_rate_cdf_std: Optional[float] = 0.5,
+        false_rate_cdf_median: Optional[float] = 0.1,  # [false alarms/year]
+        false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
+        anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
+        anm_mag_cdf_shape: Optional[float] = 0.4,  # [unit/year]
+    ):
         """
         Calculate the metric for SKF when optimizing for SKF's parameters
 
@@ -1346,11 +1357,29 @@ class SKF:
             detection_rate (float): detection rate
             false_rate (float): false alarm rate (No. false alarm / year)
             anm_magnitude (float): anomaly slope [unit / year]
+            detection_rate_cdf_mean (Optional[float]): mean for the CDF: norm.cdf(
+                    detection_rate, loc=detection_rate_cdf_mean, scale=..)
+            detection_rate_cdf_std (Optional[float]): std for the CDF: norm.cdf(
+                    detection_rate, loc=.., scale=detection_rate_cdf_std)
+            false_rate_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(
+                    false_rate, s=.., scale=false_rate_cdf_median). Unit [false alarms/year].
+            false_rate_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
+                    false_rate, s=false_rate_cdf_shape, scale=..). Unit [false alarms/year].
+            anm_mag_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(
+                    anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].
+            anm_mag_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
+                    anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].
         """
 
-        j1 = norm.cdf(detection_rate, loc=0.5, scale=0.5)
-        j2 = 1 - lognorm.cdf(false_rate, s=0.2, scale=0.1)
-        j3 = 1 - lognorm.cdf(anm_magnitude, s=0.4, scale=0.3)
+        j1 = norm.cdf(
+            detection_rate, loc=detection_rate_cdf_mean, scale=detection_rate_cdf_std
+        )
+        j2 = 1 - lognorm.cdf(
+            false_rate, s=false_rate_cdf_shape, scale=false_rate_cdf_median
+        )
+        j3 = 1 - lognorm.cdf(
+            anm_magnitude, s=anm_mag_cdf_shape, scale=anm_mag_cdf_median
+        )
         skf_metric = j1 * j2 * j3
 
         return skf_metric
