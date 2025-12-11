@@ -83,7 +83,7 @@ skf = SKF(
 )
 
 # Anomaly Detection
-filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
+_, _, states, filter_marginal_abnorm_prob = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother()
 
 #  Plot
