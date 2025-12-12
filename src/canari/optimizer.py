@@ -1,6 +1,7 @@
 """
-This module automates the search for optimal hyperparameters of a
-:class:`~canari.model.Model` instance by leveraging external libraries.
+This module automates the search for optimal hyperparameters of
+:class:`~canari.model.Model` and :class:`~canari.skf.SKF` instances by leveraging the
+external libraries Ray Tune and Optuna.
 """
 
 from typing import Callable, Dict, Optional
@@ -18,28 +19,33 @@ signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
 class Optimizer:
     """
-    Optimize hyperparameters for :class:`~canari.model.Model` using the Ray Tune
-    external library using the metric :attr:`~canari.model.Model.metric_optim`.
+    Optimize hyperparameters for :class:`~canari.model.Model` and :class:`~canari.skf.SKF`
+    using the Ray Tune and Optuna external libraries.
+    Optimization is based on the metric saved in :attr:`~canari.model.Model.metric_optim` for
+    :class:`~canari.model.Model` or :attr:`~canari.skf.SKF.metric_optim`
+    for :class:`~canari.skf.SKF`.
 
     Args:
         model (Callable):
             Function that returns a model instance given a model configuration.
         param (Dict[str, list]):
             Parameter search space: two-value lists [min, max] for defining the
-            bounds of the optimization.
-        train_data (Dict[str, np.ndarray], optional):
-            Training data.
-        validation_data (Dict[str, np.ndarray], optional):
-            Validation data.
+            bounds of the optimization. Users can also use Ray Tune search space object
+            such as: tune.randint(12, 53), tune.uniform(0.1, 0.4), tune.loguniform(1e-1, 4e-1).
+        model_input (Dict): Any other inputs for the model that is different from the
+            model's parameters.
         num_optimization_trial (int, optional):
-            Number of random search trials (ignored for grid search). Defaults to 50.
+            Number of random search trials (ignored for grid-search). Defaults to 50.
         grid_search (bool, optional):
             If True, perform grid search. Defaults to False.
         algorithm (str, optional):
-            Search algorithm: 'default' (OptunaSearch) or 'parallel' (ASHAScheduler).
-            Defaults to 'OptunaSearch'.
-        mode (str, optional): Direction for optimization stopping: 'min' (default).
-        back_end(str, optional): "ray". Using the external library Ray for optimization.
+            Search algorithm: 'TPE' (OptunaSearch) or 'random' (random sampling).
+            Defaults to 'TPE'.
+        mode (str, optional): Direction for optimization stopping: "min" or "max".
+            Defaults to "min".
+        back_end (str, optional): "ray". Using the external library Ray for optimization.
+        num_startup_trials (int, optional): Number of start up trial when using TPE sampling.
+            Defaults to 20.
 
     Attributes:
         model_optim :
@@ -61,7 +67,7 @@ class Optimizer:
         num_startup_trials: Optional[int] = 20,
     ):
         """
-        Initialize the ModelOptimizer.
+        Initialize the Optimizer.
         """
 
         self.model = model
@@ -109,13 +115,12 @@ class Optimizer:
         if self._backend == "ray":
             self._ray_optimizer()
 
-    def get_best_model(self) -> Model:
+    def get_best_model(self):
         """
         Retrieve the optimized model instance after running optimization.
 
         Returns:
-            :class:`~canari.model.Model`: Model instance initialized with the best
-                                            hyperparameter values.
+            Model instance initialized with the best hyperparameter values.
 
         """
         return self.model_optim
