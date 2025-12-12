@@ -153,16 +153,16 @@ def main(
                 - data_processor.data.index[data_processor.train_start]
             ).days / 365.25
 
+            false_rate_yearly = false_rate / data_len_year
             metric_optim = skf.objective(
-                detection_rate, false_rate / data_len_year, skf_param_space["slope"]
+                detection_rate, false_rate_yearly, skf_param_space["slope"]
             )
 
             skf.load_initial_states()
-
             skf.metric_optim = metric_optim.copy()
             print_metric = {}
             print_metric["detection_rate"] = detection_rate
-            print_metric["false_rate"] = false_rate
+            print_metric["yearly_false_rate"] = false_rate_yearly
             skf.print_metric = print_metric
 
             return skf
@@ -244,11 +244,11 @@ def main(
             skf_optim_dict["model_param"] = param
             skf_optim_dict["skf_param"] = skf_param
             skf_optim_dict["cov_names"] = train_data["cov_names"]
-            with open(config["saved_model_path"], "wb") as f:
+            with open(f"{config['saved_model_path']}_2step_optim.pkl", "wb") as f:
                 pickle.dump(skf_optim_dict, f)
         else:
             # # Load saved skf model
-            with open(config["saved_model_path"], "rb") as f:
+            with open(f"{config['saved_model_path']}_2step_optim.pkl", "rb") as f:
                 skf_optim_dict = pickle.load(f)
             skf_optim = SKF.load_dict(skf_optim_dict)
 
@@ -264,7 +264,33 @@ def main(
             model_prob=filter_marginal_abnorm_prob,
         )
         fig.suptitle("SKF hidden states", fontsize=10, y=1)
-        plt.savefig(config["saved_result_path"])
+        plt.savefig(f"{config['saved_result_path']}_2step_optim.png")
+        plt.show()
+
+        # Plot a sample of anomaly with optimal magnitude
+        synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
+            train_data,
+            num_samples=1,
+            slope=[skf_optim_dict["skf_param"]["slope"] / 52],
+        )
+
+        train_time = data_processor.get_time("train")
+        plt.plot(train_time, synthetic_anomaly_data[0]["y"])
+        plot_data(
+            data_processor=data_processor,
+            standardization=True,
+            plot_validation_data=False,
+            plot_test_data=False,
+            plot_column=output_col,
+            train_label="data without anomaly",
+        )
+        plt.legend(
+            [
+                "data with optimal anomaly slope",
+                "data without anomaly",
+            ]
+        )
+        plt.title("Train data with added synthetic anomalies")
         plt.show()
 
 
