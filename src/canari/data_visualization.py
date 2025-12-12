@@ -294,12 +294,14 @@ def plot_states(
         states (StatesHistory): Object containing hidden states history over time.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        standardization (bool, optional): Whether to plot hidden states in standardized or original space.
+        standardization (bool, optional): Whether to plot hidden states in
+            standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence region.
         sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Color for mean line and confidence region fill.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Legend placement for first state subplot.
+        time_start_index (int, optional): Time start index for plotting states. Defaults to 0.
 
     Examples:
         >>> from canari import plot_states
@@ -419,13 +421,15 @@ def plot_skf_states(
         model_prob (np.ndarray): Probabilities of the abnormal regime.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        standardization (bool, optional):  Whether to plot hidden states in standardized or original space.
+        standardization (bool, optional):  Whether to plot hidden states in
+            standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence regions.
         plot_observation (bool, optional): Whether to include observed data into "level" plot.
         color (str, optional): Line color for states.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Location of legend in top subplot.
         plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.
+        time_start_index (int, optional): Time start index for plotting states. Defaults to 0.
 
     Examples:
         >>> from canari import plot_skf_states

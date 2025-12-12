@@ -1349,9 +1349,9 @@ class SKF:
         false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
         anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
         anm_mag_cdf_shape: Optional[float] = 0.4,  # [unit/year]
-    ):
+    ) -> int:
         """
-        Calculate the metric for SKF when optimizing for SKF's parameters
+        Calculate the metric that is used when optimizing for SKF's parameters.
 
         Args:
             detection_rate (float): detection rate
@@ -1369,6 +1369,9 @@ class SKF:
                     anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].
             anm_mag_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
                     anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].
+
+        Returns:
+            metric (int): metric used when optimizing for SKF's parameters.
         """
 
         j1 = norm.cdf(
