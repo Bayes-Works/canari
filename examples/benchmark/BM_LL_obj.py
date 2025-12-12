@@ -2,6 +2,7 @@ import fire
 import pickle
 import json
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from ray import tune
 from pytagi import metric
@@ -23,9 +24,9 @@ with open("examples/benchmark/BM_metadata.json", "r") as f:
 
 
 def main(
-    num_trial_optim_model: int = 10,
+    num_trial_optim_model: int = 60,
     param_optimization: bool = True,
-    benchmark_no: str = ["2"],
+    benchmark_no: str = ["4"],
 ):
     for benchmark in benchmark_no:
 
@@ -44,6 +45,7 @@ def main(
         df.index = date_time
         df.index.name = "date_time"
         # Data pre-processing
+        df = DataProcess.add_lagged_columns(df, config["lag_vector"])
         output_col = config["output_col"]
         data_processor = DataProcess(
             data=df,
@@ -119,31 +121,17 @@ def main(
             skf = SKF(
                 norm_model=model,
                 abnorm_model=abnorm_model,
-                std_transition_error=param["std_transition_error"],
-                norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
+                # std_transition_error=param["std_transition_error"],
+                # norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
+                std_transition_error=1e-4,
+                norm_to_abnorm_prob=1e-5,
             )
 
             skf.save_initial_states()
 
-            mu_preds, std_preds, _, _ = skf.filter(data=all_data)
+            skf.filter(data=all_data)
+            log_lik_all = np.nanmean(skf.ll_history)
 
-            mu_preds_unnorm = normalizer.unstandardize(
-                mu_preds,
-                data_processor.scale_const_mean[data_processor.output_col],
-                data_processor.scale_const_std[data_processor.output_col],
-            )
-
-            std_preds_unnorm = normalizer.unstandardize_std(
-                std_preds,
-                data_processor.scale_const_std[data_processor.output_col],
-            )
-
-            obs_all = data_processor.get_data("all").flatten()
-            log_lik_all = metric.log_likelihood(
-                prediction=mu_preds_unnorm,
-                observation=obs_all,
-                std=std_preds_unnorm,
-            )
             skf.metric_optim = -log_lik_all
 
             return skf
@@ -153,8 +141,8 @@ def main(
             param_space = {
                 "look_back_len": config["look_back_len"],
                 "sigma_v": config["sigma_v"],
-                "std_transition_error": config["std_transition_error"],
-                "norm_to_abnorm_prob": config["norm_to_abnorm_prob"],
+                # "std_transition_error": config["std_transition_error"],
+                # "norm_to_abnorm_prob": config["norm_to_abnorm_prob"],
                 "slope": config["slope"],
             }
             # Define optimizer
@@ -163,7 +151,6 @@ def main(
                 param=param_space,
                 num_optimization_trial=num_trial_optim_model,
                 num_startup_trials=50,
-                mode="max",
             )
             model_optimizer.optimize()
             # Get best model
