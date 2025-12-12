@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>canari.skf &#8212; canari v.0.2.0 documentation</title>
+    <title>canari.skf &#8212; canari v.0.2.3 documentation</title>
   
   
   
@@ -36,7 +36,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=a921a727"></script>
+    <script src="../_static/documentation_options.js?v=be552741"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -46,7 +46,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/canari.skf';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="canari.skf_optimizer" href="canari.skf_optimizer.html" />
+    <link rel="next" title="canari.optimizer" href="canari.optimizer.html" />
     <link rel="prev" title="canari.model_assemble" href="canari.model_assemble.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
@@ -139,8 +139,8 @@
       
     
     
-    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.0 documentation - Home"/>
-    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.0 documentation - Home"/>`);</script>
+    <img src="../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.3 documentation - Home"/>
+    <script>document.write(`<img src="../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -184,10 +184,9 @@
 <li class="toctree-l2"><a class="reference internal" href="canari.data_struct.html">canari.data_struct</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model.html">canari.model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.model_optimizer.html">canari.model_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">canari.skf</a></li>
-<li class="toctree-l2"><a class="reference internal" href="canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="canari.optimizer.html">canari.optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="canari.data_visualization.html">canari.data_visualization</a></li>
 </ul>
 </details></li>
@@ -329,6 +328,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.early_stop_metric_history"><code class="docutils literal notranslate"><span class="pre">SKF.early_stop_metric_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">SKF.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.stop_training"><code class="docutils literal notranslate"><span class="pre">SKF.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.metric_optim"><code class="docutils literal notranslate"><span class="pre">SKF.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">SKF.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.backward"><code class="docutils literal notranslate"><span class="pre">SKF.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.detect_synthetic_anomaly"><code class="docutils literal notranslate"><span class="pre">SKF.detect_synthetic_anomaly()</span></code></a></li>
@@ -340,6 +340,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.load_dict"><code class="docutils literal notranslate"><span class="pre">SKF.load_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.load_initial_states"><code class="docutils literal notranslate"><span class="pre">SKF.load_initial_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_train"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_train()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.objective"><code class="docutils literal notranslate"><span class="pre">SKF.objective()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.rts_smoother"><code class="docutils literal notranslate"><span class="pre">SKF.rts_smoother()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.save_initial_states"><code class="docutils literal notranslate"><span class="pre">SKF.save_initial_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.set_memory"><code class="docutils literal notranslate"><span class="pre">SKF.set_memory()</span></code></a></li>
@@ -684,6 +685,22 @@ early stopping or reaching the maximum number of epochs.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">#</span> <span class="pre">Optimization</span> <span class="pre">attribute</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.skf.SKF.metric_optim">
+<span class="sig-name descname"><span class="pre">metric_optim</span></span><a class="headerlink" href="#canari.skf.SKF.metric_optim" title="Link to this definition">#</a></dt>
+<dd><p>metric used for optimization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.auto_initialize_baseline_states">
 <span class="sig-name descname"><span class="pre">auto_initialize_baseline_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.auto_initialize_baseline_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.auto_initialize_baseline_states" title="Link to this definition">#</a></dt>
@@ -969,6 +986,39 @@ deviation each epoch. Defaults to 0.9.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="canari.skf.SKF.objective">
+<span class="sig-name descname"><span class="pre">objective</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detection_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">false_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anm_magnitude</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection_rate_cdf_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection_rate_cdf_std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">false_rate_cdf_median</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">false_rate_cdf_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anm_mag_cdf_median</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anm_mag_cdf_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="../_modules/canari/skf.html#SKF.objective"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.objective" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the metric that is used when optimizing for SKF’s parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>detection_rate</strong> (<em>float</em>) – detection rate</p></li>
+<li><p><strong>false_rate</strong> (<em>float</em>) – false alarm rate (No. false alarm / year)</p></li>
+<li><p><strong>anm_magnitude</strong> (<em>float</em>) – anomaly slope [unit / year]</p></li>
+<li><p><strong>detection_rate_cdf_mean</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – mean for the CDF: norm.cdf(
+detection_rate, loc=detection_rate_cdf_mean, scale=..)</p></li>
+<li><p><strong>detection_rate_cdf_std</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – std for the CDF: norm.cdf(
+detection_rate, loc=.., scale=detection_rate_cdf_std)</p></li>
+<li><p><strong>false_rate_cdf_median</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – median for the CDF: lognorm.cdf(
+false_rate, s=.., scale=false_rate_cdf_median). Unit [false alarms/year].</p></li>
+<li><p><strong>false_rate_cdf_shape</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – shape for the CDF: lognorm.cdf(
+false_rate, s=false_rate_cdf_shape, scale=..). Unit [false alarms/year].</p></li>
+<li><p><strong>anm_mag_cdf_median</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – median for the CDF: lognorm.cdf(
+anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].</p></li>
+<li><p><strong>anm_mag_cdf_shape</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – shape for the CDF: lognorm.cdf(
+anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>metric used when optimizing for SKF’s parameters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>metric (int)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="canari.skf.SKF.rts_smoother">
 <span class="sig-name descname"><span class="pre">rts_smoother</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix_inversion_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'absolute'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/canari/skf.html#SKF.rts_smoother"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#canari.skf.SKF.rts_smoother" title="Link to this definition">#</a></dt>
 <dd><p>Smoother for the Switching Kalman filter at a given time step.</p>
@@ -1084,11 +1134,11 @@ Defaults to “relative”.</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="canari.skf_optimizer.html"
+       href="canari.optimizer.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">canari.skf_optimizer</p>
+        <p class="prev-next-title">canari.optimizer</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1131,6 +1181,7 @@ Defaults to “relative”.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.early_stop_metric_history"><code class="docutils literal notranslate"><span class="pre">SKF.early_stop_metric_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.optimal_epoch"><code class="docutils literal notranslate"><span class="pre">SKF.optimal_epoch</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.stop_training"><code class="docutils literal notranslate"><span class="pre">SKF.stop_training</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.metric_optim"><code class="docutils literal notranslate"><span class="pre">SKF.metric_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.auto_initialize_baseline_states"><code class="docutils literal notranslate"><span class="pre">SKF.auto_initialize_baseline_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.backward"><code class="docutils literal notranslate"><span class="pre">SKF.backward()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.detect_synthetic_anomaly"><code class="docutils literal notranslate"><span class="pre">SKF.detect_synthetic_anomaly()</span></code></a></li>
@@ -1142,6 +1193,7 @@ Defaults to “relative”.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.load_dict"><code class="docutils literal notranslate"><span class="pre">SKF.load_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.load_initial_states"><code class="docutils literal notranslate"><span class="pre">SKF.load_initial_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_train"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_train()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.objective"><code class="docutils literal notranslate"><span class="pre">SKF.objective()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.rts_smoother"><code class="docutils literal notranslate"><span class="pre">SKF.rts_smoother()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.save_initial_states"><code class="docutils literal notranslate"><span class="pre">SKF.save_initial_states()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.set_memory"><code class="docutils literal notranslate"><span class="pre">SKF.set_memory()</span></code></a></li>

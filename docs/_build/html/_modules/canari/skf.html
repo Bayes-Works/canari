@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>canari.skf &#8212; canari v.0.2.0 documentation</title>
+    <title>canari.skf &#8212; canari v.0.2.3 documentation</title>
   
   
   
@@ -35,7 +35,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=a921a727"></script>
+    <script src="../../_static/documentation_options.js?v=be552741"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -136,8 +136,8 @@
       
     
     
-    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.0 documentation - Home"/>
-    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.0 documentation - Home"/>`);</script>
+    <img src="../../_static/canari_logo.png" class="logo__image only-light" alt="canari v.0.2.3 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/canari_logo.png" class="logo__image only-dark" alt="canari v.0.2.3 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -181,10 +181,9 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_struct.html">canari.data_struct</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.common.html">canari.common</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.model.html">canari.model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_optimizer.html">canari.model_optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.model_assemble.html">canari.model_assemble</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf.html">canari.skf</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/canari.skf_optimizer.html">canari.skf_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/canari.optimizer.html">canari.optimizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/canari.data_visualization.html">canari.data_visualization</a></li>
 </ul>
 </details></li>
@@ -323,6 +322,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pytagi</span><span class="w"> </span><span class="kn">import</span> <span class="n">metric</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">norm</span><span class="p">,</span> <span class="n">lognorm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari</span><span class="w"> </span><span class="kn">import</span> <span class="n">common</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">canari.data_struct</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatesHistory</span>
@@ -427,6 +427,9 @@ document.write(`
 <span class="sd">        stop_training (bool):</span>
 <span class="sd">            Flag indicating whether training has been stopped due to</span>
 <span class="sd">            early stopping or reaching the maximum number of epochs.</span>
+
+<span class="sd">        # Optimization attribute</span>
+<span class="sd">        metric_optim (float): metric used for optimization.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -530,7 +533,8 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">early_stop_metric</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># Optimization</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">metric_optim</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_optim</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">print_metric</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">abnorm_model</span><span class="p">:</span> <span class="n">Model</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize transition models and link SKF to these new models.</span>
@@ -1529,7 +1533,7 @@ document.write(`
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">var_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">std_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob_history</span><span class="p">()</span>
 
         <span class="c1"># Initialize hidden states</span>
@@ -1557,7 +1561,7 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">_save_states_history</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_states</span><span class="p">()</span>
             <span class="n">mu_obs_preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mu_obs_pred</span><span class="p">)</span>
-            <span class="n">var_obs_preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var_obs_pred</span><span class="p">)</span>
+            <span class="n">std_obs_preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var_obs_pred</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob</span><span class="p">[</span><span class="s2">&quot;norm&quot;</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">marginal_prob</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]</span>
@@ -1565,8 +1569,10 @@ document.write(`
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mu_obs_preds</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">std_obs_preds</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_marginal_prob_history</span><span class="p">[</span><span class="s2">&quot;abnorm&quot;</span><span class="p">]),</span>
         <span class="p">)</span></div>
 
 
@@ -1660,7 +1666,7 @@ document.write(`
             <span class="n">anomaly_end</span><span class="o">=</span><span class="n">anomaly_end</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">filter_marginal_abnorm_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_initial_states</span><span class="p">()</span>
 
         <span class="c1"># Check false alarm in the training set</span>
@@ -1669,7 +1675,7 @@ document.write(`
 
         <span class="c1"># Iterate over data with synthetic anomalies</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_anomaly</span><span class="p">):</span>
-            <span class="n">filter_marginal_abnorm_prob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">synthetic_data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">filter_marginal_abnorm_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">synthetic_data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">window_start</span> <span class="o">=</span> <span class="n">synthetic_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;anomaly_timestep&quot;</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="n">max_timestep_to_detect</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1687,6 +1693,58 @@ document.write(`
         <span class="n">false_rate</span> <span class="o">=</span> <span class="n">num_false_alarm</span> <span class="o">/</span> <span class="n">num_anomaly</span>
 
         <span class="k">return</span> <span class="n">detection_rate</span><span class="p">,</span> <span class="n">false_rate</span><span class="p">,</span> <span class="n">false_alarm_train</span></div>
+
+
+<div class="viewcode-block" id="SKF.objective">
+<a class="viewcode-back" href="../../api/canari.skf.html#canari.skf.SKF.objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">detection_rate</span><span class="p">,</span>
+        <span class="n">false_rate</span><span class="p">,</span>
+        <span class="n">anm_magnitude</span><span class="p">,</span>
+        <span class="n">detection_rate_cdf_mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">detection_rate_cdf_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">false_rate_cdf_median</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>  <span class="c1"># [false alarms/year]</span>
+        <span class="n">false_rate_cdf_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>  <span class="c1"># [false alarms/year]</span>
+        <span class="n">anm_mag_cdf_median</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>  <span class="c1"># [unit/year]</span>
+        <span class="n">anm_mag_cdf_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>  <span class="c1"># [unit/year]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the metric that is used when optimizing for SKF&#39;s parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            detection_rate (float): detection rate</span>
+<span class="sd">            false_rate (float): false alarm rate (No. false alarm / year)</span>
+<span class="sd">            anm_magnitude (float): anomaly slope [unit / year]</span>
+<span class="sd">            detection_rate_cdf_mean (Optional[float]): mean for the CDF: norm.cdf(</span>
+<span class="sd">                    detection_rate, loc=detection_rate_cdf_mean, scale=..)</span>
+<span class="sd">            detection_rate_cdf_std (Optional[float]): std for the CDF: norm.cdf(</span>
+<span class="sd">                    detection_rate, loc=.., scale=detection_rate_cdf_std)</span>
+<span class="sd">            false_rate_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(</span>
+<span class="sd">                    false_rate, s=.., scale=false_rate_cdf_median). Unit [false alarms/year].</span>
+<span class="sd">            false_rate_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(</span>
+<span class="sd">                    false_rate, s=false_rate_cdf_shape, scale=..). Unit [false alarms/year].</span>
+<span class="sd">            anm_mag_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(</span>
+<span class="sd">                    anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].</span>
+<span class="sd">            anm_mag_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(</span>
+<span class="sd">                    anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            metric (int): metric used when optimizing for SKF&#39;s parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">j1</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span>
+            <span class="n">detection_rate</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="n">detection_rate_cdf_mean</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">detection_rate_cdf_std</span>
+        <span class="p">)</span>
+        <span class="n">j2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">lognorm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span>
+            <span class="n">false_rate</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="n">false_rate_cdf_shape</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">false_rate_cdf_median</span>
+        <span class="p">)</span>
+        <span class="n">j3</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">lognorm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span>
+            <span class="n">anm_magnitude</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="n">anm_mag_cdf_shape</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">anm_mag_cdf_median</span>
+        <span class="p">)</span>
+        <span class="n">skf_metric</span> <span class="o">=</span> <span class="n">j1</span> <span class="o">*</span> <span class="n">j2</span> <span class="o">*</span> <span class="n">j3</span>
+
+        <span class="k">return</span> <span class="n">skf_metric</span></div>
 </div>
 
 </pre></div>
