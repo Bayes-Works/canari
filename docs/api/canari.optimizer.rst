@@ -1,7 +1,7 @@
-canari.model\_optimizer
+canari.optimizer
 ==============================
 
-.. automodule:: canari.model_optimizer
+.. automodule:: canari.optimizer
    :members:
    :undoc-members:
    :show-inheritance:
