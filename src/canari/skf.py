@@ -96,6 +96,7 @@ class SKF:
         abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+        ll_history (list): Log-likelihood history.
 
         # LSTM-related attributes: only being used when a :class:`~canari.component.lstm_component.LstmNetwork` component is found.
 
@@ -213,6 +214,8 @@ class SKF:
         self.marginal_prob = self._marginal()
         self.marginal_prob["norm"] = self.norm_model_prior_prob
         self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
+
+        self.ll_history = []
 
         # LSTM-related attributes
         self.lstm_net = None
@@ -630,6 +633,8 @@ class SKF:
                     * self.marginal_prob[origin_state]
                 )
                 sum_trans_prob += trans_prob[transit]
+
+        self.ll_history.append(np.log(sum(trans_prob.values())))
         for transit in trans_prob:
             trans_prob[transit] = trans_prob[transit] / np.maximum(
                 sum_trans_prob, epsilon

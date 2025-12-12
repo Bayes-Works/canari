@@ -44,6 +44,7 @@ def main(
         df.index = date_time
         df.index.name = "date_time"
         # Data pre-processing
+        df = DataProcess.add_lagged_columns(df, config["lag_vector"])
         output_col = config["output_col"]
         data_processor = DataProcess(
             data=df,

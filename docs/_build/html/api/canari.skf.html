@@ -322,6 +322,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.abnorm_to_norm_prob"><code class="docutils literal notranslate"><span class="pre">SKF.abnorm_to_norm_prob</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.norm_model_prior_prob"><code class="docutils literal notranslate"><span class="pre">SKF.norm_model_prior_prob</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.conditional_likelihood"><code class="docutils literal notranslate"><span class="pre">SKF.conditional_likelihood</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.ll_history"><code class="docutils literal notranslate"><span class="pre">SKF.ll_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_net"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_net</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_output_history"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_output_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.early_stop_metric"><code class="docutils literal notranslate"><span class="pre">SKF.early_stop_metric</span></code></a></li>
@@ -600,6 +601,17 @@ and ‘abnormal’ over time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="canari.skf.SKF.ll_history">
+<span class="sig-name descname"><span class="pre">ll_history</span></span><a class="headerlink" href="#canari.skf.SKF.ll_history" title="Link to this definition">#</a></dt>
+<dd><p>Log-likelihood history.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1175,6 +1187,7 @@ Defaults to “relative”.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.abnorm_to_norm_prob"><code class="docutils literal notranslate"><span class="pre">SKF.abnorm_to_norm_prob</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.norm_model_prior_prob"><code class="docutils literal notranslate"><span class="pre">SKF.norm_model_prior_prob</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.conditional_likelihood"><code class="docutils literal notranslate"><span class="pre">SKF.conditional_likelihood</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.ll_history"><code class="docutils literal notranslate"><span class="pre">SKF.ll_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_net"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_net</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.lstm_output_history"><code class="docutils literal notranslate"><span class="pre">SKF.lstm_output_history</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#canari.skf.SKF.early_stop_metric"><code class="docutils literal notranslate"><span class="pre">SKF.early_stop_metric</span></code></a></li>
