@@ -16,6 +16,17 @@ import pickle
 from pytagi import Normalizer
 import copy
 
+from matplotlib import ticker
+formatter = ticker.ScalarFormatter(useMathText=True)
+formatter.set_scientific(True) 
+formatter.set_powerlimits((-1,1)) 
+params = {'text.usetex' : True,
+          'font.size' : 12,
+          'font.family' : 'lmodern',
+          'lines.linewidth' : 1,
+          }
+plt.rcParams.update(params)
+
 
 # # # Read data
 data_file = "./data/toy_time_series/syn_data_simple_phi05.csv"
@@ -30,7 +41,7 @@ df_raw.columns = ["obs"]
 # anm_mag = 0.010416667/10
 time_anomaly = 52*8
 # anm_mag = 0.3/52
-anm_mag = 2/52
+anm_mag = 4/52
 # anm_mag = 0
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag
@@ -130,10 +141,45 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(t
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
-# #  Plot
+detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
+
 state_type = "prior"
+
+# Save observations, state predictions, and detection results into a csv file
+# Create an empty dataframe
+results_df = pd.DataFrame()
+results_df['time'] = data_processor.get_time(split="all")
+results_df['obs'] = normalized_data['y'].flatten()
+results_df['level_pred_mu'] = hsl_tsad_agent.base_model.states.get_mean(
+                states_type=state_type, states_name='level', standardization=True
+            )
+results_df['level_pred_std'] = hsl_tsad_agent.base_model.states.get_std(
+                states_type=state_type, states_name='level', standardization=True
+            )
+results_df['trend_pred_mu'] = hsl_tsad_agent.base_model.states.get_mean(
+                states_type=state_type, states_name='trend', standardization=True
+            )
+results_df['trend_pred_std'] = hsl_tsad_agent.base_model.states.get_std(
+                states_type=state_type, states_name='trend', standardization=True
+            )
+results_df['ar_pred_mu'] = hsl_tsad_agent.base_model.states.get_mean(
+                states_type=state_type, states_name='autoregression', standardization=True
+            )
+results_df['ar_pred_std'] = hsl_tsad_agent.base_model.states.get_std(
+                states_type=state_type, states_name='autoregression', standardization=True
+            )
+# Encode detection time and time_anomaly: index == detection time -> 1, else 0
+results_df['anomaly_start_time'] = 0
+results_df.loc[time_anomaly, 'anomaly_start_time'] = 1
+results_df['detection_time'] = 0
+if len(detection_time) > 0:
+    results_df.loc[detection_time[0], 'detection_time'] = 1
+
+results_df.to_csv('saved_results/intervention_ar_changes/intervention.csv', index=True)
+
+# #  Plot
 #  Plot states from pretrained model
-fig = plt.figure(figsize=(5, 1.9), constrained_layout=True)
+fig = plt.figure(figsize=(5.2, 2))
 gs = gridspec.GridSpec(3, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
@@ -155,7 +201,8 @@ plot_states(
     states_to_plot=['level'],
     sub_plot=ax0,
 )
-# ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
+ax0.axvline(x=time[time_anomaly], color='red', linestyle='--', label='Anomaly start')
+ax0.axvline(x=time[detection_time[0]], color='green', linestyle='--', label='Detection time')
 ax0.set_xticklabels([])
 plot_states(
     data_processor=data_processor,

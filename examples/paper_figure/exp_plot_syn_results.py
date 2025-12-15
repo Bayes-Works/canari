@@ -17,21 +17,26 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv")
-
+df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_prophet_online.csv")
+df_catch = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_catch.csv")
+df_lstmed = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_lstmed.csv")
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
 df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
 df_mp["anomaly_magnitude"] = np.abs(df_mp["anomaly_magnitude"]) * 52
 df_prophet["anomaly_magnitude"] = np.abs(df_prophet["anomaly_magnitude"]) * 52
+df_catch["anomaly_magnitude"] = np.abs(df_catch["anomaly_magnitude"]) * 52
+df_lstmed["anomaly_magnitude"] = np.abs(df_lstmed["anomaly_magnitude"]) * 52
 
 df_il["anomaly_detected_index"] = df_il["anomaly_detected_index"].apply(ast.literal_eval)
 df_skf["anomaly_detected_index"] = df_skf["anomaly_detected_index"].apply(ast.literal_eval)
 df_mp["anomaly_detected_index"] = df_mp["anomaly_detected_index"].apply(ast.literal_eval)
 df_prophet["anomaly_detected_index"] = df_prophet["anomaly_detected_index"].apply(ast.literal_eval)
+df_catch["anomaly_detected_index"] = df_catch["anomaly_detected_index"].apply(ast.literal_eval)
+df_lstmed["anomaly_detected_index"] = df_lstmed["anomaly_detected_index"].apply(ast.literal_eval)
 
 # Compute detection_rate, for each anomaly magnitude, when df_il["detection_time"] == 260, it means that the anomaly is not detected
 df_il["detection_rate"] = df_il["detection_time"].apply(
@@ -44,6 +49,12 @@ df_mp["detection_rate"] = df_mp["detection_time"].apply(
     lambda x: 0 if x >= 52 * 3 else 1
 )
 df_prophet["detection_rate"] = df_prophet["detection_time"].apply(
+    lambda x: 0 if x >= 52 * 3 else 1
+)
+df_catch["detection_rate"] = df_catch["detection_time"].apply(
+    lambda x: 0 if x >= 52 * 3 else 1
+)
+df_lstmed["detection_rate"] = df_lstmed["detection_time"].apply(
     lambda x: 0 if x >= 52 * 3 else 1
 )
 
@@ -92,6 +103,27 @@ df_prophet = df_prophet.drop(index=neg_detect_indices)
 false_alarm_rate_prophet = false_alarms_prophet * 10 / (sum_anm_start_index/52)
 print("False alarm rate for Prophet: ", false_alarm_rate_prophet, "per 10 years")
 
+
+false_alarms_catch = 0
+neg_detect_indices = []
+for i in range(df_catch.shape[0]):
+    if df_catch.iloc[i]["detection_time"] < 0:
+        false_alarms_catch += len(df_catch.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+df_catch = df_catch.drop(index=neg_detect_indices)
+false_alarm_rate_catch = false_alarms_catch * 10 / (sum_anm_start_index/52)
+print("False alarm rate for Catch22: ", false_alarm_rate_catch, "per 10 years")
+
+false_alarms_lstmed = 0
+neg_detect_indices = []
+for i in range(df_lstmed.shape[0]):
+    if df_lstmed.iloc[i]["detection_time"] < 0:
+        false_alarms_lstmed += len(df_lstmed.iloc[i]["anomaly_detected_index"])
+        neg_detect_indices.append(i)
+df_lstmed = df_lstmed.drop(index=neg_detect_indices)
+false_alarm_rate_lstmed = false_alarms_lstmed * 10 / (sum_anm_start_index/52)
+print("False alarm rate for LSTMED: ", false_alarm_rate_lstmed, "per 10 years")
+
 # Get anomaly_detected_index from df_prophet["anomaly_detected_index"]
 df_il["alarms_num"] = df_il["anomaly_detected_index"].apply(
     lambda x: len(x) if len(x) > 0 else 0
@@ -105,12 +137,20 @@ df_mp["alarms_num"] = df_mp["anomaly_detected_index"].apply(
 df_prophet["alarms_num"] = df_prophet["anomaly_detected_index"].apply(
     lambda x: len(x) if len(x) > 0 else 0
 )
+df_catch["alarms_num"] = df_catch["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
+)
+df_lstmed["alarms_num"] = df_lstmed["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
+)
 
 # Set alarms_num to 0 if "detection_rate" is 0
 df_il.loc[df_il["detection_rate"] == 0, "alarms_num"] = 0
 df_skf.loc[df_skf["detection_rate"] == 0, "alarms_num"] = 0
 df_mp.loc[df_mp["detection_rate"] == 0, "alarms_num"] = 0
 df_prophet.loc[df_prophet["detection_rate"] == 0, "alarms_num"] = 0
+df_catch.loc[df_catch["detection_rate"] == 0, "alarms_num"] = 0
+df_lstmed.loc[df_lstmed["detection_rate"] == 0, "alarms_num"] = 0
 
 # For the same anomaly magnitude, compute the mean and variance of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"], stored them in a new dataframe
 df_il_mean = df_il.groupby("anomaly_magnitude").agg(
@@ -141,8 +181,24 @@ df_skf_whitenoise_mean = df_mp.groupby("anomaly_magnitude").agg(
 
 df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
     {
-        "mse_LL": ["mean", "std"],
-        "mse_LT": ["mean", "std"],
+        # "mse_LL": ["mean", "std"],
+        # "mse_LT": ["mean", "std"],
+        "detection_time": ["mean", "std"],
+        "detection_rate": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
+    }
+)
+
+df_catch_mean = df_catch.groupby("anomaly_magnitude").agg(
+    {
+        "detection_time": ["mean", "std"],
+        "detection_rate": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
+    }
+)
+
+df_lstmed_mean = df_lstmed.groupby("anomaly_magnitude").agg(
+    {
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
         "alarms_num": ["mean", "std"],
@@ -150,7 +206,7 @@ df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
 )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-fig, ax = plt.subplots(3, 1, figsize=(6, 2.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(6, 3.5), constrained_layout=True)
 # fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
 
 
@@ -183,6 +239,20 @@ ax[0].fill_between(
     df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
     alpha=0.2,
 )
+ax[0].plot(df_catch_mean.index, df_catch_mean["detection_time"]["mean"], label="Catch")
+ax[0].fill_between(
+    df_catch_mean.index,
+    df_catch_mean["detection_time"]["mean"] - df_catch_mean["detection_time"]["std"],
+    df_catch_mean["detection_time"]["mean"] + df_catch_mean["detection_time"]["std"],
+    alpha=0.2,
+)
+ax[0].plot(df_lstmed_mean.index, df_lstmed_mean["detection_time"]["mean"], label="LSTMED")
+ax[0].fill_between(
+    df_lstmed_mean.index,
+    df_lstmed_mean["detection_time"]["mean"] - df_lstmed_mean["detection_time"]["std"],
+    df_lstmed_mean["detection_time"]["mean"] + df_lstmed_mean["detection_time"]["std"],
+    alpha=0.2,
+)
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
@@ -190,16 +260,18 @@ ax[0].set_yticklabels([0, 1, 2, 3])
 ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
-# ax[0].legend(ncol=2)
+# ax[0].legend(ncol=3)
 # Show the legend outside the plot
 # ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
-ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=4)
+ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=3)
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
 ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF")
 ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_rate"]["mean"], label="Matrix profile")
 ax[1].plot(df_prophet_mean.index, df_prophet_mean["detection_rate"]["mean"], label="Prophet")
+ax[1].plot(df_catch_mean.index, df_catch_mean["detection_rate"]["mean"], label="Catch")
+ax[1].plot(df_lstmed_mean.index, df_lstmed_mean["detection_rate"]["mean"], label="LSTMED")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")
@@ -242,6 +314,22 @@ ax[2].fill_between(
     df_prophet_mean["alarms_num"]["mean"] + df_prophet_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:red"
+)
+ax[2].plot(df_catch_mean.index, df_catch_mean["alarms_num"]["mean"], label="Catch", color = "tab:purple")
+ax[2].fill_between(
+    df_catch_mean.index,
+    df_catch_mean["alarms_num"]["mean"] - df_catch_mean["alarms_num"]["std"],
+    df_catch_mean["alarms_num"]["mean"] + df_catch_mean["alarms_num"]["std"],
+    alpha=0.2,
+    color = "tab:purple"
+)
+ax[2].plot(df_lstmed_mean.index, df_lstmed_mean["alarms_num"]["mean"], label="LSTMED", color = "tab:brown")
+ax[2].fill_between(
+    df_lstmed_mean.index,
+    df_lstmed_mean["alarms_num"]["mean"] - df_lstmed_mean["alarms_num"]["std"],
+    df_lstmed_mean["alarms_num"]["mean"] + df_lstmed_mean["alarms_num"]["std"],
+    alpha=0.2,
+    color = "tab:brown"
 )
 ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
