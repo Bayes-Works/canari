@@ -1224,10 +1224,8 @@ class SKF:
 
         self.set_memory(time_step=0)
         return (
-            np.array(mu_obs_preds).flatten(),
-            np.array(std_obs_preds).flatten(),
-            self.states,
             np.array(self.filter_marginal_prob_history["abnorm"]),
+            self.states,
         )
 
     def smoother(
@@ -1315,7 +1313,7 @@ class SKF:
             anomaly_end=anomaly_end,
         )
 
-        _, _, _, filter_marginal_abnorm_prob = self.filter(data=data)
+        filter_marginal_abnorm_prob, _ = self.filter(data=data)
         self.load_initial_states()
 
         # Check false alarm in the training set
@@ -1324,7 +1322,7 @@ class SKF:
 
         # Iterate over data with synthetic anomalies
         for i in range(0, num_anomaly):
-            _, _, _, filter_marginal_abnorm_prob = self.filter(data=synthetic_data[i])
+            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
             window_start = synthetic_data[i]["anomaly_timestep"]
 
             if max_timestep_to_detect is None:

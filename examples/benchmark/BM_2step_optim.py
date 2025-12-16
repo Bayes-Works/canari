@@ -257,7 +257,7 @@ def main(
         print("Model parameters used:", skf_optim_dict["model_param"])
         print("SKF model parameters used:", skf_optim_dict["skf_param"])
 
-        _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
+        filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
 
         fig, ax = plot_skf_states(
             data_processor=data_processor,
