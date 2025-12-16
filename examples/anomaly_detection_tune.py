@@ -140,7 +140,6 @@ def main(
             model=model_with_parameters,
             param=param_space,
             num_optimization_trial=num_trial_optimization,
-            # num_startup_trials=50,
             mode="min",
         )
         model_optimizer.optimize()
