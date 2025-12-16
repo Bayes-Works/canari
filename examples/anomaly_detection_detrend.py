@@ -159,7 +159,7 @@ skf = SKF(
 skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
 
 # # Anomaly Detection
-_, _, states, filter_marginal_abnorm_prob = skf.filter(data=all_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot

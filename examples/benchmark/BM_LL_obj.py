@@ -131,9 +131,9 @@ def main(
 
             skf.filter(data=all_data)
             log_lik_all = np.nanmean(skf.ll_history)
-
             skf.metric_optim = -log_lik_all
 
+            skf.load_initial_states()
             return skf
 
         ######### Parameter optimization #########
@@ -143,7 +143,6 @@ def main(
                 "sigma_v": config["sigma_v"],
                 # "std_transition_error": config["std_transition_error"],
                 # "norm_to_abnorm_prob": config["norm_to_abnorm_prob"],
-                "slope": config["slope"],
             }
             # Define optimizer
             model_optimizer = Optimizer(
@@ -171,7 +170,7 @@ def main(
         ######### Detect anomaly #########
         print("Model parameters used:", skf_optim_dict["model_param"])
 
-        _, _, states, filter_marginal_abnorm_prob = skf_optim.filter(data=all_data)
+        filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
 
         fig, ax = plot_skf_states(
             data_processor=data_processor,
@@ -180,32 +179,6 @@ def main(
         )
         fig.suptitle("SKF hidden states", fontsize=10, y=1)
         plt.savefig(f"{config['saved_result_path']}_LL_obj.png")
-        plt.show()
-
-        # Plot a sample of anomaly with optimal magnitude
-        synthetic_anomaly_data = DataProcess.add_synthetic_anomaly(
-            train_data,
-            num_samples=1,
-            slope=[skf_optim_dict["model_param"]["slope"] / 52],
-        )
-
-        train_time = data_processor.get_time("train")
-        plt.plot(train_time, synthetic_anomaly_data[0]["y"])
-        plot_data(
-            data_processor=data_processor,
-            standardization=True,
-            plot_validation_data=False,
-            plot_test_data=False,
-            plot_column=output_col,
-            train_label="data without anomaly",
-        )
-        plt.legend(
-            [
-                "data with optimal anomaly slope",
-                "data without anomaly",
-            ]
-        )
-        plt.title("Train data with added synthetic anomalies")
         plt.show()
 
 
