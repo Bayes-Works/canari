@@ -26,7 +26,7 @@ with open("examples/benchmark/BM_metadata.json", "r") as f:
 def main(
     num_trial_optim_model: int = 60,
     param_optimization: bool = True,
-    benchmark_no: str = ["4"],
+    benchmark_no: str = ["2"],
 ):
     for benchmark in benchmark_no:
 
