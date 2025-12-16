@@ -2073,8 +2073,8 @@ class Model:
         return np.array(time_series_all), input_covariates, anm_mag_all, anm_begin_all
 
     def ad(self, data):
-        tol = 0.001
-
+        #tol = 0.001
+        tol = 0.1
         mu_obs_preds = []
         std_obs_preds = []
         self.initialize_states_history()
@@ -2085,12 +2085,18 @@ class Model:
 
         level_pos_cur = self.mu_states[0]
         level_pos_next = []
+        residual_pos_cur = self.mu_states[3]
+        residual_pos_next = []
         prob = []
         trigger = 0
         count = 0
-        cumsum = 0
+        cumsum_trend = 0
+        cumsum_residual = 0
         prev_trigger = 0
         diff_list = []
+        diff_residual_list = []
+        intervention_level = []
+        intervention_trend = []
         for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -2105,61 +2111,48 @@ class Model:
 
             level_pos_next = mu_states_posterior[0]
             trend_pos_next = mu_states_posterior[1]
+            residual_pos_next = mu_states_posterior[3]
 
             diff = level_pos_next - level_pos_cur - trend_pos_next
             diff_list.append(diff)
-            #mu_states_posterior[1] += 0.5*diff
-            #if trigger == 1 and abs(diff) < tol:
-            #    trigger = 0
-            cumsum += diff
-            if abs(diff) > tol:
-                count += 1
-                if count >= 1:
-                    #level_intervention = diff
-                    trend_intervention = np.sign(cumsum)*min(abs(cumsum),abs(np.sum(diff_list[-25:]))) * 0.25
-                    #mu_states_posterior[0] += level_intervention
-                    mu_states_posterior[1] += trend_intervention
-                    cumsum = 0
-                    trigger += 1
-                    #  Add delta to trend's mean
-                    # delta_trend = diff**2
-                    #mu_states_posterior[0] += 0.1926 #toy
-                    #mu_states_posterior[1] += 0.015  #toy
-                    #mu_states_posterior[0] +=  0.6 #toy
-                    #if trigger == 1:
-                        #mu_states_posterior[1] += -0.002    #bench-4
-                        #mu_states_posterior[1] += -0.001    #bench-5
-                        #mu_states_posterior[0] += -0.4      #bench-6
-                        #mu_states_posterior[1] += -0.0015   #bench-6
-                        #mu_states_posterior[0] += 0.1       #bench-7
-                        #mu_states_posterior[1] += 0.002     #bench-7
-                        #mu_states_posterior[0] += 0.4       #bench-9
-                        #mu_states_posterior[1] += 0.008     #bench-9
-                        #mu_states_posterior[1] += -0.003    #bench-10
-                    #elif trigger == 2:
-                        #mu_states_posterior[1] += -0.0001   #bench-5
-                        #mu_states_posterior[0] += 0.5       #bench-9
-                        #mu_states_posterior[1] += -0.005    #bench-9
-                    #elif trigger == 5:
-                        #mu_states_posterior[1] += -0.005    #bench-5
-                    #elif trigger == 9:
-                        #mu_states_posterior[0] += 0.2       #bench-5
-                        #mu_states_posterior[1] += 0.008     #bench-5
-                    #elif trigger == 12:
-                        #mu_states_posterior[0] += 2.4       #bench-4
-                        #mu_states_posterior[1] += 0.003     #bench-4
-                    #elif trigger == 17:
-                        #mu_states_posterior[0] += 1.3       #bench-10
-                        #mu_states_posterior[1] += -0.001    #bench-10
+            diff_residual = residual_pos_next - residual_pos_cur
+            diff_residual_list.append(diff_residual)
 
-                    #  Add delta to trend's variances
-                    #var_states_posterior[1] += 1e-7
-                    #self.var_states_posterior = var_states_posterior
-                    count = 0
+            #cumsum_trend += mu_states_posterior[3]
+            cumsum_trend += diff_residual
+            #cumsum_residual = 0
+            cumsum_residual += mu_states_posterior[3]
+            level_intervention = mu_states_posterior[3] * 0.1
+            trend_intervention = cumsum_trend * 5E-4
+
+            metric = mu_states_posterior[3]
+            #metric = trend_intervention
+            if abs(metric) > tol or abs(trend_intervention)>0.001:
+                count += 1
+                if count >= 3:
+                    if count > 3:
+                        mult *= 2
+                    else:
+                        mult = 1
+
+                    level_intervention *= mult
+                    trend_intervention *= mult
+
+                    mu_states_posterior[0] += level_intervention
+                    mu_states_posterior[1] += trend_intervention
+                    mu_states_posterior[3] -= level_intervention
+
+                    cumsum_residual = 0
+                    cumsum_trend = 0
+                    trigger += 1
             else:
                 count = 0
 
+            intervention_level.append(level_intervention)
+            intervention_trend.append(trend_intervention)
+
             self.mu_states_posterior = mu_states_posterior
+            self.var_states_posterior = var_states_posterior
 
             delta_trend = diff**2
             prob.append(diff)
@@ -2178,4 +2171,4 @@ class Model:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
-        return prob
+        return prob, intervention_level, intervention_trend
