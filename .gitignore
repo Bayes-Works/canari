@@ -12,8 +12,8 @@ data/demo_data
 data/benchmark_data/
 
 # Docs
-docs/_build/*
-!docs/_build/html/
+docs/_build/
+# !docs/_build/html/
 
 # Figures
 !saved_results/time_series_toy.png
