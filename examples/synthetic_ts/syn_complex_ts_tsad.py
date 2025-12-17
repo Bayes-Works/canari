@@ -30,7 +30,7 @@ df_raw.columns = ["obs"]
 # anm_mag = 0.010416667/10
 time_anomaly = 52*8
 # anm_mag = 0.3/52
-anm_mag = 2/52
+anm_mag = 4/52
 # anm_mag = 0
 # anm_baseline = np.linspace(0, 3, num=len(df_raw))
 anm_baseline = np.arange(len(df_raw)) * anm_mag

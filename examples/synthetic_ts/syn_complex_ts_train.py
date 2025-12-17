@@ -186,7 +186,7 @@ print("The sigma_ar for generation model is:", np.sqrt(ar_model.states.get_mean(
 
 
 # Plot states in ar_model
-state_type = "posterior"
+state_type = "prior"
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[0])
@@ -202,7 +202,7 @@ plot_states(
     sub_plot=ax0,
 )
 ax0.set_xticklabels([])
-ax0.set_title("Posterior")
+ax0.set_title("Prior")
 plot_states(
     data_processor=data_processor,
     standardization=True,

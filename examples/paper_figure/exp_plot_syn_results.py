@@ -17,12 +17,12 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_prophet_online.csv")
-df_catch = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_catch.csv")
-df_lstmed = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_lstmed.csv")
+df_il = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv")
+df_catch = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_tranad.csv")
+df_lstmed = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_lstmed.csv")
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
 df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
@@ -112,7 +112,7 @@ for i in range(df_catch.shape[0]):
         neg_detect_indices.append(i)
 df_catch = df_catch.drop(index=neg_detect_indices)
 false_alarm_rate_catch = false_alarms_catch * 10 / (sum_anm_start_index/52)
-print("False alarm rate for Catch22: ", false_alarm_rate_catch, "per 10 years")
+print("False alarm rate for TranAD: ", false_alarm_rate_catch, "per 10 years")
 
 false_alarms_lstmed = 0
 neg_detect_indices = []
@@ -239,7 +239,7 @@ ax[0].fill_between(
     df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_catch_mean.index, df_catch_mean["detection_time"]["mean"], label="Catch")
+ax[0].plot(df_catch_mean.index, df_catch_mean["detection_time"]["mean"], label="TranAD")
 ax[0].fill_between(
     df_catch_mean.index,
     df_catch_mean["detection_time"]["mean"] - df_catch_mean["detection_time"]["std"],
@@ -270,7 +270,7 @@ ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
 ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF")
 ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_rate"]["mean"], label="Matrix profile")
 ax[1].plot(df_prophet_mean.index, df_prophet_mean["detection_rate"]["mean"], label="Prophet")
-ax[1].plot(df_catch_mean.index, df_catch_mean["detection_rate"]["mean"], label="Catch")
+ax[1].plot(df_catch_mean.index, df_catch_mean["detection_rate"]["mean"], label="TranAD")
 ax[1].plot(df_lstmed_mean.index, df_lstmed_mean["detection_rate"]["mean"], label="LSTMED")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
@@ -315,7 +315,7 @@ ax[2].fill_between(
     alpha=0.2,
     color = "tab:red"
 )
-ax[2].plot(df_catch_mean.index, df_catch_mean["alarms_num"]["mean"], label="Catch", color = "tab:purple")
+ax[2].plot(df_catch_mean.index, df_catch_mean["alarms_num"]["mean"], label="TranAD", color = "tab:purple")
 ax[2].fill_between(
     df_catch_mean.index,
     df_catch_mean["alarms_num"]["mean"] - df_catch_mean["alarms_num"]["std"],

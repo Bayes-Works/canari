@@ -16,7 +16,10 @@ plt.rcParams.update(params)
 df_il = pd.read_csv("saved_results/prob_eva/detrended_allts_results_il.csv")
 df_skf = pd.read_csv("saved_results/prob_eva/detrended_allts_results_skf_aug14.csv")
 df_mp = pd.read_csv("saved_results/prob_eva/detrended_allts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
+# df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
+# df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_tranad.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_lstmed.csv")
+
 
 # Multiply the df_il["anomaly_magnitude"] by 52
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
@@ -56,6 +59,12 @@ df_prophet["alarms_num"] = df_prophet["anomaly_detected_index"].apply(
     lambda x: len(x) if len(x) > 0 else 0
 )
 
+neg_detect_indices = []
+for i in range(df_prophet.shape[0]):
+    if df_prophet.iloc[i]["detection_time"] < 0:
+        neg_detect_indices.append(i)
+df_prophet = df_prophet.drop(index=neg_detect_indices)
+
 # Set alarms_num to 0 if "detection_rate" is 0
 df_il.loc[df_il["detection_rate"] == 0, "alarms_num"] = 0
 df_skf.loc[df_skf["detection_rate"] == 0, "alarms_num"] = 0
@@ -91,8 +100,6 @@ df_skf_whitenoise_mean = df_mp.groupby("anomaly_magnitude").agg(
 
 df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
     {
-        "mse_LL": ["mean", "std"],
-        "mse_LT": ["mean", "std"],
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
         "alarms_num": ["mean", "std"],
