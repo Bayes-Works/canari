@@ -21,7 +21,7 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 
 def main(
     num_trial_optimization: int = 50,
-    param_optimization: bool = False,
+    param_optimization: bool = True,
 ):
     ######### Data processing #########
     # Read data
