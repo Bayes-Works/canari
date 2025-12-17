@@ -16,9 +16,9 @@ plt.rcParams.update(params)
 df_il = pd.read_csv("saved_results/prob_eva/detrended_allts_results_il.csv")
 df_skf = pd.read_csv("saved_results/prob_eva/detrended_allts_results_skf_aug14.csv")
 df_mp = pd.read_csv("saved_results/prob_eva/detrended_allts_results_mp.csv")
-# df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
-# df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_tranad.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_lstmed.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/detrended_allts_results_prophet_online.csv")
+df_lstmed = pd.read_csv("saved_results/prob_eva/detrended_allts_results_lstmed.csv")
+df_tranad = pd.read_csv("saved_results/prob_eva/detrended_allts_results_tranad.csv")
 
 
 # Multiply the df_il["anomaly_magnitude"] by 52
@@ -26,6 +26,8 @@ df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
 df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
 df_mp["anomaly_magnitude"] = np.abs(df_mp["anomaly_magnitude"]) * 52
 df_prophet["anomaly_magnitude"] = np.abs(df_prophet["anomaly_magnitude"]) * 52
+df_lstmed["anomaly_magnitude"] = np.abs(df_lstmed["anomaly_magnitude"]) * 52
+df_tranad["anomaly_magnitude"] = np.abs(df_tranad["anomaly_magnitude"]) * 52
 
 # Compute detection_rate, for each anomaly magnitude, when df_il["detection_time"] == 260, it means that the anomaly is not detected
 df_il["detection_rate"] = df_il["detection_time"].apply(
@@ -38,6 +40,12 @@ df_mp["detection_rate"] = df_mp["detection_time"].apply(
     lambda x: 0 if x >= 52 * 3 else 1
 )
 df_prophet["detection_rate"] = df_prophet["detection_time"].apply(
+    lambda x: 0 if x >= 52 * 3 else 1
+)
+df_lstmed["detection_rate"] = df_lstmed["detection_time"].apply(
+    lambda x: 0 if x >= 52 * 3 else 1
+)
+df_tranad["detection_rate"] = df_tranad["detection_time"].apply(
     lambda x: 0 if x >= 52 * 3 else 1
 )
 
@@ -58,18 +66,44 @@ df_prophet["anomaly_detected_index"] = df_prophet["anomaly_detected_index"].appl
 df_prophet["alarms_num"] = df_prophet["anomaly_detected_index"].apply(
     lambda x: len(x) if len(x) > 0 else 0
 )
+df_tranad["anomaly_detected_index"] = df_tranad["anomaly_detected_index"].apply(ast.literal_eval)
+df_tranad["alarms_num"] = df_tranad["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
+)
+df_lstmed["anomaly_detected_index"] = df_lstmed["anomaly_detected_index"].apply(ast.literal_eval)
+df_lstmed["alarms_num"] = df_lstmed["anomaly_detected_index"].apply(
+    lambda x: len(x) if len(x) > 0 else 0
+)
 
 neg_detect_indices = []
 for i in range(df_prophet.shape[0]):
     if df_prophet.iloc[i]["detection_time"] < 0:
         neg_detect_indices.append(i)
 df_prophet = df_prophet.drop(index=neg_detect_indices)
+neg_detect_indices = []
+for i in range(df_tranad.shape[0]):
+    if df_tranad.iloc[i]["detection_time"] < 0:
+        neg_detect_indices.append(i)
+df_tranad = df_tranad.drop(index=neg_detect_indices)
+neg_detect_indices = []
+for i in range(df_lstmed.shape[0]):
+    if df_lstmed.iloc[i]["detection_time"] < 0:
+        neg_detect_indices.append(i)
+df_lstmed = df_lstmed.drop(index=neg_detect_indices)
+
+neg_detect_indices = []
+for i in range(df_lstmed.shape[0]):
+    if df_lstmed.iloc[i]["detection_time"] < 0:
+        neg_detect_indices.append(i)
+df_lstmed = df_lstmed.drop(index=neg_detect_indices)
 
 # Set alarms_num to 0 if "detection_rate" is 0
 df_il.loc[df_il["detection_rate"] == 0, "alarms_num"] = 0
 df_skf.loc[df_skf["detection_rate"] == 0, "alarms_num"] = 0
 df_mp.loc[df_mp["detection_rate"] == 0, "alarms_num"] = 0
 df_prophet.loc[df_prophet["detection_rate"] == 0, "alarms_num"] = 0
+df_tranad.loc[df_tranad["detection_rate"] == 0, "alarms_num"] = 0
+df_lstmed.loc[df_lstmed["detection_rate"] == 0, "alarms_num"] = 0
 
 # For the same anomaly magnitude, compute the mean and variance of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"], stored them in a new dataframe
 df_il_mean = df_il.groupby("anomaly_magnitude").agg(
@@ -105,9 +139,23 @@ df_prophet_mean = df_prophet.groupby("anomaly_magnitude").agg(
         "alarms_num": ["mean", "std"],
     }
 )
+df_tranad_mean = df_tranad.groupby("anomaly_magnitude").agg(
+    {
+        "detection_time": ["mean", "std"],
+        "detection_rate": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
+    }
+)
+df_lstmed_mean = df_lstmed.groupby("anomaly_magnitude").agg(
+    {
+        "detection_time": ["mean", "std"],
+        "detection_rate": ["mean", "std"],
+        "alarms_num": ["mean", "std"],
+    }
+)
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-# fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, constrained_layout=True)
 fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
 
 # # Plot for mse_LL
@@ -215,6 +263,22 @@ ax[0].fill_between(
     df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
     alpha=0.2,
 )
+ax[0].plot(df_lstmed_mean.index, df_lstmed_mean["detection_time"]["mean"], color="tab:brown", label="LSTMED")
+ax[0].fill_between(
+    df_lstmed_mean.index,
+    df_lstmed_mean["detection_time"]["mean"] - df_lstmed_mean["detection_time"]["std"],
+    df_lstmed_mean["detection_time"]["mean"] + df_lstmed_mean["detection_time"]["std"],
+    color="tab:brown",
+    alpha=0.2,
+)
+ax[0].plot(df_tranad_mean.index, df_tranad_mean["detection_time"]["mean"], color="tab:purple", label="TranAD")
+ax[0].fill_between(
+    df_tranad_mean.index,
+    df_tranad_mean["detection_time"]["mean"] - df_tranad_mean["detection_time"]["std"],
+    df_tranad_mean["detection_time"]["mean"] + df_tranad_mean["detection_time"]["std"],
+    color="tab:purple",
+    alpha=0.2,
+)
 ax[0].set_ylabel(r"$\Delta t\ (\mathrm{yr})$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
@@ -230,6 +294,8 @@ ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
 ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF")
 ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_rate"]["mean"], label="Matrix profile")
 ax[1].plot(df_prophet_mean.index, df_prophet_mean["detection_rate"]["mean"], label="Prophet")
+ax[1].plot(df_lstmed_mean.index, df_lstmed_mean["detection_rate"]["mean"], color="tab:brown", label="LSTMED")
+ax[1].plot(df_tranad_mean.index, df_tranad_mean["detection_rate"]["mean"], color="tab:purple", label="TranAD")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")
@@ -272,6 +338,22 @@ ax[2].fill_between(
     df_prophet_mean["alarms_num"]["mean"] + df_prophet_mean["alarms_num"]["std"],
     alpha=0.2,
     color = "tab:red"
+)
+ax[2].plot(df_lstmed_mean.index, df_lstmed_mean["alarms_num"]["mean"], label="LSTMED", color="tab:brown")
+ax[2].fill_between(
+    df_lstmed_mean.index,
+    df_lstmed_mean["alarms_num"]["mean"] - df_lstmed_mean["alarms_num"]["std"],
+    df_lstmed_mean["alarms_num"]["mean"] + df_lstmed_mean["alarms_num"]["std"],
+    alpha=0.2,
+    color="tab:brown"
+)
+ax[2].plot(df_tranad_mean.index, df_tranad_mean["alarms_num"]["mean"], label="TranAD", color="tab:purple")
+ax[2].fill_between(
+    df_tranad_mean.index,
+    df_tranad_mean["alarms_num"]["mean"] - df_tranad_mean["alarms_num"]["std"],
+    df_tranad_mean["alarms_num"]["mean"] + df_tranad_mean["alarms_num"]["std"],
+    alpha=0.2,
+    color="tab:purple"
 )
 ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
