@@ -1,0 +1,551 @@
+{
+    "1": {
+        "data_path": "data/benchmark_data/test_1_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 2,
+        "train_split": 0.25,
+        "validation_split": 0.08,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-1,
+            4e-1
+        ],
+        "std_transition_error": [
+            1e-4,
+            1e-3
+        ],
+        "norm_to_abnorm_prob": [
+            1e-4,
+            1e-3
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM1",
+        "saved_result_path": "saved_results/BM1"
+    },
+    "2": {
+        "data_path": "data/benchmark_data/test_2_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 2,
+        "train_split": 0.25,
+        "validation_split": 0.08,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM2",
+        "saved_result_path": "saved_results/BM2"
+    },
+    "3": {
+        "data_path": "data/benchmark_data/test_3_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 2,
+        "train_split": 0.173,
+        "validation_split": 0.022,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            3,
+            211
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM3",
+        "saved_result_path": "saved_results/BM3"
+    },
+    "4": {
+        "data_path": "data/benchmark_data/test_4_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.23,
+        "validation_split": 0.07,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM4",
+        "saved_result_path": "saved_results/BM4"
+    },
+    "5": {
+        "data_path": "data/benchmark_data/test_5_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.289,
+        "validation_split": 0.0693,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM5",
+        "saved_result_path": "saved_results/BM5"
+    },
+    "6": {
+        "data_path": "data/benchmark_data/test_6_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.289,
+        "validation_split": 0.0693,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM6",
+        "saved_result_path": "saved_results/BM6"
+    },
+    "7": {
+        "data_path": "data/benchmark_data/test_7_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.289,
+        "validation_split": 0.0693,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM7",
+        "saved_result_path": "saved_results/BM7"
+    },
+    "8": {
+        "data_path": "data/benchmark_data/test_8_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            0,
+            0,
+            0
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 5,
+        "train_split": 0.3,
+        "validation_split": 0.074,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM8",
+        "saved_result_path": "saved_results/BM8"
+    },
+    "9": {
+        "data_path": "data/benchmark_data/test_9_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.35354,
+        "validation_split": 0.087542,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            157
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM9",
+        "saved_result_path": "saved_results/BM9"
+    },
+    "10": {
+        "data_path": "data/benchmark_data/test_10_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0,
+            4,
+            4,
+            4
+        ],
+        "time_covariates": [
+            "week_of_year"
+        ],
+        "num_feature": 17,
+        "train_split": 0.27975,
+        "validation_split": 0.054,
+        "infer_len": 156,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            156
+        ],
+        "look_back_len": [
+            12,
+            53
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-4
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-4
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM10",
+        "saved_result_path": "saved_results/BM10"
+    },
+    "11": {
+        "data_path": "data/benchmark_data/test_11_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0
+        ],
+        "time_covariates": [
+            "month_of_year"
+        ],
+        "num_feature": 2,
+        "train_split": 0.16,
+        "validation_split": 0.03,
+        "infer_len": 36,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            36
+        ],
+        "look_back_len": [
+            6,
+            15
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-5,
+            1e-3
+        ],
+        "norm_to_abnorm_prob": [
+            1e-5,
+            1e-3
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM11",
+        "saved_result_path": "saved_results/BM11"
+    },
+    "12": {
+        "data_path": "data/benchmark_data/test_12_data.csv",
+        "output_col": [
+            0
+        ],
+        "lag_vector": [
+            0
+        ],
+        "time_covariates": [
+            "month_of_year"
+        ],
+        "num_feature": 2,
+        "train_split": 0.16,
+        "validation_split": 0.025,
+        "infer_len": 36,
+        "smoother": true,
+        "num_epoch": 50,
+        "init_period_states": [
+            0,
+            36
+        ],
+        "look_back_len": [
+            6,
+            15
+        ],
+        "sigma_v": [
+            1e-3,
+            2e-1
+        ],
+        "std_transition_error": [
+            1e-6,
+            1e-3
+        ],
+        "norm_to_abnorm_prob": [
+            1e-6,
+            1e-3
+        ],
+        "slope": [
+            0.1,
+            0.6
+        ],
+        "saved_model_path": "saved_params/BM12",
+        "saved_result_path": "saved_results/BM12"
+    }
+}

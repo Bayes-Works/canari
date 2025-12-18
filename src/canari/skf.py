@@ -15,6 +15,7 @@ from typing import Tuple, Dict, Optional
 import copy
 import numpy as np
 from pytagi import metric
+from scipy.stats import norm, lognorm
 from canari.model import Model
 from canari import common
 from canari.data_struct import StatesHistory
@@ -95,6 +96,7 @@ class SKF:
         abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+        ll_history (list): Log-likelihood history.
 
         # LSTM-related attributes: only being used when a :class:`~canari.component.lstm_component.LstmNetwork` component is found.
 
@@ -117,6 +119,9 @@ class SKF:
         stop_training (bool):
             Flag indicating whether training has been stopped due to
             early stopping or reaching the maximum number of epochs.
+
+        # Optimization attribute
+        metric_optim (float): metric used for optimization.
     """
 
     def __init__(
@@ -210,6 +215,8 @@ class SKF:
         self.marginal_prob["norm"] = self.norm_model_prior_prob
         self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
+        self.ll_history = []
+
         # LSTM-related attributes
         self.lstm_net = None
 
@@ -220,7 +227,8 @@ class SKF:
         self.early_stop_metric = None
 
         # Optimization
-        self.metric_optim = {}
+        self.metric_optim = None
+        self.print_metric = None
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
         """Initialize transition models and link SKF to these new models.
@@ -625,6 +633,8 @@ class SKF:
                     * self.marginal_prob[origin_state]
                 )
                 sum_trans_prob += trans_prob[transit]
+
+        self.ll_history.append(np.log(sum(trans_prob.values())))
         for transit in trans_prob:
             trans_prob[transit] = trans_prob[transit] / np.maximum(
                 sum_trans_prob, epsilon
@@ -1178,7 +1188,7 @@ class SKF:
         """
 
         mu_obs_preds = []
-        var_obs_preds = []
+        std_obs_preds = []
         self.filter_marginal_prob_history = self._prob_history()
 
         # Initialize hidden states
@@ -1206,7 +1216,7 @@ class SKF:
             self._save_states_history()
             self.set_states()
             mu_obs_preds.append(mu_obs_pred)
-            var_obs_preds.append(var_obs_pred)
+            std_obs_preds.append(var_obs_pred**0.5)
             self.filter_marginal_prob_history["norm"].append(self.marginal_prob["norm"])
             self.filter_marginal_prob_history["abnorm"].append(
                 self.marginal_prob["abnorm"]
@@ -1330,3 +1340,52 @@ class SKF:
         false_rate = num_false_alarm / num_anomaly
 
         return detection_rate, false_rate, false_alarm_train
+
+    def objective(
+        self,
+        detection_rate,
+        false_rate,
+        anm_magnitude,
+        detection_rate_cdf_mean: Optional[float] = 0.5,
+        detection_rate_cdf_std: Optional[float] = 0.5,
+        false_rate_cdf_median: Optional[float] = 0.1,  # [false alarms/year]
+        false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
+        anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
+        anm_mag_cdf_shape: Optional[float] = 0.4,  # [unit/year]
+    ) -> int:
+        """
+        Calculate the metric that is used when optimizing for SKF's parameters.
+
+        Args:
+            detection_rate (float): detection rate
+            false_rate (float): false alarm rate (No. false alarm / year)
+            anm_magnitude (float): anomaly slope [unit / year]
+            detection_rate_cdf_mean (Optional[float]): mean for the CDF: norm.cdf(
+                    detection_rate, loc=detection_rate_cdf_mean, scale=..)
+            detection_rate_cdf_std (Optional[float]): std for the CDF: norm.cdf(
+                    detection_rate, loc=.., scale=detection_rate_cdf_std)
+            false_rate_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(
+                    false_rate, s=.., scale=false_rate_cdf_median). Unit [false alarms/year].
+            false_rate_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
+                    false_rate, s=false_rate_cdf_shape, scale=..). Unit [false alarms/year].
+            anm_mag_cdf_median (Optional[float]): median for the CDF: lognorm.cdf(
+                    anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].
+            anm_mag_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
+                    anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].
+
+        Returns:
+            metric (int): metric used when optimizing for SKF's parameters.
+        """
+
+        j1 = norm.cdf(
+            detection_rate, loc=detection_rate_cdf_mean, scale=detection_rate_cdf_std
+        )
+        j2 = 1 - lognorm.cdf(
+            false_rate, s=false_rate_cdf_shape, scale=false_rate_cdf_median
+        )
+        j3 = 1 - lognorm.cdf(
+            anm_magnitude, s=anm_mag_cdf_shape, scale=anm_mag_cdf_median
+        )
+        skf_metric = j1 * j2 * j3
+
+        return skf_metric
