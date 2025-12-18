@@ -122,7 +122,7 @@ def SKF_anomaly_detection_runner(
             break
 
     # Anomaly detection
-    filter_marginal_abnorm_prob, _ = test_model.filter(data=all_data)
+    filter_marginal_abnorm_prob, states = test_model.filter(data=all_data)
     smooth_marginal_abnorm_prob, states = test_model.smoother()
 
     # Check anomalies

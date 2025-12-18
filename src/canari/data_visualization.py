@@ -76,31 +76,22 @@ def _add_dynamic_grids(ax, time):
     ax.grid(visible=False, which="minor", axis="y")
 
 
-def _determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
+def _determine_time(
+    data_processor: DataProcess, len_states: int, time_start: int
+) -> np.ndarray:
     """
     Infer which segment of the time index to use for state plots.
 
     Args:
-        data_processor (DataProcess): Provides split index mapping.
+        data_processor (DataProcess): data processor.
         len_states (int): Number of states in time.
+        time_start (int): Start index for time.
 
     Returns:
         np.ndarray: Time values corresponding to the state sequence.
     """
 
-    train_index, val_index, _ = data_processor.get_split_indices()
-    if len_states == len(data_processor.data):
-        return data_processor.data.index.to_numpy()
-    elif len_states == len(train_index):
-        return data_processor.data.index[train_index].to_numpy()
-    else:
-        return np.concatenate(
-            [
-                data_processor.data.index[train_index].to_numpy(),
-                data_processor.data.index[val_index].to_numpy(),
-            ],
-            axis=0,
-        )
+    return data_processor.data.index[time_start : time_start + len_states].to_numpy()
 
 
 def plot_data(
@@ -293,6 +284,7 @@ def plot_states(
     color: Optional[str] = "b",
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
+    time_start_index: Optional[int] = 0,
 ):
     """
     Plot hidden states with mean and confidence regions.
@@ -302,12 +294,14 @@ def plot_states(
         states (StatesHistory): Object containing hidden states history over time.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        standardization (bool, optional): Whether to plot hidden states in standardized or original space.
+        standardization (bool, optional): Whether to plot hidden states in
+            standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence region.
         sub_plot (plt.Axes, optional): Matplotlib subplot axis to plot on.
         color (str, optional): Color for mean line and confidence region fill.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Legend placement for first state subplot.
+        time_start_index (int, optional): Time start index for plotting states. Defaults to 0.
 
     Examples:
         >>> from canari import plot_states
@@ -333,7 +327,7 @@ def plot_states(
 
     # Time determination
     len_states = len(states.mu_prior)
-    time = _determine_time(data_processor, len_states)
+    time = _determine_time(data_processor, len_states, time_start_index)
 
     for idx, plot_state in enumerate(states_to_plot):
 
@@ -416,6 +410,7 @@ def plot_skf_states(
     linestyle: Optional[str] = "-",
     legend_location: Optional[str] = None,
     plot_nan: Optional[bool] = True,
+    time_start_index: Optional[int] = 0,
 ):
     """
     Plot hidden states along with probabilities of regime changes.
@@ -426,13 +421,15 @@ def plot_skf_states(
         model_prob (np.ndarray): Probabilities of the abnormal regime.
         states_to_plot (list[str] or "all", optional): Names of states to plot.
         states_type (str, optional): Type of state ('posterior' or 'prior' or 'smooth').
-        standardization (bool, optional):  Whether to plot hidden states in standardized or original space.
+        standardization (bool, optional):  Whether to plot hidden states in
+            standardized or original space.
         num_std (int, optional): Number of standard deviations for confidence regions.
         plot_observation (bool, optional): Whether to include observed data into "level" plot.
         color (str, optional): Line color for states.
         linestyle (str, optional): Line style.
         legend_location (str, optional): Location of legend in top subplot.
         plot_nan (bool, optional): Whether to include NaNs in the plot for plotting missing values.
+        time_start_index (int, optional): Time start index for plotting states. Defaults to 0.
 
     Examples:
         >>> from canari import plot_skf_states
@@ -455,7 +452,7 @@ def plot_skf_states(
 
     # Time determination
     len_states = len(states.mu_prior)
-    time = _determine_time(data_processor, len_states)
+    time = _determine_time(data_processor, len_states, time_start_index)
 
     for idx, plot_state in enumerate(states_to_plot):
 

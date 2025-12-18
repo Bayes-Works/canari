@@ -2,19 +2,23 @@ build
 *.DS_Store
 *.vscode
 *.json
-saved_results/
+saved_results/*
+saved_params/*
 **/__pycache__/
 *.egg-info/
 *.png
 dist/
-data/demo_data
 data/benchmark_data/
-# saved_params/
 
 # Docs
-docs/_build/*
-!docs/_build/html/
+docs/_build/
 
 # Figures
 !saved_results/time_series_toy.png
 !docs/_static/**
+
+# Model
+!saved_params/toy_anomaly_detection_tune.pkl
+
+# Metadata 
+!examples/benchmark/BM_metadata.json

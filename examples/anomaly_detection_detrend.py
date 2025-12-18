@@ -53,26 +53,25 @@ df_detrend.values = seasonal + residual + np.mean(trend)
 
 # # Data pre-processing
 output_col = [0]
-data_processor = DataProcess(
+data_processor_detrend = DataProcess(
     data=df_detrend,
     time_covariates=["hour_of_day"],
     train_split=0.4,
     validation_split=0.1,
     output_col=output_col,
 )
-train_data, validation_data, _, _ = data_processor.get_splits()
+train_data, validation_data, _, _ = data_processor_detrend.get_splits()
 
-data_values = np.concatenate(
-    (df_raw.values, data_processor.data.values[:, 1].reshape(-1, 1)), axis=1
+data_processor = DataProcess(
+    data=df_raw,
+    time_covariates=["hour_of_day"],
+    train_split=0.4,
+    validation_split=0.1,
+    output_col=output_col,
+    scale_const_mean=data_processor_detrend.scale_const_mean,
+    scale_const_std=data_processor_detrend.scale_const_std,
 )
-all_data_norm = normalizer.standardize(
-    data=data_values,
-    mu=data_processor.scale_const_mean,
-    std=data_processor.scale_const_std,
-)
-all_data = {}
-all_data["x"] = all_data_norm[:, data_processor.covariates_col]
-all_data["y"] = all_data_norm[:, data_processor.output_col]
+_, _, _, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = 3e-2
@@ -90,27 +89,13 @@ lstm_network = LstmNetwork(
 noise = WhiteNoise(std_error=sigma_v)
 
 # Model for training lstm
-model_lstm = Model(local_trend, lstm_network, noise)
-model_lstm.auto_initialize_baseline_states(train_data["y"][0:23])
-
-# Switching Kalman filter
 model = Model(
     local_trend,
     lstm_network,
     noise,
 )
-ab_model = Model(
-    local_acceleration,
-    lstm_network,
-    noise,
-)
-skf = SKF(
-    norm_model=model,
-    abnorm_model=ab_model,
-    std_transition_error=1e-4,
-    norm_to_abnorm_prob=1e-4,
-)
-skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
+model.auto_initialize_baseline_states(train_data["y"][0:23])
+
 
 #  Training
 num_epoch = 50
@@ -120,7 +105,7 @@ std_validation_preds_optim = None
 
 for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # Train the model
-    (mu_validation_preds, std_validation_preds, states) = model_lstm.lstm_train(
+    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
@@ -128,16 +113,16 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     # # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
         mu_validation_preds,
-        data_processor.scale_const_mean[output_col],
-        data_processor.scale_const_std[output_col],
+        data_processor_detrend.scale_const_mean[output_col],
+        data_processor_detrend.scale_const_std[output_col],
     )
 
     std_validation_preds_unnorm = normalizer.unstandardize_std(
         std_validation_preds,
-        data_processor.scale_const_std[output_col],
+        data_processor_detrend.scale_const_std[output_col],
     )
 
-    validation_obs = data_processor.get_data("validation").flatten()
+    validation_obs = data_processor_detrend.get_data("validation").flatten()
     validation_log_lik = metric.log_likelihood(
         prediction=mu_validation_preds_unnorm,
         observation=validation_obs,
@@ -145,43 +130,52 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     # Early-stopping
-    model_lstm.early_stopping(
+    model.early_stopping(
         evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
     )
-    if epoch == model_lstm.optimal_epoch:
+    if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds.copy()
         std_validation_preds_optim = std_validation_preds.copy()
         states_optim = copy.copy(states)
 
-    if model_lstm.stop_training:
+    if model.stop_training:
         break
 
-print(f"Optimal epoch       : {model_lstm.optimal_epoch}")
-print(f"Validation log-likelihood  :{model_lstm.early_stop_metric: 0.4f}")
+print(f"Optimal epoch       : {model.optimal_epoch}")
+print(f"Validation log-likelihood  :{model.early_stop_metric: 0.4f}")
+
+# # SKF model
+abnorm_model = Model(
+    LocalAcceleration(),
+    LstmNetwork(),
+    WhiteNoise(),
+)
+skf = SKF(
+    norm_model=model,
+    abnorm_model=abnorm_model,
+    std_transition_error=1e-4,
+    norm_to_abnorm_prob=1e-4,
+)
+skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
 
 # # Anomaly Detection
-skf.model["norm_norm"].lstm_net = model_lstm.lstm_net
-skf.lstm_net = model_lstm.lstm_net
-skf.model["norm_norm"].lstm_output_history = model_lstm.lstm_output_history
-skf.model["norm_norm"].lstm_states_history = model_lstm.lstm_states_history
-
-filter_marginal_abnorm_prob, _ = skf.filter(data=all_data)
+filter_marginal_abnorm_prob, states = skf.filter(data=all_data)
 smooth_marginal_abnorm_prob, states = skf.smoother()
 
 # # Plot
 marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
-    data_processor=data_processor,
+    data_processor=data_processor_detrend,
     plot_column=output_col,
     standardization=True,
     plot_test_data=False,
     validation_label="y",
 )
 plot_prediction(
-    data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred=std_validation_preds,
+    data_processor=data_processor_detrend,
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
     validation_label=[r"$\mu$", f"$\pm\sigma$"],
 )
 ax.set_xlabel("Time")
