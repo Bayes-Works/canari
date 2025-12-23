@@ -260,54 +260,54 @@ ymin = -2.5
 ymax = 2.5
 yticks = [-2, 0, 2]
 
-ax0.plot(datetime1, data1["y"], label="Observed", color='C0')
-ax0.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
+ax0.plot(datetime3, data3["y"], label="Observed", color='C0')
+ax0.xaxis.set_major_locator(mdates.YearLocator(base=6))
 ax0.set_ylim([ymin, ymax])
 ax0.set_yticks(yticks)
-ax0.axvspan(datetime1[0],
+ax0.axvspan(datetime3[0],
+            datetime3[int(len(data3["y"])*(training_splits[2]))],
+            color="red",
+            alpha=0.1,
+            edgecolor=None,
+        )
+ax0.axvspan(datetime3[int(len(data3["y"])*training_splits[2]+1)],
+            datetime3[int(len(data3["y"])*(training_splits[2]+validation_splits[2]))],
+            color="green",
+            alpha=0.1,
+            edgecolor=None,
+        )
+
+ax1.plot(datetime1, data1["y"], label="Observed", color='C0')
+ax1.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
+ax1.set_ylim([ymin, ymax])
+ax1.set_yticks(yticks)
+ax1.set_yticklabels([])
+ax1.axvspan(datetime1[0],
             datetime1[int(len(data1["y"])*(training_splits[0]))],
             color="red",
             alpha=0.1,
             edgecolor=None,
         )
-ax0.axvspan(datetime1[int(len(data1["y"])*training_splits[0]+1)],
+ax1.axvspan(datetime1[int(len(data1["y"])*training_splits[0]+1)],
             datetime1[int(len(data1["y"])*(training_splits[0]+validation_splits[0]))],
             color="green",
             alpha=0.1,
             edgecolor=None,
         )
 
-ax1.plot(datetime2, data2["y"], label="Observed", color='C0')
-ax1.xaxis.set_major_locator(mdates.YearLocator(base=5))
-ax1.set_ylim([ymin, ymax])
-ax1.set_yticks(yticks)
-ax1.set_yticklabels([])
-ax1.axvspan(datetime2[0],
+ax2.plot(datetime2, data2["y"], label="Observed", color='C0')
+ax2.xaxis.set_major_locator(mdates.YearLocator(base=5))
+ax2.set_ylim([ymin, ymax])
+ax2.set_yticks(yticks)
+ax2.set_yticklabels([])
+ax2.axvspan(datetime2[0],
             datetime2[int(len(data2["y"])*(training_splits[1]))],
             color="red",
             alpha=0.1,
             edgecolor=None,
         )
-ax1.axvspan(datetime2[int(len(data2["y"])*training_splits[1]+1)],
+ax2.axvspan(datetime2[int(len(data2["y"])*training_splits[1]+1)],
             datetime2[int(len(data2["y"])*(training_splits[1]+validation_splits[1]))],
-            color="green",
-            alpha=0.1,
-            edgecolor=None,
-        )
-
-ax2.plot(datetime3, data3["y"], label="Observed", color='C0')
-ax2.xaxis.set_major_locator(mdates.YearLocator(base=6))
-ax2.set_ylim([ymin, ymax])
-ax2.set_yticks(yticks)
-ax2.set_yticklabels([])
-ax2.axvspan(datetime3[0],
-            datetime3[int(len(data3["y"])*(training_splits[2]))],
-            color="red",
-            alpha=0.1,
-            edgecolor=None,
-        )
-ax2.axvspan(datetime3[int(len(data3["y"])*training_splits[2]+1)],
-            datetime3[int(len(data3["y"])*(training_splits[2]+validation_splits[2]))],
             color="green",
             alpha=0.1,
             edgecolor=None,

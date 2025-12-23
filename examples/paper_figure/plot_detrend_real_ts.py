@@ -250,22 +250,23 @@ ymin = -2.
 ymax = 2.
 yticks = [-2, 0, 2]
 
-ax0.plot(datetime1, data1["y"], label="Observed", color='C0')
-ax0.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
+ax0.plot(datetime3, data3["y"], label="Observed", color='C0')
+ax0.xaxis.set_major_locator(mdates.YearLocator(base=6))
 ax0.set_ylim([ymin, ymax])
 ax0.set_yticks(yticks)
 
-ax1.plot(datetime2, data2["y"], label="Observed", color='C0')
-ax1.xaxis.set_major_locator(mdates.YearLocator(base=5))
+ax1.plot(datetime1, data1["y"], label="Observed", color='C0')
+ax1.xaxis.set_major_locator(mdates.YearLocator(base=4, month=12))
 ax1.set_ylim([ymin, ymax])
 ax1.set_yticks(yticks)
 ax1.set_yticklabels([])
 
-ax2.plot(datetime3, data3["y"], label="Observed", color='C0')
-ax2.xaxis.set_major_locator(mdates.YearLocator(base=6))
+ax2.plot(datetime2, data2["y"], label="Observed", color='C0')
+ax2.xaxis.set_major_locator(mdates.YearLocator(base=5))
 ax2.set_ylim([ymin, ymax])
 ax2.set_yticks(yticks)
 ax2.set_yticklabels([])
+
 
 ax3.plot(datetime4, data4["y"], label="Observed", color='C0')
 ax3.xaxis.set_major_locator(mdates.YearLocator(base=4))
