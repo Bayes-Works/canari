@@ -1025,6 +1025,17 @@ class Model:
             dummy[:, col_idx] = normed[:, 0]
 
         return dummy
+    
+    def _states_intervention(self, delta_mu, delta_var):
+        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+            delta_mu = np.atleast_2d(delta_mu).T
+            delta_var = np.diag(delta_var)
+            self.mu_states = self.mu_states + delta_mu
+            self.var_states = self.var_states + delta_var
+        else:
+            raise ValueError(
+                "Incorrect mu and/or var dimension for inverventions."
+            )
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
@@ -1560,7 +1571,9 @@ class Model:
             )
 
     def forecast(
-        self, data: Dict[str, np.ndarray]
+        self, 
+        data: Dict[str, np.ndarray],
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Perform multi-step-ahead forecast over an entire dataset by recursively making
@@ -1596,7 +1609,10 @@ class Model:
         if self.lstm_net:
             self.lstm_net.eval()
 
-        for index, x in enumerate(data["x"]):
+        for index, (x, time) in enumerate(zip(data["x"], data["time"])):
+            if time in intervention:
+                self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
+
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
@@ -1621,6 +1637,7 @@ class Model:
         self,
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1654,11 +1671,13 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        # set lstm to train mode
+        # set lstm to train modes
         if self.lstm_net and train_lstm:
             self.lstm_net.train()
 
-        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+        for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
+            if time in intervention:
+                self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1744,6 +1763,7 @@ class Model:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1797,8 +1817,8 @@ class Model:
         if self.lstm_net.smooth:
             self.pretraining_filter(train_data)
 
-        self.filter(train_data)
-        mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
+        self.filter(data=train_data, intervention=intervention)
+        mu_validation_preds, std_validation_preds, _ = self.forecast(data=validation_data, intervention=intervention)
         self.smoother()
         self.set_memory(time_step=0)
         self._current_epoch += 1
