@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_datadriven_smoother_track import hsl_classification
+from src.hsl_classification_2classes_clean import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-anm_type = 'LT'
-time_anomaly = 52*7
-anm_mag = 6/52
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-# # LL anomaly
-# anm_type = 'LL'
+# # LT anomaly
+# anm_type = 'LT'
 # time_anomaly = 52*7
-# anm_mag = 17
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_mag = 6/52
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
+
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*8
+anm_mag = 17
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -74,6 +74,9 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 train_val_data = copy.deepcopy(normalized_data)
 train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]
 train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
+
+# Normalize the trend anomaly
+print("normalied anomaly trend", anm_mag / data_processor.scale_const_std[0])
 
 
 ####################################################################
@@ -166,8 +169,8 @@ hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04,
 
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
-# hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-#                                   load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
+                                    load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
@@ -181,14 +184,10 @@ ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
-# ax4 = plt.subplot(gs[4])
-# ax5 = plt.subplot(gs[5])
-# ax6 = plt.subplot(gs[6])
-# ax7 = plt.subplot(gs[7])
-ax8 = plt.subplot(gs[4])
-ax9 = plt.subplot(gs[5])
-ax10 = plt.subplot(gs[6])
-ax11 = plt.subplot(gs[7])
+ax4 = plt.subplot(gs[4])
+ax5 = plt.subplot(gs[5])
+ax6 = plt.subplot(gs[6])
+ax7 = plt.subplot(gs[7])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -237,81 +236,15 @@ plot_states(
     sub_plot=ax3,
 )
 ax3.set_xticklabels([])
-# ax4.plot(time, np.array(mu_ar_preds_all), label='obs', color='tab:red')
-# ax4.fill_between(time,
-#                 np.array(mu_ar_preds_all) - np.array(std_ar_preds_all),
-#                 np.array(mu_ar_preds_all) + np.array(std_ar_preds_all),
-#                 color='tab:red',
-#                 alpha=0.5)
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model.states,
-#     states_type=state_type,
-#     states_to_plot=['level'],
-#     sub_plot=ax4,
-# )
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model2.states,
-#     states_type=state_type,
-#     states_to_plot=['level'],
-#     sub_plot=ax4,
-#     color='tab:green',
-# )
-# ax4.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model.states,
-#     states_type=state_type,
-#     states_to_plot=['trend'],
-#     sub_plot=ax5,
-# )
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model2.states,
-#     states_type=state_type,
-#     states_to_plot=['trend'],
-#     sub_plot=ax5,
-#     color='tab:green',
-# )
-# ax5.set_xticklabels([])
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model.states,
-#     states_type=state_type,
-#     states_to_plot=['autoregression'],
-#     sub_plot=ax6,
-# )
-# plot_states(
-#     data_processor=data_processor,
-#     standardization=True,
-#     states=hsl_tsad_agent.drift_model2.states,
-#     states_type=state_type,
-#     states_to_plot=['autoregression'],
-#     sub_plot=ax6,
-#     color='tab:green',
-# )
-# ax6.set_xticklabels([])
 
-# ax7.plot(time, hsl_tsad_agent.mp_all, label="MP metric", color="blue")
-# # ax6.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-# ax7.set_ylabel('MP')
-# ax7.set_xticklabels([])
-# _add_dynamic_grids(ax7, time)
-
-ax8.plot(time, hsl_tsad_agent.p_anm_all)
+ax4.plot(time, hsl_tsad_agent.p_anm_all)
 detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
 for i in range(len(detection_time)):
-    ax8.axvline(x=time[detection_time[i]], color='red', linestyle='--', label='Anomaly start')
-ax8.set_ylabel("p_anm")
-ax8.set_xlim(ax0.get_xlim())
-ax8.set_ylim(-0.05, 1.05)
-_add_dynamic_grids(ax8, time)
+    ax4.axvline(x=time[detection_time[i]], color='red', linestyle='--', label='Anomaly start')
+ax4.set_ylabel("p_anm")
+ax4.set_xlim(ax0.get_xlim())
+ax4.set_ylim(-0.05, 1.05)
+_add_dynamic_grids(ax4, time)
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
 
@@ -323,65 +256,7 @@ m_probs, std_probs = [], []
 for t in range(m_logits.shape[0]):
     pr_classes = hierachical_softmax(m_logits[t], std_logits[t])
     m_probs.append(pr_classes.tolist())
-    # std_probs.append(std_p.tolist())
 m_probs = np.array(m_probs)
-# std_probs = np.array(std_probs)
-
-# # anm_prob_lower = np.array(hsl_tsad_agent.pred_class_probs) - np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
-# for class_idx in range(m_logits.shape[1]):
-#     ax9.plot(time, m_logits[:, class_idx], color=colors[class_idx])
-#     ax9.fill_between(time,
-#                     m_logits[:, class_idx] - std_logits[:, class_idx],
-#                     m_logits[:, class_idx] + std_logits[:, class_idx],
-#                     color=colors[class_idx],
-#                     alpha=0.3, label="_nolegend_")
-# # Set legend labels to ['LT', 'LL', 'PD']
-# ax9.legend(['gate1', 'gate2'],loc='upper left', ncol=2)
-# # ax9.legend = ['LT', 'LL', 'PD']
-# ax9.set_ylim(-5, 5)
-# # ax9.legend(loc='upper left', ncol=2)
-# ax9.set_ylabel("logits")
-
-# # Plot class probabilities with ReMax
-# for class_idx in range(m_probs.shape[1]):
-#     ax9.plot(time, m_probs[:, class_idx], color=colors[class_idx])
-#     # ax10.fill_between(time,
-#     #                 m_probs[:, class_idx] - std_probs[:, class_idx],
-#     #                 m_probs[:, class_idx] + std_probs[:, class_idx],
-#     #                 color=colors[class_idx],
-#     #                 alpha=0.3, label="_nolegend_")
-# # Set legend labels to ['LT', 'LL', 'PD']
-# ax9.legend(['LT', 'LL'],loc='upper left', ncol=2)
-# ax9.set_ylim(-0.05, 1.05)
-# ax9.set_ylabel("classifier")
-
-# for class_idx in range(2):
-#     log_likelihoods = []
-#     for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-#         if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-#             log_likelihoods.append(0)
-#         else:
-#             log_likelihoods.append(hsl_tsad_agent.data_loglikelihoods[t][class_idx+2])
-#     ax9.plot(time, log_likelihoods, color=colors[class_idx])
-# ax9.set_ylabel("cuLL_op")
-# ax9.set_xticklabels([])
-
-
-# # Plot hsl_tsad_agent.data_loglikelihoods
-# itv_probs = []
-# for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-#     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-#         itv_probs.append([0.5, 0.5])
-#     else:
-#         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-#         probs = np.exp(log_likelihoods)
-#         probs /= np.sum(probs)
-#         itv_probs.append(probs)
-# itv_probs = np.array(itv_probs)
-# for class_idx in range(m_probs.shape[1]):
-#     ax10.plot(time, itv_probs[:, class_idx], color=colors[class_idx])
-# ax10.set_ylabel("logsum itv")
-# ax10.set_xticklabels([])
 
 # # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
 final_class_log_probs = []
@@ -391,92 +266,28 @@ for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
     else:
         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
         log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:]
-#         # Combining log likelihoods
-#         # log_prior_probs = np.log(m_probs[t])
-#         # combined_log_probs = log_likelihoods + log_prior_probs
-#         # # Normalize to get probabilities
-#         # probs = np.exp(combined_log_probs)
 
         probs = np.exp(log_likelihoods)
         # probs = np.array(log_likelihoods).astype(np.float64)
         probs /= np.sum(probs)
-        final_class_log_probs.append(probs)
-
-#         # # Combining likelihoods
-#         # prior_probs = m_probs[t]
-#         # probs = np.array(log_likelihoods) * np.array(prior_probs)
-#         # probs /= np.sum(probs)
-#         # final_class_log_probs.append(probs)
-
-        # # Set the smaller value in log_likelihoods to 0
-        # probs = np.array(log_likelihoods) - np.min(log_likelihoods)
-        # # probs = np.array(log_likelihoods)
-        # # Softmax on log_likelihoods
-        # probs = np.exp(log_likelihoods)
-        # probs /= np.sum(probs)
-        # final_class_log_probs.append(probs)
-        
-#         # probs = (np.array(log_likelihoods) / np.sum(np.array(log_likelihoods)))
-#         # Use max min normalization on log_likelihoods
-#         # probs = (np.array(log_likelihoods) - np.min(np.array(log_likelihoods))) / (np.max(np.array(log_likelihoods)) - np.min(np.array(log_likelihoods)))
-#         # probs /= np.sum(probs)
-#         # final_class_log_probs.append(probs)
+        final_class_log_probs.append(probs)        
 
 final_class_log_probs = np.array(final_class_log_probs)
 # Plot final class probabilities
 for class_idx in range(final_class_log_probs.shape[1]):
-    ax11.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+    ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
 # Set legend labels to ['LT', 'LL', 'PD']
-ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
-ax11.set_ylim(-0.05, 1.05)
-ax11.set_ylabel("posteriors")
-
-
-# from src.convert_to_class import exponential_decay_with_halfpoint
-# decay_classifier = exponential_decay_with_halfpoint(
-#     array_len=len(time),
-#     start_decay=detection_time[0],
-#     half_point=detection_time[0] + 52*2
-# )
-# itv_probs = []
-# for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-#     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-#         itv_probs.append([0.5, 0.5])
-#     else:
-#         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-#         probs = np.exp(log_likelihoods)
-#         probs /= np.sum(probs)
-#         itv_probs.append(probs)
-# itv_probs = np.array(itv_probs)
-
-# for class_idx in range(m_probs.shape[1]):
-#     ax11.plot(time, itv_probs[:, class_idx] * (1-decay_classifier) + decay_classifier * m_probs[:, class_idx], color=colors[class_idx])
-# ax11.set_ylabel("decay comb")
-# ax11.legend(['LT', 'LL'], loc='upper left', ncol=2)
-# ax11.set_ylim(-0.05, 1.05)
-
-# Find the anm_flags that is 0.5 greater than the other two class flags
-# anm_type_flags = []
-# for t in range(anm_prob_lower.shape[0]):
-#     max_flag = np.max(anm_prob_lower[t, :])
-#     max_idx = np.argmax(anm_prob_lower[t, :])
-#     other_anm = np.delete(anm_prob_lower[t, :], max_idx)
-#     if max_flag - np.max(other_anm) < 0.5:
-#         pass
-#     else:
-#         anm_type_flags.append((t, max_idx, anm_prob_lower[t, max_idx]))
-# # Plot vertical lines for the anm_type_flags
-# for flag in anm_type_flags:
-#     ax9.axvline(x=time[flag[0]], color=colors[flag[1]], linestyle=':')
+ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
+ax7.set_ylim(-0.05, 1.05)
+ax7.set_ylabel("posteriors")
 
 gen_ar_phi = model_dict['gen_phi_ar']
 gen_ar_sigma =model_dict['gen_sigma_ar']
 stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
-# ax9.fill_between(time, hsl_tsad_agent.ll_itv_all - 2 * stationary_ar_std, hsl_tsad_agent.ll_itv_all + 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
-ax9.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
-ax9.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:blue')
-ax9.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
-ax9.set_ylabel("itv")
+ax5.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
+ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:blue')
+ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
+ax5.set_ylabel("itv")
 
 # Look up the index where hsl_tsad_agent.ll_itv_all is equal to - 2 * stationary_ar_std or 2 * stationary_ar_std
 masked_ll_itv = np.array(hsl_tsad_agent.ll_itv_all)
@@ -486,10 +297,10 @@ non_zero_start_indices = np.where(masked_ll_itv != 0)[0][0]
 masked_ll_itv[non_zero_start_indices:non_zero_start_indices+26] = 0
 if np.any(masked_ll_itv > 2 * stationary_ar_std):
     certain_zone_begin = np.where(masked_ll_itv > 2 * stationary_ar_std)[0][0]
-    ax11.fill_between(time, -0.05, 1.05, where=(time < time[certain_zone_begin]), color='gray', alpha=0.3, label='Uncertain zone')
-    ax11.fill_between(time, -0.05, 1.05, where=(time >= time[certain_zone_begin]), color='green', alpha=0.3, label='Certain zone')
+    ax7.fill_between(time, -0.05, 1.05, where=(time < time[certain_zone_begin]), color='gray', alpha=0.3, label='Uncertain zone')
+    ax7.fill_between(time, -0.05, 1.05, where=(time >= time[certain_zone_begin]), color='green', alpha=0.3, label='Certain zone')
 else:
-    ax11.fill_between(time, -0.05, 1.05, color='gray', alpha=0.3, label='Uncertain zone')
+    ax7.fill_between(time, -0.05, 1.05, color='gray', alpha=0.3, label='Uncertain zone')
 
 
 
