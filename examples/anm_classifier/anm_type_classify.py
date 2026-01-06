@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_clean import hsl_classification
+from src.hsl_classification_2classes_2itvmodels import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -170,7 +170,7 @@ hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04,
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                    load_model_path='saved_params/NN_intervention_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
+                                    save_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_ts.pkl', save_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
