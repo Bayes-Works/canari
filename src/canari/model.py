@@ -32,6 +32,7 @@ from canari import common
 from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from canari.component import Intervention
 
 
 class Model:
@@ -196,6 +197,9 @@ class Model:
         self.mu_W2_prior = None
         self.var_W2_prior = None
 
+        # Intervention-related atrribute
+        self._interv_state_index = None
+
         # Noise related attribute
         self.sched_sigma_v = None
         self._var_v2bar_prior = None
@@ -229,6 +233,7 @@ class Model:
         self._assemble_states()
         self._initialize_lstm_network()
         self._initialize_autoregression()
+        self._initialize_intervention()
 
     def _assemble_matrices(self):
         """
@@ -313,6 +318,21 @@ class Model:
         if "AR_error" in self.states_name:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
+
+    def _initialize_intervention(self):
+        """
+        Initialize intervention-related attributes.
+        Only applicable when using the Intervention component.
+        """
+    
+        intervention_component = next(
+            (
+                comp for comp in self.components.values() if isinstance(comp, Intervention)
+            ),
+            None,
+        )
+        if intervention_component is not None:
+            self._interv_state_index = intervention_component.interv_state_index
 
     def _set_posterior_states(
         self,
@@ -1027,6 +1047,13 @@ class Model:
         return dummy
     
     def _states_intervention(self, delta_mu, delta_var):
+        """
+        States intervention.
+
+        :param delta_mu: intervention for states mean
+        :param delta_var: intervention for states variances
+        """
+
         if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
             delta_mu = np.atleast_2d(delta_mu).T
             delta_var = np.diag(delta_var)
@@ -1036,6 +1063,24 @@ class Model:
             raise ValueError(
                 "Incorrect mu and/or var dimension for inverventions."
             )
+
+    def _transition_matrix_interv(self):
+        """
+        Transition matrix intervention.
+        """
+
+        if "intervention" in self.states_name:
+            interv_idx = self.get_states_index(states_name="intervention")
+            self.transition_matrix[self._interv_state_index, interv_idx] = 1
+    
+    def _reset_transition_matrix_interv(self):
+        """
+        Reset transition matrix intervention to the original one. 
+        """
+
+        if "intervention" in self.states_name:
+            interv_idx = self.get_states_index(states_name="intervention")
+            self.transition_matrix[self._interv_state_index, interv_idx] = 0
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
@@ -1610,8 +1655,10 @@ class Model:
             self.lstm_net.eval()
 
         for index, (x, time) in enumerate(zip(data["x"], data["time"])):
+            # Intervention
             if time in intervention:
                 self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
+                self._transition_matrix_interv()
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -1627,6 +1674,11 @@ class Model:
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
+
+            # Intervention, reset transition matrix
+            if time in intervention:
+                self._reset_transition_matrix_interv()
+
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1676,8 +1728,10 @@ class Model:
             self.lstm_net.train()
 
         for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
+            # Intervention
             if time in intervention:
                 self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
+                self._transition_matrix_interv()
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1703,6 +1757,10 @@ class Model:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
+            # Intervention, reset transition matrix
+            if time in intervention:
+                self._reset_transition_matrix_interv()
+                
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
