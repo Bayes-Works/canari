@@ -124,7 +124,8 @@ class StatesHistory:
 
     def get_mean(
         self,
-        states_name: str,
+        states_name: Optional[str] = None,
+        states_index: Optional[int] = None,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
         scale_const_mean: Optional[float] = 0,
@@ -136,7 +137,8 @@ class StatesHistory:
         or c) the posterior updated values after the smoother step (smoothed estimates).
 
         Args:
-            states_name (str): Name of hidden state to extract.
+            states_name (str, optional): Name of hidden state to extract.
+            states_index (int, optional): Index of the hidden state to extract.
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
             standardization (bool, optional): Get the standardized values for hidden states.
@@ -158,8 +160,10 @@ class StatesHistory:
             raise ValueError(
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
-
-        idx = self.states_name.index(states_name)
+        if states_index is None:
+            idx = self.states_name.index(states_name)
+        else:
+            idx = states_index
         mean = values[:, idx].flatten()
 
         if not standardization:
@@ -170,7 +174,8 @@ class StatesHistory:
 
     def get_std(
         self,
-        states_name: str,
+        states_name: Optional[str] = None,
+        states_index: Optional[int] = None,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
         scale_const_std: Optional[float] = 1,
@@ -182,7 +187,8 @@ class StatesHistory:
         (smoothed estimates).
 
         Args:
-            states_name (str): Name of hidden state to extract.
+            states_name (str, optional): Name of hidden state to extract.
+            states_index (int, optional): Index of the hidden state to extract.
             states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').
                 Defaults to "posterior".
             standardization (bool, optional): Get the standardized values for hidden states.
@@ -204,7 +210,10 @@ class StatesHistory:
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
 
-        idx = self.states_name.index(states_name)
+        if states_index is None:
+            idx = self.states_name.index(states_name)
+        else:
+            idx = states_index
         standard_deviation = values[:, idx, idx] ** 0.5
 
         if not standardization:
