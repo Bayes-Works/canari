@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LstmNetwork, WhiteNoise, LocalTrend
+from canari.component import LstmNetwork, WhiteNoise, LocalTrend, Intervention
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -23,11 +23,17 @@ df_raw.columns = ["values"]
 # Resampling data
 df = df_raw.resample("H").mean()
 
+# Intervention
+index_intervention = 100
+intervention_mean_value = 0.5
+df.iloc[index_intervention:,0] =  df.iloc[index_intervention:,0] + intervention_mean_value
+
 # Define parameters
 output_col = [0]
 num_epoch = 50
 
 # Build data processor
+
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day"],
@@ -43,6 +49,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 sigma_v = 0.003
 model = Model(
     LocalTrend(),
+    Intervention(interv_state_index=0),
     LstmNetwork(
         look_back_len=12,
         num_features=2,
@@ -57,11 +64,10 @@ model = Model(
 
 model.auto_initialize_baseline_states(train_data["y"][0:24])
 
-# inter_time = train_data["time"][50]
 intervention = {
-    normalized_data["time"][200]: {
-        "mu": [0.5, 0, 0, 0],
-        "var": [0, 0, 0, 0],
+    normalized_data["time"][index_intervention]: {
+        "mu": [0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
+        "var": [0, 0, 0, 0, 0],
         }
 }
 
