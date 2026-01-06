@@ -97,8 +97,8 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     model.smoother()
 
     # Get first state and observation
-    prior_states_mu = states.get_mean("lstm", "prior", True)
-    prior_states_std = states.get_std("lstm", "prior", True)
+    prior_states_mu = states.get_mean(states_name="lstm", states_type="prior", standardization=True)
+    prior_states_std = states.get_std(states_name="lstm", states_type="prior", standardization=True)
     first_state = prior_states_mu[0]
     first_observation = train_data["y"][0]
 
