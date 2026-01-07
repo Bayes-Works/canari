@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# # LT anomaly
-# anm_type = 'LT'
-# time_anomaly = 52*7
-# anm_mag = 6/52
-# anm_baseline = np.arange(len(df_raw)) * anm_mag
-# # Set the first 52*12 values in anm_baseline to be 0
-# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
-
-# LL anomaly
-anm_type = 'LL'
-time_anomaly = 52*8
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
+# LT anomaly
+anm_type = 'LT'
+time_anomaly = 52*7
+anm_mag = 6/52
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)
+
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*7
+# anm_mag = 17
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -76,7 +76,16 @@ train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]
 train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 
 # Normalize the trend anomaly
-print("normalied anomaly trend", anm_mag / data_processor.scale_const_std[0])
+# normed_anm_mag =  (anm_mag - data_processor.scale_const_mean[0]) / data_processor.scale_const_std[0]
+normed_anm_mag =  anm_mag / data_processor.scale_const_std[0]
+print("normalied anomaly trend", normed_anm_mag)
+normed_anm_baseline = np.arange(len(df_raw)) * normed_anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+normed_anm_baseline[time_anomaly:] -= normed_anm_baseline[time_anomaly]
+normed_anm_baseline[:time_anomaly] = 0
+# Get the normed lt baseline
+
+# print("normalied anomaly trend", anm_mag / data_processor.scale_const_std[0])
 
 
 ####################################################################
@@ -163,14 +172,20 @@ hsl_tsad_agent.detection_threshold = 0.1
 # hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = 3.0531803e-06, 0.0003885695, -7.6621116e-05, 0.0034827138, 3.8428175, 2.1701705
 # hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([2.2853521e-04, 2.1895172e-02, 5.9053360e+01]), np.array([5.3996309e-03, 6.2583315e-01, 7.5614799e+01])
 
-# # Classification + intervention models + new MP:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3441674e-05, 0.0004603353, -4.2705156e-05, 0.003506228, 5.272658, 3.560844
-hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = np.array([1.7884585e-04, 5.2052871e-03, 5.9214630e+01]), np.array([5.2153803e-03, 6.3000584e-01, 7.5671562e+01])
+# # # Classification + intervention models + new MP:
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3441674e-05, 0.0004603353, -4.2705156e-05, 0.003506228, 5.272658, 3.560844
+# hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([3.3949208e-04, 3.8289719e+01]), np.array([6.3677123e-03, 6.6973274e+01])
+# hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([1.9944116e-02, 4.2935741e+01]), np.array([0.72300506, 69.76192])
+
+# 2 intervention models:
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3276256e-05, 0.0004600634, -3.7790043e-05, 0.003501312, 5.2705355, 3.5586061
+hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([2.518625e-04, 3.668254e+01]), np.array([6.1926572e-03, 6.5914955e+01])
+hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([6.4476170e-03, 4.3150906e+01]), np.array([0.7179858, 69.91169])
 
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                    save_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_ts.pkl', save_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_ts.pkl', max_training_epoch=50)
+                                    load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_ts.pkl', load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_ts.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
@@ -207,6 +222,8 @@ plot_states(
 )
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
+# ax0.axhline(y=normed_ll, color='purple', linestyle='--', label='Anomaly magnitude')
+ax0.plot(time, normed_anm_baseline, color='purple', linestyle='--', label='Anomaly magnitude')
 
 ############ Original plots #############
 plot_states(
@@ -288,6 +305,8 @@ ax5.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gr
 ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:blue')
 ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
 ax5.set_ylabel("itv")
+# ax5.axhline(y=normed_ll, color='purple', linestyle='--', label='Anomaly magnitude')
+ax5.plot(time, normed_anm_baseline, color='purple', linestyle='--', label='Anomaly magnitude')
 
 # Look up the index where hsl_tsad_agent.ll_itv_all is equal to - 2 * stationary_ar_std or 2 * stationary_ar_std
 masked_ll_itv = np.array(hsl_tsad_agent.ll_itv_all)
