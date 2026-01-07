@@ -59,7 +59,7 @@ class hsl_classification:
         self.current_time_step = 0
         self.lstm_history = []
         self.lstm_cell_states = []
-        self.mean_train, self.std_train, self.mean_target, self.std_target = None, None, None, None
+        self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
         self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
         self.pred_class_probs = []
         self.pred_class_probs_var = []
@@ -705,56 +705,38 @@ class hsl_classification:
                 self.pred_class_probs_var.append(m_pred_logits[1::2].tolist())
                 
 
-                # # Track what NN learns
-                # LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
-                # # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                # LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior)
-                # LTd_history = np.array(LTd_history.tolist(), dtype=np.float32)
-                # LTd_history = (LTd_history - self.mean_train) / self.std_train
-                # if self.nn_train_with == 'tagiv':
-                #     LTd_history = np.repeat(LTd_history[np.newaxis, :], self.batch_size, axis=0)
-
-                #     output_pred_mu, output_pred_var = self.model.net(LTd_history)
-                #     output_pred_mu = output_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                #     output_pred_var = output_pred_var.reshape(self.batch_size, len(self.target_list)*2)
-                #     itv_pred_mu = output_pred_mu[0, [0, 2, 4]]
-                #     itv_pred_var = output_pred_mu[0, [1, 3, 5]]
-                # elif self.nn_train_with == 'backprop':
-                #     LTd_history = torch.tensor(LTd_history)
-                #     itv_pred_mu = self.model(LTd_history)
-                #     itv_pred_mu = itv_pred_mu.detach().numpy()
-                #     itv_pred_var = np.zeros_like(itv_pred_mu)
-                    
-                # itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-                # itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
-
-                # self.mu_itv_all.append(itv_pred_mu_denorm.tolist())
-                # self.std_itv_all.append(np.sqrt(itv_pred_var_denorm).tolist())
-
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
             # Get interventions predicted by the model
-            class_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
-            # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
-            class_input_history = class_input_history.astype(np.float32)
-            output_pred_mu, output_pred_var = self.model.net(class_input_history)
-            itv_pred_mu = output_pred_mu[::2]
-            itv_pred_var = output_pred_mu[1::2] + output_pred_var[::2]
-                
-            itv_pred_mu_denorm = itv_pred_mu * self.std_target + self.mean_target
-            itv_pred_var_denorm = itv_pred_var * self.std_target ** 2
+            self.lt_itv_model.net.eval()
+            self.ll_itv_model.net.eval()
 
-            num_steps_retract = max(int(itv_pred_mu_denorm[2]), 1)
+            itv_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
+            # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
+            itv_input_history = itv_input_history.astype(np.float32)
+            output_pred_lt_mu, output_pred_lt_var = self.lt_itv_model.net(itv_input_history)
+            itv_pred_lt_mu = output_pred_lt_mu[::2]
+            itv_pred_lt_var = output_pred_lt_mu[1::2] + output_pred_lt_var[::2]
+            output_pred_ll_mu, output_pred_ll_var = self.ll_itv_model.net(itv_input_history)
+            itv_pred_ll_mu = output_pred_ll_mu[::2]
+            itv_pred_ll_var = output_pred_ll_mu[1::2] + output_pred_ll_var[::2]
+                
+            itv_pred_lt_mu_denorm = itv_pred_lt_mu * self.std_target_lt_model + self.mean_target_lt_model
+            itv_pred_lt_var_denorm = itv_pred_lt_var * self.std_target_lt_model ** 2
+            itv_pred_ll_mu_denorm = itv_pred_ll_mu * self.std_target_ll_model + self.mean_target_ll_model
+            itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
+
+            num_steps_retract_lt = max(int(itv_pred_lt_mu_denorm[1]), 1)
+            # num_steps_retract_ll = max(int(itv_pred_ll_mu_denorm[1]), 1)
 
             # Apply intervention to estimate data likelihood
             # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
-                
-                level_itv = itv_pred_mu_denorm[1]
-                trend_itv = itv_pred_mu_denorm[0]
-                var_level_itv = itv_pred_var_denorm[1]
-                var_trend_itv = itv_pred_var_denorm[0]
+                trend_itv = itv_pred_lt_mu_denorm[0]
+                var_trend_itv = itv_pred_lt_var_denorm[0]
+                level_itv = itv_pred_ll_mu_denorm[0]
+                var_trend_itv = itv_pred_ll_var_denorm[0]
 
                 # if anm_type == "LL":
                     # level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
@@ -784,7 +766,7 @@ class hsl_classification:
                     level_intervention = [level_itv, 0],
                     # level_intervention = [0, 1],
                     trend_intervention = [0, 0],
-                    num_steps_retract = num_steps_retract,
+                    num_steps_retract = num_steps_retract_lt,
                     data = data,
                     make_mask=True
                 )
@@ -797,11 +779,11 @@ class hsl_classification:
                     level_intervention = [0, 0],
                     trend_intervention = [trend_itv, 0],
                     # trend_intervention = [0, 1/52/2],
-                    num_steps_retract = num_steps_retract,
+                    num_steps_retract = num_steps_retract_lt,
                     data = data,
                     make_mask=False
                 )
-                self.lt_itv_all.append(itv_LT * num_steps_retract)
+                self.lt_itv_all.append(itv_LT * num_steps_retract_lt)
                 # self.lt_itv_all.append(itv_LT)
                 # plt.show()
 
@@ -810,9 +792,9 @@ class hsl_classification:
 
                 stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
 
-                if abs(itv_LL) < 2 * stationary_ar_std and abs(itv_LT * num_steps_retract) < 2 * stationary_ar_std:
-                    data_likelihoods_ll = []
-                    data_likelihoods_lt = []
+                # if abs(itv_LL) < 2 * stationary_ar_std and abs(itv_LT * num_steps_retract_lt) < 2 * stationary_ar_std:
+                #     data_likelihoods_ll = []
+                #     data_likelihoods_lt = []
 
                 # Decay from the first value to the last value
                 decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
@@ -855,7 +837,7 @@ class hsl_classification:
             #             # To control that during the rerun from the past, the agent cannnot trigger again
             #             i_before_retract = copy.copy(i)
             #             # Retract agent
-            #             step_back = max(int(itv_pred_mu_denorm[2]), 1) if max(int(itv_pred_mu_denorm[2]), 1) < i else i - 2
+            #             step_back = max(int(itv_pred_lt_mu_denorm[2]), 1) if max(int(itv_pred_lt_mu_denorm[2]), 1) < i else i - 2
             #             self._retract_agent(time_step_back=step_back)
             #             i = i - step_back
             #             self.current_time_step = self.current_time_step - step_back
@@ -863,10 +845,10 @@ class hsl_classification:
             #             # Apply intervention on base_model hidden states
             #             LL_index = self.base_model.states_name.index("level")
             #             LT_index = self.base_model.states_name.index("trend")
-            #             # self.base_model.mu_states[LL_index] += itv_pred_mu_denorm[1]
-            #             self.base_model.mu_states[LT_index] += itv_pred_mu_denorm[0]
-            #             self.base_model.var_states[LL_index, LL_index] += itv_pred_var_denorm[1]
-            #             self.base_model.var_states[LT_index, LT_index] += itv_pred_var_denorm[0]
+            #             # self.base_model.mu_states[LL_index] += itv_pred_lt_mu_denorm[1]
+            #             self.base_model.mu_states[LT_index] += itv_pred_lt_mu_denorm[0]
+            #             self.base_model.var_states[LL_index, LL_index] += itv_pred_lt_var_denorm[1]
+            #             self.base_model.var_states[LT_index, LT_index] += itv_pred_lt_var_denorm[0]
 
             #             self.drift_model.mu_states[0] = 0
             #             self.drift_model.mu_states[1] = self.mu_LTd
@@ -916,7 +898,7 @@ class hsl_classification:
             mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
             mp_input = mu_ar + mu_lstm
             if p_a_I_Yt > self.detection_threshold:
-                anm_start_global = self.current_time_step - num_steps_retract
+                anm_start_global = self.current_time_step - num_steps_retract_lt
             else:
                 anm_start_global = np.inf
             if self.current_time_step >= self.start_idx_mp:
@@ -1019,78 +1001,78 @@ class hsl_classification:
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
 
-        # Plot retracted states after intervention
-        mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
-        std_level_plot = ssm_copy.states.get_std(states_type="posterior", states_name="level", standardization=True)
-        mu_trend_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="trend", standardization=True)
-        std_trend_plot = ssm_copy.states.get_std(states_type="posterior", states_name="trend", standardization=True)
-        mu_lstm_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
-        std_lstm_plot = ssm_copy.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
-        mu_ar_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
-        std_ar_plot = ssm_copy.states.get_std(states_type="posterior", states_name="autoregression", standardization=True)
-        # Remove the first self.num_before_detect points to align with mu_y_preds
-        mu_level_plot = mu_level_plot[self.num_before_detect:]
-        std_level_plot = std_level_plot[self.num_before_detect:]
-        mu_trend_plot = mu_trend_plot[self.num_before_detect:]
-        std_trend_plot = std_trend_plot[self.num_before_detect:]
-        mu_lstm_plot = mu_lstm_plot[self.num_before_detect:]
-        std_lstm_plot = std_lstm_plot[self.num_before_detect:]
-        mu_ar_plot = mu_ar_plot[self.num_before_detect:]
-        std_ar_plot = std_ar_plot[self.num_before_detect:]
+        # # Plot retracted states after intervention
+        # mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
+        # std_level_plot = ssm_copy.states.get_std(states_type="posterior", states_name="level", standardization=True)
+        # mu_trend_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="trend", standardization=True)
+        # std_trend_plot = ssm_copy.states.get_std(states_type="posterior", states_name="trend", standardization=True)
+        # mu_lstm_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+        # std_lstm_plot = ssm_copy.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+        # mu_ar_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
+        # std_ar_plot = ssm_copy.states.get_std(states_type="posterior", states_name="autoregression", standardization=True)
+        # # Remove the first self.num_before_detect points to align with mu_y_preds
+        # mu_level_plot = mu_level_plot[self.num_before_detect:]
+        # std_level_plot = std_level_plot[self.num_before_detect:]
+        # mu_trend_plot = mu_trend_plot[self.num_before_detect:]
+        # std_trend_plot = std_trend_plot[self.num_before_detect:]
+        # mu_lstm_plot = mu_lstm_plot[self.num_before_detect:]
+        # std_lstm_plot = std_lstm_plot[self.num_before_detect:]
+        # mu_ar_plot = mu_ar_plot[self.num_before_detect:]
+        # std_ar_plot = std_ar_plot[self.num_before_detect:]
 
-        fig = plt.figure(figsize=(10, 5))
-        gs = gridspec.GridSpec(4, 1)
-        ax0 = plt.subplot(gs[0])
-        ax1 = plt.subplot(gs[1])
-        ax2 = plt.subplot(gs[2])
-        ax3 = plt.subplot(gs[3])
-        ax0.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
-        ax0.fill_between(range(len(mu_y_preds)),
-                         np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
-                         np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
-                         color='gray', alpha=0.5)
-        ax0.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
-        ax0.fill_between(range(len(original_mu_obs_preds)),
-                         np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
-                         np.array(original_mu_obs_preds).flatten() + np.array(original_std_obs_preds).flatten(),
-                         color='gray', alpha=0.5)
-        ax0.plot(range(len(data["y"])), data["y"], color='k')
-        ax0.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
-        ax0.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
-        # Plot hidden states at index 0
-        ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
-        ax0.fill_between(range(len(mu_level_plot)),
-                         mu_level_plot.flatten() - std_level_plot.flatten(),
-                         mu_level_plot.flatten() + std_level_plot.flatten(),
-                         color='tab:blue', alpha=0.2)
-        ax0.set_title('Level State with and without Intervention')
-        ax0.legend(ncol=2, loc='upper left')
-        if level_intervention[0] > 0:
-            ax0.set_title('LL itv')
-        if trend_intervention[0] > 0:
-            ax0.set_title('LT itv')
-        ax1.plot(range(len(mu_trend_plot)), np.array(mu_trend_plot).flatten(),color='tab:blue')
-        ax1.fill_between(range(len(mu_trend_plot)),
-                         mu_trend_plot.flatten() - std_trend_plot.flatten(),
-                         mu_trend_plot.flatten() + std_trend_plot.flatten(),
-                         color='tab:blue', alpha=0.2)
-        ax1.set_xlim(ax0.get_xlim())
-        ax1.set_ylabel('LT')
-        ax2.plot(range(len(mu_lstm_plot)), np.array(mu_lstm_plot).flatten(),color='tab:blue')
-        ax2.fill_between(range(len(mu_lstm_plot)),
-                         mu_lstm_plot.flatten() - std_lstm_plot.flatten(),
-                         mu_lstm_plot.flatten() + std_lstm_plot.flatten(),
-                         color='tab:blue', alpha=0.2)
-        ax2.set_xlim(ax0.get_xlim())
-        ax2.set_ylabel('LSTM')
-        ax3.plot(range(len(mu_ar_plot)), np.array(mu_ar_plot).flatten(),color='tab:blue')
-        ax3.fill_between(range(len(mu_ar_plot)),
-                         mu_ar_plot.flatten() - std_ar_plot.flatten(),
-                         mu_ar_plot.flatten() + std_ar_plot.flatten(),
-                         color='tab:blue', alpha=0.2)
-        ax3.set_xlim(ax0.get_xlim())
-        ax3.set_ylabel('AR')
-        plt.show()
+        # fig = plt.figure(figsize=(10, 5))
+        # gs = gridspec.GridSpec(4, 1)
+        # ax0 = plt.subplot(gs[0])
+        # ax1 = plt.subplot(gs[1])
+        # ax2 = plt.subplot(gs[2])
+        # ax3 = plt.subplot(gs[3])
+        # ax0.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
+        # ax0.fill_between(range(len(mu_y_preds)),
+        #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
+        #                  np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
+        #                  color='gray', alpha=0.5)
+        # ax0.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
+        # ax0.fill_between(range(len(original_mu_obs_preds)),
+        #                  np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
+        #                  np.array(original_mu_obs_preds).flatten() + np.array(original_std_obs_preds).flatten(),
+        #                  color='gray', alpha=0.5)
+        # ax0.plot(range(len(data["y"])), data["y"], color='k')
+        # ax0.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
+        # ax0.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
+        # # Plot hidden states at index 0
+        # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
+        # ax0.fill_between(range(len(mu_level_plot)),
+        #                  mu_level_plot.flatten() - std_level_plot.flatten(),
+        #                  mu_level_plot.flatten() + std_level_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax0.set_title('Level State with and without Intervention')
+        # ax0.legend(ncol=2, loc='upper left')
+        # if level_intervention[0] > 0:
+        #     ax0.set_title('LL itv')
+        # if trend_intervention[0] > 0:
+        #     ax0.set_title('LT itv')
+        # ax1.plot(range(len(mu_trend_plot)), np.array(mu_trend_plot).flatten(),color='tab:blue')
+        # ax1.fill_between(range(len(mu_trend_plot)),
+        #                  mu_trend_plot.flatten() - std_trend_plot.flatten(),
+        #                  mu_trend_plot.flatten() + std_trend_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax1.set_xlim(ax0.get_xlim())
+        # ax1.set_ylabel('LT')
+        # ax2.plot(range(len(mu_lstm_plot)), np.array(mu_lstm_plot).flatten(),color='tab:blue')
+        # ax2.fill_between(range(len(mu_lstm_plot)),
+        #                  mu_lstm_plot.flatten() - std_lstm_plot.flatten(),
+        #                  mu_lstm_plot.flatten() + std_lstm_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax2.set_xlim(ax0.get_xlim())
+        # ax2.set_ylabel('LSTM')
+        # ax3.plot(range(len(mu_ar_plot)), np.array(mu_ar_plot).flatten(),color='tab:blue')
+        # ax3.fill_between(range(len(mu_ar_plot)),
+        #                  mu_ar_plot.flatten() - std_ar_plot.flatten(),
+        #                  mu_ar_plot.flatten() + std_ar_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
+        # ax3.set_xlim(ax0.get_xlim())
+        # ax3.set_ylabel('AR')
+        # plt.show()
 
         if "lstm" in ssm.states_name:
             # Set the base_model back to the original state
@@ -2052,99 +2034,104 @@ class hsl_classification:
         # Combine the two columns for input feature
         samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'], axis=1)
 
+        # Remove the samples with samples['anm_type'] == 1
+        samples_lt = samples[samples['anm_type'] != 2].reset_index(drop=True)
+        samples_ll = samples[samples['anm_type'] != 1].reset_index(drop=True)
+
         # Target list
-        self.target_list = ['itv_LT', 'itv_LL', 'anm_develop_time']
+        self.target_lt_model_list = ['itv_LT', 'anm_develop_time']
+        self.target_ll_model_list = ['itv_LL', 'anm_develop_time']
 
-        samples_input = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
-        samples_target = np.array(samples[self.target_list].values, dtype=np.float32)
-        samples_p_anm = np.array(samples['p_anm'].values.tolist(), dtype=np.float32)
+        samples_input_lt = np.array(samples_lt['input_feature'].values.tolist(), dtype=np.float32)
+        samples_input_ll = np.array(samples_ll['input_feature'].values.tolist(), dtype=np.float32)
+        samples_target_lt_model = np.array(samples_lt[self.target_lt_model_list].values, dtype=np.float32)
+        samples_target_ll_model = np.array(samples_ll[self.target_ll_model_list].values, dtype=np.float32)
+        samples_p_anm = np.array(samples_lt['p_anm'].values.tolist(), dtype=np.float32)
 
-        train_X = samples_input[:n_train]
-        train_y = samples_target[:n_train]
+        n_samples_lt = len(samples_lt)
+        n_train_lt = int(n_samples_lt * 0.8)
+        n_samples_ll = len(samples_ll)
+        n_train_ll = int(n_samples_ll * 0.8)
+
+        train_X_lt = samples_input_lt[:n_train_lt]
+        train_X_ll = samples_input_ll[:n_train_ll]
+        train_y_lt_model = samples_target_lt_model[:n_train_lt]
+        train_y_ll_model = samples_target_ll_model[:n_train_ll]
         # Get the moments of training set, and use them to normalize the validation set and test set
-        if self.mean_train is None or self.std_train is None or self.mean_target is None or self.std_target is None:
-            self.mean_target = train_y.mean(axis=0)
-            self.std_target = train_y.std(axis=0)
-        print('mean and std of training target', self.mean_target, self.std_target)
+        if self.mean_target_lt_model is None or self.std_target_lt_model is None:
+            self.mean_target_lt_model = train_y_lt_model.mean(axis=0)
+            self.std_target_lt_model = train_y_lt_model.std(axis=0)
+        if self.mean_target_ll_model is None or self.std_target_ll_model is None:
+            self.mean_target_ll_model = train_y_ll_model.mean(axis=0)
+            self.std_target_ll_model = train_y_ll_model.std(axis=0)
+        print('mean and std of training target (lt model)', self.mean_target_lt_model, self.std_target_lt_model)
+        print('mean and std of training target (ll model)', self.mean_target_ll_model, self.std_target_ll_model)
 
-        train_y = (train_y - self.mean_target) / self.std_target
+        train_y_lt_model = (train_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
+        train_y_ll_model = (train_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
 
         # Validation set 10% of the samples
-        n_val = int(n_samples * 0.1)
-        val_X = samples_input[n_train:n_train+n_val]
-        val_y = samples_target[n_train:n_train+n_val]
-        val_y = (val_y - self.mean_target) / self.std_target
+        n_val_lt = int(n_samples_lt * 0.1)
+        n_val_ll = int(n_samples_ll * 0.1)
+        val_X_lt = samples_input_lt[n_train_lt:n_train_lt+n_val_lt]
+        val_X_ll = samples_input_ll[n_train_ll:n_train_ll+n_val_ll]
+        val_y_lt_model = samples_target_lt_model[n_train_lt:n_train_lt+n_val_lt]
+        val_y_lt_model = (val_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
+        val_y_ll_model = samples_target_ll_model[n_train_ll:n_train_ll+n_val_ll]
+        val_y_ll_model = (val_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
 
         # Test the model using 10% of the samples
-        n_test = int(n_samples * 0.1)
-        test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
-        test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
-        test_y = (test_y - self.mean_target) / self.std_target
+        n_test_lt = int(n_samples_lt * 0.1)
+        n_test_ll = int(n_samples_ll * 0.1)
+        test_X_lt = samples_input_lt[n_train_lt+n_val_lt:n_train_lt+n_val_lt+n_test_lt]
+        test_X_ll = samples_input_ll[n_train_ll+n_val_ll:n_train_ll+n_val_ll+n_test_ll]
+        test_y_lt_model = samples_target_lt_model[n_train_lt+n_val_lt:n_train_lt+n_val_lt+n_test_lt]
+        test_y_lt_model = (test_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
+        test_y_ll_model = samples_target_ll_model[n_train_ll+n_val_ll:n_train_ll+n_val_ll+n_test_ll]
+        test_y_ll_model = (test_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
 
         if self.nn_train_with == 'tagiv':
-            self.model = TAGI_Net(len(samples['input_feature'][0]), len(self.target_list))
-        elif self.nn_train_with == 'backprop':
-            self.model = NN(input_size = len(samples['input_feature'][0]), output_size = len(self.target_list))
-            loss_fn = torch.nn.MSELoss()
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
-            train_X = torch.tensor(train_X)
-            train_y = torch.tensor(train_y)
-            val_X = torch.tensor(val_X)
-            val_y = torch.tensor(val_y)
-            test_X = torch.tensor(test_X)
-            test_y = torch.tensor(test_y)
+            self.lt_itv_model = TAGI_Net(len(samples_lt['input_feature'][0]), len(self.target_lt_model_list))
+            self.ll_itv_model = TAGI_Net(len(samples_ll['input_feature'][0]), len(self.target_ll_model_list))
 
         self.batch_size = 20
 
-        if load_model_path is not None:
+        if load_lt_model_path is not None:
             if self.nn_train_with == 'tagiv':
-                with open(load_model_path, 'rb') as f:
+                with open(load_lt_model_path, 'rb') as f:
                     param_dict = pickle.load(f)
-                self.model.net.load_state_dict(param_dict)
-            elif self.nn_train_with == 'backprop':
-                pass    # TODO
+                self.lt_itv_model.net.load_state_dict(param_dict)
         else:
-            # Train the model with batch size 20
-            n_batch_train = n_train // self.batch_size
-            n_batch_val = n_val // self.batch_size
+            n_batch_train = n_train_lt // self.batch_size
+            n_batch_val = n_val_lt // self.batch_size
             patience = 10
             best_loss = float('inf')
-            # for epoch in range(max_training_epoch):
             for epoch in range(max_training_epoch):
                 for i in range(n_batch_train):
                     if self.nn_train_with == 'tagiv':
-                        prediction_mu, _ = self.model.net(train_X[i*self.batch_size:(i+1)*self.batch_size])
-                        prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_list)*2)
+                        prediction_mu, _ = self.lt_itv_model.net(train_X_lt[i*self.batch_size:(i+1)*self.batch_size])
+                        prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
 
                         # Update model
-                        out_updater = OutputUpdater(self.model.net.device)
+                        out_updater = OutputUpdater(self.lt_itv_model.net.device)
                         out_updater.update_heteros(
-                            output_states = self.model.net.output_z_buffer,
-                            mu_obs = train_y[i*self.batch_size:(i+1)*self.batch_size].flatten(),
-                            delta_states = self.model.net.input_delta_z_buffer,
+                            output_states = self.lt_itv_model.net.output_z_buffer,
+                            mu_obs = train_y_lt_model[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                            delta_states = self.lt_itv_model.net.input_delta_z_buffer,
                         )
-                        self.model.net.backward()
-                        self.model.net.step()
-                    elif self.nn_train_with == 'backprop':
-                        optimizer.zero_grad()
-                        y_pred = self.model(train_X[i*self.batch_size:(i+1)*self.batch_size].float())
-                        loss_train = loss_fn(y_pred, train_y[i*self.batch_size:(i+1)*self.batch_size].float())
-                        loss_train.backward()
-                        optimizer.step()
+                        self.lt_itv_model.net.backward()
+                        self.lt_itv_model.net.step()
 
                 loss_val = 0
                 if self.nn_train_with == 'tagiv':
                     for j in range(n_batch_val):
-                        val_pred_mu, _ = self.model.net(val_X[j*self.batch_size:(j+1)*self.batch_size])
-                        val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                        val_pred_y_mu = val_pred_mu[:, [0, 2, 4]]
-                        val_y_batch = val_y[j*self.batch_size:(j+1)*self.batch_size]
+                        val_pred_mu, _ = self.lt_itv_model.net(val_X_lt[j*self.batch_size:(j+1)*self.batch_size])
+                        val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
+                        val_pred_y_mu = val_pred_mu[:, [0, 2]]
+                        val_y_batch = val_y_lt_model[j*self.batch_size:(j+1)*self.batch_size]
                         # Compute the mse between val_pred_y_mu and val_y_batch
                         loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
                     loss_val /= n_batch_val
-                elif self.nn_train_with == 'backprop':
-                    y_pred = self.model(val_X.float())
-                    loss_val = loss_fn(y_pred, val_y.float())
 
                 print(f'Epoch {epoch}: {loss_val}')
                 # Early stopping with patience 10
@@ -2156,45 +2143,106 @@ class hsl_classification:
                     if patience == 0:
                         break
 
-            n_batch_test = n_test // self.batch_size
+            # ====================================== Train LL intervention model ==============================================
 
-            loss_test = 0
+        if load_ll_model_path is not None:
             if self.nn_train_with == 'tagiv':
-                for j in range(n_batch_val):
-                    test_pred_mu, test_pred_var = self.model.net(test_X[j*self.batch_size:(j+1)*self.batch_size])
-                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_list)*2)
-                    test_pred_y_mu = test_pred_mu[:, [0, 2, 4]]
-                    test_pred_y_var = test_pred_mu[:, [1, 3, 5]]
-                    test_y_batch = test_y[j*self.batch_size:(j+1)*self.batch_size]
+                with open(load_ll_model_path, 'rb') as f:
+                    param_dict = pickle.load(f)
+                self.ll_itv_model.net.load_state_dict(param_dict)
+        else:
+            n_batch_train = n_train_ll // self.batch_size
+            n_batch_val = n_val_ll // self.batch_size
+            patience = 10
+            best_loss = float('inf')
+            for epoch in range(max_training_epoch):
+                for i in range(n_batch_train):
+                    if self.nn_train_with == 'tagiv':
+                        prediction_mu, _ = self.ll_itv_model.net(train_X_ll[i*self.batch_size:(i+1)*self.batch_size])
+                        prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
+
+                        # Update model
+                        out_updater = OutputUpdater(self.ll_itv_model.net.device)
+                        out_updater.update_heteros(
+                            output_states = self.ll_itv_model.net.output_z_buffer,
+                            mu_obs = train_y_ll_model[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                            delta_states = self.ll_itv_model.net.input_delta_z_buffer,
+                        )
+                        self.ll_itv_model.net.backward()
+                        self.ll_itv_model.net.step()
+
+                loss_val = 0
+                if self.nn_train_with == 'tagiv':
+                    for j in range(n_batch_val):
+                        val_pred_mu, _ = self.ll_itv_model.net(val_X_ll[j*self.batch_size:(j+1)*self.batch_size])
+                        val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
+                        val_pred_y_mu = val_pred_mu[:, [0, 2]]
+                        val_y_batch = val_y_ll_model[j*self.batch_size:(j+1)*self.batch_size]
+                        # Compute the mse between val_pred_y_mu and val_y_batch
+                        loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
+                    loss_val /= n_batch_val
+
+                print(f'Epoch {epoch}: {loss_val}')
+                # Early stopping with patience 10
+                if loss_val < best_loss:
+                    best_loss = loss_val
+                    patience = 10
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        break
+
+            
+
+            if self.nn_train_with == 'tagiv':
+                loss_test = 0
+                n_batch_test = n_test_lt // self.batch_size
+                for j in range(n_batch_test):
+                    test_pred_mu, test_pred_var = self.lt_itv_model.net(test_X_lt[j*self.batch_size:(j+1)*self.batch_size])
+                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
+                    test_pred_y_mu = test_pred_mu[:, [0, 2,]]
+                    test_pred_y_var = test_pred_mu[:, [1, 3]]
+                    test_y_batch = test_y_lt_model[j*self.batch_size:(j+1)*self.batch_size]
                     # Compute the mse between test_pred_y_mu and test_y_batch
                     loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
-                loss_test /= n_batch_test
-            elif self.nn_train_with == 'backprop':
-                y_pred = self.model(test_X.float())
-                loss_test = loss_fn(y_pred, test_y.float())
-                # difference = y_pred - test_y.float()
-                # # Convert to numpy
-                # difference = difference.detach().numpy()
+                loss_test_lt = loss_test/n_batch_test
 
-            print(f'Test loss {loss_test}')
+                loss_test = 0
+                n_batch_test = n_test_ll // self.batch_size
+                for j in range(n_batch_test):
+                    test_pred_mu, test_pred_var = self.ll_itv_model.net(test_X_ll[j*self.batch_size:(j+1)*self.batch_size])
+                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
+                    test_pred_y_mu = test_pred_mu[:, [0, 2]]
+                    test_pred_y_var = test_pred_mu[:, [1, 3]]
+                    test_y_batch = test_y_ll_model[j*self.batch_size:(j+1)*self.batch_size]
+                    # Compute the mse between test_pred_y_mu and test_y_batch
+                    loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+                loss_test_ll = loss_test/n_batch_test
+
+            print(f'Test loss of lt model: {loss_test_lt}')
+            print(f'Test loss of ll model: {loss_test_ll}')
 
         # # Denormalize the prediction
         # y_pred = y_pred.detach().numpy()
         # y_pred_denorm = y_pred * self.std_target + self.mean_target
         # # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
-        # y_test_denorm = test_y * self.std_target + self.mean_target
+        # y_test_denorm = test_y_lt_model * self.std_target + self.mean_target
         # print(y_test_denorm.tolist()[:20])
         # print(y_pred_denorm.tolist()[:20])
         # print(np.sqrt(y_pred_var_denorm))
 
-        if save_model_path is not None:
+        if save_lt_model_path is not None:
             if self.nn_train_with == 'tagiv':
-                param_dict = self.model.net.state_dict()
+                param_dict = self.lt_itv_model.net.state_dict()
                 # Save dictionary to file
-                with open(save_model_path, 'wb') as f:
+                with open(save_lt_model_path, 'wb') as f:
                     pickle.dump(param_dict, f)
-            elif self.nn_train_with == 'backprop':
-                pass    # TODO
+        if save_ll_model_path is not None:
+            if self.nn_train_with == 'tagiv':
+                param_dict = self.ll_itv_model.net.state_dict()
+                # Save dictionary to file
+                with open(save_ll_model_path, 'wb') as f:
+                    pickle.dump(param_dict, f)
 
     def _save_lstm_input(self):
         self.lstm_history.append(copy.deepcopy(self.base_model.lstm_output_history))
