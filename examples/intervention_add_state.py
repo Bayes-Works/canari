@@ -24,8 +24,8 @@ df_raw.columns = ["values"]
 df = df_raw.resample("H").mean()
 
 # Intervention
-index_intervention = 100
 intervention_mean_value = 0.5
+index_intervention = 200
 df.iloc[index_intervention:,0] =  df.iloc[index_intervention:,0] + intervention_mean_value
 
 # Define parameters
@@ -67,7 +67,7 @@ model.auto_initialize_baseline_states(train_data["y"][0:24])
 intervention = {
     normalized_data["time"][index_intervention]: {
         "mu": [0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
-        "var": [0, 0, 0, 0, 0],
+        "var": [0, 0, 1e-5, 0, 0],
         }
 }
 

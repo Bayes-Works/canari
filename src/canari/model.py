@@ -1631,6 +1631,7 @@ class Model:
         Args:
             data (Dict[str, np.ndarray]): A dictionary containing key 'x' as input covariates,
                 if exists 'y' (real observations) will not be used.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1656,8 +1657,8 @@ class Model:
 
         for index, (x, time) in enumerate(zip(data["x"], data["time"])):
             # Intervention
-            if time in intervention:
-                self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv()
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
@@ -1676,7 +1677,7 @@ class Model:
             std_obs_preds.append(var_obs_pred**0.5)
 
             # Intervention, reset transition matrix
-            if time in intervention:
+            if intervention and (interv := intervention.get(time)) is not None:
                 self._reset_transition_matrix_interv()
 
         return (
@@ -1701,8 +1702,9 @@ class Model:
 
         Args:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
-            train_lstm (bool): Whether to update LSTM's parameter weights and biases.
+            train_lstm (bool, optional): Whether to update LSTM's parameter weights and biases.
                 Defaults to True.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1729,8 +1731,8 @@ class Model:
 
         for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
             # Intervention
-            if time in intervention:
-                self._states_intervention(intervention[time]["mu"], intervention[time]["var"])
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv()
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
@@ -1758,9 +1760,9 @@ class Model:
             std_obs_preds.append(var_obs_pred**0.5)
 
             # Intervention, reset transition matrix
-            if time in intervention:
+            if intervention and (interv := intervention.get(time)) is not None:
                 self._reset_transition_matrix_interv()
-                
+            
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1845,6 +1847,7 @@ class Model:
             white_noise_decay_factor (float, optional):
                 Multiplicative decay factor applied to the white‐noise standard
                 deviation each epoch. Defaults to 0.9.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
