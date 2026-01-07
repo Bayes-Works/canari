@@ -152,6 +152,7 @@ def test_skf_filter(skf_version):
     data = {}
     data["x"] = np.array([[0.1]])
     data["y"] = np.array([0.1])
+    data["time"] = np.array([1])
 
     skf_version.filter(data=data)
 
@@ -187,6 +188,7 @@ def test_detect_synthetic_anomaly(skf_version):
     data["x"] = np.tile(data["x"], (10, 1))
     data["y"] = np.array([[0.1]])
     data["y"] = np.tile(data["y"], (10, 1))
+    data["time"] = np.linspace(1,10, num=10)
 
     np.random.seed(1)
     skf_version.detect_synthetic_anomaly(
