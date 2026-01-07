@@ -23,10 +23,12 @@ df_raw.columns = ["values"]
 # Resampling data
 df = df_raw.resample("H").mean()
 
-# Intervention
-index_intervention = 120
+# Add intervention to data
 intervention_mean_value = 0.5
+index_intervention = 200
 df.iloc[index_intervention:,0] =  df.iloc[index_intervention:,0] + intervention_mean_value
+index_intervention_1 = 210
+df.iloc[index_intervention_1:,0] =  df.iloc[index_intervention_1:,0] + intervention_mean_value
 
 # Define parameters
 output_col = [0]
@@ -66,7 +68,11 @@ intervention = {
     normalized_data["time"][index_intervention]: {
         "mu": [intervention_mean_value/data_processor.scale_const_std[0], 0, 0, 0],
         "var": [0, 0, 0, 0],
-        }
+        },
+    normalized_data["time"][index_intervention_1]: {
+        "mu": [intervention_mean_value/data_processor.scale_const_std[0], 0, 0, 0],
+        "var": [0, 0, 0, 0],
+        },
 }
 
 # Training
@@ -99,7 +105,7 @@ for epoch in range(num_epoch):
         std_validation_preds_optim = std_validation_preds
         states_optim = copy.copy(
             states
-        )  # If we want to plot the states, plot those from optimal epoch
+        ) 
 
     if model.stop_training:
         break
