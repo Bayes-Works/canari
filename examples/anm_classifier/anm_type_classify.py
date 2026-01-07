@@ -33,7 +33,7 @@ df_raw.columns = ["obs"]
 # LT anomaly
 anm_type = 'LT'
 time_anomaly = 52*7
-anm_mag = 3/52
+anm_mag = 6/52
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
 anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
@@ -43,7 +43,7 @@ df_raw = df_raw.add(anm_baseline, axis=0)
 # # LL anomaly
 # anm_type = 'LL'
 # time_anomaly = 52*7
-# anm_mag = 8
+# anm_mag = 17
 # anm_baseline = np.ones(len(df_raw)) * anm_mag
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
@@ -194,7 +194,7 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_tra
                                     load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_ts.pkl', 
                                     load_itvtime_model_path='saved_params/NN_intervention_itvtime_model_syn_simple_ts.pkl',
                                     max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False, anm_begin=time_anomaly)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
@@ -315,6 +315,15 @@ ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
 ax5.set_ylabel("itv")
 # ax5.axhline(y=normed_anm_mag, color='purple', linestyle='--', label='Anomaly magnitude')
 # ax5.plot(time, normed_anm_baseline, color='purple', linestyle='--', label='Anomaly magnitude')
+
+# Ax6: compare self.itvtime_comparison.append([itvtime_pred, itvtime_pred_std, itvtime_from_det, itvtime_true])
+itvtime_comparison = np.array(hsl_tsad_agent.itvtime_comparison)
+ax6.plot(time, itvtime_comparison[:, 0], label='Predicted itv time', color='tab:blue')
+ax6.fill_between(time, itvtime_comparison[:, 0] - itvtime_comparison[:, 1], itvtime_comparison[:, 0] + itvtime_comparison[:, 1], color='tab:blue', alpha=0.3)
+ax6.plot(time, itvtime_comparison[:, 2], label='From detection', color='tab:green')
+ax6.plot(time, itvtime_comparison[:, 3], label='True itv time', color='tab:red')
+ax6.set_ylabel("itv time")
+ax6.legend(loc='upper left', ncol=3)
 
 # Look up the index where hsl_tsad_agent.ll_itv_all is equal to - 2 * stationary_ar_std or 2 * stationary_ar_std
 masked_ll_itv = np.array(hsl_tsad_agent.ll_itv_all)
