@@ -59,7 +59,7 @@ class hsl_classification:
         self.current_time_step = 0
         self.lstm_history = []
         self.lstm_cell_states = []
-        self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
+        self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model,self.mean_target_itvtime_model, self.std_target_itvtime_model = None, None, None, None, None, None
         self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
         self.pred_class_probs = []
         self.pred_class_probs_var = []
@@ -721,14 +721,16 @@ class hsl_classification:
             output_pred_ll_mu, output_pred_ll_var = self.ll_itv_model.net(itv_input_history)
             itv_pred_ll_mu = output_pred_ll_mu[::2]
             itv_pred_ll_var = output_pred_ll_mu[1::2] + output_pred_ll_var[::2]
+            output_pred_itvtime_mu, output_pred_itvtime_var = self.itvtime_model.net(itv_input_history)
+            itv_pred_itvtime_mu = output_pred_itvtime_mu[::2]
+            itv_pred_itvtime_var = output_pred_itvtime_mu[1::2] + output_pred_itvtime_var[::2]
                 
             itv_pred_lt_mu_denorm = itv_pred_lt_mu * self.std_target_lt_model + self.mean_target_lt_model
             itv_pred_lt_var_denorm = itv_pred_lt_var * self.std_target_lt_model ** 2
             itv_pred_ll_mu_denorm = itv_pred_ll_mu * self.std_target_ll_model + self.mean_target_ll_model
             itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
-
-            num_steps_retract_lt = max(int(itv_pred_lt_mu_denorm[1]), 1)
-            # num_steps_retract_ll = max(int(itv_pred_ll_mu_denorm[1]), 1)
+            itvtime_pred_mu_denorm = itv_pred_itvtime_mu * self.std_target_itvtime_model + self.mean_target_itvtime_model
+            itvtime_pred_var_denorm = itv_pred_itvtime_var * self.std_target_itvtime_model ** 2
 
             # Apply intervention to estimate data likelihood
             # Get the true values of anomaly
@@ -754,11 +756,17 @@ class hsl_classification:
                     # var_level_itv = 0
                     # var_trend_itv = 0
 
+                # # Option 1: use the intervention time predicted by the BNN
+                # num_steps_retract = max(int(itvtime_pred_mu_denorm[0]), 1)
+
+                # # Option 2: use the detection time
                 # if first_time_trigger is False:
                 #     trigger_time = self.current_time_step
                 #     first_time_trigger = True
-
                 # num_steps_retract = self.current_time_step - trigger_time + 1
+
+                # Option 3: true intervention time, with no access to in reality
+                num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
 
                 self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
@@ -766,7 +774,7 @@ class hsl_classification:
                     level_intervention = [level_itv, 0],
                     # level_intervention = [0, 1],
                     trend_intervention = [0, 0],
-                    num_steps_retract = num_steps_retract_lt,
+                    num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=True
                 )
@@ -779,11 +787,11 @@ class hsl_classification:
                     level_intervention = [0, 0],
                     trend_intervention = [trend_itv, 0],
                     # trend_intervention = [0, 1/52/2],
-                    num_steps_retract = num_steps_retract_lt,
+                    num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
                 )
-                self.lt_itv_all.append(itv_LT * num_steps_retract_lt)
+                self.lt_itv_all.append(itv_LT * num_steps_retract)
                 # self.lt_itv_all.append(itv_LT)
                 # plt.show()
 
@@ -898,7 +906,7 @@ class hsl_classification:
             mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
             mp_input = mu_ar + mu_lstm
             if p_a_I_Yt > self.detection_threshold:
-                anm_start_global = self.current_time_step - num_steps_retract_lt
+                anm_start_global = self.current_time_step - num_steps_retract
             else:
                 anm_start_global = np.inf
             if self.current_time_step >= self.start_idx_mp:
@@ -2001,7 +2009,7 @@ class hsl_classification:
         #     # Save the local pytorch model
         #     torch.save(self.model_class.state_dict(), save_model_path)
 
-    def learn_intervention(self, training_samples_path, save_lt_model_path=None, save_ll_model_path=None, load_lt_model_path=None, load_ll_model_path=None, max_training_epoch=10):
+    def learn_intervention(self, training_samples_path, save_lt_model_path=None, save_ll_model_path=None, save_itvtime_model_path=None, load_lt_model_path=None, load_ll_model_path=None, load_itvtime_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
@@ -2039,24 +2047,30 @@ class hsl_classification:
         samples_ll = samples[samples['anm_type'] != 1].reset_index(drop=True)
 
         # Target list
-        self.target_lt_model_list = ['itv_LT', 'anm_develop_time']
-        self.target_ll_model_list = ['itv_LL', 'anm_develop_time']
+        self.target_lt_model_list = ['itv_LT']
+        self.target_ll_model_list = ['itv_LL']
+        self.target_itvtime_model_list = ['anm_develop_time']
 
         samples_input_lt = np.array(samples_lt['input_feature'].values.tolist(), dtype=np.float32)
         samples_input_ll = np.array(samples_ll['input_feature'].values.tolist(), dtype=np.float32)
+        samples_input_itvtime = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
         samples_target_lt_model = np.array(samples_lt[self.target_lt_model_list].values, dtype=np.float32)
         samples_target_ll_model = np.array(samples_ll[self.target_ll_model_list].values, dtype=np.float32)
-        samples_p_anm = np.array(samples_lt['p_anm'].values.tolist(), dtype=np.float32)
+        samples_target_itvtime_model = np.array(samples[self.target_itvtime_model_list].values, dtype=np.float32)
 
         n_samples_lt = len(samples_lt)
         n_train_lt = int(n_samples_lt * 0.8)
         n_samples_ll = len(samples_ll)
         n_train_ll = int(n_samples_ll * 0.8)
+        n_samples_itvtime = len(samples)
+        n_train_itvtime = int(n_samples_itvtime * 0.8)
 
         train_X_lt = samples_input_lt[:n_train_lt]
         train_X_ll = samples_input_ll[:n_train_ll]
+        train_X_itvtime = samples_input_itvtime[:n_train_itvtime]
         train_y_lt_model = samples_target_lt_model[:n_train_lt]
         train_y_ll_model = samples_target_ll_model[:n_train_ll]
+        train_y_itvtime_model = samples_target_itvtime_model[:n_train_itvtime]
         # Get the moments of training set, and use them to normalize the validation set and test set
         if self.mean_target_lt_model is None or self.std_target_lt_model is None:
             self.mean_target_lt_model = train_y_lt_model.mean(axis=0)
@@ -2064,35 +2078,49 @@ class hsl_classification:
         if self.mean_target_ll_model is None or self.std_target_ll_model is None:
             self.mean_target_ll_model = train_y_ll_model.mean(axis=0)
             self.std_target_ll_model = train_y_ll_model.std(axis=0)
+        if self.mean_target_itvtime_model is None or self.std_target_itvtime_model is None:
+            self.mean_target_itvtime_model = train_y_itvtime_model.mean(axis=0)
+            self.std_target_itvtime_model = train_y_itvtime_model.std(axis=0)
         print('mean and std of training target (lt model)', self.mean_target_lt_model, self.std_target_lt_model)
         print('mean and std of training target (ll model)', self.mean_target_ll_model, self.std_target_ll_model)
+        print('mean and std of training target (itvtime model)', self.mean_target_itvtime_model, self.std_target_itvtime_model)
 
         train_y_lt_model = (train_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
         train_y_ll_model = (train_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
+        train_y_itvtime_model = (train_y_itvtime_model - self.mean_target_itvtime_model) / self.std_target_itvtime_model
 
         # Validation set 10% of the samples
         n_val_lt = int(n_samples_lt * 0.1)
         n_val_ll = int(n_samples_ll * 0.1)
+        n_val_itvtime = int(n_samples_itvtime * 0.1)
         val_X_lt = samples_input_lt[n_train_lt:n_train_lt+n_val_lt]
         val_X_ll = samples_input_ll[n_train_ll:n_train_ll+n_val_ll]
+        val_X_itvtime = samples_input_itvtime[n_train_itvtime:n_train_itvtime+n_val_itvtime]
         val_y_lt_model = samples_target_lt_model[n_train_lt:n_train_lt+n_val_lt]
         val_y_lt_model = (val_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
         val_y_ll_model = samples_target_ll_model[n_train_ll:n_train_ll+n_val_ll]
         val_y_ll_model = (val_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
+        val_y_itvtime_model = samples_target_itvtime_model[n_train_itvtime:n_train_itvtime+n_val_itvtime]
+        val_y_itvtime_model = (val_y_itvtime_model - self.mean_target_itvtime_model) / self.std_target_itvtime_model
 
         # Test the model using 10% of the samples
         n_test_lt = int(n_samples_lt * 0.1)
         n_test_ll = int(n_samples_ll * 0.1)
+        n_test_itvtime = int(n_samples_itvtime * 0.1)
         test_X_lt = samples_input_lt[n_train_lt+n_val_lt:n_train_lt+n_val_lt+n_test_lt]
         test_X_ll = samples_input_ll[n_train_ll+n_val_ll:n_train_ll+n_val_ll+n_test_ll]
+        test_X_itvtime = samples_input_itvtime[n_train_itvtime+n_val_itvtime:n_train_itvtime+n_val_itvtime+n_test_itvtime]
         test_y_lt_model = samples_target_lt_model[n_train_lt+n_val_lt:n_train_lt+n_val_lt+n_test_lt]
         test_y_lt_model = (test_y_lt_model - self.mean_target_lt_model) / self.std_target_lt_model
         test_y_ll_model = samples_target_ll_model[n_train_ll+n_val_ll:n_train_ll+n_val_ll+n_test_ll]
         test_y_ll_model = (test_y_ll_model - self.mean_target_ll_model) / self.std_target_ll_model
+        test_y_itvtime_model = samples_target_itvtime_model[n_train_itvtime+n_val_itvtime:n_train_itvtime+n_val_itvtime+n_test_itvtime]
+        test_y_itvtime_model = (test_y_itvtime_model - self.mean_target_itvtime_model) / self.std_target_itvtime_model
 
         if self.nn_train_with == 'tagiv':
             self.lt_itv_model = TAGI_Net(len(samples_lt['input_feature'][0]), len(self.target_lt_model_list))
             self.ll_itv_model = TAGI_Net(len(samples_ll['input_feature'][0]), len(self.target_ll_model_list))
+            self.itvtime_model = TAGI_Net(len(samples_lt['input_feature'][0]), len(self.target_itvtime_model_list))
 
         self.batch_size = 20
 
@@ -2127,7 +2155,7 @@ class hsl_classification:
                     for j in range(n_batch_val):
                         val_pred_mu, _ = self.lt_itv_model.net(val_X_lt[j*self.batch_size:(j+1)*self.batch_size])
                         val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
-                        val_pred_y_mu = val_pred_mu[:, [0, 2]]
+                        val_pred_y_mu = val_pred_mu[:, ::2]
                         val_y_batch = val_y_lt_model[j*self.batch_size:(j+1)*self.batch_size]
                         # Compute the mse between val_pred_y_mu and val_y_batch
                         loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
@@ -2143,7 +2171,20 @@ class hsl_classification:
                     if patience == 0:
                         break
 
-            # ====================================== Train LL intervention model ==============================================
+            loss_test = 0
+            n_batch_test = n_test_lt // self.batch_size
+            for j in range(n_batch_test):
+                test_pred_mu, test_pred_var = self.lt_itv_model.net(test_X_lt[j*self.batch_size:(j+1)*self.batch_size])
+                test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
+                test_pred_y_mu = test_pred_mu[:, ::2]
+                test_pred_y_var = test_pred_mu[:, 1::2]
+                test_y_batch = test_y_lt_model[j*self.batch_size:(j+1)*self.batch_size]
+                # Compute the mse between test_pred_y_mu and test_y_batch
+                loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+            loss_test_lt = loss_test/n_batch_test
+            print(f'Test loss of lt model: {loss_test_lt}')
+
+        # ====================================== Train LL intervention model ==============================================
 
         if load_ll_model_path is not None:
             if self.nn_train_with == 'tagiv':
@@ -2176,7 +2217,7 @@ class hsl_classification:
                     for j in range(n_batch_val):
                         val_pred_mu, _ = self.ll_itv_model.net(val_X_ll[j*self.batch_size:(j+1)*self.batch_size])
                         val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
-                        val_pred_y_mu = val_pred_mu[:, [0, 2]]
+                        val_pred_y_mu = val_pred_mu[:, ::2]
                         val_y_batch = val_y_ll_model[j*self.batch_size:(j+1)*self.batch_size]
                         # Compute the mse between val_pred_y_mu and val_y_batch
                         loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
@@ -2192,34 +2233,79 @@ class hsl_classification:
                     if patience == 0:
                         break
 
-            
+            loss_test = 0
+            n_batch_test = n_test_ll // self.batch_size
+            for j in range(n_batch_test):
+                test_pred_mu, test_pred_var = self.ll_itv_model.net(test_X_ll[j*self.batch_size:(j+1)*self.batch_size])
+                test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
+                test_pred_y_mu = test_pred_mu[:, ::2]
+                test_pred_y_var = test_pred_mu[:, 1::2]
+                test_y_batch = test_y_ll_model[j*self.batch_size:(j+1)*self.batch_size]
+                # Compute the mse between test_pred_y_mu and test_y_batch
+                loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+            loss_test_ll = loss_test/n_batch_test
+            print(f'Test loss of ll model: {loss_test_ll}')
 
+        # ====================================== Train intervention time model ==============================================
+
+        if load_itvtime_model_path is not None:
             if self.nn_train_with == 'tagiv':
-                loss_test = 0
-                n_batch_test = n_test_lt // self.batch_size
-                for j in range(n_batch_test):
-                    test_pred_mu, test_pred_var = self.lt_itv_model.net(test_X_lt[j*self.batch_size:(j+1)*self.batch_size])
-                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_lt_model_list)*2)
-                    test_pred_y_mu = test_pred_mu[:, [0, 2,]]
-                    test_pred_y_var = test_pred_mu[:, [1, 3]]
-                    test_y_batch = test_y_lt_model[j*self.batch_size:(j+1)*self.batch_size]
-                    # Compute the mse between test_pred_y_mu and test_y_batch
-                    loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
-                loss_test_lt = loss_test/n_batch_test
+                with open(load_itvtime_model_path, 'rb') as f:
+                    param_dict = pickle.load(f)
+                self.itvtime_model.net.load_state_dict(param_dict)
+        else:
+            n_batch_train = n_train_itvtime // self.batch_size
+            n_batch_val = n_val_itvtime // self.batch_size
+            patience = 10
+            best_loss = float('inf')
+            for epoch in range(max_training_epoch):
+                for i in range(n_batch_train):
+                    if self.nn_train_with == 'tagiv':
+                        prediction_mu, _ = self.itvtime_model.net(train_X_itvtime[i*self.batch_size:(i+1)*self.batch_size])
+                        prediction_mu = prediction_mu.reshape(self.batch_size, len(self.target_itvtime_model_list)*2)
 
-                loss_test = 0
-                n_batch_test = n_test_ll // self.batch_size
-                for j in range(n_batch_test):
-                    test_pred_mu, test_pred_var = self.ll_itv_model.net(test_X_ll[j*self.batch_size:(j+1)*self.batch_size])
-                    test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_ll_model_list)*2)
-                    test_pred_y_mu = test_pred_mu[:, [0, 2]]
-                    test_pred_y_var = test_pred_mu[:, [1, 3]]
-                    test_y_batch = test_y_ll_model[j*self.batch_size:(j+1)*self.batch_size]
-                    # Compute the mse between test_pred_y_mu and test_y_batch
-                    loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
-                loss_test_ll = loss_test/n_batch_test
+                        # Update model
+                        out_updater = OutputUpdater(self.itvtime_model.net.device)
+                        out_updater.update_heteros(
+                            output_states = self.itvtime_model.net.output_z_buffer,
+                            mu_obs = train_y_itvtime_model[i*self.batch_size:(i+1)*self.batch_size].flatten(),
+                            delta_states = self.itvtime_model.net.input_delta_z_buffer,
+                        )
+                        self.itvtime_model.net.backward()
+                        self.itvtime_model.net.step()
 
-            print(f'Test loss of lt model: {loss_test_lt}')
+                loss_val = 0
+                if self.nn_train_with == 'tagiv':
+                    for j in range(n_batch_val):
+                        val_pred_mu, _ = self.itvtime_model.net(val_X_itvtime[j*self.batch_size:(j+1)*self.batch_size])
+                        val_pred_mu = val_pred_mu.reshape(self.batch_size, len(self.target_itvtime_model_list)*2)
+                        val_pred_y_mu = val_pred_mu[:, ::2]
+                        val_y_batch = val_y_itvtime_model[j*self.batch_size:(j+1)*self.batch_size]
+                        # Compute the mse between val_pred_y_mu and val_y_batch
+                        loss_val += ((val_pred_y_mu - val_y_batch)**2).mean()
+                    loss_val /= n_batch_val
+
+                print(f'Epoch {epoch}: {loss_val}')
+                # Early stopping with patience 10
+                if loss_val < best_loss:
+                    best_loss = loss_val
+                    patience = 10
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        break
+
+            loss_test = 0
+            n_batch_test = n_test_itvtime // self.batch_size
+            for j in range(n_batch_test):
+                test_pred_mu, test_pred_var = self.itvtime_model.net(test_X_itvtime[j*self.batch_size:(j+1)*self.batch_size])
+                test_pred_mu = test_pred_mu.reshape(self.batch_size, len(self.target_itvtime_model_list)*2)
+                test_pred_y_mu = test_pred_mu[:, ::2]
+                test_pred_y_var = test_pred_mu[:, 1::2]
+                test_y_batch = test_y_itvtime_model[j*self.batch_size:(j+1)*self.batch_size]
+                # Compute the mse between test_pred_y_mu and test_y_batch
+                loss_test += ((test_pred_y_mu - test_y_batch)**2).mean()
+            loss_test_ll = loss_test/n_batch_test
             print(f'Test loss of ll model: {loss_test_ll}')
 
         # # Denormalize the prediction
@@ -2242,6 +2328,12 @@ class hsl_classification:
                 param_dict = self.ll_itv_model.net.state_dict()
                 # Save dictionary to file
                 with open(save_ll_model_path, 'wb') as f:
+                    pickle.dump(param_dict, f)
+        if save_itvtime_model_path is not None:
+            if self.nn_train_with == 'tagiv':
+                param_dict = self.itvtime_model.net.state_dict()
+                # Save dictionary to file
+                with open(save_itvtime_model_path, 'wb') as f:
                     pickle.dump(param_dict, f)
 
     def _save_lstm_input(self):
