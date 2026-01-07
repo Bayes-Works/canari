@@ -474,12 +474,12 @@ class DataProcess:
                     0, trend_end_value, len_data - change_point
                 )
                 _data_with_anomaly.append(data["y"].flatten() + trend)
-
+    
         return [
             {
-                "x": data["x"],
-                "y": ts.reshape(-1, 1),
-                "anomaly_timestep": timestep,
+                **data,                     
+                "y": ts.reshape(-1, 1),    
+                "anomaly_timestep": timestep
             }
             for ts, timestep in zip(_data_with_anomaly, anomaly_start_history)
         ]
