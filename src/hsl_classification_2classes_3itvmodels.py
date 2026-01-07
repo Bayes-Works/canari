@@ -70,6 +70,7 @@ class hsl_classification:
         self.start_idx_mp = start_idx_mp
         self.m_mp = m_mp
         self.mp_all = []
+        self.itvtime_comparison = []
 
     def _copy_initial_models(self):
         """
@@ -216,6 +217,7 @@ class hsl_classification:
             self.data_loglikelihoods.append([None, None, None, None])
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
+            self.itvtime_comparison.append([0, 0, 0, 0])
 
             self.current_time_step += 1
 
@@ -756,17 +758,21 @@ class hsl_classification:
                     # var_level_itv = 0
                     # var_trend_itv = 0
 
-                # # Option 1: use the intervention time predicted by the BNN
-                # num_steps_retract = max(int(itvtime_pred_mu_denorm[0]), 1)
+                # Option 1: use the intervention time predicted by the BNN
+                itvtime_pred = max(int(itvtime_pred_mu_denorm[0]), 1)
+                itvtime_pred_std = np.sqrt(itvtime_pred_var_denorm[0])
 
-                # # Option 2: use the detection time
-                # if first_time_trigger is False:
-                #     trigger_time = self.current_time_step
-                #     first_time_trigger = True
-                # num_steps_retract = self.current_time_step - trigger_time + 1
+                # Option 2: use the detection time
+                if first_time_trigger is False:
+                    trigger_time = self.current_time_step
+                    first_time_trigger = True
+                itvtime_from_det = self.current_time_step - trigger_time + 1
 
                 # Option 3: true intervention time, with no access to in reality
-                num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+
+                num_steps_retract = itvtime_true
+                self.itvtime_comparison.append([itvtime_pred, itvtime_pred_std, itvtime_from_det, itvtime_true])
 
                 self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
@@ -837,6 +843,7 @@ class hsl_classification:
                 self.data_loglikelihoods.append([None, None, None, None])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
+                self.itvtime_comparison.append([0,0,0,0])
 
             # if apply_intervention:
             #     if rerun_kf is False:
