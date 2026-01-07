@@ -9,7 +9,7 @@ class Intervention(BaseComponent):
     It is used to add a hidden state for intervention.
 
     Args:
-        interv_state_index (int): Index of hidden state to be intervene.
+        interv_state_index (int): Index of hidden state make intervention.
         contribute_to_obs (bool, optinal): the intervention hidden state contribute
                                             to the observation or not. Defaults to False.
 
