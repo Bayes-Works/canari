@@ -654,6 +654,45 @@ class SKF:
                 )
 
         return transition_coef
+    
+    def _states_intervention(self, delta_mu, delta_var):
+        """
+        States intervention.
+
+        :param delta_mu: intervention for states mean
+        :param delta_var: intervention for states variances
+        """
+
+        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+            delta_mu = np.atleast_2d(delta_mu).T
+            delta_var = np.diag(delta_var)
+            for transition_model in self.model.values():
+                transition_model.mu_states = transition_model.mu_states + delta_mu
+                transition_model.var_states = transition_model.var_states + delta_var
+        else:
+            raise ValueError(
+                "Incorrect mu and/or var dimension for inverventions."
+            )
+        
+    def _transition_matrix_interv(self):
+        """
+        Transition matrix intervention.
+        """
+
+        if "intervention" in self.states_name:
+            for transition_model in self.model.values():
+                interv_idx = transition_model.get_states_index(states_name="intervention")
+                transition_model.transition_matrix[transition_model._interv_state_index, interv_idx] = 1
+
+    def _reset_transition_matrix_interv(self):
+        """
+        Reset transition matrix intervention to the original one. 
+        """
+
+        if "intervention" in self.states_name:
+            for transition_model in self.model.values():
+                interv_idx = transition_model.get_states_index(states_name="intervention")
+                transition_model.transition_matrix[transition_model._interv_state_index, interv_idx] = 0
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -818,6 +857,7 @@ class SKF:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component
@@ -861,6 +901,7 @@ class SKF:
             white_noise_decay,
             white_noise_max_std,
             white_noise_decay_factor,
+            intervention,
         )
 
     def early_stopping(
@@ -1163,6 +1204,7 @@ class SKF:
     def filter(
         self,
         data: Dict[str, np.ndarray],
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset.
@@ -1173,6 +1215,7 @@ class SKF:
 
         Args:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, StatesHistory]:
@@ -1201,7 +1244,13 @@ class SKF:
             if self.lstm_net.smooth:
                 self.lstm_net.num_samples = len(data["y"])
 
-        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+        for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
+
+            # Intervention
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._states_intervention(interv["mu"], interv["var"])
+                self._transition_matrix_interv()
+
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
 
@@ -1221,6 +1270,10 @@ class SKF:
             self.filter_marginal_prob_history["abnorm"].append(
                 self.marginal_prob["abnorm"]
             )
+
+            # Intervention, reset transition matrix
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._reset_transition_matrix_interv()
 
         self.set_memory(time_step=0)
         return (

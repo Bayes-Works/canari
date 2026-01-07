@@ -8,6 +8,8 @@ class Intervention(BaseComponent):
     `Intervention` class, inheriting from Canari's `BaseComponent`.
     It is used to add a hidden state for intervention.
 
+    NOTE: This component is under development. At the moment, use one `Intervention` hidden state per intervention event.
+
     Args:
         interv_state_index (int): Index of hidden state make intervention.
         contribute_to_obs (bool, optinal): the intervention hidden state contribute
