@@ -181,16 +181,22 @@ hsl_tsad_agent.detection_threshold = 0.1
 # hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([2.518625e-04, 3.668254e+01]), np.array([6.1926572e-03, 6.5914955e+01])
 # hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([6.4476170e-03, 4.3150906e+01]), np.array([0.7179858, 69.91169])
 
-# 3 intervention models:
+# # 3 intervention models:
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3507482e-05, 0.00046119656, -3.7839018e-05, 0.003499785, 5.2784915, 3.567143
+# hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.00025412]), np.array([0.00619449])
+# hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00738322]), np.array([0.71826804])
+# hsl_tsad_agent.mean_target_itvtime_model, hsl_tsad_agent.std_target_itvtime_model = np.array([59.366714]), np.array([75.76769])
+
+# 3 intervention models, V2: itv_LLcLT:
 hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = -1.3507482e-05, 0.00046119656, -3.7839018e-05, 0.003499785, 5.2784915, 3.567143
-hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.00025412]), np.array([0.00619449])
+hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.0002547, 0.02990128]), np.array([0.00619274, 0.83012444])
 hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00738322]), np.array([0.71826804])
 hsl_tsad_agent.mean_target_itvtime_model, hsl_tsad_agent.std_target_itvtime_model = np.array([59.366714]), np.array([75.76769])
 
 hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
 hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_ts_two_classes_dmodels_itv_newMP.csv', 
-                                    load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_ts.pkl', 
+                                    load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_ts_LLcLT.pkl', 
                                     load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_ts.pkl', 
                                     load_itvtime_model_path='saved_params/NN_intervention_itvtime_model_syn_simple_ts.pkl',
                                     max_training_epoch=50)
@@ -293,6 +299,7 @@ for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
         log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:]
 
         probs = np.exp(log_likelihoods)
+        # probs = log_likelihoods
         # probs = np.array(log_likelihoods).astype(np.float64)
         probs /= np.sum(probs)
         final_class_log_probs.append(probs)        

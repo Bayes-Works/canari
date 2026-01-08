@@ -738,6 +738,7 @@ class hsl_classification:
             # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
                 trend_itv = itv_pred_lt_mu_denorm[0]
+                llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_trend_itv = itv_pred_ll_var_denorm[0]
@@ -762,23 +763,28 @@ class hsl_classification:
                 itvtime_pred = max(int(itvtime_pred_mu_denorm[0]), 1)
                 itvtime_pred_std = np.sqrt(itvtime_pred_var_denorm[0])
 
-                # Option 2: use the detection time
+                # Option 2: true intervention time, with no access to in reality
+                itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+
+                # Option 3: use the detection time
                 if first_time_trigger is False:
                     trigger_time = self.current_time_step
                     first_time_trigger = True
+                    # llclt_itv_at_trigger = llclt_itv
                 itvtime_from_det = self.current_time_step - trigger_time + 1
 
-                # Option 3: true intervention time, with no access to in reality
-                itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
+                # Option 4: use the detection time and calibrated LL at that time step
+                llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
 
-                num_steps_retract = itvtime_true
+                # Intervention time step option to choose:
+                num_steps_retract = itvtime_from_det
+
                 self.itvtime_comparison.append([itvtime_pred, itvtime_pred_std, itvtime_from_det, itvtime_true])
 
                 self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     level_intervention = [level_itv, 0],
-                    # level_intervention = [0, 1],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
                     data = data,
@@ -790,14 +796,15 @@ class hsl_classification:
                 decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
                 data_likelihoods_lt, _, itv_LT = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
-                    level_intervention = [0, 0],
+                    # level_intervention = [0, 0],
+                    level_intervention = [llclt_itv_at_trigger, 0],
                     trend_intervention = [trend_itv, 0],
-                    # trend_intervention = [0, 1/52/2],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
                 )
-                self.lt_itv_all.append(itv_LT * num_steps_retract)
+                # self.lt_itv_all.append(itv_LT * num_steps_retract)
+                self.lt_itv_all.append(trend_itv * num_steps_retract + llclt_itv_at_trigger)
                 # self.lt_itv_all.append(itv_LT)
                 # plt.show()
 
@@ -821,6 +828,8 @@ class hsl_classification:
                 if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
                     log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                     log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+                    # log_likelihood_ll = np.mean(data_likelihoods_ll)
+                    # log_likelihood_lt = np.mean(data_likelihoods_lt)
                 else:
                     log_likelihood_ll = 1
                     log_likelihood_lt = 1
@@ -2023,6 +2032,8 @@ class hsl_classification:
         samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
+        # Create a new column that times itv_LT by anm_develop_time
+        samples['itv_LLcLT'] = samples.apply(lambda row: row['itv_LT'] * row['anm_develop_time'], axis=1)
 
         # Shuffle samples
         samples = samples.sample(frac=1).reset_index(drop=True)
@@ -2054,7 +2065,7 @@ class hsl_classification:
         samples_ll = samples[samples['anm_type'] != 1].reset_index(drop=True)
 
         # Target list
-        self.target_lt_model_list = ['itv_LT']
+        self.target_lt_model_list = ['itv_LT', 'itv_LLcLT']
         self.target_ll_model_list = ['itv_LL']
         self.target_itvtime_model_list = ['anm_develop_time']
 
