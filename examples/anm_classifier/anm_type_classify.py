@@ -32,7 +32,7 @@ df_raw.columns = ["obs"]
 
 # LT anomaly
 anm_type = 'LT'
-time_anomaly = 52*7
+time_anomaly = 52*5
 anm_mag = 6/52
 anm_baseline = np.arange(len(df_raw)) * anm_mag
 # Set the first 52*12 values in anm_baseline to be 0
