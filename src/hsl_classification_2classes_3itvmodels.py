@@ -11,7 +11,7 @@ from pytagi import Normalizer as normalizer
 from typing import Tuple, Dict, Optional, Callable
 import numpy as np
 import copy
-from canari.common import likelihood
+from canari.common import likelihood, likelihood_laplace_approx, likelihood_studentt_approx
 import pandas as pd
 from tqdm import tqdm
 from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp, Remax
@@ -1019,10 +1019,17 @@ class hsl_classification:
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
 
-            # Regular likelihood
-            y_likelihood = likelihood(mu_obs_pred, 
-                                    np.sqrt(var_obs_pred), 
-                                    data_all["y"][i])
+            # # Regular likelihood
+            # y_likelihood = likelihood(mu_obs_pred, 
+            #                         np.sqrt(var_obs_pred), 
+            #                         data_all["y"][i])
+            
+            # Laplace approximated likelihood
+            y_likelihood = likelihood_laplace_approx(
+                                mu_obs_pred, 
+                                np.sqrt(var_obs_pred), 
+                                data_all["y"][i])
+
             y_likelihood_all.append(y_likelihood.item())
 
         # # Plot retracted states after intervention
