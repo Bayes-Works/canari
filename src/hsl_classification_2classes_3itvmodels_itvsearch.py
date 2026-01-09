@@ -646,6 +646,7 @@ class hsl_classification:
             anm_magnitude: Optional[float] = 17,
             anm_begin: Optional[int] = 52*7,
             apply_intervention: Optional[bool] = False,
+            itv_sample_num: Optional[int] = 100,
             ):
 
         lstm_index = self.base_model.get_states_index("lstm")
@@ -740,6 +741,7 @@ class hsl_classification:
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
+                var_llclt_itv = itv_pred_lt_var_denorm[1]
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_level_itv = itv_pred_ll_var_denorm[0]
 
@@ -782,31 +784,41 @@ class hsl_classification:
                 self.itvtime_comparison.append([itvtime_pred, itvtime_pred_std, itvtime_from_det, itvtime_true])
 
                 self.likelihoods_log_mask = []
-                data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
-                    ssm=self.base_model,
-                    level_intervention = [level_itv, 0],
-                    trend_intervention = [0, 0],
-                    num_steps_retract = num_steps_retract,
-                    data = data,
-                    make_mask=True
-                )
-                self.ll_itv_all.append(itv_LL)
-                # gamma = 0.95
-                gamma = 1
-                decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
-                data_likelihoods_lt, _, itv_LT = self._estimate_likelihoods_with_intervention(
-                    ssm=self.base_model,
-                    # level_intervention = [0, 0],
-                    level_intervention = [llclt_itv_at_trigger, 0],
-                    trend_intervention = [trend_itv, 0],
-                    num_steps_retract = num_steps_retract,
-                    data = data,
-                    make_mask=False
-                )
-                # self.lt_itv_all.append(itv_LT * num_steps_retract)
-                self.lt_itv_all.append(trend_itv * num_steps_retract + llclt_itv_at_trigger)
-                # self.lt_itv_all.append(itv_LT)
-                # plt.show()
+                # Get itv_sample_num samples of level_itv and trend_itv from their predicted distributions
+                level_itv_samples = np.random.normal(loc=level_itv, scale=np.sqrt(var_level_itv), size=itv_sample_num)
+                trend_itv_samples = np.random.normal(loc=trend_itv, scale=np.sqrt(var_trend_itv), size=itv_sample_num)
+                llclt_itv_samples = np.random.normal(loc=llclt_itv, scale=np.sqrt(var_llclt_itv), size=itv_sample_num)
+                data_likelihoods_ll_all_samples = []
+                data_likelihoods_lt_all_samples = []
+                for s in range(itv_sample_num):
+                    level_itv_s = level_itv_samples[s]
+                    trend_itv_s = trend_itv_samples[s]
+                    llclt_itv_at_trigger = llclt_itv_samples[s] - trend_itv_s * itvtime_from_det
+                    data_likelihoods_ll, _, itv_LL = self._estimate_likelihoods_with_intervention(
+                        ssm=self.base_model,
+                        level_intervention = [level_itv_s, 0],
+                        trend_intervention = [0, 0],
+                        num_steps_retract = num_steps_retract,
+                        data = data,
+                        make_mask=True
+                    )
+                    data_likelihoods_ll_all_samples.append(data_likelihoods_ll)
+                    data_likelihoods_lt, _, itv_LT = self._estimate_likelihoods_with_intervention(
+                        ssm=self.base_model,
+                        # level_intervention = [0, 0],
+                        level_intervention = [llclt_itv_at_trigger, 0],
+                        trend_intervention = [trend_itv_s, 0],
+                        num_steps_retract = num_steps_retract,
+                        data = data,
+                        make_mask=False
+                    )
+                    data_likelihoods_lt_all_samples.append(data_likelihoods_lt)
+                best_idx_ll = np.argmax(np.log(np.array(data_likelihoods_ll_all_samples)).sum(axis=1))
+                best_idx_lt = np.argmax(np.log(np.array(data_likelihoods_lt_all_samples)).sum(axis=1))
+
+                self.ll_itv_all.append(level_itv_samples[best_idx_ll])
+                llclt_itv_at_trigger = llclt_itv_samples[best_idx_lt] - trend_itv_samples[best_idx_lt] * itvtime_from_det
+                self.lt_itv_all.append(trend_itv_samples[best_idx_lt] * num_steps_retract + llclt_itv_at_trigger)
 
                 gen_ar_phi = self.generate_model.components["autoregression 2"].phi
                 gen_ar_sigma = self.generate_model.components["autoregression 2"].std_error
@@ -817,17 +829,14 @@ class hsl_classification:
                 #     data_likelihoods_ll = []
                 #     data_likelihoods_lt = []
 
-                # Decay from the first value to the last value
-                decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
-
                 # # Take the logsum of each list data_likelihoods_ll and data_likelihoods_lt
                 # log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                 # log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
 
                 # Compute the average of data_likelihoods_ll and data_likelihoods_lt
                 if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
-                    log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
-                    log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+                    log_likelihood_ll = np.sum(np.log(data_likelihoods_ll_all_samples[best_idx_ll]))
+                    log_likelihood_lt = np.sum(np.log(data_likelihoods_lt_all_samples[best_idx_lt]))
                     # log_likelihood_ll = np.mean(data_likelihoods_ll)
                     # log_likelihood_lt = np.mean(data_likelihoods_lt)
                 else:
@@ -1019,18 +1028,18 @@ class hsl_classification:
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
 
-        #     # Regular likelihood
-        #     y_likelihood = likelihood(mu_obs_pred, 
-        #                             np.sqrt(var_obs_pred), 
-        #                             data_all["y"][i])
+            # # Regular likelihood
+            # y_likelihood = likelihood(mu_obs_pred, 
+            #                         np.sqrt(var_obs_pred), 
+            #                         data_all["y"][i])
             
-        #     # # Laplace approximated likelihood
-        #     # y_likelihood = likelihood_laplace_approx(
-        #     #                     mu_obs_pred, 
-        #     #                     np.sqrt(var_obs_pred), 
-        #     #                     data_all["y"][i])
+            # Laplace approximated likelihood
+            y_likelihood = likelihood_laplace_approx(
+                                mu_obs_pred, 
+                                np.sqrt(var_obs_pred), 
+                                data_all["y"][i])
 
-        #     y_likelihood_all.append(y_likelihood.item())
+            y_likelihood_all.append(y_likelihood.item())
 
         # # Plot retracted states after intervention
         # mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
@@ -1070,14 +1079,14 @@ class hsl_classification:
         # ax0.plot(range(len(data["y"])), data["y"], color='k')
         # ax0.axvline(x=len(mu_y_preds)-1, color='green', linestyle='--', label='Detection Point')
         # ax0.axvline(x=len(mu_y_preds)-num_steps_retract-1, color='red', linestyle='--', label='Intervention Point')
-        # # # Plot hidden states at index 0
-        # # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
-        # # ax0.fill_between(range(len(mu_level_plot)),
-        # #                  mu_level_plot.flatten() - std_level_plot.flatten(),
-        # #                  mu_level_plot.flatten() + std_level_plot.flatten(),
-        # #                  color='tab:blue', alpha=0.2)
+        # # Plot hidden states at index 0
+        # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
+        # ax0.fill_between(range(len(mu_level_plot)),
+        #                  mu_level_plot.flatten() - std_level_plot.flatten(),
+        #                  mu_level_plot.flatten() + std_level_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
         # ax0.set_title('Level State with and without Intervention')
-        # # ax0.legend(ncol=2, loc='upper left')
+        # ax0.legend(ncol=2, loc='upper left')
         # if level_intervention[0] > 0:
         #     ax0.set_title('LL itv')
         # if trend_intervention[0] > 0:
@@ -1103,15 +1112,6 @@ class hsl_classification:
         #                  color='tab:blue', alpha=0.2)
         # ax3.set_xlim(ax0.get_xlim())
         # ax3.set_ylabel('AR')
-        # if trend_intervention[0] == 0:
-        #     print('LL intervention applied.')
-        #     print(y_likelihood_all)
-        #     print(np.prod(y_likelihood_all))
-        # if trend_intervention[0] > 0:
-        #     print('LT intervention applied.')
-        #     print(y_likelihood_all)
-        #     print(np.prod(y_likelihood_all))
-
         # plt.show()
 
         if "lstm" in ssm.states_name:
