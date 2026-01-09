@@ -290,6 +290,7 @@ class SKF:
                 )
                 soure_model.num_states += 1
                 soure_model.states_name.insert(i, state)
+                soure_model._states_comp = target_model._states_comp.copy()
                 states_diff.append(state)
 
         if "white noise" in soure_model.states_name:
@@ -663,36 +664,27 @@ class SKF:
         :param delta_var: intervention for states variances
         """
 
-        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
-            delta_mu = np.atleast_2d(delta_mu).T
-            delta_var = np.diag(delta_var)
-            for transition_model in self.model.values():
-                transition_model.mu_states = transition_model.mu_states + delta_mu
-                transition_model.var_states = transition_model.var_states + delta_var
-        else:
-            raise ValueError(
-                "Incorrect mu and/or var dimension for inverventions."
-            )
+        # if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+        #     delta_mu = np.atleast_2d(delta_mu).T
+        #     delta_var = np.diag(delta_var)
+        #     for transition_model in self.model.values():
+        #         transition_model.mu_states = transition_model.mu_states + delta_mu
+        #         transition_model.var_states = transition_model.var_states + delta_var
+                
+        # else:
+        #     raise ValueError(
+        #         "Incorrect mu and/or var dimension for inverventions."
+        #     )
+        for transition_model in self.model.values():
+            transition_model._states_intervention(delta_mu, delta_var)
         
-    def _transition_matrix_interv(self):
+    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
         """
         Transition matrix intervention.
         """
 
-        if "intervention" in self.states_name:
-            for transition_model in self.model.values():
-                interv_idx = transition_model.get_states_index(states_name="intervention")
-                transition_model.transition_matrix[transition_model._interv_state_index, interv_idx] = 1
-
-    def _reset_transition_matrix_interv(self):
-        """
-        Reset transition matrix intervention to the original one. 
-        """
-
-        if "intervention" in self.states_name:
-            for transition_model in self.model.values():
-                interv_idx = transition_model.get_states_index(states_name="intervention")
-                transition_model.transition_matrix[transition_model._interv_state_index, interv_idx] = 0
+        for transition_model in self.model.values():
+            transition_model._transition_matrix_interv(delta_mu, delta_var, value)
 
     def auto_initialize_baseline_states(self, y: np.ndarray):
         """
@@ -1249,7 +1241,7 @@ class SKF:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv()
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
             mu_states_posterior, var_states_posterior = self.backward(y)
@@ -1273,7 +1265,7 @@ class SKF:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv()
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
 
         self.set_memory(time_step=0)
         return (
