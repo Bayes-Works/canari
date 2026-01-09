@@ -400,11 +400,22 @@ def gaussian_pdf(mu: float, std:float) -> None:
     pdf = lambda x: np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
     return pdf
 
+def laplace_pdf(mu: float, b:float) -> None:
+    """Laplace probability density function"""
+    pdf = lambda x: (1 / (2 * b)) * np.exp(-np.abs(x - mu) / b)
+    return pdf
+
 def likelihood(mu: np.ndarray, std: np.ndarray, observation: np.ndarray) -> None:
     """Compute the likelihood"""
     pdf = gaussian_pdf(mu, std)
     return pdf(observation)
 
+def likelihood_laplace_approx(mu: np.ndarray, std: np.ndarray, observation: np.ndarray) -> None:
+    """Compute the likelihood using Laplace approximation"""
+    mu_laplace = mu
+    b_laplace = std / np.sqrt(2)
+    pdf = laplace_pdf(mu_laplace, b_laplace)
+    return pdf(observation)
 
 def norm_cdf(x) -> np.ndarray:
     """
