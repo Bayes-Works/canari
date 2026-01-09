@@ -36,6 +36,8 @@ df_raw = df_raw.add(trend, axis=0)
 intervention_mean_value = 0.5
 index_intervention = 162
 df_raw.iloc[index_intervention:,0] =  df_raw.iloc[index_intervention:,0] + intervention_mean_value
+index_intervention_1 = 172
+df_raw.iloc[index_intervention_1:,0] =  df_raw.iloc[index_intervention_1:,0] + intervention_mean_value
 
 # Data pre-processing
 output_col = [0]
@@ -68,6 +70,7 @@ intervention = Intervention(interv_state_index=0)
 model = Model(
     local_trend,
     intervention,
+    intervention,
     lstm_network,
     noise,
 )
@@ -75,6 +78,7 @@ model = Model(
 #  Abnormal model
 ab_model = Model(
     local_acceleration,
+    intervention,
     intervention,
     lstm_network,
     noise,
@@ -91,9 +95,13 @@ skf.auto_initialize_baseline_states(train_data["y"][0:24])
 
 intervention = {
     all_data["time"][index_intervention]: {
-        "mu": [0, 0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
-        "var": [0, 0, 0, 0*1e-5, 0, 0],
-        }
+        "mu": [0, 0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0, 0],
+        "var": [0, 0, 0, 1e-5, 0, 0, 0],
+        },
+    all_data["time"][index_intervention_1]: {
+        "mu": [0, 0, 0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
+        "var": [0, 0, 0, 0, 1e-5, 0, 0],
+        },  
 }
 
 #  Training
