@@ -27,6 +27,8 @@ df = df_raw.resample("H").mean()
 intervention_mean_value = 0.5
 index_intervention = 200
 df.iloc[index_intervention:,0] =  df.iloc[index_intervention:,0] + intervention_mean_value
+index_intervention_1 = 210
+df.iloc[index_intervention_1:,0] =  df.iloc[index_intervention_1:,0] + intervention_mean_value
 
 # Define parameters
 output_col = [0]
@@ -50,6 +52,7 @@ sigma_v = 0.003
 model = Model(
     LocalTrend(),
     Intervention(interv_state_index=0),
+    Intervention(interv_state_index=0),
     LstmNetwork(
         look_back_len=12,
         num_features=2,
@@ -66,8 +69,12 @@ model.auto_initialize_baseline_states(train_data["y"][0:24])
 
 intervention = {
     normalized_data["time"][index_intervention]: {
-        "mu": [0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
-        "var": [0, 0, 1e-5, 0, 0],
+        "mu": [0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0, 0],
+        "var": [0, 0, 1e-5, 0, 0, 0],
+        },
+    normalized_data["time"][index_intervention_1]: {
+        "mu": [0, 0, 0, intervention_mean_value/data_processor.scale_const_std[0], 0, 0],
+        "var": [0, 0, 0, 1e-5, 0, 0],
         }
 }
 
