@@ -169,6 +169,7 @@ class Model:
         self.components = {}
         self.num_states = 0
         self.states_name = []
+        self._states_comp = []
         self.output_col = []
         self.input_col = []
         self.output_lag_col = []
@@ -196,9 +197,6 @@ class Model:
         self.var_W2bar = None
         self.mu_W2_prior = None
         self.var_W2_prior = None
-
-        # Intervention-related atrribute
-        self._interv_state_index = None
 
         # Noise related attribute
         self.sched_sigma_v = None
@@ -233,7 +231,6 @@ class Model:
         self._assemble_states()
         self._initialize_lstm_network()
         self._initialize_autoregression()
-        self._initialize_intervention()
 
     def _assemble_matrices(self):
         """
@@ -279,6 +276,11 @@ class Model:
             for component in self.components.values()
             for state in component.states_name
         ]
+        self._states_comp = [
+            comp_name
+            for comp_name, component in self.components.items()
+            for _ in component.states_name
+        ]
         self.num_states = sum(
             component.num_states for component in self.components.values()
         )
@@ -318,21 +320,6 @@ class Model:
         if "AR_error" in self.states_name:
             self.mu_W2bar = autoregression_component.mu_states[-1]
             self.var_W2bar = autoregression_component.var_states[-1]
-
-    def _initialize_intervention(self):
-        """
-        Initialize intervention-related attributes.
-        Only applicable when using the Intervention component.
-        """
-    
-        intervention_component = next(
-            (
-                comp for comp in self.components.values() if isinstance(comp, Intervention)
-            ),
-            None,
-        )
-        if intervention_component is not None:
-            self._interv_state_index = intervention_component.interv_state_index
 
     def _set_posterior_states(
         self,
@@ -1064,23 +1051,25 @@ class Model:
                 "Incorrect mu and/or var dimension for inverventions."
             )
 
-    def _transition_matrix_interv(self):
+    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
         """
         Transition matrix intervention.
         """
 
-        if "intervention" in self.states_name:
-            interv_idx = self.get_states_index(states_name="intervention")
-            self.transition_matrix[self._interv_state_index, interv_idx] = 1
-    
-    def _reset_transition_matrix_interv(self):
-        """
-        Reset transition matrix intervention to the original one. 
-        """
+        _interv_index_mu = np.nonzero(delta_mu)[0].tolist()
+        _interv_index_var = np.nonzero(delta_var)[0].tolist()
+        _interv_index = list(dict.fromkeys(_interv_index_mu + _interv_index_var))
+        _interv_index = _interv_index[0]
+        _interv_hs_index = self.get_states_index("intervention")
 
-        if "intervention" in self.states_name:
-            interv_idx = self.get_states_index(states_name="intervention")
-            self.transition_matrix[self._interv_state_index, interv_idx] = 0
+        if isinstance(_interv_hs_index, int):
+            _interv_hs_index = [_interv_hs_index]
+        elif _interv_hs_index is None:
+            _interv_hs_index = []
+
+        if _interv_index in _interv_hs_index:
+            _interv_state_index = self.components[self._states_comp[_interv_index]].interv_state_index
+            self.transition_matrix[_interv_state_index, _interv_index] = value
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
@@ -1167,13 +1156,18 @@ class Model:
             >>> level_index = model.get_states_index("level")
         """
 
-        index = (
-            self.states_name.index(states_name)
-            if states_name in self.states_name
-            else None
-        )
-        return index
+        indices = [
+                index
+                for index, name in enumerate(self.states_name)
+                if name == states_name
+            ]
 
+        if not indices:
+            return None
+        if len(indices) == 1:
+            return indices[0]
+        return indices
+    
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
         Automatically assign initial means and variances for baseline hidden states (level,
@@ -1659,7 +1653,7 @@ class Model:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv()
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
@@ -1678,7 +1672,7 @@ class Model:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv()
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
 
         return (
             np.array(mu_obs_preds).flatten(),
@@ -1733,7 +1727,7 @@ class Model:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv()
+                self._transition_matrix_interv(interv["mu"], interv["var"])
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1761,7 +1755,7 @@ class Model:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv()
+                self._reset_transition_matrix_interv(interv["mu"], interv["var"])
             
         return (
             np.array(mu_obs_preds).flatten(),
