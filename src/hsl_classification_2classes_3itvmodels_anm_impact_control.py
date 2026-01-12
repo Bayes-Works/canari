@@ -65,9 +65,7 @@ class hsl_classification:
         self.pred_class_probs_var = []
         self.data_loglikelihoods = []
         self.ll_itv_all, self.lt_itv_all = [], []
-        self.itv_baselines_std = []
-        self.itv_res_std = []
-        self.certain_zone = []
+        self.prob_coeff = []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
@@ -220,9 +218,7 @@ class hsl_classification:
             self.data_loglikelihoods.append([None, None, None, None])
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
-            self.itv_baselines_std.append(0)
-            self.itv_res_std.append(0)
-            self.certain_zone.append(0)
+            self.prob_coeff.append(0)
             self.itvtime_comparison.append([0, 0, 0, 0])
 
             self.current_time_step += 1
@@ -825,28 +821,10 @@ class hsl_classification:
                 ll_itv_baseline = np.zeros(num_steps_retract) + self.ll_itv_all[-1]
                 lt_itv_baseline = np.array([trend_itv * t + llclt_itv_at_trigger for t in range(num_steps_retract)])
                 itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
-                self.itv_baselines_std.append(itv_baselines_std_n)
 
-                mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
                 itv_res_std_n = stationary_ar_std
-                self.itv_res_std.append(itv_res_std_n)
-                if len(mu_ar[-num_steps_retract:])>1:
-                    self.certain_zone.append(max(1-itv_res_std_n**2/(itv_baselines_std_n**2+itv_res_std_n**2), 0))
-                else:
-                    self.certain_zone.append(0)
-
-                # plt.show()
-
-                # if abs(itv_LL) < 2 * stationary_ar_std and abs(itv_LT * num_steps_retract_lt) < 2 * stationary_ar_std:
-                #     data_likelihoods_ll = []
-                #     data_likelihoods_lt = []
-
-                # Decay from the first value to the last value
-                decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
-
-                # # Take the logsum of each list data_likelihoods_ll and data_likelihoods_lt
-                # log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
-                # log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
+                ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + itv_res_std_n**2)
+                self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
 
                 # Compute the average of data_likelihoods_ll and data_likelihoods_lt
                 if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
@@ -877,9 +855,7 @@ class hsl_classification:
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
                 self.itvtime_comparison.append([0,0,0,0])
-                self.itv_baselines_std.append(0)
-                self.itv_res_std.append(0)
-                self.certain_zone.append(0)
+                self.prob_coeff.append(0)
 
             # if apply_intervention:
             #     if rerun_kf is False:
