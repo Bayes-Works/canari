@@ -346,20 +346,20 @@ ax6.legend(loc='upper left', ncol=3)
 # else:
 #     ax7.fill_between(time, -0.05, 1.05, color='gray', alpha=0.3, label='Uncertain zone')
 
-# Plot final class probabilities
-relu_certain_zone = np.zeros_like(hsl_tsad_agent.certain_zone)
-for i in range(len(hsl_tsad_agent.certain_zone)):
-    # relu_certain_zone[i] = max(2 * (hsl_tsad_agent.certain_zone[i] - 0.5), 0)
-    relu_certain_zone[i] = min(max((hsl_tsad_agent.certain_zone[i] - 0.5) * 6, 0), 1)
+# # Plot final class probabilities
+# relu_certain_zone = np.zeros_like(hsl_tsad_agent.certain_zone)
+# for i in range(len(hsl_tsad_agent.certain_zone)):
+#     # relu_certain_zone[i] = max(2 * (hsl_tsad_agent.certain_zone[i] - 0.5), 0)
+#     relu_certain_zone[i] = min(max((hsl_tsad_agent.certain_zone[i] - 0.5) * 6, 0), 1)
 
 for class_idx in range(final_class_log_probs.shape[1]):
-    ax7.plot(time, 0.5 + relu_certain_zone * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
+    ax7.plot(time, 0.5 + hsl_tsad_agent.prob_coeff * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
 # Set legend labels to ['LT', 'LL', 'PD']
 ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
 ax7.set_ylim(-0.05, 1.05)
-ax7.set_ylabel("posteriors")
+ax7.set_ylabel("Pr(anm)")
 
-ax7.plot(time, hsl_tsad_agent.certain_zone, '--', label='Certain zone value', color='black')
+# ax7.plot(time, hsl_tsad_agent.prob_coeff, '--', label='Certain zone value', color='black')
 
 
 
