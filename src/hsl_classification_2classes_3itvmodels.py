@@ -1019,10 +1019,10 @@ class hsl_classification:
             mu_y_preds.append(mu_obs_pred)
             std_y_preds.append(var_obs_pred**0.5)
 
-        #     # Regular likelihood
-        #     y_likelihood = likelihood(mu_obs_pred, 
-        #                             np.sqrt(var_obs_pred), 
-        #                             data_all["y"][i])
+            # Regular likelihood
+            y_likelihood = likelihood(mu_obs_pred, 
+                                    np.sqrt(var_obs_pred), 
+                                    data_all["y"][i])
             
         #     # # Laplace approximated likelihood
         #     # y_likelihood = likelihood_laplace_approx(
@@ -1030,7 +1030,7 @@ class hsl_classification:
         #     #                     np.sqrt(var_obs_pred), 
         #     #                     data_all["y"][i])
 
-        #     y_likelihood_all.append(y_likelihood.item())
+            y_likelihood_all.append(y_likelihood.item())
 
         # # Plot retracted states after intervention
         # mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
