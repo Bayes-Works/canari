@@ -18,7 +18,7 @@ from pytagi import Normalizer
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_std1.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -288,7 +288,7 @@ model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior
 
 # Save model_dict to local
 import pickle
-with open("saved_params/ssm_ts_anmtype_simple_phi05_std1.pkl", "wb") as f:
+with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "wb") as f:
     pickle.dump(model_dict, f)
 
 ####################################################################

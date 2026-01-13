@@ -97,6 +97,8 @@ autoregression_index = model_dict["states_name"].index("autoregression")
 
 print("phi_AR for base_model =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR for base_model =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
+print("phi_AR_gen =", model_dict['gen_phi_ar'])
+print("sigma_AR_gen =", model_dict['gen_sigma_ar'])
 pretrained_model = Model(
     # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
     LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12]),
