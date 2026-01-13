@@ -1085,11 +1085,11 @@ class hsl_classification:
         # #                  mu_level_plot.flatten() - std_level_plot.flatten(),
         # #                  mu_level_plot.flatten() + std_level_plot.flatten(),
         # #                  color='tab:blue', alpha=0.2)
-        # ax0.set_title('Level State with and without Intervention')
+        # # ax0.set_title('Level State with and without Intervention')
         # # ax0.legend(ncol=2, loc='upper left')
-        # if level_intervention[0] > 0:
+        # if level_intervention[0] != 0:
         #     ax0.set_title('LL itv')
-        # if trend_intervention[0] > 0:
+        # if trend_intervention[0] != 0:
         #     ax0.set_title('LT itv')
         # ax1.plot(range(len(mu_trend_plot)), np.array(mu_trend_plot).flatten(),color='tab:blue')
         # ax1.fill_between(range(len(mu_trend_plot)),
@@ -1116,7 +1116,7 @@ class hsl_classification:
         #     print('LL intervention applied.')
         #     print(y_likelihood_all)
         #     print(np.prod(y_likelihood_all))
-        # if trend_intervention[0] > 0:
+        # if trend_intervention[0] != 0:
         #     print('LT intervention applied.')
         #     print(y_likelihood_all)
         #     print(np.prod(y_likelihood_all))
