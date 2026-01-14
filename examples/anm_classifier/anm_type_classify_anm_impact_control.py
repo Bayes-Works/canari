@@ -310,8 +310,10 @@ ax5.set_ylabel("itv")
 #     # relu_certain_zone[i] = max(2 * (hsl_tsad_agent.certain_zone[i] - 0.5), 0)
 #     relu_certain_zone[i] = min(max((hsl_tsad_agent.certain_zone[i] - 0.5) * 6, 0), 1)
 
+# for class_idx in range(final_class_log_probs.shape[1]):
+#     ax7.plot(time, 0.5 + hsl_tsad_agent.prob_coeff * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
 for class_idx in range(final_class_log_probs.shape[1]):
-    ax7.plot(time, 0.5 + hsl_tsad_agent.prob_coeff * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
+    ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
 # Set legend labels to ['LT', 'LL', 'PD']
 ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
 ax7.set_ylim(-0.05, 1.05)
