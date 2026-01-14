@@ -804,10 +804,16 @@ class hsl_classification:
                 stationary_ar_std = np.sqrt(ar_sigma**2 / (1 - ar_phi**2))
 
                 # Measure the impact of the intervention v.s. the AR
+                # Option 1: compare the variance of them
                 itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
-                itv_res_std_n = stationary_ar_std
-                ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + itv_res_std_n**2)
+                ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + stationary_ar_std**2)
                 self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
+
+                # # Option 2: drop likelihoods
+                # ll_lt_diff = ll_itv_baseline - lt_itv_baseline
+                # indices_insignificant = np.where(np.abs(ll_lt_diff) < stationary_ar_std)[0]
+                # data_likelihoods_ll = [data_likelihoods_ll[j] for j in range(len(data_likelihoods_ll)) if j not in indices_insignificant]
+                # data_likelihoods_lt = [data_likelihoods_lt[j] for j in range(len(data_likelihoods_lt)) if j not in indices_insignificant]
 
                 # Compute the average of data_likelihoods_ll and data_likelihoods_lt
                 if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
