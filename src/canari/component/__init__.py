@@ -11,3 +11,4 @@ from canari.component.periodic_component import Periodic
 from canari.component.white_noise_component import WhiteNoise
 from canari.component.bounded_autoregression_component import BoundedAutoregression
 from canari.component.intervention_component import Intervention
+from canari.component.exp_smoothing_component import ExpSmoothing
