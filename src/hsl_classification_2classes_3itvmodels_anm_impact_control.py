@@ -770,7 +770,7 @@ class hsl_classification:
                 num_steps_retract = itvtime_from_det
 
                 self.likelihoods_log_mask = []
-                data_likelihoods_ll, itv_LL, _ = self._estimate_likelihoods_with_intervention(
+                data_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     level_intervention = [level_itv, 0],
                     trend_intervention = [0, 0],
@@ -782,7 +782,7 @@ class hsl_classification:
                 # gamma = 0.95
                 gamma = 1
                 decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
-                data_likelihoods_lt, _, itv_LT = self._estimate_likelihoods_with_intervention(
+                data_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     # level_intervention = [0, 0],
                     level_intervention = [llclt_itv_at_trigger, 0],
@@ -803,11 +803,8 @@ class hsl_classification:
                 # stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
                 stationary_ar_std = np.sqrt(ar_sigma**2 / (1 - ar_phi**2))
 
-                # Get the std between LL and LT intervened baselines
-                ll_itv_baseline = np.zeros(num_steps_retract) + self.ll_itv_all[-1]
-                lt_itv_baseline = np.array([trend_itv * t + llclt_itv_at_trigger for t in range(num_steps_retract)])
+                # Measure the impact of the intervention v.s. the AR
                 itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
-
                 itv_res_std_n = stationary_ar_std
                 ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + itv_res_std_n**2)
                 self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
@@ -990,6 +987,7 @@ class hsl_classification:
         LL_intervened_value = ssm_copy.mu_states[LL_index]
         LT_intervened_value = ssm_copy.mu_states[LT_index]
         y_likelihood_all = []
+        LL_track = [LL_intervened_value]
         for i in range(num_steps_retract):
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
@@ -1004,6 +1002,7 @@ class hsl_classification:
                 )
             ssm_copy._save_states_history()
             ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+            LL_track.append(mu_states_prior[LL_index])
             # ssm_copy.set_states(mu_states_prior, var_states_prior)
 
             mu_y_preds.append(mu_obs_pred)
@@ -1115,7 +1114,7 @@ class hsl_classification:
             ssm.lstm_output_history = copy.deepcopy(output_history_temp)
             ssm.lstm_net.set_lstm_states(cell_states_temp)
 
-        return y_likelihood_all, LL_intervened_value.item(), LT_intervened_value.item()
+        return y_likelihood_all, LL_intervened_value.item(), LT_intervened_value.item(), np.array(LL_track).flatten()
     
     def _estimate_likelihoods(
             self, 
