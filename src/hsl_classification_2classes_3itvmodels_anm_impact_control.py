@@ -772,27 +772,28 @@ class hsl_classification:
                 self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
-                    level_intervention = [level_itv, 0],
+                    # level_intervention = [level_itv, 0],
+                    level_intervention = [level_itv, var_level_itv],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=True
                 )
-                self.ll_itv_all.append(itv_LL)
+                self.ll_itv_all.append(ll_itv_baseline[-1])
                 # gamma = 0.95
                 gamma = 1
                 decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
                 data_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
-                    # level_intervention = [0, 0],
                     level_intervention = [llclt_itv_at_trigger, 0],
-                    trend_intervention = [trend_itv, 0],
+                    # trend_intervention = [trend_itv, 0],
+                    trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
                 )
                 # self.lt_itv_all.append(itv_LT * num_steps_retract)
-                self.lt_itv_all.append(trend_itv * num_steps_retract + llclt_itv_at_trigger)   
+                self.lt_itv_all.append(lt_itv_baseline[-1])   
 
 
                 gen_ar_phi = self.generate_model.components["autoregression 2"].phi
@@ -804,10 +805,10 @@ class hsl_classification:
                 stationary_ar_std = np.sqrt(ar_sigma**2 / (1 - ar_phi**2))
 
                 # Measure the impact of the intervention v.s. the AR
-                # Option 1: compare the variance of them
-                itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
-                ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + stationary_ar_std**2)
-                self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
+                # # Option 1: compare the variance of them
+                # itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
+                # ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + stationary_ar_std**2)
+                # self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
 
                 # # Option 2: drop likelihoods
                 # ll_lt_diff = ll_itv_baseline - lt_itv_baseline
@@ -816,7 +817,7 @@ class hsl_classification:
                 # data_likelihoods_lt = [data_likelihoods_lt[j] for j in range(len(data_likelihoods_lt)) if j not in indices_insignificant]
 
                 # Compute the average of data_likelihoods_ll and data_likelihoods_lt
-                if len(data_likelihoods_ll) > 0 and len(data_likelihoods_lt) > 0:
+                if len(data_likelihoods_ll) > 51 and len(data_likelihoods_lt) > 51:
                     log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                     log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
                     # log_likelihood_ll = np.sum(data_likelihoods_ll)
@@ -940,8 +941,6 @@ class hsl_classification:
         """
         Compute the likelihood of observation and hidden states given action
         """
-
-        # Do the intervention again with the smoothed states
         ssm_copy = copy.deepcopy(ssm)
         data_all = copy.deepcopy(data)
         original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
@@ -990,6 +989,99 @@ class hsl_classification:
         ssm_copy.mu_states[LT_index] += trend_intervention[0]
         ssm_copy.var_states[LL_index, LL_index] += level_intervention[1]
         ssm_copy.var_states[LT_index, LT_index] += trend_intervention[1]
+        y_likelihood_all = []
+        # if trend_intervention[1] > 0:
+        #     ssm_copy.transition_matrix[0, 1] = 0
+        for i in range(num_steps_retract):
+
+            mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
+            # if trend_intervention[1] > 0:
+            #     mu_states_prior[0] += mu_states_prior[1]
+            #     ssm_copy.mu_states_prior = mu_states_prior
+            _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
+            if "lstm" in ssm_copy.states_name:
+                lstm_index = ssm_copy.get_states_index("lstm")
+                ssm_copy.lstm_output_history.update(
+                    mu_states_posterior[lstm_index],
+                    var_states_posterior[lstm_index, lstm_index],
+                    # mu_states_prior[lstm_index],
+                    # var_states_prior[lstm_index, lstm_index],
+                )
+            ssm_copy._save_states_history()
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+
+            mu_y_preds.append(mu_obs_pred)
+            std_y_preds.append(var_obs_pred**0.5)
+
+            # Regular likelihood
+            y_likelihood = likelihood(mu_obs_pred, 
+                                    np.sqrt(var_obs_pred), 
+                                    data_all["y"][i])
+            y_likelihood_all.append(y_likelihood.item())
+
+        # # Option 1: use smoothed values as the deterministic intervention
+        # # Perform smoother
+        # ssm_copy.smoother()
+
+        # # Get the smoothed value at -(num_steps_retract)
+        # mu_LL_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
+        # mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
+
+        # Option 2: use filtered values as the deterministic intervention
+        mu_LL_deterministic_itv = mu_states_prior[LL_index]
+        mu_LT_deterministic_itv = mu_states_prior[LT_index]
+        LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
+
+        # Do the intervention again with the smoothed states
+        ssm_copy = copy.deepcopy(ssm)
+        data_all = copy.deepcopy(data)
+        original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
+        original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
+
+        mu_y_preds = copy.deepcopy(self.mu_obs_preds)
+        std_y_preds = copy.deepcopy(self.std_obs_preds)
+        current_preds_num = len(mu_y_preds)
+        if "lstm" in ssm.states_name:
+            output_history_temp = copy.deepcopy(ssm.lstm_output_history)
+            cell_states_temp = copy.deepcopy(ssm.lstm_net.get_lstm_states())
+            ssm_copy.lstm_net = ssm.lstm_net
+            ssm_copy.lstm_output_history = copy.deepcopy(output_history_temp)
+            ssm_copy.lstm_net.set_lstm_states(cell_states_temp)
+        
+        # Retract SSM to the time of intervention
+        # Constrain num_steps_retract to be no larger than current_preds_num
+        num_steps_retract = min(num_steps_retract, current_preds_num - 1)
+        remove_until_index = -(num_steps_retract)
+        ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
+        ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
+        ssm_copy.states.mu_posterior = ssm_copy.states.mu_posterior[:remove_until_index]
+        ssm_copy.states.var_posterior = ssm_copy.states.var_posterior[:remove_until_index]
+        ssm_copy.states.cov_states = ssm_copy.states.cov_states[:remove_until_index]
+        ssm_copy.states.mu_smooth = ssm_copy.states.mu_smooth[:remove_until_index]
+        ssm_copy.states.var_smooth = ssm_copy.states.var_smooth[:remove_until_index]
+        mu_y_preds = mu_y_preds[:remove_until_index]
+        std_y_preds = std_y_preds[:remove_until_index]
+        lstm_history_copy = copy.deepcopy(self.lstm_history)
+        lstm_cell_states_copy = copy.deepcopy(self.lstm_cell_states)
+        if "lstm" in ssm.states_name:
+            retracted_lstm_history = lstm_history_copy[:remove_until_index]
+            retracted_lstm_cell_states = lstm_cell_states_copy[:remove_until_index]
+        # Keep the data after intervention time
+        data_all["y"] = data_all["y"][current_preds_num-num_steps_retract:]
+        data_all["x"] = data_all["x"][current_preds_num-num_steps_retract:]
+
+        ssm_copy.set_states(ssm_copy.states.mu_posterior[-1], ssm_copy.states.var_posterior[-1])
+        ssm_copy.lstm_output_history = retracted_lstm_history[-1]
+        ssm_copy.lstm_net.set_lstm_states(retracted_lstm_cell_states[-1])
+        
+        # Apply intervention
+        LL_index = ssm_copy.states_name.index("level")
+        LT_index = ssm_copy.states_name.index("trend")
+        if trend_intervention[0] != 0:
+            ssm_copy.mu_states[LL_index] += LLcLT_deterministic_itv
+            ssm_copy.mu_states[LT_index] += mu_LT_deterministic_itv
+        else:
+            ssm_copy.mu_states[LL_index] += mu_LL_deterministic_itv
         LL_intervened_value = ssm_copy.mu_states[LL_index]
         LT_intervened_value = ssm_copy.mu_states[LT_index]
         y_likelihood_all = []
