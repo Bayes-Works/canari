@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 import pytagi
 from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
@@ -98,6 +98,8 @@ class LstmNetwork(BaseComponent):
         var_states: Optional[list[float]] = None,
         smoother: Optional[bool] = True,
         model_noise: Optional[bool] = False,
+        embed_len: Optional[int] = 0,
+        embedding: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -116,6 +118,8 @@ class LstmNetwork(BaseComponent):
         self.smoother = smoother
         self.model_noise = model_noise
         self.num_output = 2 * num_output if self.model_noise else num_output
+        self.embed_len = embed_len if embedding is None else embedding[0].flatten().shape[0]
+        self.embedding = embedding
         super().__init__()
 
     def initialize_component_name(self):
@@ -188,7 +192,7 @@ class LstmNetwork(BaseComponent):
         if self.smoother:
             layers.append(
                 SLSTM(
-                    self.num_features + self.look_back_len - 1,
+                    self.num_features + self.look_back_len + self.embed_len - 1,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
@@ -212,7 +216,7 @@ class LstmNetwork(BaseComponent):
         else:
             layers.append(
                 LSTM(
-                    self.num_features + self.look_back_len - 1,
+                    self.num_features + self.look_back_len + self.embed_len - 1,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
@@ -236,6 +240,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.lstm_infer_len = self.infer_len
         lstm_network.model_noise = self.model_noise
+        lstm_network.embed_len = self.embed_len
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
@@ -253,6 +258,9 @@ class LstmNetwork(BaseComponent):
             lstm_network.smooth = True
         else:
             lstm_network.smooth = False
+
+        if self.embed_len > 0:
+            lstm_network.input_state_update = True
 
         if self.load_lstm_net:
             lstm_network.load(filename=self.load_lstm_net)

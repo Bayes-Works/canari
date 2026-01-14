@@ -248,3 +248,135 @@ class OutputHistory:
 
         self.mu.append(mu.item())
         self.var.append(var.item())
+
+
+@dataclass
+class LstmEmbedding:
+    """
+    Stores the current LSTM embedding mean and variance vectors.
+
+    Attributes:
+        mu (np.ndarray): Mean of the embedding with shape (embedding_dim,).
+        var (np.ndarray): Variance of the embedding with shape (embedding_dim,).
+        length (int): Number of embedding features currently tracked.
+    """
+
+    mu: np.ndarray = field(init=False)
+    var: np.ndarray = field(init=False)
+    length: int = field(init=False, default=0)
+
+    def initialize(self, embedding_len: int):
+        """
+        Initialize the mean and variance of the embedding vector.
+
+        The mean is initialized to zeros and the variance to ones. Both arrays
+        have shape (embedding_len,).
+
+        Args:
+            embedding_len (int): Length of the LSTM embedding.
+        """
+        if embedding_len <= 0:
+            raise ValueError("Embedding length must be a positive integer.")
+
+        self.mu = np.random.normal(loc=0.0, scale=1.0, size=embedding_len).astype(
+            np.float32
+        )
+        self.var = np.ones(embedding_len, dtype=np.float32)
+        self.length = embedding_len
+
+    def set_values(
+        self,
+        mu: np.ndarray,
+        var: np.ndarray,
+    ):
+        """
+        Explicitly set the embedding mean and variance arrays.
+
+        Args:
+            mu (np.ndarray): Mean of the embedding.
+            var (np.ndarray): Variance of the embedding.
+        """
+        prepared_mu = self._prepare_vector(mu, "mu")
+        prepared_var = self._prepare_vector(var, "var")
+        if prepared_mu.shape != prepared_var.shape:
+            raise ValueError("Mean and variance must share the same shape.")
+
+        self.mu = prepared_mu
+        self.var = prepared_var
+        self.length = self.mu.size
+
+    def update(
+        self,
+        delta_mu: np.ndarray,
+        delta_var: np.ndarray,
+        min_variance: float = 1e-6,
+    ):
+        """
+        Update the LSTM embedding mean and variance in place.
+
+        Args:
+            delta_mu (np.ndarray): Update term applied to the current mean.
+            delta_var (np.ndarray): Update term applied to the current variance.
+            min_variance (float): Lower bound applied to the variance for stability.
+        """
+        if self.length == 0:
+            raise RuntimeError("LSTM embedding must be initialized before updating.")
+
+        delta_mu = self._prepare_vector(delta_mu, "delta_mu")
+        delta_var = self._prepare_vector(delta_var, "delta_var")
+
+        if delta_mu.shape != self.mu.shape or delta_var.shape != self.var.shape:
+            raise ValueError("Update terms must match embedding shape.")
+
+        self.mu = self.mu + delta_mu
+        self.var = np.maximum(
+            self.var + delta_var, np.full_like(self.var, min_variance)
+        )
+
+    def as_tuple(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the mean and variance of the LSTM embedding.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Mean and variance arrays of the LSTM embedding.
+        """
+
+        return self.mu.copy(), self.var.copy()
+
+    def __getitem__(self) -> tuple[np.ndarray, np.ndarray]:
+        return self.as_tuple()
+
+    def __setitem__(self, value: tuple[np.ndarray, np.ndarray]):
+        """
+        Set the mean and variance of the LSTM embedding.
+
+        Args:
+            value (tuple[np.ndarray, np.ndarray]): New mean and variance arrays to set.
+        """
+        self.set_values(*value)
+
+    def _prepare_vector(self, array: np.ndarray, name: str) -> np.ndarray:
+        """
+        Convert an input array to a 1D float32 vector with the expected length.
+        """
+        arr = np.asarray(array, dtype=np.float32)
+        if arr.ndim > 2:
+            raise ValueError(f"Embedding {name} must be 1D or a single-row 2D array.")
+
+        if arr.ndim == 2:
+            if arr.shape[0] != 1:
+                raise ValueError(
+                    f"Embedding {name} 2D arrays must have shape (1, embedding_len)."
+                )
+            arr = arr.squeeze(axis=0)
+
+        if arr.ndim == 0:
+            arr = arr.reshape(1)
+
+        if self.length and arr.size != self.length:
+            raise ValueError(
+                f"Embedding {name} length mismatch: expected {self.length}, "
+                f"got {arr.size}."
+            )
+
+        return arr.copy()
