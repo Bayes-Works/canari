@@ -32,6 +32,7 @@ from canari import common
 from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
+from canari.component import Intervention
 
 
 class Model:
@@ -168,6 +169,7 @@ class Model:
         self.components = {}
         self.num_states = 0
         self.states_name = []
+        self._states_comp = []
         self.output_col = []
         self.input_col = []
         self.output_lag_col = []
@@ -273,6 +275,11 @@ class Model:
             state
             for component in self.components.values()
             for state in component.states_name
+        ]
+        self._states_comp = [
+            comp_name
+            for comp_name, component in self.components.items()
+            for _ in component.states_name
         ]
         self.num_states = sum(
             component.num_states for component in self.components.values()
@@ -1025,6 +1032,44 @@ class Model:
             dummy[:, col_idx] = normed[:, 0]
 
         return dummy
+    
+    def _states_intervention(self, delta_mu, delta_var):
+        """
+        States intervention.
+
+        :param delta_mu: intervention for states mean
+        :param delta_var: intervention for states variances
+        """
+
+        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+            delta_mu = np.atleast_2d(delta_mu).T
+            delta_var = np.diag(delta_var)
+            self.mu_states = self.mu_states + delta_mu
+            self.var_states = self.var_states + delta_var
+        else:
+            raise ValueError(
+                "Incorrect mu and/or var dimension for inverventions."
+            )
+
+    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+        """
+        Transition matrix intervention.
+        """
+
+        _interv_index_mu = np.nonzero(delta_mu)[0].tolist()
+        _interv_index_var = np.nonzero(delta_var)[0].tolist()
+        _interv_index = list(dict.fromkeys(_interv_index_mu + _interv_index_var))
+        _interv_index = _interv_index[0]
+        _interv_hs_index = self.get_states_index("intervention")
+
+        if isinstance(_interv_hs_index, int):
+            _interv_hs_index = [_interv_hs_index]
+        elif _interv_hs_index is None:
+            _interv_hs_index = []
+
+        if _interv_index in _interv_hs_index:
+            _interv_state_index = self.components[self._states_comp[_interv_index]].interv_state_index
+            self.transition_matrix[_interv_state_index, _interv_index] = value
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
         """
@@ -1111,13 +1156,18 @@ class Model:
             >>> level_index = model.get_states_index("level")
         """
 
-        index = (
-            self.states_name.index(states_name)
-            if states_name in self.states_name
-            else None
-        )
-        return index
+        indices = [
+                index
+                for index, name in enumerate(self.states_name)
+                if name == states_name
+            ]
 
+        if not indices:
+            return None
+        if len(indices) == 1:
+            return indices[0]
+        return indices
+    
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
         Automatically assign initial means and variances for baseline hidden states (level,
@@ -1560,7 +1610,9 @@ class Model:
             )
 
     def forecast(
-        self, data: Dict[str, np.ndarray]
+        self, 
+        data: Dict[str, np.ndarray],
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Perform multi-step-ahead forecast over an entire dataset by recursively making
@@ -1573,6 +1625,7 @@ class Model:
         Args:
             data (Dict[str, np.ndarray]): A dictionary containing key 'x' as input covariates,
                 if exists 'y' (real observations) will not be used.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1596,7 +1649,12 @@ class Model:
         if self.lstm_net:
             self.lstm_net.eval()
 
-        for index, x in enumerate(data["x"]):
+        for index, (x, time) in enumerate(zip(data["x"], data["time"])):
+            # Intervention
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._states_intervention(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
+
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
@@ -1611,6 +1669,11 @@ class Model:
             self.set_states(mu_states_prior, var_states_prior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
+
+            # Intervention, reset transition matrix
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
+
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1621,6 +1684,7 @@ class Model:
         self,
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1632,8 +1696,9 @@ class Model:
 
         Args:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
-            train_lstm (bool): Whether to update LSTM's parameter weights and biases.
+            train_lstm (bool, optional): Whether to update LSTM's parameter weights and biases.
                 Defaults to True.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1654,11 +1719,15 @@ class Model:
         std_obs_preds = []
         self.initialize_states_history()
 
-        # set lstm to train mode
+        # set lstm to train modes
         if self.lstm_net and train_lstm:
             self.lstm_net.train()
 
-        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
+        for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
+            # Intervention
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._states_intervention(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"])
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1684,6 +1753,10 @@ class Model:
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
 
+            # Intervention, reset transition matrix
+            if intervention and (interv := intervention.get(time)) is not None:
+                self._reset_transition_matrix_interv(interv["mu"], interv["var"])
+            
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1744,6 +1817,7 @@ class Model:
         white_noise_decay: Optional[bool] = True,
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
+        intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1767,6 +1841,7 @@ class Model:
             white_noise_decay_factor (float, optional):
                 Multiplicative decay factor applied to the white‐noise standard
                 deviation each epoch. Defaults to 0.9.
+            intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1797,8 +1872,8 @@ class Model:
         if self.lstm_net.smooth:
             self.pretraining_filter(train_data)
 
-        self.filter(train_data)
-        mu_validation_preds, std_validation_preds, _ = self.forecast(validation_data)
+        self.filter(data=train_data, intervention=intervention)
+        mu_validation_preds, std_validation_preds, _ = self.forecast(data=validation_data, intervention=intervention)
         self.smoother()
         self.set_memory(time_step=0)
         self._current_epoch += 1

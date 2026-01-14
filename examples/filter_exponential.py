@@ -134,7 +134,7 @@ periodic_index = model.get_states_index("periodic 1")
 cov_scaled_exp_level = []
 cov_scaled_exp_periodic = []
 cov_level_periodic = []
-for i in range(len(model.states.get_mean("level", "smooth"))):
+for i in range(len(model.states.get_mean(states_name="level", states_type="smooth"))):
     cov_scaled_exp_level.append(
         model.states.var_smooth[i][scaled_exp_index, level_index]
     )
@@ -150,28 +150,28 @@ cov_level_periodic = np.array(cov_level_periodic)
 plt.figure(figsize=(10, 8))
 plt.plot(
     df_raw.index,
-    model.states.get_mean("scaled exp", "smooth")
-    + model.states.get_mean("level", "smooth")
-    + model.states.get_mean("periodic 1", "smooth"),
+    model.states.get_mean(states_name="scaled exp", states_type="smooth")
+    + model.states.get_mean(states_name="level", states_type="smooth")
+    + model.states.get_mean(states_name="periodic 1", states_type="smooth"),
     color="purple",
 )
 plt.fill_between(
     data_processor.get_time("all"),
-    model.states.get_mean("scaled exp", "smooth")
-    + model.states.get_mean("level", "smooth")
-    + model.states.get_mean("periodic 1", "smooth")
+    model.states.get_mean(states_name="scaled exp", states_type="smooth")
+    + model.states.get_mean(states_name="level", states_type="smooth")
+    + model.states.get_mean(states_name="periodic 1", states_type="smooth")
     + np.sqrt(
-        model.states.get_std("scaled exp", "smooth") ** 2
-        + model.states.get_std("level", "smooth") ** 2
-        + model.states.get_std("periodic 1", "smooth") ** 2
+        model.states.get_std(states_name="scaled exp", states_type="smooth") ** 2
+        + model.states.get_std(states_name="level", states_type="smooth") ** 2
+        + model.states.get_std(states_name="periodic 1", states_type="smooth") ** 2
         + 2 * (cov_scaled_exp_level + cov_scaled_exp_periodic + cov_level_periodic)
     ),
-    model.states.get_mean("scaled exp", "smooth")
-    + model.states.get_mean("level", "smooth")
-    + model.states.get_mean("periodic 1", "smooth")
+    model.states.get_mean(states_name="scaled exp", states_type="smooth")
+    + model.states.get_mean(states_name="level", states_type="smooth")
+    + model.states.get_mean(states_name="periodic 1", states_type="smooth")
     - np.sqrt(
-        model.states.get_std("scaled exp", "smooth") ** 2
-        + model.states.get_std("level", "smooth") ** 2
+        model.states.get_std(states_name="scaled exp", states_type="smooth") ** 2
+        + model.states.get_std(states_name="level", states_type="smooth") ** 2
         + 2 * (cov_scaled_exp_level + cov_scaled_exp_periodic + cov_level_periodic)
     ),
     color="purple",

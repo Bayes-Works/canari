@@ -14,4 +14,5 @@ to build a structured states-space models.
    canari.component.autoregression_component
    canari.component.bounded_autoregression_component
    canari.component.white_noise_component
+   canari.component.intervention_component
 
