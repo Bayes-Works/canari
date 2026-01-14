@@ -7,11 +7,12 @@ saved_params/*
 **/__pycache__/
 *.egg-info/
 *.png
+*.pgf
 dist/
 data/benchmark_data/
 
 # Docs
-docs/_build/
+docs/_build/**
 
 # Figures
 !saved_results/time_series_toy.png
