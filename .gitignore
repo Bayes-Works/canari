@@ -13,6 +13,7 @@ data/**
 
 # Data
 !data/toy_time_series/
+!data/toy_time_series/**
 
 # Docs
 docs/_build/
