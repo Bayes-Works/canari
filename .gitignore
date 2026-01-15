@@ -7,7 +7,6 @@ saved_results/
 *.egg-info/
 *.png
 dist/
-data/demo_data
 data/**
 # Data
 !data/toy_time_series/
