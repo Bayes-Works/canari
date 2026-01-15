@@ -7,8 +7,12 @@ saved_params/*
 **/__pycache__/
 *.egg-info/
 *.png
+*.pgf
 dist/
-data/benchmark_data/
+data/**
+
+# Data
+!data/toy_time_series/
 
 # Docs
 docs/_build/
