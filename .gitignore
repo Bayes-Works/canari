@@ -9,10 +9,14 @@ saved_params/*
 *.png
 *.pgf
 dist/
-data/benchmark_data/
+data/**
+
+# Data
+!data/toy_time_series/
+!data/toy_time_series/**
 
 # Docs
-docs/_build/**
+docs/_build/
 
 # Figures
 !saved_results/time_series_toy.png
