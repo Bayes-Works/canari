@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# # LT anomaly
-# anm_type = 'LT'
-# time_anomaly = 52*5
-# anm_mag = 6/52
-# anm_baseline = np.arange(len(df_raw)) * anm_mag
-# # Set the first 52*12 values in anm_baseline to be 0
-# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
-
-# LL anomaly
-anm_type = 'LL'
-time_anomaly = 52*7
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
+# LT anomaly
+anm_type = 'LT'
+time_anomaly = 52*5
+anm_mag = 6/52
+anm_baseline = np.arange(len(df_raw)) * anm_mag
+# Set the first 52*12 values in anm_baseline to be 0
+anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)
+
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*7
+# anm_mag = 17
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
