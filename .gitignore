@@ -8,8 +8,11 @@ saved_results/
 *.png
 dist/
 data/demo_data
-data/benchmark_data/
 # saved_params/
+data/**
+# Data
+!data/toy_time_series/
+!data/toy_time_series/**
 
 # Docs
 docs/_build/*
