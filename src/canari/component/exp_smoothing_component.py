@@ -39,7 +39,7 @@ class ExpSmoothing(BaseComponent):
         self._observation_matrix = np.array([[1, 0, 0]])
 
     def initialize_process_noise_matrix(self):
-        self._process_noise_matrix = np.zeros(3,3)
+        self._process_noise_matrix = np.zeros((3,3))
 
     def initialize_mu_states(self):
         if self._mu_states is None:

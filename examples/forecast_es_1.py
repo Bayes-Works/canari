@@ -165,8 +165,8 @@ print(f"Test Log-Lik        :{log_lik: 0.2f}")
 
 # plot the test data
 es = states.get_mean(states_name="es")
-idx_level = model.get_states_index(states_name="level")
-level_sum = states.get_mean(states_name="level") + states.get_mean(states_name="es")
+# idx_level = model.get_states_index(states_name="level")
+level_sum = states.get_mean(states_name="es")
 
 noise = states.get_mean(states_name="heteroscedastic noise")
 # states.mu_posterior[idx_level,:] = level_sum

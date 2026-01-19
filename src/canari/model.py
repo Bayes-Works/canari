@@ -737,6 +737,47 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
+    def _exp_smoothing_backward_modification(
+        self,
+        mu_states_posterior: np.ndarray, 
+        var_states_posterior: np.ndarray,
+    ) -> Tuple[np.ndarray,np.ndarray,]:
+        """
+        Modify backward function for exponential smoothing component.
+        """
+
+        # noise_index = self.get_states_index(states_name="white noise")
+        noise_index = self.get_states_index(states_name="heteroscedastic noise")
+        exp_coeff_index = self.get_states_index(states_name="es coeff")  
+        exp_prod_index = self.get_states_index(states_name="es prod")
+        mu_prod = (
+            mu_states_posterior[exp_coeff_index]
+            * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_coeff_index, noise_index]
+        )
+        cov_prod_others = (
+            var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
+            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
+        )
+        mu_states_posterior[exp_prod_index] = mu_prod
+        var_states_posterior[exp_prod_index,:] = cov_prod_others
+        var_states_posterior[:,exp_prod_index] = cov_prod_others
+        var_prod = (
+            var_states_posterior[exp_coeff_index,exp_coeff_index]
+            * var_states_posterior[noise_index,noise_index]
+            + var_states_posterior[exp_coeff_index,noise_index]**2
+            + 2 * var_states_posterior[exp_coeff_index,noise_index]
+            * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_coeff_index,exp_coeff_index]
+            * mu_states_posterior[noise_index]**2
+            + var_states_posterior[noise_index,noise_index]
+            * mu_states_posterior[exp_coeff_index]**2
+        )
+        var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
+
+        return mu_states_posterior, var_states_posterior
+         
+
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
     ):
@@ -1514,6 +1555,11 @@ class Model:
                 )
             )
 
+        if "es" in self.states_name:
+            mu_states_posterior, var_states_posterior = self._exp_smoothing_backward_modification(
+                mu_states_posterior, var_states_posterior
+            )
+
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior
 
@@ -1659,6 +1705,9 @@ class Model:
                 x
             )
 
+            # if "es" in self.states_name:
+            #     es_prod_index = self.get_states_index(states_name="es prod")
+            #     mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)
@@ -1727,7 +1776,7 @@ class Model:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1755,7 +1804,7 @@ class Model:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
             
         return (
             np.array(mu_obs_preds).flatten(),
