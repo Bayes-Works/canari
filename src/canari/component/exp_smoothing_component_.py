@@ -27,26 +27,19 @@ class ExpSmoothing(BaseComponent):
         self._component_name = "exp smoothing"
 
     def initialize_num_states(self):
-        self._num_states = 6
+        self._num_states = 3
 
     def initialize_states_name(self):
-        self._states_name = ["es", "es coeff", "es prod", "es trend", "es trend coeff", "es trend prod"]
+        self._states_name = ["es", "es coeff", "es prod"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array(
-            [[1, 0, 1 , 1, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 1],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0]],
-            )
+        self._transition_matrix = np.array([[1, 0, 1], [0, 1, 0], [0, 0, 0]])
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[1, 0, 0, 0, 0, 0]])
+        self._observation_matrix = np.array([[1, 0, 0]])
 
     def initialize_process_noise_matrix(self):
-        self._process_noise_matrix = np.zeros((6,6))
+        self._process_noise_matrix = np.zeros((3,3))
 
     def initialize_mu_states(self):
         if self._mu_states is None:

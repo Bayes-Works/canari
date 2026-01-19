@@ -737,7 +737,7 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def _exp_smoothing_backward_modification(
+    def _exp_smoothing_backward_modification_(
         self,
         mu_states_posterior: np.ndarray, 
         var_states_posterior: np.ndarray,
@@ -774,6 +774,87 @@ class Model:
             * mu_states_posterior[exp_coeff_index]**2
         )
         var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
+
+        return mu_states_posterior, var_states_posterior
+    
+    def _exp_smoothing_backward_modification(
+        self,
+        mu_states_posterior: np.ndarray, 
+        var_states_posterior: np.ndarray,
+    ) -> Tuple[np.ndarray,np.ndarray,]:
+        """
+        Modify backward function for exponential smoothing component.
+        """
+
+        noise_index = self.get_states_index(states_name="heteroscedastic noise")
+        exp_coeff_index = self.get_states_index(states_name="es coeff")
+        exp_prod_index = self.get_states_index(states_name="es prod")
+        mu_prod = (
+            mu_states_posterior[exp_coeff_index]
+            * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_coeff_index, noise_index]
+        )
+        cov_prod_others = (
+            var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
+            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
+        )
+        var_prod = (
+            var_states_posterior[exp_coeff_index,exp_coeff_index]
+            * var_states_posterior[noise_index,noise_index]
+            + var_states_posterior[exp_coeff_index,noise_index]**2
+            + 2 * var_states_posterior[exp_coeff_index,noise_index]
+            * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_coeff_index,exp_coeff_index]
+            * mu_states_posterior[noise_index]**2
+            + var_states_posterior[noise_index,noise_index]
+            * mu_states_posterior[exp_coeff_index]**2
+        )
+
+
+        exp_trend_coeff_index = self.get_states_index(states_name="es trend coeff")
+        exp_trend_prod_index = self.get_states_index(states_name="es trend prod")
+        mu_trend_prod = (
+            mu_states_posterior[exp_trend_coeff_index]
+            * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_trend_coeff_index, noise_index]
+        )
+        cov_trend_prod_others = (
+            var_states_posterior[exp_trend_coeff_index,:] * mu_states_posterior[noise_index]
+            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_trend_coeff_index]
+        )
+        var_trend_prod = (
+            var_states_posterior[exp_trend_coeff_index,exp_trend_coeff_index]
+            * var_states_posterior[noise_index,noise_index]
+            + var_states_posterior[exp_trend_coeff_index,noise_index]**2
+            + 2 * var_states_posterior[exp_trend_coeff_index,noise_index]
+            * mu_states_posterior[exp_trend_coeff_index] * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_trend_coeff_index,exp_trend_coeff_index]
+            * mu_states_posterior[noise_index]**2
+            + var_states_posterior[noise_index,noise_index]
+            * mu_states_posterior[exp_trend_coeff_index]**2
+        )
+
+        mu_states_posterior[exp_prod_index] = mu_prod
+        var_states_posterior[exp_prod_index,:] = cov_prod_others
+        var_states_posterior[:,exp_prod_index] = cov_prod_others
+        var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
+
+        mu_states_posterior[exp_trend_prod_index] = mu_trend_prod
+        var_states_posterior[exp_trend_prod_index,:] = cov_trend_prod_others
+        var_states_posterior[:,exp_trend_prod_index] = cov_trend_prod_others
+        var_states_posterior[exp_trend_prod_index,exp_trend_prod_index] = var_trend_prod
+
+        cross_cov_exp = (
+            var_states_posterior[exp_coeff_index,exp_trend_coeff_index]
+            * var_states_posterior[noise_index,noise_index]
+            + var_states_posterior[exp_coeff_index,noise_index] * var_states_posterior[exp_trend_coeff_index,noise_index]
+            + var_states_posterior[exp_coeff_index,exp_trend_coeff_index] * mu_states_posterior[noise_index]**2
+            + var_states_posterior[exp_coeff_index,noise_index] * mu_states_posterior[exp_trend_coeff_index] * mu_states_posterior[noise_index]
+            + var_states_posterior[exp_trend_coeff_index,noise_index] * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
+            + var_states_posterior[noise_index,noise_index] * mu_states_posterior[exp_coeff_index] * mu_states_posterior[exp_trend_coeff_index]
+        )
+        var_states_posterior[exp_prod_index, exp_trend_prod_index] = cross_cov_exp
+        var_states_posterior[exp_trend_prod_index, exp_prod_index] = cross_cov_exp
 
         return mu_states_posterior, var_states_posterior
          

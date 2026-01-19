@@ -49,7 +49,7 @@ df.columns = ["values"]
 
 # Define parameters
 output_col = [0]
-num_epoch = 50
+num_epoch = 2
 
 # Build data processor
 data_processor = DataProcess(
@@ -68,7 +68,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 model = Model(
     LocalTrend(),
     # LocalLevel(),
-    ExpSmoothing(mu_states=[0,0.3,0], var_states=[0,1e-2,0]),
+    ExpSmoothing(mu_states=[0, 0.1, 0, 1e-5, 0.1, 0], var_states=[1e-5, 1e-3, 0, 1e-5, 1e-4, 1e-5]),
     LstmNetwork(
         look_back_len=12,
         num_features=1,
