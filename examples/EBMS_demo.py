@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 from scipy.stats import norm, beta
 
 ## Analysis configuration
-nb_obs = 100        #Number of observations
+nb_obs = 1        #Number of observations
 nb_sim = 1          #Number of simulations
 
 ## Model hyperparameters
@@ -23,7 +23,8 @@ b_post = np.zeros(nb_sim)    #\#obs model B (Beta PDF)
 ## Loop
 for i in range(nb_sim):
     ## Standard BMS
-    y = np.random.normal(loc=mu_real,scale=np.sqrt(var_AB),size=nb_obs)                  #Batch Observations
+    # y = np.random.normal(loc=mu_real,scale=np.sqrt(var_AB),size=nb_obs)                  #Batch Observations
+    y = [0.7]
     fA_y = np.exp(np.sum(np.log(norm.pdf(y,loc=mu_A,scale=np.sqrt(var_mu+var_AB)))))     #joint likelihood of model A
     fB_y = np.exp(np.sum(np.log(norm.pdf(y,loc=mu_B,scale=np.sqrt(var_mu+var_AB)))))     #joint likelihood of model B
     prA_post[i] = fA_y / (fA_y+fB_y)                            #Posterior probability of model A
@@ -38,6 +39,35 @@ for i in range(nb_sim):
         b_post[i] += b
         a_post[i] *= discount_coeff
         b_post[i] *= discount_coeff
+
+    # ## BetaBMS & CBMS
+    # nb_mcs = 100
+    # for j in range(nb_obs):
+    #     a = np.zeros(nb_mcs)
+    #     b = np.zeros(nb_mcs)
+    #     p = np.zeros(nb_mcs)
+    #     for s in range(nb_mcs):
+    #         v = np.random.normal(loc=0,scale=np.sqrt(var_AB),size=1)
+    #         fAc_y = np.exp(np.log(norm.pdf(y[j],loc=mu_A+v,scale=np.sqrt(var_mu))))
+    #         fBc_y = np.exp(np.log(norm.pdf(y[j],loc=mu_B+v,scale=np.sqrt(var_mu))))
+    #         if fAc_y==0 or fBc_y==0:
+    #             if abs(mu_A+v-y[j]) < abs(mu_B+v-y[j]):
+    #                 fAc_y = 1000
+    #                 fBc_y = 1
+    #             elif abs(mu_A+v-y[j]) > abs(mu_B+v-y[j]):
+    #                 fAc_y = 1
+    #                 fBc_y = 1000
+    #             else:
+    #                 fAc_y = 1
+    #                 fBc_y = 1
+
+    #         a[s] = fAc_y / (fAc_y + fBc_y)  #Posterior probability of model A
+    #         b[s] = fBc_y / (fAc_y + fBc_y)  #Posterior probability of model B
+    #         a_post[i] += np.sum(a)/nb_mcs
+    #         b_post[i] += np.sum(b)/nb_mcs
+    #         a_post[i] *= discount_coeff
+    #         b_post[i] *= discount_coeff
+
     prAc_post[i] = a_post[i]/(a_post[i]+b_post[i])
 
 ## Plotting
@@ -66,6 +96,7 @@ if nb_sim>1:
     axs[2].hist(prAc_post, bins=100, range=(0,1))
     axs[2].set_ylabel('#')
 else:
+    print(a_post/(a_post+b_post))
     p = np.linspace(0,1,200)
     fp = beta.pdf(p,a_post,b_post)
     axs[2].plot(p,fp)
