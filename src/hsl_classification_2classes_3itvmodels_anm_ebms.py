@@ -823,11 +823,18 @@ class hsl_classification:
                     # # Joint likelihood
                     # log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                     # log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
-                    # EBMS
-                    ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    log_likelihood_ll = np.sum(ll_post_n)
-                    log_likelihood_lt = np.sum(lt_post_n)
+
+                    # Compare var(ll_itv_baseline-lt_itv_baseline) with stationary_ar_std**2 to decide whether to keep the likelihood or not
+                    ll_lt_diff = ll_itv_baseline - lt_itv_baseline
+                    if np.var(ll_lt_diff) < stationary_ar_std**2:
+                        log_likelihood_ll = 1
+                        log_likelihood_lt = 1
+                    else:
+                        # EBMS
+                        ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                        lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                        log_likelihood_ll = np.sum(ll_post_n)
+                        log_likelihood_lt = np.sum(lt_post_n)
 
                     # log_likelihood_ll = np.sum(data_likelihoods_ll)
                     # log_likelihood_lt = np.sum(data_likelihoods_lt)
@@ -1101,7 +1108,7 @@ class hsl_classification:
         LL_intervened_value = ssm_copy.mu_states[LL_index]
         LT_intervened_value = ssm_copy.mu_states[LT_index]
         y_likelihood_all = []
-        LL_track = [LL_intervened_value]
+        LL_track = [LL_intervened_value.item()]
         for i in range(num_steps_retract):
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
@@ -1124,7 +1131,7 @@ class hsl_classification:
             ssm_copy.set_states(mu_states_posterior, var_states_posterior)
             drift_model_copy._save_states_history()
             drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-            LL_track.append(mu_states_prior[LL_index])
+            LL_track.append(mu_states_prior[LL_index].item())
             # ssm_copy.set_states(mu_states_prior, var_states_prior)
 
             mu_y_preds.append(mu_obs_pred)
