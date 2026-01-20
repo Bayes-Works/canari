@@ -3,14 +3,14 @@ import matplotlib.pylab as plt
 from scipy.stats import norm, beta
 
 ## Analysis configuration
-nb_obs = 1        #Number of observations
+nb_obs = 10        #Number of observations
 nb_sim = 1          #Number of simulations
 
 ## Model hyperparameters
 mu_real = 0         #Mean of the real model
 var_AB = 1          #Variance of the models Note: s_A = s_B = s_real = 1
-mu_A = -0.5         #Mean of model A
-mu_B = 0.25          #Mean of model B
+mu_A = -1         #Mean of model A
+mu_B = 0.5          #Mean of model B
 var_mu = 0.05       #Epistemic variance associated with mu_A & mu_B
 discount_coeff = 1  #Discount coefficient \in(0,1) in order to model a non-stationary probability
 
@@ -23,8 +23,8 @@ b_post = np.zeros(nb_sim)    #\#obs model B (Beta PDF)
 ## Loop
 for i in range(nb_sim):
     ## Standard BMS
-    # y = np.random.normal(loc=mu_real,scale=np.sqrt(var_AB),size=nb_obs)                  #Batch Observations
-    y = [0.7]
+    y = np.random.normal(loc=mu_real,scale=np.sqrt(var_AB),size=nb_obs)                  #Batch Observations
+    # y = [0.7]
     fA_y = np.exp(np.sum(np.log(norm.pdf(y,loc=mu_A,scale=np.sqrt(var_mu+var_AB)))))     #joint likelihood of model A
     fB_y = np.exp(np.sum(np.log(norm.pdf(y,loc=mu_B,scale=np.sqrt(var_mu+var_AB)))))     #joint likelihood of model B
     prA_post[i] = fA_y / (fA_y+fB_y)                            #Posterior probability of model A

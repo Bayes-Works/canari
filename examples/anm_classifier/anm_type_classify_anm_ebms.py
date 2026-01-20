@@ -259,9 +259,11 @@ m_probs = np.array(m_probs)
 
 # # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
 final_class_log_probs = []
+final_class_prob_stds = []
 for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
         final_class_log_probs.append([0.5, 0.5])
+        final_class_prob_stds.append(0)
     else:
         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
         log_likelihoods_op = hsl_tsad_agent.data_loglikelihoods[t][2:]
@@ -269,9 +271,12 @@ for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
         # probs = np.exp(log_likelihoods)
         probs = log_likelihoods
         probs /= np.sum(probs)
-        final_class_log_probs.append(probs)        
+        var = log_likelihoods[0] * log_likelihoods[1]/(log_likelihoods[0] + log_likelihoods[1])**2/ (log_likelihoods[0] + log_likelihoods[1] +1)
+        final_class_log_probs.append(probs)     
+        final_class_prob_stds.append(np.sqrt(var))   
 
 final_class_log_probs = np.array(final_class_log_probs)
+final_class_prob_stds = np.array(final_class_prob_stds)
 
 gen_ar_phi = model_dict['gen_phi_ar']
 gen_ar_sigma =model_dict['gen_sigma_ar']
@@ -314,10 +319,12 @@ ax5.set_ylabel("itv")
 #     ax7.plot(time, 0.5 + hsl_tsad_agent.prob_coeff * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
 for class_idx in range(final_class_log_probs.shape[1]):
     ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+    ax7.fill_between(time, final_class_log_probs[:, class_idx] - final_class_prob_stds, 
+                     final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
 # Set legend labels to ['LT', 'LL', 'PD']
-ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
-# ax7.set_ylim(-0.05, 1.05)
-ax7.set_ylim(0.35, 0.65)
+# ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
+ax7.set_ylim(-0.05, 1.05)
+# ax7.set_ylim(0.35, 0.65)
 ax7.set_ylabel("Pr(anm)")
 
 # ax7.plot(time, hsl_tsad_agent.prob_coeff, '--', label='Certain zone value', color='black')
