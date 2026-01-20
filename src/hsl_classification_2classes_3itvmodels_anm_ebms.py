@@ -729,7 +729,6 @@ class hsl_classification:
             itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
 
             # Apply intervention to estimate data likelihood
-            # Get the true values of anomaly
             if p_a_I_Yt > self.detection_threshold:
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
@@ -772,6 +771,7 @@ class hsl_classification:
                 self.likelihoods_log_mask = []
                 data_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
+                    drift_model=self.drift_model,
                     # level_intervention = [level_itv, 0],
                     level_intervention = [level_itv, var_level_itv],
                     trend_intervention = [0, 0],
@@ -786,6 +786,7 @@ class hsl_classification:
                 decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
                 data_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
+                    drift_model=self.drift_model,
                     level_intervention = [llclt_itv_at_trigger, 0],
                     # trend_intervention = [trend_itv, 0],
                     trend_intervention = [trend_itv, var_trend_itv],
@@ -841,15 +842,13 @@ class hsl_classification:
                 # log_likelihood_lt = np.sum(decay_weights * data_likelihoods_lt)
                 # log_likelihood_ll_op = np.sum(decay_weights_op * data_likelihoods_ll)
                 # log_likelihood_lt_op = np.sum(decay_weights_op * data_likelihoods_lt)
-                log_likelihood_ll_op = None
-                log_likelihood_lt_op = None
 
                 # # Multivariate likelihood
                 # log_likelihood_ll = data_likelihoods_ll
                 # log_likelihood_lt = data_likelihoods_lt
 
                 # Store the log-likelihoods
-                self.data_loglikelihoods.append([log_likelihood_lt, log_likelihood_ll, log_likelihood_lt_op, log_likelihood_ll_op])
+                self.data_loglikelihoods.append([log_likelihood_lt, log_likelihood_ll, None, None])
             else:
                 self.data_loglikelihoods.append([None, None, None, None])
                 self.ll_itv_all.append(0)
@@ -945,7 +944,7 @@ class hsl_classification:
 
         return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(self.mu_ar_preds).flatten(), np.array(self.std_ar_preds).flatten()
 
-    def _estimate_likelihoods_with_intervention(self, ssm: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data, make_mask=False):
+    def _estimate_likelihoods_with_intervention(self, ssm: Model, drift_model: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data, make_mask=False):
         """
         Compute the likelihood of observation and hidden states given action
         """
@@ -1042,6 +1041,7 @@ class hsl_classification:
 
         # Do the intervention again with the smoothed states
         ssm_copy = copy.deepcopy(ssm)
+        drift_model_copy = copy.deepcopy(drift_model)
         data_all = copy.deepcopy(data)
         original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
         original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
@@ -1067,6 +1067,13 @@ class hsl_classification:
         ssm_copy.states.cov_states = ssm_copy.states.cov_states[:remove_until_index]
         ssm_copy.states.mu_smooth = ssm_copy.states.mu_smooth[:remove_until_index]
         ssm_copy.states.var_smooth = ssm_copy.states.var_smooth[:remove_until_index]
+        drift_model_copy.states.mu_prior = drift_model_copy.states.mu_prior[:remove_until_index]
+        drift_model_copy.states.var_prior = drift_model_copy.states.var_prior[:remove_until_index]
+        drift_model_copy.states.mu_posterior = drift_model_copy.states.mu_posterior[:remove_until_index]
+        drift_model_copy.states.var_posterior = drift_model_copy.states.var_posterior[:remove_until_index]
+        drift_model_copy.states.cov_states = drift_model_copy.states.cov_states[:remove_until_index]
+        drift_model_copy.states.mu_smooth = drift_model_copy.states.mu_smooth[:remove_until_index]
+        drift_model_copy.states.var_smooth = drift_model_copy.states.var_smooth[:remove_until_index]
         mu_y_preds = mu_y_preds[:remove_until_index]
         std_y_preds = std_y_preds[:remove_until_index]
         lstm_history_copy = copy.deepcopy(self.lstm_history)
@@ -1079,6 +1086,7 @@ class hsl_classification:
         data_all["x"] = data_all["x"][current_preds_num-num_steps_retract:]
 
         ssm_copy.set_states(ssm_copy.states.mu_posterior[-1], ssm_copy.states.var_posterior[-1])
+        drift_model_copy.set_states(drift_model_copy.states.mu_posterior[-1], drift_model_copy.states.var_posterior[-1])
         ssm_copy.lstm_output_history = retracted_lstm_history[-1]
         ssm_copy.lstm_net.set_lstm_states(retracted_lstm_cell_states[-1])
         
@@ -1098,6 +1106,12 @@ class hsl_classification:
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
             (_, _, mu_states_posterior, var_states_posterior) = ssm_copy.backward(data_all["y"][i])
+            _, _, mu_d_states_prior, _ = drift_model_copy.forward()
+            _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+                obs=ssm_copy.mu_states_posterior[self.AR_index], 
+                obs_var=ssm_copy.var_states_posterior[self.AR_index, self.AR_index])
+            x_likelihood = likelihood(self.mu_LTd, self.LTd_std,
+                mu_drift_states_posterior[1].item())
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
                 ssm_copy.lstm_output_history.update(
@@ -1107,7 +1121,9 @@ class hsl_classification:
                     # var_states_prior[lstm_index, lstm_index],
                 )
             ssm_copy._save_states_history()
-            ssm_copy.set_states(mu_states_prior, var_states_prior)
+            ssm_copy.set_states(mu_states_posterior, var_states_posterior)
+            drift_model_copy._save_states_history()
+            drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             LL_track.append(mu_states_prior[LL_index])
             # ssm_copy.set_states(mu_states_prior, var_states_prior)
 
@@ -1131,17 +1147,23 @@ class hsl_classification:
             #                     mu_obs_pred - 3 * np.sqrt(var_obs_pred))
             # y_likelihood = max(y_likelihood, y_ll_lb)
 
-            y_likelihood_all.append(y_likelihood.item())
+            # print(mu_drift_states_posterior[1].item(), self.mu_LTd, self.LTd_std)
+            # print(data_all["y"][i], mu_obs_pred, np.sqrt(var_obs_pred))
+            # print(y_likelihood.item(), x_likelihood.item())
+
+            y_likelihood_all.append(y_likelihood.item() * x_likelihood.item())
 
         # # Plot retracted states after intervention
-        # mu_level_plot = ssm_copy.states.get_mean(states_type="prior", states_name="level", standardization=True)
-        # std_level_plot = ssm_copy.states.get_std(states_type="prior", states_name="level", standardization=True)
-        # mu_trend_plot = ssm_copy.states.get_mean(states_type="prior", states_name="trend", standardization=True)
-        # std_trend_plot = ssm_copy.states.get_std(states_type="prior", states_name="trend", standardization=True)
-        # mu_lstm_plot = ssm_copy.states.get_mean(states_type="prior", states_name="lstm", standardization=True)
-        # std_lstm_plot = ssm_copy.states.get_std(states_type="prior", states_name="lstm", standardization=True)
-        # mu_ar_plot = ssm_copy.states.get_mean(states_type="prior", states_name="autoregression", standardization=True)
-        # std_ar_plot = ssm_copy.states.get_std(states_type="prior", states_name="autoregression", standardization=True)
+        # mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
+        # std_level_plot = ssm_copy.states.get_std(states_type="posterior", states_name="level", standardization=True)
+        # mu_trend_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="trend", standardization=True)
+        # std_trend_plot = ssm_copy.states.get_std(states_type="posterior", states_name="trend", standardization=True)
+        # mu_lstm_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
+        # std_lstm_plot = ssm_copy.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
+        # mu_ar_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
+        # std_ar_plot = ssm_copy.states.get_std(states_type="posterior", states_name="autoregression", standardization=True)
+        # mu_arlevel_plot = drift_model_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
+        # mu_artrend_plot = drift_model_copy.states.get_mean(states_type="posterior", states_name="trend", standardization=True)
         # # Remove the first self.num_before_detect points to align with mu_y_preds
         # mu_level_plot = mu_level_plot[self.num_before_detect:]
         # std_level_plot = std_level_plot[self.num_before_detect:]
@@ -1151,13 +1173,16 @@ class hsl_classification:
         # std_lstm_plot = std_lstm_plot[self.num_before_detect:]
         # mu_ar_plot = mu_ar_plot[self.num_before_detect:]
         # std_ar_plot = std_ar_plot[self.num_before_detect:]
+        # mu_arlevel_plot = mu_arlevel_plot[self.num_before_detect:]
+        # mu_artrend_plot = mu_artrend_plot[self.num_before_detect:]
 
         # fig = plt.figure(figsize=(10, 5))
-        # gs = gridspec.GridSpec(4, 1)
+        # gs = gridspec.GridSpec(5, 1)
         # ax0 = plt.subplot(gs[0])
         # ax1 = plt.subplot(gs[1])
         # ax2 = plt.subplot(gs[2])
         # ax3 = plt.subplot(gs[3])
+        # ax4 = plt.subplot(gs[4])
         # ax0.plot(range(len(mu_y_preds)), np.array(mu_y_preds).flatten(), label='After itv')
         # ax0.fill_between(range(len(mu_y_preds)),
         #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
@@ -1202,17 +1227,21 @@ class hsl_classification:
         #                  mu_ar_plot.flatten() - std_ar_plot.flatten(),
         #                  mu_ar_plot.flatten() + std_ar_plot.flatten(),
         #                  color='tab:blue', alpha=0.2)
+        # ax3.plot(range(len(mu_arlevel_plot)), np.array(mu_arlevel_plot).flatten(), color='tab:orange', label='AR Level Drift')
         # ax3.set_xlim(ax0.get_xlim())
         # ax3.set_ylabel('AR')
-        # if trend_intervention[0] == 0:
-        #     print('LL intervention applied.')
-        #     print(y_likelihood_all)
-        #     print(np.prod(y_likelihood_all))
-        # if trend_intervention[0] != 0:
-        #     print('LT intervention applied.')
-        #     print(y_likelihood_all)
-        #     print(np.prod(y_likelihood_all))
+        # # if trend_intervention[0] == 0:
+        # #     print('LL intervention applied.')
+        # #     print(y_likelihood_all)
+        # #     # print(np.prod(y_likelihood_all))
+        # # if trend_intervention[0] != 0:
+        # #     print('LT intervention applied.')
+        # #     print(y_likelihood_all)
+        # #     # print(np.prod(y_likelihood_all))
 
+        # ax4.plot(range(len(mu_artrend_plot)), np.array(mu_artrend_plot).flatten(), color='tab:orange', label='AR LT Drift')
+        # ax4.fill_between(range(len(mu_artrend_plot)), self.mu_LTd-self.LTd_std, self.mu_LTd+self.LTd_std, color='tab:orange', alpha=0.2)
+        # ax4.set_xlim(ax0.get_xlim())
         # plt.show()
 
         if "lstm" in ssm.states_name:
