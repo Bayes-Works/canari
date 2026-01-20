@@ -98,6 +98,7 @@ class LstmNetwork(BaseComponent):
         var_states: Optional[list[float]] = None,
         smoother: Optional[bool] = True,
         model_noise: Optional[bool] = False,
+        model_exp_smooth: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -115,39 +116,54 @@ class LstmNetwork(BaseComponent):
         self._var_states = var_states
         self.smoother = smoother
         self.model_noise = model_noise
-        self.num_output = 2 * num_output if self.model_noise else num_output
+        self.model_exp_smooth = model_exp_smooth
+        # self.num_output = 2 * num_output if self.model_noise else num_output
+        self.num_output = 3
         super().__init__()
 
     def initialize_component_name(self):
         self._component_name = "lstm"
 
     def initialize_num_states(self):
-        self._num_states = 2 if self.model_noise else 1
+        # self._num_states = 2 if self.model_noise else 1
+        self._num_states = 3
 
     def initialize_states_name(self):
         if self.model_noise:
             self._states_name = ["lstm", "heteroscedastic noise"]
         else:
             self._states_name = ["lstm"]
+        if self.model_exp_smooth:
+            self._states_name = ["lstm", "heteroscedastic noise", "es coeff"]
+
 
     def initialize_transition_matrix(self):
         if self.model_noise:
             self._transition_matrix = np.array([[0, 0], [0, 0]])
         else:
             self._transition_matrix = np.array([[0]])
+        if self.model_exp_smooth:
+            self._transition_matrix = np.array(
+                [[0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]]
+                )
 
     def initialize_observation_matrix(self):
         if self.model_noise:
             self._observation_matrix = np.array([[1, 1]])
         else:
             self._observation_matrix = np.array([[1]])
+        if self.model_exp_smooth:
+            self._observation_matrix = np.array([[1, 1, 0]])
 
     def initialize_process_noise_matrix(self):
         if self.model_noise:
             self._process_noise_matrix = np.array([[self.std_error**2, 0], [0, 0]])
         else:
             self._process_noise_matrix = np.array([[self.std_error**2]])
-
+        if self.model_exp_smooth:
+            self._process_noise_matrix = np.zeros((3,3))
     def initialize_mu_states(self):
         if self._mu_states is None:
             self._mu_states = np.zeros((self.num_states, 1))

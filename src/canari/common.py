@@ -99,8 +99,12 @@ def forward(
         + process_noise_matrix
     )
     if mu_lstm_pred is not None:
-        mu_states_prior[lstm_indice] = mu_lstm_pred.item()
-        var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
+        # mu_states_prior[lstm_indice] = mu_lstm_pred.item()
+        # var_states_prior[lstm_indice, lstm_indice] = var_lstm_pred.item()
+
+        mu_states_prior[lstm_indice] = mu_lstm_pred.reshape(-1, 1)
+        var_states_prior[lstm_indice[0], lstm_indice[0]] = var_lstm_pred[0]
+        var_states_prior[lstm_indice[1], lstm_indice[1]] = var_lstm_pred[1]
 
     mu_obs_predict, var_obs_predict = calc_observation(
         mu_states_prior, var_states_prior, observation_matrix

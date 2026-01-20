@@ -737,7 +737,7 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def _exp_smoothing_backward_modification_(
+    def _exp_smoothing_backward_modification(
         self,
         mu_states_posterior: np.ndarray, 
         var_states_posterior: np.ndarray,
@@ -774,87 +774,6 @@ class Model:
             * mu_states_posterior[exp_coeff_index]**2
         )
         var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
-
-        return mu_states_posterior, var_states_posterior
-    
-    def _exp_smoothing_backward_modification(
-        self,
-        mu_states_posterior: np.ndarray, 
-        var_states_posterior: np.ndarray,
-    ) -> Tuple[np.ndarray,np.ndarray,]:
-        """
-        Modify backward function for exponential smoothing component.
-        """
-
-        noise_index = self.get_states_index(states_name="heteroscedastic noise")
-        exp_coeff_index = self.get_states_index(states_name="es coeff")
-        exp_prod_index = self.get_states_index(states_name="es prod")
-        mu_prod = (
-            mu_states_posterior[exp_coeff_index]
-            * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_coeff_index, noise_index]
-        )
-        cov_prod_others = (
-            var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
-            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
-        )
-        var_prod = (
-            var_states_posterior[exp_coeff_index,exp_coeff_index]
-            * var_states_posterior[noise_index,noise_index]
-            + var_states_posterior[exp_coeff_index,noise_index]**2
-            + 2 * var_states_posterior[exp_coeff_index,noise_index]
-            * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_coeff_index,exp_coeff_index]
-            * mu_states_posterior[noise_index]**2
-            + var_states_posterior[noise_index,noise_index]
-            * mu_states_posterior[exp_coeff_index]**2
-        )
-
-
-        exp_trend_coeff_index = self.get_states_index(states_name="es trend coeff")
-        exp_trend_prod_index = self.get_states_index(states_name="es trend prod")
-        mu_trend_prod = (
-            mu_states_posterior[exp_trend_coeff_index]
-            * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_trend_coeff_index, noise_index]
-        )
-        cov_trend_prod_others = (
-            var_states_posterior[exp_trend_coeff_index,:] * mu_states_posterior[noise_index]
-            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_trend_coeff_index]
-        )
-        var_trend_prod = (
-            var_states_posterior[exp_trend_coeff_index,exp_trend_coeff_index]
-            * var_states_posterior[noise_index,noise_index]
-            + var_states_posterior[exp_trend_coeff_index,noise_index]**2
-            + 2 * var_states_posterior[exp_trend_coeff_index,noise_index]
-            * mu_states_posterior[exp_trend_coeff_index] * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_trend_coeff_index,exp_trend_coeff_index]
-            * mu_states_posterior[noise_index]**2
-            + var_states_posterior[noise_index,noise_index]
-            * mu_states_posterior[exp_trend_coeff_index]**2
-        )
-
-        mu_states_posterior[exp_prod_index] = mu_prod
-        var_states_posterior[exp_prod_index,:] = cov_prod_others
-        var_states_posterior[:,exp_prod_index] = cov_prod_others
-        var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
-
-        mu_states_posterior[exp_trend_prod_index] = mu_trend_prod
-        var_states_posterior[exp_trend_prod_index,:] = cov_trend_prod_others
-        var_states_posterior[:,exp_trend_prod_index] = cov_trend_prod_others
-        var_states_posterior[exp_trend_prod_index,exp_trend_prod_index] = var_trend_prod
-
-        cross_cov_exp = (
-            var_states_posterior[exp_coeff_index,exp_trend_coeff_index]
-            * var_states_posterior[noise_index,noise_index]
-            + var_states_posterior[exp_coeff_index,noise_index] * var_states_posterior[exp_trend_coeff_index,noise_index]
-            + var_states_posterior[exp_coeff_index,exp_trend_coeff_index] * mu_states_posterior[noise_index]**2
-            + var_states_posterior[exp_coeff_index,noise_index] * mu_states_posterior[exp_trend_coeff_index] * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_trend_coeff_index,noise_index] * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
-            + var_states_posterior[noise_index,noise_index] * mu_states_posterior[exp_coeff_index] * mu_states_posterior[exp_trend_coeff_index]
-        )
-        var_states_posterior[exp_prod_index, exp_trend_prod_index] = cross_cov_exp
-        var_states_posterior[exp_trend_prod_index, exp_prod_index] = cross_cov_exp
 
         return mu_states_posterior, var_states_posterior
          
@@ -1521,7 +1440,8 @@ class Model:
         """
 
         # LSTM prediction:
-        lstm_states_index = self.get_states_index("lstm")
+        # lstm_states_index = self.get_states_index("lstm")
+        lstm_states_index = [4, 6]
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             if var_input_covariates is not None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -1665,19 +1585,29 @@ class Model:
             delta_var_states (np.ndarray): Delta variance states.
         """
 
-        lstm_index = self.get_states_index("lstm")
-        delta_mu_lstm = np.array(
-            delta_mu_states[lstm_index] / self.var_states_prior[lstm_index, lstm_index]
-        )
-        delta_var_lstm = np.array(
-            delta_var_states[lstm_index, lstm_index]
-            / self.var_states_prior[lstm_index, lstm_index] ** 2
-        )
+        # lstm_index = self.get_states_index("lstm")
+        lstm_index = [4, 6]
+        delta_mu_lstm = np.zeros((3,1))
+        delta_var_lstm = np.zeros((3,1))
+        delta_mu_lstm[0] = delta_mu_states[lstm_index[0]] / self.var_states_prior[lstm_index[0], lstm_index[0]]
+        delta_mu_lstm[2] = delta_mu_states[lstm_index[1]] / self.var_states_prior[lstm_index[1], lstm_index[1]]
+        delta_var_lstm[0] = delta_var_states[lstm_index[0], lstm_index[0]] / self.var_states_prior[lstm_index[0], lstm_index[0]] ** 2
+        delta_var_lstm[2] = delta_var_states[lstm_index[1], lstm_index[1]] / self.var_states_prior[lstm_index[1], lstm_index[1]] ** 2
+
+        # delta_mu_lstm = np.array(
+        #     delta_mu_states[lstm_index] / self.var_states_prior[lstm_index, lstm_index]
+        # )
+        # delta_var_lstm = np.array(
+        #     delta_var_states[lstm_index, lstm_index]
+        #     / self.var_states_prior[lstm_index, lstm_index] ** 2
+        # )
 
         if self.lstm_net.model_noise:
             delta_mu_v2bar, delta_var_v2bar = self._delta_hete_noise()
-            delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
-            delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+            # delta_mu_lstm = np.append(delta_mu_lstm, delta_mu_v2bar)
+            # delta_var_lstm = np.append(delta_var_lstm, delta_var_v2bar)
+            delta_mu_lstm[1] = delta_mu_v2bar
+            delta_var_lstm[1] = delta_var_v2bar
 
         self.lstm_net.set_delta_z(
             np.array(delta_mu_lstm, dtype=np.float32),

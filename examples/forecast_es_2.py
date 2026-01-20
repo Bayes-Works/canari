@@ -9,34 +9,12 @@ from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, 
 
 # # Read data
 
-# data_file = "./data/toy_time_series/sine.csv"
-# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# # df_raw = pd.concat([df_raw, df_raw], ignore_index=True)
+data_file = "./data/toy_time_series/sine.csv"
+df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
+# df_raw = pd.concat([df_raw, df_raw], ignore_index=True)
 
-# # Create piecewise linear trend
-# N = len(df_raw)
-# half = N // 2
-# linear_trend = np.concatenate([
-#     np.linspace(0, , half, endpoint=False),
-#     np.linspace(1, 0, N - half)
-# ])
-
-# # Add trend row-wise
-# df_raw = df_raw.add(linear_trend, axis=0)
-
-# data_file_time = "./data/toy_time_series/sine_datetime.csv"
-# time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-# time_series = pd.to_datetime(time_series[0])
-# df_raw.index = time_series
-# df_raw.index.name = "date_time"
-# df_raw.columns = ["values"]
-
-# # Resampling data
-# df = df_raw.resample("H").mean()
-
-data_file = "./data/data_exp_smoothing.csv"
-df = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
-N = len(df)
+# Create piecewise linear trend
+N = len(df_raw)
 half = N // 2
 linear_trend = np.concatenate([
     np.linspace(0, 1, half, endpoint=False),
@@ -44,8 +22,30 @@ linear_trend = np.concatenate([
 ])
 
 # Add trend row-wise
-df = df.add(linear_trend, axis=0)
-df.columns = ["values"]
+df_raw = df_raw.add(linear_trend, axis=0)
+
+data_file_time = "./data/toy_time_series/sine_datetime.csv"
+time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
+time_series = pd.to_datetime(time_series[0])
+df_raw.index = time_series
+df_raw.index.name = "date_time"
+df_raw.columns = ["values"]
+
+# Resampling data
+df = df_raw.resample("H").mean()
+
+# data_file = "./data/data_exp_smoothing.csv"
+# df = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
+# N = len(df)
+# half = N // 2
+# linear_trend = np.concatenate([
+#     np.linspace(0, 1, half, endpoint=False),
+#     np.linspace(1, 0, N - half)
+# ])
+
+# Add trend row-wise
+# df = df.add(linear_trend, axis=0)
+# df.columns = ["values"]
 
 # Define parameters
 output_col = [0]
@@ -54,12 +54,20 @@ num_epoch = 50
 # Build data processor
 data_processor = DataProcess(
     data=df,
-    # time_covariates=["hour_of_day"],
+    time_covariates=["hour_of_day"],
     train_split=0.8,
     validation_split=0.1,
+
     output_col=output_col,
 )
-
+# plot_data(
+#     data_processor=data_processor,
+#     standardization=True,
+#     plot_validation_data=True,
+#     plot_test_data=True,
+#     plot_column=output_col
+# )
+# plt.show()
 # split data
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
@@ -69,11 +77,11 @@ model = Model(
     ExpSmoothing(),
     LstmNetwork(
         look_back_len=12,
-        num_features=1,
-        infer_len=24 * 3,
+        num_features=2,
+        # infer_len=24 * 3,
         num_layer=1,
         num_hidden_unit=40,
-        manual_seed=1,
+        manual_seed=5,
         model_noise=True,
         model_exp_smooth=True,
         smoother=False,
