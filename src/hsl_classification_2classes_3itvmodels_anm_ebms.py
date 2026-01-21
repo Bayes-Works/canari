@@ -63,7 +63,7 @@ class hsl_classification:
         self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
         self.pred_class_probs = []
         self.pred_class_probs_var = []
-        self.data_loglikelihoods = []
+        self.class_prob_moments = []
         self.ll_itv_all, self.lt_itv_all = [], []
         self.prob_coeff = []
         self.y_std_scale = y_std_scale
@@ -214,7 +214,7 @@ class hsl_classification:
             self.std_itv_all.append([np.nan, np.nan, np.nan])
             self.pred_class_probs.append([0])
             self.pred_class_probs_var.append([0])
-            self.data_loglikelihoods.append([None, None, None, None])
+            self.class_prob_moments.append([0.5, 0.5, 0, 0])
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
             self.prob_coeff.append(0)
@@ -833,31 +833,25 @@ class hsl_classification:
                     # EBMS
                     ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    log_likelihood_ll = np.sum(ll_post_n)
-                    log_likelihood_lt = np.sum(lt_post_n)
+                    ll_post_sum = np.sum(ll_post_n)
+                    lt_post_sum = np.sum(lt_post_n)
 
-                    # log_likelihood_ll = np.sum(data_likelihoods_ll)
-                    # log_likelihood_lt = np.sum(data_likelihoods_lt)
-                    # log_likelihood_ll = np.mean(data_likelihoods_ll)
-                    # log_likelihood_lt = np.mean(data_likelihoods_lt)
+                    # ll_post_sum = np.sum(data_likelihoods_ll)
+                    # lt_post_sum = np.sum(data_likelihoods_lt)
+                    # ll_post_sum = np.mean(data_likelihoods_ll)
+                    # lt_post_sum = np.mean(data_likelihoods_lt)
                 else:
-                    log_likelihood_ll = 1
-                    log_likelihood_lt = 1
+                    ll_post_sum = 1
+                    lt_post_sum = 1
 
-                # # # Take the average of each list data_likelihoods_ll and data_likelihoods_lt
-                # log_likelihood_ll = np.sum(decay_weights * data_likelihoods_ll)
-                # log_likelihood_lt = np.sum(decay_weights * data_likelihoods_lt)
-                # log_likelihood_ll_op = np.sum(decay_weights_op * data_likelihoods_ll)
-                # log_likelihood_lt_op = np.sum(decay_weights_op * data_likelihoods_lt)
-
-                # # Multivariate likelihood
-                # log_likelihood_ll = data_likelihoods_ll
-                # log_likelihood_lt = data_likelihoods_lt
+                llitv_prob_mean = ll_post_sum / (ll_post_sum + lt_post_sum)
+                ltitv_prob_mean = lt_post_sum / (ll_post_sum + lt_post_sum)
+                llitv_prob_std = np.sqrt( ll_post_sum * lt_post_sum / (ll_post_sum + lt_post_sum)**2/(ll_post_sum + lt_post_sum + 1))
 
                 # Store the log-likelihoods
-                self.data_loglikelihoods.append([log_likelihood_lt, log_likelihood_ll, None, None])
+                self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
             else:
-                self.data_loglikelihoods.append([None, None, None, None])
+                self.class_prob_moments.append([0.5, 0.5, 0, 0])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
                 self.prob_coeff.append(0)

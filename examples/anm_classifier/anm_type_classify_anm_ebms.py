@@ -168,7 +168,7 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_tra
                                     load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_phi05.pkl', 
                                     load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_phi05.pkl', 
                                     max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False, anm_begin=time_anomaly)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True, anm_begin=time_anomaly)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 
@@ -257,24 +257,29 @@ for t in range(m_logits.shape[0]):
     m_probs.append(pr_classes.tolist())
 m_probs = np.array(m_probs)
 
-# # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
-final_class_log_probs = []
-final_class_prob_stds = []
-for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
-    if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
-        final_class_log_probs.append([0.5, 0.5])
-        final_class_prob_stds.append(0)
-    else:
-        log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
-        # probs = np.exp(log_likelihoods)
-        probs = log_likelihoods
-        probs /= np.sum(probs)
-        var = log_likelihoods[0] * log_likelihoods[1]/(log_likelihoods[0] + log_likelihoods[1])**2/ (log_likelihoods[0] + log_likelihoods[1] +1)
-        final_class_log_probs.append(probs)     
-        final_class_prob_stds.append(np.sqrt(var))   
+# # # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
+# final_class_log_probs = []
+# final_class_prob_stds = []
+# for t in range(len(hsl_tsad_agent.data_loglikelihoods)):
+#     if hsl_tsad_agent.data_loglikelihoods[t][0] is None:
+#         final_class_log_probs.append([0.5, 0.5])
+#         final_class_prob_stds.append(0)
+#     else:
+#         log_likelihoods = hsl_tsad_agent.data_loglikelihoods[t][0:2]
+#         # probs = np.exp(log_likelihoods)
+#         probs = log_likelihoods
+#         probs /= np.sum(probs)
+#         var = log_likelihoods[0] * log_likelihoods[1]/(log_likelihoods[0] + log_likelihoods[1])**2/ (log_likelihoods[0] + log_likelihoods[1] +1)
+#         final_class_log_probs.append(probs)     
+#         final_class_prob_stds.append(np.sqrt(var)) 
 
-final_class_log_probs = np.array(final_class_log_probs)
-final_class_prob_stds = np.array(final_class_prob_stds)
+  
+
+# final_class_log_probs = np.array(final_class_log_probs)
+# final_class_prob_stds = np.array(final_class_prob_stds)
+
+final_class_log_probs = np.array(hsl_tsad_agent.class_prob_moments)[:, 0:2]
+final_class_prob_stds = np.array(hsl_tsad_agent.class_prob_moments)[:, 2]
 
 gen_ar_phi = model_dict['gen_phi_ar']
 gen_ar_sigma =model_dict['gen_sigma_ar']
