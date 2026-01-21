@@ -824,17 +824,17 @@ class hsl_classification:
                     # log_likelihood_ll = np.sum(np.log(data_likelihoods_ll))
                     # log_likelihood_lt = np.sum(np.log(data_likelihoods_lt))
 
-                    # Compare var(ll_itv_baseline-lt_itv_baseline) with stationary_ar_std**2 to decide whether to keep the likelihood or not
-                    ll_lt_diff = ll_itv_baseline - lt_itv_baseline
-                    if np.var(ll_lt_diff) < stationary_ar_std**2:
-                        log_likelihood_ll = 1
-                        log_likelihood_lt = 1
-                    else:
-                        # EBMS
-                        ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                        lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                        log_likelihood_ll = np.sum(ll_post_n)
-                        log_likelihood_lt = np.sum(lt_post_n)
+                    # # Compare var(ll_itv_baseline-lt_itv_baseline) with stationary_ar_std**2 to decide whether to keep the likelihood or not
+                    # ll_lt_diff = ll_itv_baseline - lt_itv_baseline
+                    # if np.var(ll_lt_diff) < stationary_ar_std**2:
+                    #     log_likelihood_ll = 1
+                    #     log_likelihood_lt = 1
+                    # else:
+                    # EBMS
+                    ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                    lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                    log_likelihood_ll = np.sum(ll_post_n)
+                    log_likelihood_lt = np.sum(lt_post_n)
 
                     # log_likelihood_ll = np.sum(data_likelihoods_ll)
                     # log_likelihood_lt = np.sum(data_likelihoods_lt)
