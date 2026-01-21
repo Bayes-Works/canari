@@ -168,7 +168,7 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_tra
                                     load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_phi05.pkl', 
                                     load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_phi05.pkl', 
                                     max_training_epoch=50)
-mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True, anm_begin=time_anomaly)
+mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False, anm_begin=time_anomaly)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 

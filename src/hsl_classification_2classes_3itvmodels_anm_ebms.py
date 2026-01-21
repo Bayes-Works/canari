@@ -69,8 +69,6 @@ class hsl_classification:
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
-        self.m_mp = m_mp
-        self.mp_all = []
 
     def _copy_initial_models(self):
         """
@@ -187,23 +185,6 @@ class hsl_classification:
             self.drift_model2.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
             mu_ar_preds2.append(mu_ar_pred2)
             std_ar_preds2.append(var_ar_pred2**0.5)
-
-            # Compute MP at the current time step
-            mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
-            std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
-            mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
-            mp_input = mu_lstm + mu_ar  # Combine LSTM and AR components for MP calculation
-            if self.current_time_step >= self.start_idx_mp:
-                T = np.array(mp_input).flatten().astype("float64")
-                Q = T[self.current_time_step - self.m_mp:self.current_time_step]
-                D = stumpy.mass(Q, T[:self.current_time_step - self.m_mp], normalize=False)
-                min_idx = np.argmin(D)
-                mp_value = D[min_idx]
-                if mp_value == np.inf or np.isnan(mp_value):
-                    mp_value = np.nan
-            else:
-                mp_value = 0.0  # No anomaly score before enough history
-            self.mp_all.append(mp_value)
 
             if buffer_LTd:
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
@@ -680,7 +661,6 @@ class hsl_classification:
                 p_yt_I_Yt1 = y_likelihood_na * x_likelihood_na * self.prior_na + y_likelihood_a * x_likelihood_a * self.prior_a
                 # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
-                self.p_anm_all.append(p_a_I_Yt)
 
                 # # Track what classifier learns
                 LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
@@ -688,12 +668,10 @@ class hsl_classification:
                 # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
                 LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior, step_look_back=128)
                 LTd2_history = self._hidden_states_collector(self.current_time_step - 1, LTd2_mu_prior, step_look_back=128)
-                mp_history = self._hidden_states_collector(self.current_time_step - 1, self.mp_all, step_look_back=128)
 
                 # Normalize the histories
                 LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
                 LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class
-                mp_history = (mp_history - self.mean_MP_class) / self.std_MP_class
 
                 # # input_history = torch.tensor(LTd_history.tolist()+mp_history.tolist())
                 # input_history = np.array(LTd_history.tolist()+LTd2_history.tolist()+mp_history.tolist())
@@ -729,7 +707,7 @@ class hsl_classification:
             itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
 
             # Apply intervention to estimate data likelihood
-            if p_a_I_Yt > self.detection_threshold:
+            if p_a_I_Yt > self.detection_threshold and rerun_kf is False:
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
@@ -755,11 +733,15 @@ class hsl_classification:
                 # Option 1: true intervention time, with no access to in reality
                 itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
 
+                if first_time_trigger:
+                    self.p_anm_all.append(0)
+                else:
+                    self.p_anm_all.append(p_a_I_Yt)
+                
                 # Option 2: use the detection time
                 if first_time_trigger is False:
                     trigger_time = self.current_time_step
                     first_time_trigger = True
-                    # llclt_itv_at_trigger = llclt_itv
                 itvtime_from_det = self.current_time_step - trigger_time + 1
 
                 # Option 3: use the detection time and calibrated LL at that time step
@@ -846,39 +828,53 @@ class hsl_classification:
 
                 llitv_prob_mean = ll_post_sum / (ll_post_sum + lt_post_sum)
                 ltitv_prob_mean = lt_post_sum / (ll_post_sum + lt_post_sum)
-                llitv_prob_std = np.sqrt( ll_post_sum * lt_post_sum / (ll_post_sum + lt_post_sum)**2/(ll_post_sum + lt_post_sum + 1))
+                llitv_prob_std = np.sqrt(ll_post_sum * lt_post_sum / (ll_post_sum + lt_post_sum)**2/(ll_post_sum + lt_post_sum + 1))
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
-            else:
+            elif rerun_kf is False:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
                 self.prob_coeff.append(0)
+                self.p_anm_all.append(p_a_I_Yt)
 
-            # if apply_intervention:
-            #     if rerun_kf is False:
-            #         if p_a_I_Yt > self.detection_threshold:
-            #             rerun_kf = True
-            #             # To control that during the rerun from the past, the agent cannnot trigger again
-            #             i_before_retract = copy.copy(i)
-            #             # Retract agent
-            #             step_back = max(int(itv_pred_lt_mu_denorm[2]), 1) if max(int(itv_pred_lt_mu_denorm[2]), 1) < i else i - 2
-            #             self._retract_agent(time_step_back=step_back)
-            #             i = i - step_back
-            #             self.current_time_step = self.current_time_step - step_back
+            class_mu_threshold = 0.8
+            class_std_threshold = 0.05
+            if self.class_prob_moments[-1][0] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+                apply_intervention = True
+                ll_intervened_mu = itv_LL[0]
+                lt_intervened_mu = 0
+                print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
+            elif self.class_prob_moments[-1][1] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+                apply_intervention = True
+                ll_intervened_mu = itv_LT[0]
+                lt_intervened_mu = itv_LT[1]
+                print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
 
-            #             # Apply intervention on base_model hidden states
-            #             LL_index = self.base_model.states_name.index("level")
-            #             LT_index = self.base_model.states_name.index("trend")
-            #             # self.base_model.mu_states[LL_index] += itv_pred_lt_mu_denorm[1]
-            #             self.base_model.mu_states[LT_index] += itv_pred_lt_mu_denorm[0]
-            #             self.base_model.var_states[LL_index, LL_index] += itv_pred_lt_var_denorm[1]
-            #             self.base_model.var_states[LT_index, LT_index] += itv_pred_lt_var_denorm[0]
+            if apply_intervention:
+                if rerun_kf is False:
+                    rerun_kf = True
+                    # To control that during the rerun from the past, the agent cannnot trigger again
+                    i_before_retract = copy.copy(i)
+                    # Retract agent
+                    step_back = num_steps_retract
+                    self._retract_agent(time_step_back=step_back)
+                    i = i - step_back
+                    self.current_time_step = self.current_time_step - step_back
 
-            #             self.drift_model.mu_states[0] = 0
-            #             self.drift_model.mu_states[1] = self.mu_LTd
-            #             trigger = True
+                    # Apply intervention on base_model hidden states
+                    LL_index = self.base_model.states_name.index("level")
+                    LT_index = self.base_model.states_name.index("trend")
+                    self.base_model.mu_states[LL_index] = ll_intervened_mu
+                    self.base_model.mu_states[LT_index] = lt_intervened_mu
+
+                    self.drift_model.mu_states[0] = 0
+                    self.drift_model.mu_states[1] = self.mu_LTd
+
+                    trigger = True
+                    apply_intervention = False
+                    first_time_trigger = False
 
             # Base model filter process, same as in model.py
             # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
@@ -917,28 +913,6 @@ class hsl_classification:
                 obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
             self.drift_model2._save_states_history()
             self.drift_model2.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
-
-            # Compute MP at the current time step
-            mu_lstm = self.base_model.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
-            std_lstm = self.base_model.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
-            mu_ar = self.base_model.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
-            mp_input = mu_ar + mu_lstm
-            if p_a_I_Yt > self.detection_threshold:
-                anm_start_global = self.current_time_step - num_steps_retract
-            else:
-                anm_start_global = np.inf
-            if self.current_time_step >= self.start_idx_mp:
-                T = np.array(mp_input).flatten().astype("float64")
-                Q = T[self.current_time_step - self.m_mp:self.current_time_step]
-                stationary_space_stop = self.current_time_step - self.m_mp if self.current_time_step - self.m_mp < anm_start_global else anm_start_global
-                D = stumpy.mass(Q, T[:stationary_space_stop], normalize=False)
-                min_idx = np.argmin(D)
-                mp_value = D[min_idx]
-                if mp_value == np.inf or np.isnan(mp_value):
-                    mp_value = np.nan
-            else:
-                mp_value = 0.0  # No anomaly score before enough history
-            self.mp_all.append(mp_value)
 
             self.current_time_step += 1
             i += 1
@@ -1095,14 +1069,14 @@ class hsl_classification:
         LL_index = ssm_copy.states_name.index("level")
         LT_index = ssm_copy.states_name.index("trend")
         if trend_intervention[0] != 0:
-            ssm_copy.mu_states[LL_index] += LLcLT_deterministic_itv
-            ssm_copy.mu_states[LT_index] += mu_LT_deterministic_itv
+            ssm_copy.mu_states[LL_index] = LLcLT_deterministic_itv
+            ssm_copy.mu_states[LT_index] = mu_LT_deterministic_itv
         else:
-            ssm_copy.mu_states[LL_index] += mu_LL_deterministic_itv
-        LL_intervened_value = ssm_copy.mu_states[LL_index]
-        LT_intervened_value = ssm_copy.mu_states[LT_index]
+            ssm_copy.mu_states[LL_index] = mu_LL_deterministic_itv
+        LL_intervened_value = [mu_LL_deterministic_itv]
+        LT_intervened_value = [LLcLT_deterministic_itv, mu_LT_deterministic_itv]
         y_likelihood_all = []
-        LL_track = [LL_intervened_value.item()]
+        LL_track = [mu_LL_deterministic_itv.item()]
         for i in range(num_steps_retract):
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
@@ -1250,7 +1224,7 @@ class hsl_classification:
             ssm.lstm_output_history = copy.deepcopy(output_history_temp)
             ssm.lstm_net.set_lstm_states(cell_states_temp)
 
-        return y_likelihood_all, LL_intervened_value.item(), LT_intervened_value.item(), np.array(LL_track).flatten()
+        return y_likelihood_all, LL_intervened_value, LT_intervened_value, np.array(LL_track).flatten()
     
     def _estimate_likelihoods(
             self, 
