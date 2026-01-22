@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-anm_type = 'LT'
-time_anomaly = 52*5
-anm_mag = 12/52
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-# # LL anomaly
-# anm_type = 'LL'
-# time_anomaly = 52*7
-# anm_mag = 17
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# # LT anomaly
+# anm_type = 'LT'
+# time_anomaly = 52*5
+# anm_mag = 12/52
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
+
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*7
+anm_mag = 35
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # PD anomaly
 # time_anomaly = 52*7
@@ -285,8 +285,8 @@ gen_ar_phi = model_dict['gen_phi_ar']
 gen_ar_sigma =model_dict['gen_sigma_ar']
 stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
 ax5.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
-ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:blue')
-ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:orange')
+ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:blue')
+ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:orange')
 ax5.set_ylabel("itv")
 # ax5.axhline(y=normed_anm_mag, color='purple', linestyle='--', label='Anomaly magnitude')
 # ax5.plot(time, normed_anm_baseline, color='purple', linestyle='--', label='Anomaly magnitude')

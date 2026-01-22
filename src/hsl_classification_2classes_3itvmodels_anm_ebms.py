@@ -751,7 +751,7 @@ class hsl_classification:
                 num_steps_retract = itvtime_from_det
 
                 self.likelihoods_log_mask = []
-                data_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
+                data_likelihoods_ll, hs_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
                     # level_intervention = [level_itv, 0],
@@ -766,7 +766,7 @@ class hsl_classification:
                 # gamma = 1
                 decay_weights = np.array([gamma**i for i in range(len(data_likelihoods_ll)-1, -1, -1)])
                 decay_weights_op = np.array([gamma**i for i in range(len(data_likelihoods_ll))])
-                data_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
+                data_likelihoods_lt, hs_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
                     level_intervention = [llclt_itv_at_trigger, 0],
@@ -813,22 +813,42 @@ class hsl_classification:
                     #     log_likelihood_lt = 1
                     # else:
                     # EBMS
-                    ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    ll_post_sum = np.sum(ll_post_n)
-                    lt_post_sum = np.sum(lt_post_n)
+                    data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                    data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
+                    data_ll_post_sum = np.sum(data_ll_post_n)
+                    data_lt_post_sum = np.sum(data_lt_post_n)
+
+                    hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
+                    hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
+                    hs_ll_post_sum = np.sum(hs_ll_post_n)
+                    hs_lt_post_sum = np.sum(hs_lt_post_n)
 
                     # ll_post_sum = np.sum(data_likelihoods_ll)
                     # lt_post_sum = np.sum(data_likelihoods_lt)
                     # ll_post_sum = np.mean(data_likelihoods_ll)
                     # lt_post_sum = np.mean(data_likelihoods_lt)
                 else:
-                    ll_post_sum = 1
-                    lt_post_sum = 1
+                    data_ll_post_sum = 1
+                    data_lt_post_sum = 1
+                    hs_ll_post_sum = 1
+                    hs_lt_post_sum = 1
 
-                llitv_prob_mean = ll_post_sum / (ll_post_sum + lt_post_sum)
-                ltitv_prob_mean = lt_post_sum / (ll_post_sum + lt_post_sum)
-                llitv_prob_std = np.sqrt(ll_post_sum * lt_post_sum / (ll_post_sum + lt_post_sum)**2/(ll_post_sum + lt_post_sum + 1))
+                data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
+
+                hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
+
+                # Get mixture coefficient
+                data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
+                hs_prob_coeff = 1 - data_prob_coeff
+                # Combine data and hidden states likelihoods
+                llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
+                ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
+                llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
+                                         + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
@@ -839,14 +859,35 @@ class hsl_classification:
                 self.prob_coeff.append(0)
                 self.p_anm_all.append(p_a_I_Yt)
 
-            class_mu_threshold = 0.8
-            class_std_threshold = 0.05
-            if self.class_prob_moments[-1][0] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+            # class_mu_threshold = 0.7
+            # class_std_threshold = 0.1
+            # if self.class_prob_moments[-1][0] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+            #     apply_intervention = True
+            #     ll_intervened_mu = itv_LL[0]
+            #     lt_intervened_mu = 0
+            #     print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
+            # elif self.class_prob_moments[-1][1] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+            #     apply_intervention = True
+            #     ll_intervened_mu = itv_LT[0]
+            #     lt_intervened_mu = itv_LT[1]
+            #     print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
+
+            cond_ll = all(
+                m[0] - m[1] > 3 * m[2]
+                for m in self.class_prob_moments[-13:]
+            )
+
+            cond_lt = all(
+                m[1] - m[0] > 3 * m[2]
+                for m in self.class_prob_moments[-13:]
+            )
+
+            if cond_ll and rerun_kf is False:
                 apply_intervention = True
                 ll_intervened_mu = itv_LL[0]
                 lt_intervened_mu = 0
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
-            elif self.class_prob_moments[-1][1] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
+            elif cond_lt and rerun_kf is False:
                 apply_intervention = True
                 ll_intervened_mu = itv_LT[0]
                 lt_intervened_mu = itv_LT[1]
@@ -1076,6 +1117,7 @@ class hsl_classification:
         LL_intervened_value = [mu_LL_deterministic_itv]
         LT_intervened_value = [LLcLT_deterministic_itv, mu_LT_deterministic_itv]
         y_likelihood_all = []
+        x_likelihood_all = []
         LL_track = [mu_LL_deterministic_itv.item()]
         for i in range(num_steps_retract):
 
@@ -1126,7 +1168,8 @@ class hsl_classification:
             # print(data_all["y"][i], mu_obs_pred, np.sqrt(var_obs_pred))
             # print(y_likelihood.item(), x_likelihood.item())
 
-            y_likelihood_all.append(y_likelihood.item() * x_likelihood.item())
+            y_likelihood_all.append(y_likelihood.item())
+            x_likelihood_all.append(x_likelihood.item())
 
         # # Plot retracted states after intervention
         # mu_level_plot = ssm_copy.states.get_mean(states_type="posterior", states_name="level", standardization=True)
@@ -1224,7 +1267,7 @@ class hsl_classification:
             ssm.lstm_output_history = copy.deepcopy(output_history_temp)
             ssm.lstm_net.set_lstm_states(cell_states_temp)
 
-        return y_likelihood_all, LL_intervened_value, LT_intervened_value, np.array(LL_track).flatten()
+        return y_likelihood_all, x_likelihood_all,LL_intervened_value, LT_intervened_value, np.array(LL_track).flatten()
     
     def _estimate_likelihoods(
             self, 
@@ -2495,6 +2538,15 @@ class NN_Classification(torch.nn.Module):
         x = torch.nn.functional.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+    
+def get_data_dist_coeff(n, target=0, n_converge=52):
+    """
+    f(1) = 1
+    f(n) → target
+    Reaches ~target around n ≈ n_converge
+    """
+    alpha = np.log(2) / (n_converge - 1)  # ensures f(52) ≈ 0.5
+    return target + (1 - target) * np.exp(-alpha * (n - 1))
     
 # class tagi_classification():
 #     def __init__(self, input_size, output_size):
