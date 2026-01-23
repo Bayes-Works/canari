@@ -61,11 +61,8 @@ class hsl_classification:
         self.lstm_cell_states = []
         self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
         self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
-        self.pred_class_probs = []
-        self.pred_class_probs_var = []
         self.class_prob_moments = []
         self.ll_itv_all, self.lt_itv_all = [], []
-        self.prob_coeff = []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
@@ -193,12 +190,9 @@ class hsl_classification:
             self.p_anm_all.append(0)
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
-            self.pred_class_probs.append([0])
-            self.pred_class_probs_var.append([0])
             self.class_prob_moments.append([0.5, 0.5, 0, 0])
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
-            self.prob_coeff.append(0)
 
             self.current_time_step += 1
 
@@ -625,7 +619,6 @@ class hsl_classification:
             data,
             anm_type: Optional[str] = "LL",
             anm_magnitude: Optional[float] = 17,
-            anm_begin: Optional[int] = 52*7,
             apply_intervention: Optional[bool] = False,
             ):
 
@@ -702,9 +695,6 @@ class hsl_classification:
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_level_itv = itv_pred_ll_var_denorm[0]
 
-                # Option 1: true intervention time, with no access to in reality
-                itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-
                 if first_time_trigger:
                     self.p_anm_all.append(0)
                 else:
@@ -761,7 +751,6 @@ class hsl_classification:
                 # # Option 1: compare the variance of them
                 # itv_baselines_std_n = np.std(ll_itv_baseline - lt_itv_baseline)
                 # ratio_baseline_res = itv_baselines_std_n**2 / (itv_baselines_std_n**2 + stationary_ar_std**2)
-                # self.prob_coeff.append(min(max((ratio_baseline_res-0.5)*6, 0), 1))
 
                 # # Option 2: drop likelihoods
                 # ll_lt_diff = ll_itv_baseline - lt_itv_baseline
@@ -820,7 +809,6 @@ class hsl_classification:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
-                self.prob_coeff.append(0)
                 self.p_anm_all.append(p_a_I_Yt)
 
             cond_ll = all(
@@ -931,7 +919,7 @@ class hsl_classification:
         
         # Retract SSM to the time of intervention
         # Constrain num_steps_retract to be no larger than current_preds_num
-        num_steps_retract = min(num_steps_retract, current_preds_num - 1)
+        num_steps_retract = min(num_steps_retract, current_preds_num)
         remove_until_index = -(num_steps_retract)
         ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
         ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
@@ -1019,7 +1007,7 @@ class hsl_classification:
         
         # Retract SSM to the time of intervention
         # Constrain num_steps_retract to be no larger than current_preds_num
-        num_steps_retract = min(num_steps_retract, current_preds_num - 1)
+        num_steps_retract = min(num_steps_retract, current_preds_num)
         remove_until_index = -(num_steps_retract)
         ssm_copy.states.mu_prior = ssm_copy.states.mu_prior[:remove_until_index]
         ssm_copy.states.var_prior = ssm_copy.states.var_prior[:remove_until_index]
