@@ -18,28 +18,56 @@ class ExpSmoothing(BaseComponent):
         self,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
+        es_order: Optional[int] = 1,
+        activation: Optional[str] = None,
     ):
         self._mu_states = mu_states
         self._var_states = var_states
+        self.activation = activation
+        self.es_order = es_order
         super().__init__()
 
     def initialize_component_name(self):
         self._component_name = "exp smoothing"
 
     def initialize_num_states(self):
-        self._num_states = 3
+        if self.es_order==1:
+            self._num_states = 3
+        elif self.es_order==2:
+            self._num_states = 6
 
     def initialize_states_name(self):
-        self._states_name = ["es", "es coeff", "es prod"]
+        if self.es_order==1:
+            self._states_name = ["es", "es coeff", "es prod"]
+        elif self.es_order==2:
+            self._states_name = ["es", "es coeff", "es prod", "es trend", "es trend coeff", "es trend prod"]
 
     def initialize_transition_matrix(self):
-        self._transition_matrix = np.array([[1, 0, 1], [0, 1, 0], [0, 0, 0]])
+        if self.es_order==1:
+            self._transition_matrix = np.array([[1, 0, 1], [0, 1, 0], [0, 0, 0]])
+        elif self.es_order==2:
+            self._transition_matrix = np.array(
+                [
+                [1, 0, 1, 1, 0, 0],
+                [0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 1],
+                [0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0],
+                ]
+                )
 
     def initialize_observation_matrix(self):
-        self._observation_matrix = np.array([[1, 0, 0]])
+        if self.es_order==1:
+            self._observation_matrix = np.array([[1, 0, 0]])
+        elif self.es_order==2:
+            self._observation_matrix = np.array([[1, 0, 0, 0, 0, 0]])
 
     def initialize_process_noise_matrix(self):
-        self._process_noise_matrix = np.zeros((3,3))
+        if self.es_order==1:
+            self._process_noise_matrix = np.zeros((3,3))
+        elif self.es_order==2:
+            self._process_noise_matrix = np.zeros((6,6))
 
     def initialize_mu_states(self):
         if self._mu_states is None:

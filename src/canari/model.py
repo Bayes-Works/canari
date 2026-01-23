@@ -737,10 +737,10 @@ class Model:
 
         return mu_states_posterior, var_states_posterior
 
-    def _exp_smoothing_backward_modification(
+    def _exp_smoothing_modification(
         self,
-        mu_states_posterior: np.ndarray, 
-        var_states_posterior: np.ndarray,
+        mu_states: np.ndarray, 
+        var_states: np.ndarray,
     ) -> Tuple[np.ndarray,np.ndarray,]:
         """
         Modify backward function for exponential smoothing component.
@@ -751,63 +751,44 @@ class Model:
         exp_coeff_index = self.get_states_index(states_name="es coeff")
         exp_prod_index = self.get_states_index(states_name="es prod")
 
-        # sigmoid(alpha): es coefficient
-        mu_sigma_es_coeff = 1/(1+np.exp(-mu_states_posterior[exp_coeff_index]))
-        J_es_coeff = mu_sigma_es_coeff*(1-mu_sigma_es_coeff)
-        var_sigma_es_coeff = J_es_coeff**2 * var_states_posterior[exp_coeff_index, exp_coeff_index]
-        cov_sigma_es_coeff_others =  J_es_coeff * var_states_posterior[exp_coeff_index,:]
-        cov_sigma_es_coeff_v = cov_sigma_es_coeff_others[noise_index]
-        
+        # activation on es coeff
+        activation = self.components[self._states_comp[exp_coeff_index]].activation
+
         # noise 
-        mu_v = mu_states_posterior[noise_index]
-        var_v = var_states_posterior[noise_index, noise_index]
-        cov_v_others = var_states_posterior[noise_index,:]
+        mu_v = mu_states[noise_index]
+        var_v = var_states[noise_index, noise_index]
+        cov_v_others = var_states[noise_index,:]
+
+        # es coefficient
+        if activation == "sigmoid":
+            mu_es_coeff = 1/(1+np.exp(-mu_states[exp_coeff_index]))
+            jcb = mu_es_coeff*(1-mu_es_coeff)
+        else:
+            mu_es_coeff = mu_states[exp_coeff_index]
+            jcb = 1
+
+        var_es_coeff = jcb**2 * var_states[exp_coeff_index, exp_coeff_index]
+        cov_es_coeff_others = jcb * var_states[exp_coeff_index,:]
+        cov_es_coeff_v = cov_es_coeff_others[noise_index]
 
         mu_prod = (
-            mu_sigma_es_coeff * mu_v
-            + cov_sigma_es_coeff_v
+            mu_es_coeff * mu_v
+            + cov_es_coeff_v
         )
-        cov_prod_others = cov_sigma_es_coeff_others * mu_v + cov_v_others*mu_sigma_es_coeff
+        cov_prod_others = cov_es_coeff_others * mu_v + cov_v_others*mu_es_coeff
         var_prod = (
-            var_sigma_es_coeff * var_v
-            + cov_sigma_es_coeff_v**2 + 2*cov_sigma_es_coeff_v*mu_sigma_es_coeff*mu_v
-            + var_sigma_es_coeff*mu_v**2
-            + var_v*mu_sigma_es_coeff**2
+            var_es_coeff * var_v
+            + cov_es_coeff_v**2 + 2*cov_es_coeff_v*mu_es_coeff*mu_v
+            + var_es_coeff*mu_v**2
+            + var_v*mu_es_coeff**2
             )
 
-        mu_states_posterior[exp_prod_index] = mu_prod
-        var_states_posterior[exp_prod_index,:] = cov_prod_others
-        var_states_posterior[:,exp_prod_index] = cov_prod_others
-        var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
+        mu_states[exp_prod_index] = mu_prod
+        var_states[exp_prod_index,:] = cov_prod_others
+        var_states[:,exp_prod_index] = cov_prod_others
+        var_states[exp_prod_index,exp_prod_index] = var_prod
 
-        ## alpha: es coefficient 
-        # mu_prod = (
-        #     mu_states_posterior[exp_coeff_index]
-        #     * mu_states_posterior[noise_index]
-        #     + var_states_posterior[exp_coeff_index, noise_index]
-        # )
-        # cov_prod_others = (
-        #     var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
-        #     + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
-        # )
-        # mu_states_posterior[exp_prod_index] = mu_prod
-        # var_states_posterior[exp_prod_index,:] = cov_prod_others
-        # var_states_posterior[:,exp_prod_index] = cov_prod_others
-        # var_prod = (
-        #     var_states_posterior[exp_coeff_index,exp_coeff_index]
-        #     * var_states_posterior[noise_index,noise_index]
-        #     + var_states_posterior[exp_coeff_index,noise_index]**2
-        #     + 2 * var_states_posterior[exp_coeff_index,noise_index]
-        #     * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
-        #     + var_states_posterior[exp_coeff_index,exp_coeff_index]
-        #     * mu_states_posterior[noise_index]**2
-        #     + var_states_posterior[noise_index,noise_index]
-        #     * mu_states_posterior[exp_coeff_index]**2
-        # )
-        # var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
-
-        return mu_states_posterior, var_states_posterior
-         
+        return mu_states, var_states
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
@@ -1518,6 +1499,11 @@ class Model:
                 mu_states_prior, var_states_prior
             )
 
+        if "es" in self.states_name:
+            mu_states_prior, var_states_prior = self._exp_smoothing_modification(
+                mu_states_prior, var_states_prior
+            )
+
         self.mu_states_prior = mu_states_prior
         self.var_states_prior = var_states_prior
         self.mu_obs_predict = mu_obs_pred
@@ -1586,10 +1572,10 @@ class Model:
                 )
             )
 
-        if "es" in self.states_name:
-            mu_states_posterior, var_states_posterior = self._exp_smoothing_backward_modification(
-                mu_states_posterior, var_states_posterior
-            )
+        # if "es" in self.states_name:
+        #     mu_states_posterior, var_states_posterior = self._exp_smoothing_modification(
+        #         mu_states_posterior, var_states_posterior
+        #     )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior

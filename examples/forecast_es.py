@@ -39,8 +39,8 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 # Model
 model = Model(
     LocalTrend(),
-    ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0]),
-    # ExpSmoothing(mu_states=[0,-0.1,0], var_states=[0,0.5,0]),
+    ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
+    # ExpSmoothing(mu_states=[0,0.3,0], var_states=[0,1e-2,0], es_order=1, activation=None),
     LstmNetwork(
         look_back_len=12,
         num_features=1,
