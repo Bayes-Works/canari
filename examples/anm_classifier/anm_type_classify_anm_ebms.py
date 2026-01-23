@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -42,18 +42,19 @@ df_raw.columns = ["obs"]
 
 # LL anomaly
 anm_type = 'LL'
-time_anomaly = 52*7
-anm_mag = 35
+time_anomaly = 52*5
+anm_mag = 17
 anm_baseline = np.ones(len(df_raw)) * anm_mag
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)
 
-# # PD anomaly
-# time_anomaly = 52*7
-# anm_mag = 35
-# sine_curve = anm_mag * np.sin(np.arange(len(df_raw)) * 2 * np.pi / 52)
-# sine_curve[:time_anomaly] = 0
-# df_raw = df_raw.add(sine_curve, axis=0)
+# Second anomaly
+anm2_type = 'LL'
+time_anomaly2 = 52*9
+anm2_mag = 17
+anm2_baseline = np.ones(len(df_raw)) * anm2_mag
+anm2_baseline[:time_anomaly2] = 0
+df_raw = df_raw.add(anm2_baseline, axis=0)
 
 # # # Outlier
 # time_anomaly = 52*7

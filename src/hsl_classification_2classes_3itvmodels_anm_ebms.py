@@ -671,19 +671,7 @@ class hsl_classification:
 
                 # Normalize the histories
                 LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
-                LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class
-
-                # # input_history = torch.tensor(LTd_history.tolist()+mp_history.tolist())
-                # input_history = np.array(LTd_history.tolist()+LTd2_history.tolist()+mp_history.tolist())
-                # # input_history = np.repeat(input_history, self.batch_size, axis=0).flatten()
-                # input_history = input_history.astype(np.float32)
-                # m_pred_logits, v_pred_logits = self.model_class.forward(input_history)
-                
-                # # Convert the logits to probabilities
-                # # pred_probs = torch.nn.functional.softmax(pred_logits, dim=0).detach().numpy()
-                # self.pred_class_probs.append(m_pred_logits[::2].tolist())
-                # self.pred_class_probs_var.append(m_pred_logits[1::2].tolist())
-                
+                LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class  
 
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
@@ -714,22 +702,6 @@ class hsl_classification:
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_level_itv = itv_pred_ll_var_denorm[0]
 
-                # if anm_type == "LL":
-                    # level_itv = (anm_magnitude-self.data_processor.scale_const_mean[self.data_processor.output_col]) / self.data_processor.scale_const_std[self.data_processor.output_col]
-                    # num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-                    # trend_itv = level_itv / max(num_steps_retract, 1)
-
-                    # var_level_itv = 0
-                    # var_trend_itv = 0
-                    
-                # if anm_type == "LT":
-                    # trend_itv = anm_magnitude / self.data_processor.scale_const_std[self.data_processor.output_col]
-                    # num_steps_retract = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
-                    # level_itv = trend_itv * max(num_steps_retract, 1) / 2
-
-                    # var_level_itv = 0
-                    # var_trend_itv = 0
-
                 # Option 1: true intervention time, with no access to in reality
                 itvtime_true = self.current_time_step - anm_begin if self.current_time_step - anm_begin > 0 else 0
 
@@ -754,7 +726,6 @@ class hsl_classification:
                 data_likelihoods_ll, hs_likelihoods_ll, itv_LL, _, ll_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
-                    # level_intervention = [level_itv, 0],
                     level_intervention = [level_itv, var_level_itv],
                     trend_intervention = [0, 0],
                     num_steps_retract = num_steps_retract,
@@ -770,13 +741,11 @@ class hsl_classification:
                     ssm=self.base_model,
                     drift_model=self.drift_model,
                     level_intervention = [llclt_itv_at_trigger, 0],
-                    # trend_intervention = [trend_itv, 0],
                     trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
                 )
-                # self.lt_itv_all.append(itv_LT * num_steps_retract)
                 self.lt_itv_all.append(lt_itv_baseline[-1])   
 
 
@@ -822,11 +791,6 @@ class hsl_classification:
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_ll_post_sum = np.sum(hs_ll_post_n)
                     hs_lt_post_sum = np.sum(hs_lt_post_n)
-
-                    # ll_post_sum = np.sum(data_likelihoods_ll)
-                    # lt_post_sum = np.sum(data_likelihoods_lt)
-                    # ll_post_sum = np.mean(data_likelihoods_ll)
-                    # lt_post_sum = np.mean(data_likelihoods_lt)
                 else:
                     data_ll_post_sum = 1
                     data_lt_post_sum = 1
@@ -858,19 +822,6 @@ class hsl_classification:
                 self.lt_itv_all.append(0)
                 self.prob_coeff.append(0)
                 self.p_anm_all.append(p_a_I_Yt)
-
-            # class_mu_threshold = 0.7
-            # class_std_threshold = 0.1
-            # if self.class_prob_moments[-1][0] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
-            #     apply_intervention = True
-            #     ll_intervened_mu = itv_LL[0]
-            #     lt_intervened_mu = 0
-            #     print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
-            # elif self.class_prob_moments[-1][1] > class_mu_threshold and self.class_prob_moments[-1][2] < class_std_threshold and rerun_kf is False:
-            #     apply_intervention = True
-            #     ll_intervened_mu = itv_LT[0]
-            #     lt_intervened_mu = itv_LT[1]
-            #     print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
 
             cond_ll = all(
                 m[0] - m[1] > 3 * m[2]
@@ -917,8 +868,7 @@ class hsl_classification:
                     apply_intervention = False
                     first_time_trigger = False
 
-            # Base model filter process, same as in model.py
-            # mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
+            # Base model filter process
             mu_obs_pred, var_obs_pred, _, _ = self.base_model.forward(data["x"][i])
 
             (
@@ -1013,14 +963,9 @@ class hsl_classification:
         ssm_copy.var_states[LL_index, LL_index] += level_intervention[1]
         ssm_copy.var_states[LT_index, LT_index] += trend_intervention[1]
         y_likelihood_all = []
-        # if trend_intervention[1] > 0:
-        #     ssm_copy.transition_matrix[0, 1] = 0
         for i in range(num_steps_retract):
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = ssm_copy.forward(data_all["x"][i])
-            # if trend_intervention[1] > 0:
-            #     mu_states_prior[0] += mu_states_prior[1]
-            #     ssm_copy.mu_states_prior = mu_states_prior
             _, _, mu_states_posterior, var_states_posterior = ssm_copy.backward(obs=data_all["y"][i])
             if "lstm" in ssm_copy.states_name:
                 lstm_index = ssm_copy.get_states_index("lstm")
@@ -1617,241 +1562,6 @@ class hsl_classification:
         
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)
-    
-    def collect_synthetic_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
-        # Collect samples from synthetic time series
-        samples = {'LTd_history': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
-
-        # Anomly feature range define
-        ts_len = 52*6
-        anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]
-
-        # # Generate synthetic time series
-        covariate_col = self.data_processor.covariates_col
-        train_index, val_index, test_index = self.data_processor.get_split_indices()
-        time_covariate_info = {'initial_time_covariate': self.data_processor.data.values[val_index[-1], self.data_processor.covariates_col].item(),
-                                'mu': self.data_processor.scale_const_mean[covariate_col], 
-                                'std': self.data_processor.scale_const_std[covariate_col]}
-        gen_model_copy = copy.deepcopy(self.generate_model)
-        if "lstm" in self.generate_model.states_name:
-            gen_model_copy.lstm_net = self.generate_model.lstm_net
-            gen_model_copy.lstm_output_history = copy.deepcopy(self.generate_model.lstm_output_history)
-            gen_model_copy.lstm_net.set_lstm_states(copy.deepcopy(self.generate_model.lstm_net.get_lstm_states()))
-        generated_ts, time_covariate, anm_mag_list, anm_begin_list = gen_model_copy.generate_time_series(num_time_series=num_time_series, num_time_steps=ts_len, 
-                                                                time_covariates=self.data_processor.time_covariates, 
-                                                                time_covariate_info=time_covariate_info,
-                                                                add_anomaly=True, anomaly_mag_range=anm_mag_range, 
-                                                                anomaly_begin_range=anm_begin_range, sample_from_lstm_pred=False)
-        # Plot generated time series
-        fig = plt.figure(figsize=(10, 6))
-        gs = gridspec.GridSpec(1, 1)
-        ax0 = plt.subplot(gs[0])
-        norm_data = self.data_processor.standardize_data()
-        for j in range(len(generated_ts)):
-            ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
-                                        norm_data[val_index, self.data_processor.output_col].reshape(-1), 
-                                        generated_ts[j])))
-        ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
-        ax0.set_title("Data generation")
-        plt.show()
-
-        # # Run the current model on the synthetic time series
-        if "lstm" in self.base_model.states_name:
-            lstm_index = self.base_model.get_states_index("lstm")
-            lstm_cell_states = copy.deepcopy(self.base_model.lstm_net.get_lstm_states())
-            output_history_temp = copy.deepcopy(self.base_model.lstm_output_history)
-        for k in tqdm(range(len(generated_ts))):
-            base_model_copy = copy.deepcopy(self.base_model)
-            if "lstm" in self.base_model.states_name:
-                base_model_copy.lstm_net = self.base_model.lstm_net
-                base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
-                base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
-            drift_model_copy = copy.deepcopy(self.drift_model)
-            drift_model2_copy = copy.deepcopy(self.drift_model2)
-
-            mu_obs_preds, std_obs_preds = [], []
-            mu_ar_preds, std_ar_preds = [], []
-            p_anm_one_syn_ts = []
-            y_likelihood_a_one_ts, y_likelihood_na_one_ts = [], []
-            x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
-            base_model_copy.initialize_states_history()
-            drift_model_copy.initialize_states_history()
-            drift_model2_copy.initialize_states_history()
-
-            for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
-                # Estimate likelihood without intervention
-                y_likelihood_na, x_likelihood_na = self._estimate_likelihoods(base_model=base_model_copy, drift_model=drift_model_copy,
-                                                                                obs=y, input_covariates=x, state_dist=self.LTd_pdf)
-                # Estimate likelihood with intervention
-                itv_base_model_prior, itv_drift_model_prior = self._intervene_current_priors(base_model=base_model_copy, drift_model=drift_model_copy,)
-                y_likelihood_a, x_likelihood_a = self._estimate_likelihoods(
-                                                                            base_model=base_model_copy, drift_model=drift_model_copy,
-                                                                            obs=y, input_covariates=x, state_dist=self.LTd_pdf,
-                                                                            base_model_prior=itv_base_model_prior, drift_model_prior=itv_drift_model_prior
-                                                                            )
-                p_yt_I_Yt1 = np.maximum(y_likelihood_na * x_likelihood_na * self.prior_na, 1e-12) + y_likelihood_a * x_likelihood_a * self.prior_a
-                p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
-                p_anm_one_syn_ts.append(p_a_I_Yt)
-                y_likelihood_a_one_ts.append(y_likelihood_a)
-                y_likelihood_na_one_ts.append(y_likelihood_na)
-                x_likelihood_a_one_ts.append(x_likelihood_a)
-                x_likelihood_na_one_ts.append(x_likelihood_na)
-
-                # Collect sample input
-                if i > 65:
-                    LTd_mu_prior = np.array(drift_model_copy.states.mu_prior)[:, 1].flatten()
-                    mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
-                    samples['LTd_history'].append(mu_LTd_history.tolist())
-                    LTd_mu_prior2 = np.array(drift_model2_copy.states.mu_prior)[:, 1].flatten()
-                    mu_LTd_history2 = self._hidden_states_collector(i - 1, LTd_mu_prior2)
-                    samples['LTd2_history'].append(mu_LTd_history2.tolist())
-                if i > 65 and i < anm_begin_list[k]:
-                    samples['itv_LT'].append(0.)
-                    samples['itv_LL'].append(0.)
-                    samples['anm_develop_time'].append(0.)
-                    samples['p_anm'].append(0.)
-                elif i >= anm_begin_list[k]:
-                    # LT anomaly label
-                    itv_LT = anm_mag_list[k]
-                    itv_anm_dev_time = i - anm_begin_list[k]
-                    itv_LL = itv_LT * itv_anm_dev_time
-                    # # LL anomaly label
-                    # itv_LT = 0
-                    # itv_anm_dev_time = i - anm_begin_list[k]
-                    # itv_LL = anm_mag_list[k]
-                    
-                    samples['itv_LT'].append(itv_LT)
-                    samples['itv_LL'].append(itv_LL)
-                    samples['anm_develop_time'].append(itv_anm_dev_time)
-                    samples['p_anm'].append(p_a_I_Yt)
-
-                # if p_a_I_Yt > self.detection_threshold:
-                #     anomaly_detected = True
-                #     break
-                #     # Intervene the model using true anomaly features
-                #     LL_index = base_model_copy.states_name.index("local level")
-                #     LT_index = base_model_copy.states_name.index("local trend")
-                #     base_model_copy.mu_states[LT_index] += anm_mag_list[k]
-                #     base_model_copy.mu_states[LL_index] += anm_mag_list[k] * (i - anm_begin_list[k])
-                #     base_model_copy.mu_states[self.AR_index] = drift_model_copy.mu_states[2]
-                #     drift_model_copy.mu_states[0] = 0
-                #     drift_model_copy.mu_states[1] = self.mu_LTd
-
-                mu_obs_pred, var_obs_pred, _, _ = base_model_copy.forward(x)
-                (
-                    _, _,
-                    mu_states_posterior,
-                    var_states_posterior,
-                ) = base_model_copy.backward(y)
-
-                if "lstm" in base_model_copy.states_name:
-                    base_model_copy.lstm_output_history.update(
-                        mu_states_posterior[lstm_index],
-                        var_states_posterior[lstm_index, lstm_index],
-                    )
-
-                base_model_copy._save_states_history()
-                base_model_copy.set_states(mu_states_posterior, var_states_posterior)
-                mu_obs_preds.append(mu_obs_pred)
-                std_obs_preds.append(var_obs_pred**0.5)
-
-                mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
-                _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
-                    obs=base_model_copy.mu_states_posterior[self.AR_index], 
-                    obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
-                drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-                mu_ar_preds.append(mu_ar_pred)
-                std_ar_preds.append(var_ar_pred**0.5)
-
-                _, _, _, _ = drift_model2_copy.forward()
-                _, _, mu_drift_states_posterior2, var_drift_states_posterior2 = drift_model2_copy.backward(
-                    obs=base_model_copy.mu_states_posterior[self.AR_index], 
-                    obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model2_copy._save_states_history()
-                drift_model2_copy.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
-
-            # states_mu_prior = np.array(base_model_copy.states.mu_prior)
-            # states_var_prior = np.array(base_model_copy.states.var_prior)
-            # states_drift_mu_prior = np.array(drift_model_copy.states.mu_prior)
-            # states_drift_var_prior = np.array(drift_model_copy.states.var_prior)
-
-            # fig = plt.figure(figsize=(10, 9))
-            # gs = gridspec.GridSpec(10, 1)
-            # ax0 = plt.subplot(gs[0])
-            # ax1 = plt.subplot(gs[1])
-            # ax2 = plt.subplot(gs[2])
-            # ax3 = plt.subplot(gs[3])
-            # ax4 = plt.subplot(gs[4])
-            # ax5 = plt.subplot(gs[5])
-            # ax6 = plt.subplot(gs[6])
-            # ax7 = plt.subplot(gs[7])
-            # ax8 = plt.subplot(gs[8])
-            # ax9 = plt.subplot(gs[9])
-            # # print(base_model_copy.states.mu_prior)
-            # ax0.plot(states_mu_prior[:, 0].flatten(), label='local level')
-            # ax0.fill_between(np.arange(len(states_mu_prior[:, 0])),
-            #                 states_mu_prior[:, 0].flatten() - states_var_prior[:, 0, 0]**0.5,
-            #                 states_mu_prior[:, 0].flatten() + states_var_prior[:, 0, 0]**0.5,
-            #                 alpha=0.5)
-            # ax0.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            # ax0.plot(generated_ts[k])
-
-            # ax1.plot(states_mu_prior[:, 1].flatten(), label='local trend')
-            # ax1.fill_between(np.arange(len(states_mu_prior[:, 1])),
-            #                 states_mu_prior[:, 1].flatten() - states_var_prior[:, 1, 1]**0.5,
-            #                 states_mu_prior[:, 1].flatten() + states_var_prior[:, 1, 1]**0.5,
-            #                 alpha=0.5)
-            
-            # ax2.plot(states_mu_prior[:, 2].flatten(), label='lstm')
-            # ax2.fill_between(np.arange(len(states_mu_prior[:, 2])),
-            #                 states_mu_prior[:, 2].flatten() - states_var_prior[:, 2, 2]**0.5,
-            #                 states_mu_prior[:, 2].flatten() + states_var_prior[:, 2, 2]**0.5,
-            #                 alpha=0.5)
-            
-            # ax3.plot(states_mu_prior[:, 3].flatten(), label='autoregression')
-            # ax3.fill_between(np.arange(len(states_mu_prior[:, 3])),
-            #                 states_mu_prior[:, 3].flatten() - states_var_prior[:, 3, 3]**0.5,
-            #                 states_mu_prior[:, 3].flatten() + states_var_prior[:, 3, 3]**0.5,
-            #                 alpha=0.5)
-            # ax4.plot(np.array(mu_ar_preds).flatten(), label='obs')
-            # ax4.fill_between(np.arange(len(mu_ar_preds)),
-            #                 np.array(mu_ar_preds).flatten() - np.array(std_ar_preds).flatten(),
-            #                 np.array(mu_ar_preds).flatten() + np.array(std_ar_preds).flatten(),
-            #                 alpha=0.5)
-            # ax4.plot(states_drift_mu_prior[:, 0].flatten())
-            # ax4.fill_between(np.arange(len(states_drift_mu_prior[:, 0])),
-            #                 states_drift_mu_prior[:, 0].flatten() - states_drift_var_prior[:, 0, 0]**0.5,
-            #                 states_drift_mu_prior[:, 0].flatten() + states_drift_var_prior[:, 0, 0]**0.5,
-            #                 alpha=0.5)
-            # ax4.set_ylabel('LLd')
-            # ax5.plot(states_drift_mu_prior[:, 1].flatten())
-            # ax5.fill_between(np.arange(len(states_drift_mu_prior[:, 1])),
-            #                 states_drift_mu_prior[:, 1].flatten() - states_drift_var_prior[:, 1, 1]**0.5,
-            #                 states_drift_mu_prior[:, 1].flatten() + states_drift_var_prior[:, 1, 1]**0.5,
-            #                 alpha=0.5)
-            # ax5.set_ylabel('LTd')
-            # ax6.plot(states_drift_mu_prior[:, 2].flatten())
-            # ax6.fill_between(np.arange(len(states_drift_mu_prior[:, 2])),
-            #                 states_drift_mu_prior[:, 2].flatten() - states_drift_var_prior[:, 2, 2]**0.5,
-            #                 states_drift_mu_prior[:, 2].flatten() + states_drift_var_prior[:, 2, 2]**0.5,
-            #                 alpha=0.5)
-            # ax6.set_ylabel('ARd')
-            # ax7.plot(p_anm_one_syn_ts)
-            # ax7.axvline(x=anm_begin_list[k], color='r', linestyle='--')
-            # ax7.set_ylim(-0.05, 1.05)
-            # ax7.set_ylabel('p_anm')
-            # ax8.plot(y_likelihood_a_one_ts, label='itv')
-            # ax8.plot(y_likelihood_na_one_ts, label='no itv')
-            # ax8.set_ylabel('y_likelihood')
-            # ax9.plot(x_likelihood_a_one_ts, label='itv')
-            # ax9.plot(x_likelihood_na_one_ts, label='no itv')
-            # ax9.set_ylabel('x_likelihood')
-            # plt.show()
-        
-        samples_df = pd.DataFrame(samples)
-        samples_df.to_csv(save_to_path, index=False)
 
     def _get_look_back_time_steps(self, current_step, step_look_back = 64):
         look_back_step_list = [0]
@@ -1867,327 +1577,6 @@ class hsl_classification:
         look_back_steps_list = self._get_look_back_time_steps(current_step, step_look_back)
         hidden_states_collected = hidden_states_all_step_numpy[look_back_steps_list]
         return hidden_states_collected
-    
-    def soft_target_encode(self, target):
-        samples_target = np.zeros((len(target), 1), dtype=np.float32)
-        for i, c in enumerate(target):
-            if c == 0:
-                samples_target[i, 0] = 0
-            else:
-                if c == 1:
-                    samples_target[i, 0] = 3
-                elif c == 2:
-                    samples_target[i, 0] = -3
-        return samples_target
-
-    def learn_classification(self, training_samples_path, save_model_path=None, load_model_path=None, max_training_epoch=10):
-        samples = pd.read_csv(training_samples_path)
-        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
-        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
-        samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
-        # Shuffle samples
-        samples = samples.sample(frac=1).reset_index(drop=True)
-
-        n_samples = len(samples)
-        n_train = int(n_samples * 0.8)
-
-        # Get the moments of samples['LTd_history'] and samples['MP_history'] for normalization
-        train_LTd = np.array(samples['LTd_history'].values.tolist()[:n_train], dtype=np.float32)
-        train_LTd2 = np.array(samples['LTd2_history'].values.tolist()[:n_train], dtype=np.float32)
-        train_MP =  np.array(samples['MP_history'].values.tolist()[:n_train], dtype=np.float32)
-        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_LTd2_class is None or self.std_LTd2_class is None or self.mean_MP_class is None or self.std_MP_class is None:
-            self.mean_LTd_class = np.mean(train_LTd)
-            self.std_LTd_class = np.std(train_LTd)
-            self.mean_LTd2_class = np.mean(train_LTd2)
-            self.std_LTd2_class = np.std(train_LTd2)
-            self.mean_MP_class = np.mean(train_MP)
-            self.std_MP_class = np.std(train_MP)
-        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class)
-        # Normalize the two columns
-        samples['LTd_history'] = samples['LTd_history'].apply(lambda x: [(val - self.mean_LTd_class) / self.std_LTd_class for val in x])
-        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: [(val - self.mean_LTd2_class) / self.std_LTd2_class for val in x])
-        samples['MP_history'] = samples['MP_history'].apply(lambda x: [(val - self.mean_MP_class) / self.std_MP_class for val in x])
-        # Combine the two columns for input feature
-        samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'] + row['MP_history'], axis=1)
-
-        samples_input = np.array(samples['input_feature'].values.tolist(), dtype=np.float32)
-        samples_target = np.array(samples['anm_type'].values, dtype=np.int64)
-        samples_p_anm = np.array(samples['p_anm'].values.tolist(), dtype=np.float32)
-
-        # Train the model using 80% of the samples
-        train_X = samples_input[:n_train]
-        train_y = samples_target[:n_train]
-
-        # Validation set 10% of the samples
-        n_val = int(n_samples * 0.1)
-        val_X = samples_input[n_train:n_train+n_val]
-        val_y = samples_target[n_train:n_train+n_val]
-
-        # Test the model using 10% of the samples
-        n_test = int(n_samples * 0.1)
-        test_X = samples_input[n_train+n_val:n_train+n_val+n_test]
-        test_y = samples_target[n_train+n_val:n_train+n_val+n_test]
-
-        self.model_class = Sequential(
-                                    Linear(len(samples['input_feature'][0]), 64, gain_weight=0.2, gain_bias=0.2),
-                                    ReLU(),
-                                    Linear(64, 32, gain_weight=0.2, gain_bias=0.2),
-                                    ReLU(),
-                                    Linear(32, 1*2, gain_weight=0.2, gain_bias=0.2),
-                                    # Remax(),
-                                    EvenExp(),
-                                    )
-        # Compute class weights to handle class imbalance
-        # class_sample_counts = np.bincount(train_y)
-        # class_weights = 1. / class_sample_counts
-        # class_weights = torch.tensor(class_weights, dtype=torch.float32)
-        # loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
-        # optimizer = torch.optim.Adam(self.model_class.parameters(), lr=0.001)
-        train_X = torch.tensor(train_X)
-        train_y = torch.tensor(train_y)
-        val_X = torch.tensor(val_X)
-        val_y = torch.tensor(val_y)
-        test_X = torch.tensor(test_X)
-        test_y = torch.tensor(test_y)
-
-        self.batch_size = 20
-
-        # Prepare dataloaders
-        train_dataset = torch.utils.data.TensorDataset(train_X, train_y)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=True)
-        val_dataset = torch.utils.data.TensorDataset(val_X, val_y)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, shuffle=True, drop_last=True)
-        test_dataset = torch.utils.data.TensorDataset(test_X, test_y)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, drop_last=True)
-
-        if load_model_path is not None:
-            with open(load_model_path, 'rb') as f:
-                param_dict = pickle.load(f)
-            self.model_class.load_state_dict(param_dict)
-        else:
-            # sigma_v = 0.1
-            out_updater = OutputUpdater(self.model_class.device)
-            # var_y = np.full((self.batch_size * 3,), sigma_v**2, dtype=np.float32)
-            patience = 10
-            best_loss = -float('inf')
-
-            for epoch in range(max_training_epoch):
-                self.model_class.train()
-                train_likelihood = 0
-                num_train_samples = 0
-
-                all_m_pred = []
-                all_v_pred = []
-
-                pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{max_training_epoch}")
-                for batch_idx, (data, target) in enumerate(pbar):
-                    # prepare data
-                    x = data.numpy().flatten()
-                    y = self.soft_target_encode(target).flatten()
-
-                    m_pred, v_pred = self.model_class.forward(x)
-                    all_m_pred.append(m_pred)
-                    all_v_pred.append(v_pred)
-
-                    # Update output layers
-                    out_updater.update_heteros(
-                        output_states=self.model_class.output_z_buffer,
-                        mu_obs=y,
-                        # var_obs=var_y,
-                        delta_states=self.model_class.input_delta_z_buffer,
-                    )
-                    # Update parameters
-                    self.model_class.backward()
-                    self.model_class.step()
-
-                    # Calculate error rate
-                    # pred = m_pred[::2] - np.sqrt(m_pred[1::2])
-                    pred = m_pred[::2]
-                    s_pred = np.sqrt(m_pred[1::2])
-                    pred = np.reshape(pred, (self.batch_size, 1))
-                    s_pred = np.reshape(s_pred, (self.batch_size, 1))
-                    m_probs = []
-                    true_target = target.numpy()
-                    num_no_anm = 0
-                    for t in range(pred.shape[0]):
-                        pr_classes = hierachical_softmax(pred[t], s_pred[t])
-                        m_probs.append(pr_classes.tolist())
-                        if true_target[t] == 0:
-                            num_no_anm += 1
-                        else:
-                            train_likelihood += pr_classes[true_target[t]-1]
-                    num_train_samples += len(target) - num_no_anm
-
-                    # Update progress bar
-                    pbar.set_postfix(
-                        {"train_avg_likelihood": f"{train_likelihood/num_train_samples:.2f}"}
-                    )
-
-                average_m_pred = np.mean(np.concatenate(all_m_pred))
-                average_v_pred = np.mean(np.concatenate(all_v_pred))
-                std_v_m_pred = np.std(np.concatenate(all_m_pred))
-                std_v_pred = np.std(np.concatenate(all_v_pred))
-
-                average_v_pred_positive_m_pred = np.mean(
-                    np.concatenate(all_v_pred)[np.concatenate(all_m_pred) > 0]
-                )
-                average_v_pred_negative_m_pred = np.mean(
-                    np.concatenate(all_v_pred)[np.concatenate(all_m_pred) < 0]
-                )
-                print("Average mu prediction: ", average_m_pred)
-                print("Average var prediction: ", average_v_pred)
-                print("Std mu prediction: ", std_v_m_pred)
-                print("Std var prediction: ", std_v_pred)
-                print(
-                    "Average var prediction (positive mu): ",
-                    average_v_pred_positive_m_pred,
-                )
-                print(
-                    "Average var prediction (negative mu): ",
-                    average_v_pred_negative_m_pred,
-                )
-
-                # validation
-                self.model_class.eval()
-                val_likelihood = 0
-                num_val_samples = 0
-
-                for data, target in val_loader:
-                    x = data.numpy().flatten()
-                    m_pred, v_pred = self.model_class(x)
-                    # m_pred = m_pred[::2]
-
-                    # Calculate validation error
-                    # pred = m_pred[::2] - np.sqrt(m_pred[1::2])
-                    pred = m_pred[::2]
-                    s_pred = np.sqrt(m_pred[1::2])
-                    pred = np.reshape(pred, (self.batch_size, 1))
-                    s_pred = np.reshape(s_pred, (self.batch_size, 1))
-                    m_probs = []
-                    true_target = target.numpy()
-                    num_no_anm = 0
-                    for t in range(pred.shape[0]):
-                        pr_classes = hierachical_softmax(pred[t], s_pred[t])
-                        m_probs.append(pr_classes.tolist())
-                        if true_target[t] == 0:
-                            num_no_anm += 1
-                        else:
-                            val_likelihood += pr_classes[true_target[t]-1]
-                    num_val_samples += len(target) - num_no_anm
-
-                print(
-                    f"\nEpoch {epoch+1}/{max_training_epoch}: "
-                    f"Train likelihood: {train_likelihood/num_train_samples:.2f} | "
-                    f"Validation likelihood: {val_likelihood / num_val_samples:.2f}"
-                )
-
-                # Early stopping
-                if val_likelihood > best_loss:
-                    best_loss = val_likelihood
-                    patience_counter = 0
-                else:
-                    patience_counter += 1
-                    if patience_counter >= patience:
-                        print('Early stopping')
-                        break
-            
-            # Testing
-            self.model_class.eval()
-            test_likelihood = 0
-            num_test_samples = 0
-
-            for data, target in test_loader:
-                x = data.numpy().flatten()
-                m_pred, v_pred = self.model_class(x)
-
-                # Calculate test error
-                pred = m_pred[::2]
-                s_pred = np.sqrt(m_pred[1::2])
-                pred = np.reshape(pred, (self.batch_size, 1))
-                s_pred = np.reshape(s_pred, (self.batch_size, 1))
-                m_probs = []
-                true_target = target.numpy()
-                num_no_anm = 0
-                for t in range(pred.shape[0]):
-                    pr_classes = hierachical_softmax(pred[t], s_pred[t])
-                    m_probs.append(pr_classes.tolist())
-                    if true_target[t] == 0:
-                        num_no_anm += 1
-                    else:
-                        test_likelihood += pr_classes[true_target[t]-1]
-                num_test_samples += len(target) - num_no_anm
-
-            print(
-                f"\nEpoch {epoch+1}/{max_training_epoch}: "
-                f"Train likelihood: {train_likelihood/num_train_samples:.2f} | "
-                f"Test likelihood: {test_likelihood/ num_test_samples:.2f}"
-            )
-
-            if save_model_path is not None:
-                param_dict = self.model_class.state_dict()
-                # Save dictionary to file
-                with open(save_model_path, 'wb') as f:
-                    pickle.dump(param_dict, f)
-
-### ====================================================================================
-        #     # Train the model with batch size 20
-        #     n_batch_train = n_train // self.batch_size
-        #     n_batch_val = n_val // self.batch_size
-        #     patience = 10
-        #     best_loss = float('inf')
-        #     for epoch in range(max_training_epoch):
-        #         for i in range(n_batch_train):
-        #             batch_X = train_X[i*self.batch_size:(i+1)*self.batch_size]
-        #             batch_y = train_y[i*self.batch_size:(i+1)*self.batch_size]
-        #             optimizer.zero_grad()
-        #             outputs = self.model_class(batch_X)
-        #             loss = loss_fn(outputs, batch_y)
-        #             loss.backward()
-        #             optimizer.step()
-
-        #         # Validate the model
-        #         val_loss = 0.0
-        #         with torch.no_grad():
-        #             for i in range(n_batch_val):
-        #                 batch_X = val_X[i*self.batch_size:(i+1)*self.batch_size]
-        #                 batch_y = val_y[i*self.batch_size:(i+1)*self.batch_size]
-        #                 outputs = self.model_class(batch_X)
-        #                 loss = loss_fn(outputs, batch_y)
-        #                 val_loss += loss.item()
-        #         val_loss /= n_batch_val
-        #         print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
-        #         # Early stopping
-        #         if val_loss < best_loss:
-        #             best_loss = val_loss
-        #             patience_counter = 0
-        #         else:
-        #             patience_counter += 1
-        #             if patience_counter >= patience:
-        #                 print('Early stopping')
-        #                 break
-            
-        #     # Test the model
-        #     test_loss = 0.0
-        #     correct = 0
-        #     total = 0
-        #     n_batch_test = n_test // self.batch_size
-        #     with torch.no_grad():
-        #         for i in range(n_batch_test):
-        #             batch_X = test_X[i*self.batch_size:(i+1)*self.batch_size]
-        #             batch_y = test_y[i*self.batch_size:(i+1)*self.batch_size]
-        #             outputs = self.model_class(batch_X)
-        #             loss = loss_fn(outputs, batch_y)
-        #             test_loss += loss.item()
-        #             _, predicted = torch.max(outputs.data, 1)
-        #             total += batch_y.size(0)
-        #             correct += (predicted == batch_y).sum().item()
-        #     test_loss /= n_batch_test
-        #     accuracy = 100 * correct / total
-        #     print(f'Test Loss: {test_loss}, Test Accuracy: {accuracy}%')
-
-        # if save_model_path is not None:
-        #     # Save the local pytorch model
-        #     torch.save(self.model_class.state_dict(), save_model_path)
 
     def learn_intervention(self, training_samples_path, save_lt_model_path=None, save_ll_model_path=None, load_lt_model_path=None, load_ll_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
@@ -2413,15 +1802,6 @@ class hsl_classification:
             loss_test_ll = round(loss_test_ll, 3)
             print(f'Test loss of ll model: {loss_test_ll}')
 
-        # # Denormalize the prediction
-        # y_pred = y_pred.detach().numpy()
-        # y_pred_denorm = y_pred * self.std_target + self.mean_target
-        # # y_pred_var_denorm = test_pred_y_var * self.std_target ** 2
-        # y_test_denorm = test_y_lt_model * self.std_target + self.mean_target
-        # print(y_test_denorm.tolist()[:20])
-        # print(y_pred_denorm.tolist()[:20])
-        # print(np.sqrt(y_pred_var_denorm))
-
         if save_lt_model_path is not None:
             if self.nn_train_with == 'tagiv':
                 param_dict = self.lt_itv_model.net.state_dict()
@@ -2470,9 +1850,6 @@ class hsl_classification:
 
         self.lstm_history = self.lstm_history[:remove_until_index]
         self.lstm_cell_states = self.lstm_cell_states[:remove_until_index]
-        # self.p_anm_all = self.p_anm_all[:remove_until_index]
-        # self.mu_itv_all = self.mu_itv_all[:remove_until_index]
-        # self.std_itv_all = self.std_itv_all[:remove_until_index]
         self.mu_obs_preds = self.mu_obs_preds[:remove_until_index]
         self.std_obs_preds = self.std_obs_preds[:remove_until_index]
         self.mu_ar_preds = self.mu_ar_preds[:remove_until_index]
@@ -2513,32 +1890,6 @@ class TAGI_Net():
     def forward(self, mu_x, var_x):
         return self.net.forward(mu_x, var_x)
     
-class NN(torch.nn.Module):
-    def __init__(self, input_size, output_size):
-        super(NN, self).__init__()
-        self.fc1 = torch.nn.Linear(input_size, 64)
-        self.fc2 = torch.nn.Linear(64, 32)
-        self.fc3 = torch.nn.Linear(32, output_size)
-
-    def forward(self, x):
-        x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.nn.functional.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-    
-class NN_Classification(torch.nn.Module):
-    def __init__(self, input_size, output_size):
-        super(NN_Classification, self).__init__()
-        self.fc1 = torch.nn.Linear(input_size, 64)
-        self.fc2 = torch.nn.Linear(64, 32)
-        self.fc3 = torch.nn.Linear(32, output_size)
-
-    def forward(self, x):
-        x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.nn.functional.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-    
 def get_data_dist_coeff(n, target=0, n_converge=52):
     """
     f(1) = 1
@@ -2547,17 +1898,3 @@ def get_data_dist_coeff(n, target=0, n_converge=52):
     """
     alpha = np.log(2) / (n_converge - 1)  # ensures f(52) ≈ 0.5
     return target + (1 - target) * np.exp(-alpha * (n - 1))
-    
-# class tagi_classification():
-#     def __init__(self, input_size, output_size):
-#         super(tagi_classification, self).__init__()
-#         self.tagi_class_net = Sequential(
-#                                     Linear(input_size, 64),
-#                                     ReLU(),
-#                                     Linear(64, 32),
-#                                     ReLU(),
-#                                     Linear(32, output_size),
-#                                     Remax(),
-#                                     )
-#     def forward(self, mu_x, var_x):
-#         return self.tagi_class_net.forward(mu_x, var_x)
