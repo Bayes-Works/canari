@@ -748,32 +748,63 @@ class Model:
 
         # noise_index = self.get_states_index(states_name="white noise")
         noise_index = self.get_states_index(states_name="heteroscedastic noise")
-        exp_coeff_index = self.get_states_index(states_name="es coeff")  
+        exp_coeff_index = self.get_states_index(states_name="es coeff")
         exp_prod_index = self.get_states_index(states_name="es prod")
+
+        # sigmoid(alpha): es coefficient
+        mu_sigma_es_coeff = 1/(1+np.exp(-mu_states_posterior[exp_coeff_index]))
+        J_es_coeff = mu_sigma_es_coeff*(1-mu_sigma_es_coeff)
+        var_sigma_es_coeff = J_es_coeff**2 * var_states_posterior[exp_coeff_index, exp_coeff_index]
+        cov_sigma_es_coeff_others =  J_es_coeff * var_states_posterior[exp_coeff_index,:]
+        cov_sigma_es_coeff_v = cov_sigma_es_coeff_others[noise_index]
+        
+        # noise 
+        mu_v = mu_states_posterior[noise_index]
+        var_v = var_states_posterior[noise_index, noise_index]
+        cov_v_others = var_states_posterior[noise_index,:]
+
         mu_prod = (
-            mu_states_posterior[exp_coeff_index]
-            * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_coeff_index, noise_index]
+            mu_sigma_es_coeff * mu_v
+            + cov_sigma_es_coeff_v
         )
-        cov_prod_others = (
-            var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
-            + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
-        )
+        cov_prod_others = cov_sigma_es_coeff_others * mu_v + cov_v_others*mu_sigma_es_coeff
+        var_prod = (
+            var_sigma_es_coeff * var_v
+            + cov_sigma_es_coeff_v**2 + 2*cov_sigma_es_coeff_v*mu_sigma_es_coeff*mu_v
+            + var_sigma_es_coeff*mu_v**2
+            + var_v*mu_sigma_es_coeff**2
+            )
+
         mu_states_posterior[exp_prod_index] = mu_prod
         var_states_posterior[exp_prod_index,:] = cov_prod_others
         var_states_posterior[:,exp_prod_index] = cov_prod_others
-        var_prod = (
-            var_states_posterior[exp_coeff_index,exp_coeff_index]
-            * var_states_posterior[noise_index,noise_index]
-            + var_states_posterior[exp_coeff_index,noise_index]**2
-            + 2 * var_states_posterior[exp_coeff_index,noise_index]
-            * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
-            + var_states_posterior[exp_coeff_index,exp_coeff_index]
-            * mu_states_posterior[noise_index]**2
-            + var_states_posterior[noise_index,noise_index]
-            * mu_states_posterior[exp_coeff_index]**2
-        )
         var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
+
+        ## alpha: es coefficient 
+        # mu_prod = (
+        #     mu_states_posterior[exp_coeff_index]
+        #     * mu_states_posterior[noise_index]
+        #     + var_states_posterior[exp_coeff_index, noise_index]
+        # )
+        # cov_prod_others = (
+        #     var_states_posterior[exp_coeff_index,:] * mu_states_posterior[noise_index]
+        #     + var_states_posterior[noise_index,:] * mu_states_posterior[exp_coeff_index]
+        # )
+        # mu_states_posterior[exp_prod_index] = mu_prod
+        # var_states_posterior[exp_prod_index,:] = cov_prod_others
+        # var_states_posterior[:,exp_prod_index] = cov_prod_others
+        # var_prod = (
+        #     var_states_posterior[exp_coeff_index,exp_coeff_index]
+        #     * var_states_posterior[noise_index,noise_index]
+        #     + var_states_posterior[exp_coeff_index,noise_index]**2
+        #     + 2 * var_states_posterior[exp_coeff_index,noise_index]
+        #     * mu_states_posterior[exp_coeff_index] * mu_states_posterior[noise_index]
+        #     + var_states_posterior[exp_coeff_index,exp_coeff_index]
+        #     * mu_states_posterior[noise_index]**2
+        #     + var_states_posterior[noise_index,noise_index]
+        #     * mu_states_posterior[exp_coeff_index]**2
+        # )
+        # var_states_posterior[exp_prod_index,exp_prod_index] = var_prod
 
         return mu_states_posterior, var_states_posterior
          

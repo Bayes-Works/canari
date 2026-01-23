@@ -8,32 +8,6 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-
-# data_file = "./data/toy_time_series/sine.csv"
-# df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# # df_raw = pd.concat([df_raw, df_raw], ignore_index=True)
-
-# # Create piecewise linear trend
-# N = len(df_raw)
-# half = N // 2
-# linear_trend = np.concatenate([
-#     np.linspace(0, , half, endpoint=False),
-#     np.linspace(1, 0, N - half)
-# ])
-
-# # Add trend row-wise
-# df_raw = df_raw.add(linear_trend, axis=0)
-
-# data_file_time = "./data/toy_time_series/sine_datetime.csv"
-# time_series = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-# time_series = pd.to_datetime(time_series[0])
-# df_raw.index = time_series
-# df_raw.index.name = "date_time"
-# df_raw.columns = ["values"]
-
-# # Resampling data
-# df = df_raw.resample("H").mean()
-
 data_file = "./data/data_exp_smoothing.csv"
 df = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
 N = len(df)
@@ -54,10 +28,8 @@ num_epoch = 50
 # Build data processor
 data_processor = DataProcess(
     data=df,
-    # time_covariates=["hour_of_day"],
     train_split=0.8,
     validation_split=0.1,
-
     output_col=output_col,
 )
 
@@ -67,8 +39,8 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 # Model
 model = Model(
     LocalTrend(),
-    # LocalLevel(),
-    ExpSmoothing(mu_states=[0,0.3,0], var_states=[0,1e-2,0]),
+    ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0]),
+    # ExpSmoothing(mu_states=[0,-0.1,0], var_states=[0,0.5,0]),
     LstmNetwork(
         look_back_len=12,
         num_features=1,
@@ -107,19 +79,6 @@ for epoch in range(num_epoch):
     mse = metric.mse(mu_validation_preds, validation_obs)
     # Early-stopping
     model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
-
-    # validation_obs = data_processor.get_data("validation").flatten()
-    # validation_log_lik = metric.log_likelihood(
-    #     prediction=mu_validation_preds,
-    #     observation=validation_obs,
-    #     std=std_validation_preds,
-    # )
-
-    # # Early-stopping
-    # model.early_stopping(
-    #     evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
-    # )
-
 
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
@@ -164,12 +123,7 @@ print(f"Test MSE            :{mse: 0.4f}")
 print(f"Test Log-Lik        :{log_lik: 0.2f}")
 
 # plot the test data
-es = states.get_mean(states_name="es")
-idx_level = model.get_states_index(states_name="level")
 level_sum = states.get_mean(states_name="level") + states.get_mean(states_name="es")
-
-noise = states.get_mean(states_name="heteroscedastic noise")
-# states.mu_posterior[idx_level,:] = level_sum
 
 for i in range(len(states.mu_posterior)):
     states.mu_posterior[i][0] = level_sum[i]
@@ -184,6 +138,7 @@ plot_data(
     data_processor=data_processor,
     standardization=True,
     plot_column=output_col,
+    plot_test_data=False,
     sub_plot=ax[0],
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
