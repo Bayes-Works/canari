@@ -111,12 +111,12 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         gen_anm_ts += anm2_baseline
 
         values_str = str(list(gen_anm_ts))
-        time_series_all.append([values_str, anm_mag, time_anomaly2])
+        time_series_all.append([values_str, anm_mag, time_anomaly1, time_anomaly2])
 
 
 # Save to CSV
 saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen.csv"
-df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index"])
+df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row
 df_time_series_all.insert(0, 'timestamp', [str(list(time_stamps))] + ['']*(df_time_series_all.shape[0]-1))
@@ -130,20 +130,22 @@ time_stamps = eval(df.iloc[0]["timestamp"], {"nan": float("nan")})
 for _, row in df.iterrows():
     values = np.array(eval(row["values"], {"nan": float("nan")}), dtype=float)
     anomaly_magnitude = float(row["anomaly_magnitude"])
-    anomaly_start_index = int(row["anomaly_start_index"])
+    anomaly_start_index1 = int(row["anomaly_start_index1"])
+    anomaly_start_index2 = int(row["anomaly_start_index2"])
     
-    restored_data.append((values, anomaly_magnitude, anomaly_start_index))
+    restored_data.append((values, anomaly_magnitude, anomaly_start_index1, anomaly_start_index2))
 
 # Plot generated time series
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(1, 1)
 ax0 = plt.subplot(gs[0])
 # Randomly plot 5 time series
-# random_indices = np.random.choice(len(restored_data), size=2, replace=False)
-# for j in random_indices:
-for j in range(len(restored_data)):
+random_indices = np.random.choice(len(restored_data), size=2, replace=False)
+for j in random_indices:
+# for j in range(len(restored_data)):
     ax0.plot(time_stamps, restored_data[j][0])
-    ax0.axvline(x=restored_data[j][2], color='r', linestyle='--')
+    ax0.axvline(x=restored_data[j][2], color='g', linestyle='--')
+    ax0.axvline(x=restored_data[j][3], color='r', linestyle='--')
 # ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
 ax0.set_title("Data generation")
 # Only show x ticks for every 52 * 4 weeks

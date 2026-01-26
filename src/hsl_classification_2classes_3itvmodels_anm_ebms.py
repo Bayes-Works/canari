@@ -51,7 +51,6 @@ class hsl_classification:
         self.LTd_buffer = []
         self.p_anm_all = []
         self.mu_obs_preds, self.std_obs_preds = [], []
-        self.mu_ar_preds, self.std_ar_preds = [], []
         self.prior_na, self.prior_a = 0.998, 0.002
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
@@ -655,6 +654,11 @@ class hsl_classification:
                 # p_na_I_Yt = y_likelihood_na * x_likelihood_na * p_na_I_Yt1 / p_yt_I_Yt1
                 p_a_I_Yt = (y_likelihood_a * x_likelihood_a * self.prior_a / p_yt_I_Yt1).item()
 
+            if "lstm" in self.base_model.states_name:
+                self._save_lstm_input()
+
+            # Apply intervention to estimate data likelihood
+            if p_a_I_Yt > self.detection_threshold and rerun_kf is False:
                 # # Track what classifier learns
                 LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
                 LTd2_mu_prior = np.array(self.drift_model2.states.mu_prior)[:, 1].flatten()
@@ -665,30 +669,25 @@ class hsl_classification:
                 # Normalize the histories
                 LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
                 LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class  
-
-            if "lstm" in self.base_model.states_name:
-                self._save_lstm_input()
-
-            # Get interventions predicted by the model
-            self.lt_itv_model.net.eval()
-            self.ll_itv_model.net.eval()
-
-            itv_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
-            itv_input_history = itv_input_history.astype(np.float32)
-            output_pred_lt_mu, output_pred_lt_var = self.lt_itv_model.net(itv_input_history)
-            itv_pred_lt_mu = output_pred_lt_mu[::2]
-            itv_pred_lt_var = output_pred_lt_mu[1::2] + output_pred_lt_var[::2]
-            output_pred_ll_mu, output_pred_ll_var = self.ll_itv_model.net(itv_input_history)
-            itv_pred_ll_mu = output_pred_ll_mu[::2]
-            itv_pred_ll_var = output_pred_ll_mu[1::2] + output_pred_ll_var[::2]
                 
-            itv_pred_lt_mu_denorm = itv_pred_lt_mu * self.std_target_lt_model + self.mean_target_lt_model
-            itv_pred_lt_var_denorm = itv_pred_lt_var * self.std_target_lt_model ** 2
-            itv_pred_ll_mu_denorm = itv_pred_ll_mu * self.std_target_ll_model + self.mean_target_ll_model
-            itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
+                # Get interventions predicted by the model
+                self.lt_itv_model.net.eval()
+                self.ll_itv_model.net.eval()
 
-            # Apply intervention to estimate data likelihood
-            if p_a_I_Yt > self.detection_threshold and rerun_kf is False:
+                itv_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
+                itv_input_history = itv_input_history.astype(np.float32)
+                output_pred_lt_mu, output_pred_lt_var = self.lt_itv_model.net(itv_input_history)
+                itv_pred_lt_mu = output_pred_lt_mu[::2]
+                itv_pred_lt_var = output_pred_lt_mu[1::2] + output_pred_lt_var[::2]
+                output_pred_ll_mu, output_pred_ll_var = self.ll_itv_model.net(itv_input_history)
+                itv_pred_ll_mu = output_pred_ll_mu[::2]
+                itv_pred_ll_var = output_pred_ll_mu[1::2] + output_pred_ll_var[::2]
+                    
+                itv_pred_lt_mu_denorm = itv_pred_lt_mu * self.std_target_lt_model + self.mean_target_lt_model
+                itv_pred_lt_var_denorm = itv_pred_lt_var * self.std_target_lt_model ** 2
+                itv_pred_ll_mu_denorm = itv_pred_ll_mu * self.std_target_ll_model + self.mean_target_ll_model
+                itv_pred_ll_var_denorm = itv_pred_ll_var * self.std_target_ll_model ** 2
+
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
@@ -883,8 +882,6 @@ class hsl_classification:
                 obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
-            self.mu_ar_preds.append(mu_ar_pred)
-            self.std_ar_preds.append(var_ar_pred**0.5)
 
             mu_ar_pred2, var_ar_pred2, mu_drift_states_prior2, _ = self.drift_model2.forward()
             _, _, mu_drift_states_posterior2, var_drift_states_posterior2 = self.drift_model2.backward(
@@ -896,7 +893,7 @@ class hsl_classification:
             self.current_time_step += 1
             i += 1
 
-        return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(self.mu_ar_preds).flatten(), np.array(self.std_ar_preds).flatten()
+        return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten()
 
     def _estimate_likelihoods_with_intervention(self, ssm: Model, drift_model: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data, make_mask=False):
         """
@@ -1840,8 +1837,6 @@ class hsl_classification:
         self.lstm_cell_states = self.lstm_cell_states[:remove_until_index]
         self.mu_obs_preds = self.mu_obs_preds[:remove_until_index]
         self.std_obs_preds = self.std_obs_preds[:remove_until_index]
-        self.mu_ar_preds = self.mu_ar_preds[:remove_until_index]
-        self.std_ar_preds = self.std_ar_preds[:remove_until_index]
 
     def _retract_agent(self, time_step_back):
         self._erase_history(time_step_back)

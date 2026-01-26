@@ -51,9 +51,10 @@ time_stamps = eval(df.iloc[0]["timestamp"], {"nan": float("nan")})
 for _, row in df.iterrows():
     values = np.array(eval(row["values"], {"nan": float("nan")}), dtype=float)
     anomaly_magnitude = float(row["anomaly_magnitude"])
-    anomaly_start_index = int(row["anomaly_start_index"])
+    anomaly_start_index1 = int(row["anomaly_start_index1"])
+    anomaly_start_index2 = int(row["anomaly_start_index2"])
     
-    restored_data.append((values, anomaly_magnitude, anomaly_start_index))
+    restored_data.append((values, anomaly_magnitude, anomaly_start_index1, anomaly_start_index2))
 
 ####################################################################
 ######################### Pretrained model #########################
@@ -136,8 +137,10 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_tra
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
 mu_states_temp = copy.deepcopy(hsl_tsad_agent.base_model.mu_states)
 var_states_temp = copy.deepcopy(hsl_tsad_agent.base_model.var_states)
-lstm_cell_states_temp = copy.deepcopy(hsl_tsad_agent.base_model.lstm_net.get_lstm_states())
+lstm_states_temp = copy.deepcopy(hsl_tsad_agent.base_model.lstm_net.get_lstm_states())
 lstm_output_history_temp = copy.deepcopy(hsl_tsad_agent.base_model.lstm_output_history)
+lstm_history_temp = copy.deepcopy(hsl_tsad_agent.lstm_history)
+lstm_cell_states_temp = copy.deepcopy(hsl_tsad_agent.lstm_cell_states)
 
 drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.states)
 mu_drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.mu_states)
@@ -158,13 +161,19 @@ lt_itv_all_temp = copy.deepcopy(hsl_tsad_agent.lt_itv_all)    # For visualizatio
 test_mu_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.mu_obs_preds)     # To improve naming, hsl_tsad_agent.mu_obs_preds only store the test part
 test_std_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.std_obs_preds)   # To improve naming, hsl_tsad_agent.std_obs_preds only store the test part
 
+results_all = []
 # for k in tqdm(range(len(restored_data))):
 for k in tqdm(range(5)):
-    k = 145 + k * 10 + 1
+    k = 146 + k * 10 + 1
     # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
     df_k = pd.DataFrame()
     df_k["obs"] = restored_data[k][0]
     df_k.index = pd.to_datetime(time_stamps)
+
+    # Anomaly info
+    anm_mag = restored_data[k][1]
+    anm_start_index1 = restored_data[k][2]
+    anm_start_index2 = restored_data[k][3]
 
     data_processor_k = DataProcess(
         data=df_k,
@@ -182,102 +191,16 @@ for k in tqdm(range(5)):
     data_processor_k._compute_standardization_constants()
     _, _, test_data_k, _ = data_processor_k.get_splits()
 
-    mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data_k, apply_intervention=False)
+    mu_obs_preds, std_obs_preds = hsl_tsad_agent.detect(test_data_k, apply_intervention=False)
 
-    # #  Plot
-    state_type = "posterior"
-    fig = plt.figure(figsize=(10, 8))
-    gs = gridspec.GridSpec(8, 1)
-    ax0 = plt.subplot(gs[0])
-    ax1 = plt.subplot(gs[1])
-    ax2 = plt.subplot(gs[2])
-    ax3 = plt.subplot(gs[3])
-    ax4 = plt.subplot(gs[4])
-    ax5 = plt.subplot(gs[5])
-    ax6 = plt.subplot(gs[6])
-    ax7 = plt.subplot(gs[7])
-    time = data_processor_k.get_time(split="all")
-    plot_data(
-        data_processor=data_processor_k,
-        standardization=True,
-        plot_column=output_col,
-        validation_label="y",
-        sub_plot=ax0,
-    )
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['level'],
-        sub_plot=ax0,
-    )
-    ax0.set_xticklabels([])
-
-    ############ Original plots #############
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['trend'],
-        sub_plot=ax1,
-    )
-    ax1.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['lstm'],
-        sub_plot=ax2,
-    )
-    ax2.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['autoregression'],
-        sub_plot=ax3,
-    )
-    ax3.set_xticklabels([])
-
-    ax4.plot(time, hsl_tsad_agent.p_anm_all)
-    detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
-    for i in range(len(detection_time)):
-        ax4.axvline(x=time[detection_time[i]], color='red', linestyle='--', label='Anomaly start')
-    ax4.set_ylabel("p_anm")
-    ax4.set_xlim(ax0.get_xlim())
-    ax4.set_ylim(-0.05, 1.05)
-    _add_dynamic_grids(ax4, time)
-
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
-
-    final_class_log_probs = np.array(hsl_tsad_agent.class_prob_moments)[:, 0:2]
-    final_class_prob_stds = np.array(hsl_tsad_agent.class_prob_moments)[:, 2]
-
-    gen_ar_phi = model_dict['gen_phi_ar']
-    gen_ar_sigma =model_dict['gen_sigma_ar']
-    stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
-    ax5.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
-    ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:blue')
-    ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:orange')
-    ax5.set_ylabel("itv")
-
-    for class_idx in range(final_class_log_probs.shape[1]):
-        ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
-        ax7.fill_between(time, final_class_log_probs[:, class_idx] - final_class_prob_stds, 
-                        final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
-    ax7.set_ylim(-0.05, 1.05)
-    ax7.set_ylabel("Pr(anm)")
-
+    all_detection_points = str(np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0].tolist())
+    results_all.append([anm_mag, anm_start_index1, anm_start_index2, all_detection_points])
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
     hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
     hsl_tsad_agent.base_model.mu_states = copy.deepcopy(mu_states_temp)
     hsl_tsad_agent.base_model.var_states = copy.deepcopy(var_states_temp)
-    hsl_tsad_agent.base_model.lstm_net.set_lstm_states(lstm_cell_states_temp)
+    hsl_tsad_agent.base_model.lstm_net.set_lstm_states(lstm_states_temp)
     hsl_tsad_agent.base_model.lstm_output_history = copy.deepcopy(lstm_output_history_temp)
     hsl_tsad_agent.drift_model.states = copy.deepcopy(drift_states_temp)
     hsl_tsad_agent.drift_model.mu_states = copy.deepcopy(mu_drift_states_temp)
@@ -294,5 +217,99 @@ for k in tqdm(range(5)):
     hsl_tsad_agent.lt_itv_all = copy.deepcopy(lt_itv_all_temp)
     hsl_tsad_agent.mu_obs_preds = copy.deepcopy(test_mu_obs_preds_temp)
     hsl_tsad_agent.std_obs_preds = copy.deepcopy(test_std_obs_preds_temp)
+    hsl_tsad_agent.lstm_history = copy.deepcopy(lstm_history_temp)
+    hsl_tsad_agent.lstm_cell_states = copy.deepcopy(lstm_cell_states_temp)
 
-plt.show()
+    # # #  Plot
+    # state_type = "posterior"
+    # fig = plt.figure(figsize=(10, 8))
+    # gs = gridspec.GridSpec(8, 1)
+    # ax0 = plt.subplot(gs[0])
+    # ax1 = plt.subplot(gs[1])
+    # ax2 = plt.subplot(gs[2])
+    # ax3 = plt.subplot(gs[3])
+    # ax4 = plt.subplot(gs[4])
+    # ax5 = plt.subplot(gs[5])
+    # ax6 = plt.subplot(gs[6])
+    # ax7 = plt.subplot(gs[7])
+    # time = data_processor_k.get_time(split="all")
+    # plot_data(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    #     sub_plot=ax0,
+    # )
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['level'],
+    #     sub_plot=ax0,
+    # )
+    # ax0.set_xticklabels([])
+
+    # ############ Original plots #############
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['trend'],
+    #     sub_plot=ax1,
+    # )
+    # ax1.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['lstm'],
+    #     sub_plot=ax2,
+    # )
+    # ax2.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['autoregression'],
+    #     sub_plot=ax3,
+    # )
+    # ax3.set_xticklabels([])
+
+    # ax4.plot(time, hsl_tsad_agent.p_anm_all)
+    # detection_time = np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0]
+    # for i in range(len(detection_time)):
+    #     ax4.axvline(x=time[detection_time[i]], color='red', linestyle='--', label='Anomaly start')
+    # ax4.set_ylabel("p_anm")
+    # ax4.set_xlim(ax0.get_xlim())
+    # ax4.set_ylim(-0.05, 1.05)
+    # _add_dynamic_grids(ax4, time)
+
+    # colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+
+    # final_class_log_probs = np.array(hsl_tsad_agent.class_prob_moments)[:, 0:2]
+    # final_class_prob_stds = np.array(hsl_tsad_agent.class_prob_moments)[:, 2]
+
+    # gen_ar_phi = model_dict['gen_phi_ar']
+    # gen_ar_sigma =model_dict['gen_sigma_ar']
+    # stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
+    # ax5.fill_between(time, - 2 * stationary_ar_std, 2 * stationary_ar_std, color='gray', alpha=0.3, label='2-Sigma range')
+    # ax5.plot(time, hsl_tsad_agent.ll_itv_all, label='LL itv', color='tab:blue')
+    # ax5.plot(time, hsl_tsad_agent.lt_itv_all, label='LT itv', color='tab:orange')
+    # ax5.set_ylabel("itv")
+
+    # for class_idx in range(final_class_log_probs.shape[1]):
+    #     ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+    #     ax7.fill_between(time, final_class_log_probs[:, class_idx] - final_class_prob_stds, 
+    #                     final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
+    # ax7.set_ylim(-0.05, 1.05)
+    # ax7.set_ylabel("Pr(anm)")
+
+# plt.show()
+
+# Save the results to a CSV file
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index"])
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic.csv", index=False)
