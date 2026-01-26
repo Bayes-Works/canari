@@ -635,6 +635,8 @@ class hsl_classification:
         first_time_trigger = False
 
         self.num_before_detect = len(self.p_anm_all)
+        itv_log = [] # 0: LL itv, 1: LT itv
+        itv_applied_times = []
         while i < len(data["x"]):
             if i > i_before_retract:
                 rerun_kf = False
@@ -669,7 +671,7 @@ class hsl_classification:
                 # Normalize the histories
                 LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
                 LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class  
-                
+               
                 # Get interventions predicted by the model
                 self.lt_itv_model.net.eval()
                 self.ll_itv_model.net.eval()
@@ -824,11 +826,15 @@ class hsl_classification:
                 apply_intervention = True
                 ll_intervened_mu = itv_LL[0]
                 lt_intervened_mu = 0
+                itv_log.append(0)
+                itv_applied_times.append(trigger_time)
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
             elif cond_lt and rerun_kf is False:
                 apply_intervention = True
                 ll_intervened_mu = itv_LT[0]
                 lt_intervened_mu = itv_LT[1]
+                itv_log.append(1)
+                itv_applied_times.append(trigger_time)
                 print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
 
             if apply_intervention:
@@ -893,7 +899,7 @@ class hsl_classification:
             self.current_time_step += 1
             i += 1
 
-        return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten()
+        return np.array(self.mu_obs_preds).flatten(), np.array(self.std_obs_preds).flatten(), np.array(itv_log).flatten(), np.array(itv_applied_times).flatten()
 
     def _estimate_likelihoods_with_intervention(self, ssm: Model, drift_model: Model, level_intervention: List[float], trend_intervention: List[float], num_steps_retract: int, data, make_mask=False):
         """

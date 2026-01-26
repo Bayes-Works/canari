@@ -162,9 +162,9 @@ test_mu_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.mu_obs_preds)     # To imp
 test_std_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.std_obs_preds)   # To improve naming, hsl_tsad_agent.std_obs_preds only store the test part
 
 results_all = []
-# for k in tqdm(range(len(restored_data))):
-for k in tqdm(range(5)):
-    k = 146 + k * 10 + 1
+for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(5)):
+#     k = 146 + k * 10 + 1
     # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
     df_k = pd.DataFrame()
     df_k["obs"] = restored_data[k][0]
@@ -191,10 +191,12 @@ for k in tqdm(range(5)):
     data_processor_k._compute_standardization_constants()
     _, _, test_data_k, _ = data_processor_k.get_splits()
 
-    mu_obs_preds, std_obs_preds = hsl_tsad_agent.detect(test_data_k, apply_intervention=False)
+    mu_obs_preds, std_obs_preds, itv_log, itv_applied_times = hsl_tsad_agent.detect(test_data_k, apply_intervention=False)
 
     all_detection_points = str(np.where(np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold)[0].tolist())
-    results_all.append([anm_mag, anm_start_index1, anm_start_index2, all_detection_points])
+    itv_log = str(itv_log.tolist())
+    itv_applied_times = str(itv_applied_times.tolist())
+    results_all.append([anm_mag, anm_start_index1, anm_start_index2, all_detection_points, itv_log, itv_applied_times])
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
     hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -311,5 +313,5 @@ for k in tqdm(range(5)):
 # plt.show()
 
 # Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index"])
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times"])
 results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic.csv", index=False)
