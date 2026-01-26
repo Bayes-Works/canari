@@ -750,9 +750,10 @@ class Model:
         noise_index = self.get_states_index(states_name="heteroscedastic noise")
         exp_coeff_index = self.get_states_index(states_name="es coeff")
         exp_prod_index = self.get_states_index(states_name="es prod")
+        es_index = self.get_states_index(states_name="es")
 
         # activation on es coeff
-        activation = self.components[self._states_comp[exp_coeff_index]].activation
+        activation = self.components[self._states_comp[es_index]].activation
 
         # noise 
         mu_v = mu_states[noise_index]
@@ -763,6 +764,9 @@ class Model:
         if activation == "sigmoid":
             mu_es_coeff = 1/(1+np.exp(-mu_states[exp_coeff_index]))
             jcb = mu_es_coeff*(1-mu_es_coeff)
+        elif activation == "softplus":
+            mu_es_coeff = np.maximum(np.log1p(np.exp(mu_states[exp_coeff_index])), 1e-6)
+            jcb = np.maximum(1.0 / (1.0 + np.exp(-mu_states[exp_coeff_index])), 1e-6)
         else:
             mu_es_coeff = mu_states[exp_coeff_index]
             jcb = 1
@@ -787,6 +791,56 @@ class Model:
         var_states[exp_prod_index,:] = cov_prod_others
         var_states[:,exp_prod_index] = cov_prod_others
         var_states[exp_prod_index,exp_prod_index] = var_prod
+
+        # 2nd order ES
+        es_order = self.components[self._states_comp[exp_coeff_index]].es_order
+        if es_order == 2:
+            exp_trend_coeff_index = self.get_states_index(states_name="es trend coeff")
+            exp_trend_prod_index = self.get_states_index(states_name="es trend prod")
+
+            # es coefficient
+            if activation == "sigmoid":
+                mu_es_trend_coeff = 1/(1+np.exp(-mu_states[exp_trend_coeff_index]))
+                jcb = mu_es_trend_coeff*(1-mu_es_trend_coeff)
+            elif activation == "softplus":
+                mu_es_trend_coeff = np.maximum(np.log1p(np.exp(mu_states[exp_coeff_index])), 1e-6)
+                jcb = np.maximum(1.0 / (1.0 + np.exp(-mu_states[exp_coeff_index])), 1e-6)
+            else:
+                mu_es_trend_coeff = mu_states[exp_trend_coeff_index]
+                jcb = 1
+
+            var_es_trend_coeff = jcb**2 * var_states[exp_trend_coeff_index, exp_trend_coeff_index]
+            cov_es_trend_coeff_others = jcb * var_states[exp_trend_coeff_index,:]
+            cov_es_trend_coeff_v = cov_es_trend_coeff_others[noise_index]
+
+            mu_trend_prod = (
+                mu_es_trend_coeff * mu_v
+                + cov_es_trend_coeff_v
+            )
+            cov_trend_prod_others = cov_es_trend_coeff_others * mu_v + cov_v_others*mu_es_trend_coeff
+            var_trend_prod = (
+                var_es_trend_coeff * var_v
+                + cov_es_trend_coeff_v**2 + 2*cov_es_trend_coeff_v*mu_es_trend_coeff*mu_v
+                + var_es_trend_coeff*mu_v**2
+                + var_v*mu_es_trend_coeff**2
+                )
+            
+            mu_states[exp_trend_prod_index] = mu_trend_prod
+            var_states[exp_trend_prod_index,:] = cov_trend_prod_others
+            var_states[:,exp_trend_prod_index] = cov_trend_prod_others
+            var_states[exp_trend_prod_index,exp_trend_prod_index] = var_trend_prod
+
+            cross_cov_es_coeff = var_states[exp_coeff_index,exp_trend_coeff_index]
+            cross_cov_es_prod = (
+                cross_cov_es_coeff * var_v
+                + cov_es_coeff_v * cov_es_trend_coeff_v
+                + cross_cov_es_coeff * mu_v**2
+                + cov_es_coeff_v * mu_v * mu_es_trend_coeff
+                + cov_es_trend_coeff_v * mu_es_coeff * mu_v
+                + var_v * mu_es_trend_coeff * mu_es_coeff
+            )
+            var_states[exp_prod_index, exp_trend_prod_index] = cross_cov_es_prod
+            var_states[exp_trend_prod_index, exp_prod_index] = cross_cov_es_prod
 
         return mu_states, var_states
 
@@ -1451,6 +1505,11 @@ class Model:
 
         """
 
+        # if "es" in self.states_name:
+        #     self.mu_states, self.var_states = self._exp_smoothing_modification(
+        #         self.mu_states, self.var_states
+        #     )
+
         # LSTM prediction:
         lstm_states_index = self.get_states_index("lstm")
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
@@ -1496,11 +1555,6 @@ class Model:
         # Modification after SSM's prediction:
         if "autoregression" in self.states_name:
             mu_states_prior, var_states_prior = self._online_AR_forward_modification(
-                mu_states_prior, var_states_prior
-            )
-
-        if "es" in self.states_name:
-            mu_states_prior, var_states_prior = self._exp_smoothing_modification(
                 mu_states_prior, var_states_prior
             )
 
@@ -1572,10 +1626,10 @@ class Model:
                 )
             )
 
-        # if "es" in self.states_name:
-        #     mu_states_posterior, var_states_posterior = self._exp_smoothing_modification(
-        #         mu_states_posterior, var_states_posterior
-        #     )
+        if "es" in self.states_name:
+            mu_states_posterior, var_states_posterior = self._exp_smoothing_modification(
+                mu_states_posterior, var_states_posterior
+            )
 
         self.mu_states_posterior = mu_states_posterior
         self.var_states_posterior = var_states_posterior

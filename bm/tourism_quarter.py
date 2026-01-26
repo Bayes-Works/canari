@@ -8,57 +8,67 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-data_file = "./data/data_exp_smoothing.csv"
-df = pd.read_csv(data_file, skiprows=0, delimiter=",", header=None)
-N = len(df)
-half = N // 2
-linear_trend = np.concatenate([
-    np.linspace(0, 3, half, endpoint=False),
-    np.linspace(3, 0, N - half)
-])
+ts = 100
+# training set
+data_train_file = "./data/tourism/quarterly_in.csv"
+df_train = pd.read_csv(data_train_file, skiprows=0, delimiter=",", header=None, usecols=[ts]).dropna()
+quarter_to_month = {1: 1, 2: 4, 3: 7, 4: 10}
+train_start_time = pd.Timestamp(
+    year=int(df_train.iloc[2, 0]),
+    month=quarter_to_month[int(df_train.iloc[3, 0])],
+    day=1
+)
+df_train = df_train.iloc[4:,:]
+df_train = df_train.astype(float)
+# test set
+data_test_file = "./data/tourism/quarterly_oos.csv"
+df_test = pd.read_csv(data_test_file, skiprows=0, delimiter=",", header=None, usecols=[ts]).dropna()
+df_test = df_test.iloc[4:,:]
+df_test = df_test.astype(float)
 
-# Add trend row-wise
-df = df.add(linear_trend, axis=0)
-df.columns = ["values"]
+df = pd.concat([df_train, df_test], axis=0)
+
+df.index = pd.date_range(
+    start=train_start_time,
+    periods=len(df),
+    freq="QS"
+)
 
 # Define parameters
 output_col = [0]
 num_epoch = 50
+nb_val = 4
 
 # Build data processor
 data_processor = DataProcess(
     data=df,
-    train_split=0.8,
-    validation_split=0.1,
+    train_start=df.index[0],
+    validation_start=df.index[len(df_train) - nb_val],
+    test_start=df.index[len(df_train)],
+    time_covariates=["quarter_of_year"],
     output_col=output_col,
 )
-
 # split data
-train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+train_data, validation_data, test_data, _ = data_processor.get_splits()
 
 # Model
 model = Model(
     LocalTrend(),
-    # LocalLevel(),
     # ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
-    # ExpSmoothing(mu_states=[0,0.3,0], var_states=[0,1e-2,0], es_order=1, activation=None),
-    # ExpSmoothing(mu_states=[0,0.1,0], var_states=[0,1e-3,0], es_order=1, activation="softplus"),
-    ExpSmoothing(mu_states=[0, -1, 0, 0, -8, 0], var_states=[0, 0.5, 0, 0, 2, 0], es_order=2, activation="sigmoid"),
-    # ExpSmoothing(mu_states=[0, 0.1, 0, 0, 1e-4, 0], var_states=[0, 1e-2, 0, 0, 1e-5, 0], es_order=2),
-    # ExpSmoothing(mu_states=[0, 0.1, 0, 0, 1e-5, 0], var_states=[0, 1e-2, 0, 0, 1e-5, 0], es_order=2, activation="softplus"),
+    ExpSmoothing(mu_states=[0,0.5,0], var_states=[0,1e-1,0], es_order=1, activation=None),
     LstmNetwork(
-        look_back_len=12,
-        num_features=1,
-        infer_len=24 * 3,
+        look_back_len=4,
+        num_features=2,
+        infer_len=4 * 3,
         num_layer=1,
-        num_hidden_unit=40,
+        num_hidden_unit=50,
         manual_seed=1,
         model_noise=True,
-        smoother=False,
+        smoother=True,
     ),
 )
 
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_baseline_states(train_data["y"][0:4])
 
 # Training
 for epoch in range(num_epoch):
@@ -79,25 +89,25 @@ for epoch in range(num_epoch):
     )
 
 
-    # Calculate the log-likelihood metric
+    # Calculate the metric
     validation_obs = data_processor.get_data("validation").flatten()
-    mse = metric.mse(mu_validation_preds, validation_obs)
-    # Early-stopping
-    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
+    validation_log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=validation_obs,
+        std=std_validation_preds,
+    )
 
-    if epoch == model.optimal_epoch:
-        mu_validation_preds_optim = mu_validation_preds
-        std_validation_preds_optim = std_validation_preds
-        states_optim = copy.copy(
-            states
-        )  # If we want to plot the states, plot those from optimal epoch
+    # Early-stopping
+    model.early_stopping(
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+    )
 
     if model.stop_training:
         break
 
 
 print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
+print(f"Validation log-likelihood      :{model.early_stop_metric: 0.4f}")
 
 model.set_memory(
     time_step=data_processor.test_start - 1,
@@ -120,15 +130,9 @@ std_test_preds = normalizer.unstandardize_std(
 )
 
 # calculate the test metrics
-test_obs = data_processor.get_data("test").flatten()
-mse = metric.mse(mu_test_preds, test_obs)
-log_lik = metric.log_likelihood(mu_test_preds, test_obs, std_test_preds)
-
-print(f"Test MSE            :{mse: 0.4f}")
-print(f"Test Log-Lik        :{log_lik: 0.2f}")
+test_obs = data_processor.get_data("all").flatten()
 
 # plot the test data
-# mu_es_trend = states.get_mean(states_name="es trend") 
 level_sum = states.get_mean(states_name="level") + states.get_mean(states_name="es")
 
 for i in range(len(states.mu_posterior)):
@@ -153,15 +157,16 @@ plt.show()
 fig, ax = plt.subplots(figsize=(10, 6))
 plot_data(
     data_processor=data_processor,
+    plot_train_data=True,
+    plot_validation_data=True,
+    plot_test_data=True,
     standardization=False,
     plot_column=output_col,
-    validation_label="y",
 )
-plot_prediction(
+plot_data(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds_optim,
-    std_validation_pred=std_validation_preds_optim,
-    validation_label=[r"$\mu$", r"$\pm\sigma$"],
+    standardization=False,
+    plot_column=output_col,
 )
 plot_prediction(
     data_processor=data_processor,
