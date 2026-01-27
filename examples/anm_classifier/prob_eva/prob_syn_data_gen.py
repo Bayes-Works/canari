@@ -88,25 +88,29 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
     for k in range(num_test_ts):
         # First anomaly
         time_anomaly1 = np.random.randint(52, 52 * 2) + val_end_len
-        anm1_mag_fixed = 0.5
+        # anm1_mag_fixed = 0.5        # LL anomaly
+        anm1_mag_fixed = 0.2/52     # LT anomaly
 
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm1_mag_fixed *= sign
         anm1_mag_unstandardize = anm1_mag_fixed * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
 
-        anm1_baseline = np.ones(num_time_steps) * anm1_mag_unstandardize
+        # anm1_baseline = np.ones(num_time_steps) * anm1_mag_unstandardize
+        anm1_baseline = np.arange(num_time_steps) * anm1_mag_unstandardize
+        anm1_baseline[time_anomaly1:] -= anm1_baseline[time_anomaly1]
         anm1_baseline[:time_anomaly1] = 0
         gen_anm_ts = gen_ts[i*num_test_ts + k, :] + anm1_baseline
 
         # Second anomaly
         time_anomaly2 = time_anomaly1 + 52 * 6
-        anm2_mag = anm_mag
+        anm2_mag = anm_mag/52
 
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm2_mag *= sign
         anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
 
-        anm2_baseline = np.ones(num_time_steps) * anm2_mag_unstandardize
+        anm2_baseline = np.arange(num_time_steps) * anm2_mag_unstandardize
+        anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
         anm2_baseline[:time_anomaly2] = 0
         gen_anm_ts += anm2_baseline
 
@@ -115,7 +119,7 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 
 # Save to CSV
-saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen.csv"
+saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv"
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row
@@ -139,10 +143,10 @@ for _, row in df.iterrows():
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(1, 1)
 ax0 = plt.subplot(gs[0])
-# Randomly plot 5 time series
-random_indices = np.random.choice(len(restored_data), size=2, replace=False)
-for j in random_indices:
-# for j in range(len(restored_data)):
+# # Randomly plot samples time series
+# random_indices = np.random.choice(len(restored_data), size=2, replace=False)
+# for j in random_indices:
+for j in range(len(restored_data)):
     ax0.plot(time_stamps, restored_data[j][0])
     ax0.axvline(x=restored_data[j][2], color='g', linestyle='--')
     ax0.axvline(x=restored_data[j][3], color='r', linestyle='--')

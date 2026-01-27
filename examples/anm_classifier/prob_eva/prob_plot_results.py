@@ -20,7 +20,7 @@ plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
 # Get the total length of the test time series
-test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen.csv")
+test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltoll.csv")
 test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
@@ -87,7 +87,7 @@ ax[1].set_xlabel("Anomaly Magnitude (unit/$y$)")
 
 fig.align_ylabels(ax)
 
-# plt.tight_layout(h_pad=0.1, w_pad=0.1)
-# plt.subplots_adjust(hspace=0.3)
+plt.tight_layout(h_pad=0.1, w_pad=0.1)
+plt.subplots_adjust(hspace=0.3)
 # plt.savefig('syn_ts_results_legend.png', dpi=300)
 plt.show()

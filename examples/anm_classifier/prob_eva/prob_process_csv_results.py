@@ -150,6 +150,6 @@ def _process_detection_df(
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
     }
-    ).reset_index()
+    )
 
     return false_alarm_rate, df_group

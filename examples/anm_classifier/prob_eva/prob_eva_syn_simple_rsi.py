@@ -42,7 +42,7 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -141,9 +141,9 @@ std_itv_all_temp = copy.deepcopy(hsl_tsad_agent.std_itv_all)
 
 results_all = []
 
-# for k in tqdm(range(len(restored_data))):
-for k in tqdm(range(5)):
-    k = 146 + k * 10 + 1
+for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(5)):
+#     k = 146 + k * 10 + 1
     # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
     df_k = pd.DataFrame()
     df_k["obs"] = restored_data[k][0]
@@ -177,72 +177,72 @@ for k in tqdm(range(5)):
     itv_applied_times = None
     results_all.append([anm_mag, anm_start_index1, anm_start_index2, all_detection_points, itv_log, itv_applied_times])
 
-    #  Plot
-    state_type = "prior"
-    #  Plot states from pretrained model
-    fig = plt.figure(figsize=(10, 8))
-    gs = gridspec.GridSpec(5, 1)
-    ax0 = plt.subplot(gs[0])
-    ax1 = plt.subplot(gs[1])
-    ax2 = plt.subplot(gs[2])
-    ax3 = plt.subplot(gs[3])
-    ax4 = plt.subplot(gs[4])
-    time = data_processor_k.get_time(split="all")
-    all_detections_array = np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold
-    plot_data(
-        data_processor=data_processor_k,
-        standardization=True,
-        plot_column=output_col,
-        validation_label="y",
-        sub_plot=ax0,
-    )
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        # states=pretrained_model.states,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['level'],
-        sub_plot=ax0,
-    )
-    for detection_index in np.where(all_detections_array)[0]:
-        ax0.axvline(x=time[detection_index], color='r', linestyle='--', alpha=0.5)
-    ax0.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['trend'],
-        sub_plot=ax1,
-    )
-    ax1.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['lstm'],
-        sub_plot=ax2,
-    )
-    ax2.set_xticklabels([])
-    plot_states(
-        data_processor=data_processor_k,
-        standardization=True,
-        states=hsl_tsad_agent.base_model.states,
-        states_type=state_type,
-        states_to_plot=['autoregression'],
-        sub_plot=ax3,
-    )
-    ax3.set_xticklabels([])
+    # #  Plot
+    # state_type = "prior"
+    # #  Plot states from pretrained model
+    # fig = plt.figure(figsize=(10, 8))
+    # gs = gridspec.GridSpec(5, 1)
+    # ax0 = plt.subplot(gs[0])
+    # ax1 = plt.subplot(gs[1])
+    # ax2 = plt.subplot(gs[2])
+    # ax3 = plt.subplot(gs[3])
+    # ax4 = plt.subplot(gs[4])
+    # time = data_processor_k.get_time(split="all")
+    # all_detections_array = np.array(hsl_tsad_agent.p_anm_all) > hsl_tsad_agent.detection_threshold
+    # plot_data(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     plot_column=output_col,
+    #     validation_label="y",
+    #     sub_plot=ax0,
+    # )
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     # states=pretrained_model.states,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['level'],
+    #     sub_plot=ax0,
+    # )
+    # for detection_index in np.where(all_detections_array)[0]:
+    #     ax0.axvline(x=time[detection_index], color='r', linestyle='--', alpha=0.5)
+    # ax0.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['trend'],
+    #     sub_plot=ax1,
+    # )
+    # ax1.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['lstm'],
+    #     sub_plot=ax2,
+    # )
+    # ax2.set_xticklabels([])
+    # plot_states(
+    #     data_processor=data_processor_k,
+    #     standardization=True,
+    #     states=hsl_tsad_agent.base_model.states,
+    #     states_type=state_type,
+    #     states_to_plot=['autoregression'],
+    #     sub_plot=ax3,
+    # )
+    # ax3.set_xticklabels([])
 
-    ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
-    ax4.set_ylabel("p_anm")
-    ax4.set_xlim(ax0.get_xlim())
-    ax4.set_ylim(-0.05, 1.05)
-    for detection_index in np.where(all_detections_array)[0]:
-        ax4.axvline(x=time[detection_index], color='r', linestyle='--', alpha=0.5)
-    _add_dynamic_grids(ax4, time)
+    # ax4.plot(time, hsl_tsad_agent.p_anm_all, color='b')
+    # ax4.set_ylabel("p_anm")
+    # ax4.set_xlim(ax0.get_xlim())
+    # ax4.set_ylim(-0.05, 1.05)
+    # for detection_index in np.where(all_detections_array)[0]:
+    #     ax4.axvline(x=time[detection_index], color='r', linestyle='--', alpha=0.5)
+    # _add_dynamic_grids(ax4, time)
 
     # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
     hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -260,8 +260,8 @@ for k in tqdm(range(5)):
     hsl_tsad_agent.mu_itv_all = copy.deepcopy(mu_itv_all_temp)
     hsl_tsad_agent.std_itv_all = copy.deepcopy(std_itv_all_temp)
 
-plt.show()
+# plt.show()
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsi_samples.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsi_lttolt.csv", index=False)
