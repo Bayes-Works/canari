@@ -59,7 +59,7 @@ class hsl_classification:
         self.lstm_history = []
         self.lstm_cell_states = []
         self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
-        self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class = None, None, None, None, None, None
+        self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class = None, None, None, None
         self.class_prob_moments = []
         self.ll_itv_all, self.lt_itv_all = [], []
         self.y_std_scale = y_std_scale
@@ -825,7 +825,6 @@ class hsl_classification:
             if cond_ll and rerun_kf is False:
                 apply_intervention = True
                 ll_intervened_mu = itv_LL[0]
-                lt_intervened_mu = 0
                 itv_log.append(0)
                 itv_applied_times.append(trigger_time)
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
@@ -852,7 +851,8 @@ class hsl_classification:
                     LL_index = self.base_model.states_name.index("level")
                     LT_index = self.base_model.states_name.index("trend")
                     self.base_model.mu_states[LL_index] = ll_intervened_mu
-                    self.base_model.mu_states[LT_index] = lt_intervened_mu
+                    if cond_lt:
+                        self.base_model.mu_states[LT_index] = lt_intervened_mu
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd
@@ -1276,7 +1276,7 @@ class hsl_classification:
     
     def collect_anmtype_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
-        samples = {'LTd_history': [], 'LTd2_history': [], 'MP_history': [], 'anm_type': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
+        samples = {'LTd_history': [], 'LTd2_history': [], 'anm_type': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
         # # # Anomaly type: no_anomaly = 0, LT = 1, LL = 2, PD = 3
 
         # Anomly feature range define
@@ -1360,7 +1360,6 @@ class hsl_classification:
             p_anm_one_syn_ts = []
             y_likelihood_a_one_ts, y_likelihood_na_one_ts = [], []
             x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
-            syn_mp_all = []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
             drift_model2_copy.initialize_states_history()
@@ -1390,10 +1389,8 @@ class hsl_classification:
                     LTd_mu_prior2 = np.array(drift_model2_copy.states.mu_prior)[:, 1].flatten()
                     mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior, step_look_back=128)
                     mu_LTd_history2 = self._hidden_states_collector(i - 1, LTd_mu_prior2, step_look_back=128)
-                    mp_history = self._hidden_states_collector(i - 1, syn_mp_all, step_look_back=128)
                     samples['LTd_history'].append(mu_LTd_history.tolist())
                     samples['LTd2_history'].append(mu_LTd_history2.tolist())
-                    samples['MP_history'].append(mp_history.tolist())
                 if i > 129 and i < anm_begin_list[k]:
                     samples['anm_type'].append(0)  # No anomaly
                     samples['p_anm'].append(0.)
@@ -1458,24 +1455,6 @@ class hsl_classification:
                 drift_model2_copy.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
                 mu_ar_preds.append(mu_ar_pred)
                 std_ar_preds.append(var_ar_pred**0.5)
-
-                # Compute MP at the current time step
-                mu_lstm = base_model_copy.states.get_mean(states_type="posterior", states_name="lstm", standardization=True)
-                std_lstm = base_model_copy.states.get_std(states_type="posterior", states_name="lstm", standardization=True)
-                mu_ar = base_model_copy.states.get_mean(states_type="posterior", states_name="autoregression", standardization=True)
-                mp_input = mu_lstm + mu_ar  # Combine LSTM and AR components for MP calculation
-                if i >= self.start_idx_mp:
-                    T = np.array(mp_input).flatten().astype("float64")
-                    Q = T[i - self.m_mp:i]
-                    stationary_space_stop = i - self.m_mp if i - self.m_mp < anm_begin_list[k] else anm_begin_list[k]
-                    D = stumpy.mass(Q, T[:stationary_space_stop], normalize=False)
-                    min_idx = np.argmin(D)
-                    mp_value = D[min_idx]
-                    if mp_value == np.inf or np.isnan(mp_value):
-                        mp_value = np.nan
-                else:
-                    mp_value = 0.0  # No anomaly score before enough history
-                syn_mp_all.append(mp_value)
 
             # states_mu_posterior = np.array(base_model_copy.states.mu_posterior)
             # states_var_posterior = np.array(base_model_copy.states.var_posterior)
@@ -1543,8 +1522,6 @@ class hsl_classification:
             #                 states_drift_mu_posterior[:, 2].flatten() + states_drift_var_posterior[:, 2, 2]**0.5,
             #                 alpha=0.5)
             # ax6.set_ylabel('ARd')
-            # ax7.plot(np.arange(len(syn_mp_all)), syn_mp_all, color='r')
-            # ax7.set_ylabel('MP')
             # ax8.plot(p_anm_one_syn_ts)
             # ax8.axvline(x=anm_begin_list[k], color='r', linestyle='--')
             # ax8.set_ylim(-0.05, 1.05)
@@ -1573,7 +1550,6 @@ class hsl_classification:
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
-        samples['MP_history'] = samples['MP_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
         # Create a new column that times itv_LT by anm_develop_time
@@ -1585,22 +1561,18 @@ class hsl_classification:
         n_samples = len(samples)
         n_train = int(n_samples * 0.8)
 
-        # Get the moments of samples['LTd_history'] and samples['MP_history'] for normalization
+        # Get the moments of samples['LTd_history'] for normalization
         train_LTd = np.array(samples['LTd_history'].values.tolist()[:n_train], dtype=np.float32)
         train_LTd2 = np.array(samples['LTd2_history'].values.tolist()[:n_train], dtype=np.float32)
-        train_MP =  np.array(samples['MP_history'].values.tolist()[:n_train], dtype=np.float32)
-        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_LTd2_class is None or self.std_LTd2_class is None or self.mean_MP_class is None or self.std_MP_class is None:
+        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_LTd2_class is None or self.std_LTd2_class is None:
             self.mean_LTd_class = np.nanmean(train_LTd)
             self.std_LTd_class = np.nanstd(train_LTd)
             self.mean_LTd2_class = np.nanmean(train_LTd2)
             self.std_LTd2_class = np.nanstd(train_LTd2)
-            self.mean_MP_class = np.nanmean(train_MP)
-            self.std_MP_class = np.nanstd(train_MP)
-        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class, self.mean_MP_class, self.std_MP_class)
+        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class)
         # Normalize the two columns
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: [(val - self.mean_LTd_class) / self.std_LTd_class for val in x])
         samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: [(val - self.mean_LTd2_class) / self.std_LTd2_class for val in x])
-        samples['MP_history'] = samples['MP_history'].apply(lambda x: [(val - self.mean_MP_class) / self.std_MP_class for val in x])
         # Combine the two columns for input feature
         samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'], axis=1)
 

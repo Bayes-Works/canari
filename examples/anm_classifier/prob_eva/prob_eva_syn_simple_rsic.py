@@ -119,7 +119,7 @@ hsl_tsad_agent.detection_threshold = 0.1
 # hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv')
 
 # 3 intervention models, V2: itv_LLcLT:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class, hsl_tsad_agent.mean_MP_class, hsl_tsad_agent.std_MP_class = 1.9965937e-05, 0.00038667532, 5.639841e-05, 0.0028442398, 4.841846, 3.761018
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.9965937e-05, 0.00038667532, 5.639841e-05, 0.0028442398
 hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.0001552, 0.02051892]), np.array([0.00674669, 0.897446])
 hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00027658]), np.array([0.69313806])
 

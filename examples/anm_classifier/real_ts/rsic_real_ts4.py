@@ -22,48 +22,19 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
+data_file = "./data/benchmark_data/test_4_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["obs"]
-
-# # LT anomaly
-# anm_type = 'LT'
-# time_anomaly = 52*5
-# anm_mag = 12/52
-# anm_baseline = np.arange(len(df_raw)) * anm_mag
-# # Set the first 52*12 values in anm_baseline to be 0
-# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
-
-# LL anomaly
-anm_type = 'LL'
-time_anomaly = 52*5
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-# Second anomaly
-anm2_type = 'LL'
-time_anomaly2 = 52*9
-anm2_mag = 17
-anm2_baseline = np.ones(len(df_raw)) * anm2_mag
-anm2_baseline[:time_anomaly2] = 0
-df_raw = df_raw.add(anm2_baseline, axis=0)
-
-# # # Outlier
-# time_anomaly = 52*7
-# df_raw.iloc[time_anomaly] += 50
+df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
+df_raw = df_raw.iloc[:, :-3]
 
 # Data pre-processing
 output_col = [0]
-train_split=0.3
-validation_split=0.1
+train_split=0.23
+validation_split=0.07
 data_processor = DataProcess(
     data=df_raw,
     time_covariates=["week_of_year"],
@@ -76,27 +47,15 @@ train_val_data = copy.deepcopy(normalized_data)
 train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]
 train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 
-# Normalize the trend anomaly
-# normed_anm_mag =  (anm_mag - data_processor.scale_const_mean[0]) / data_processor.scale_const_std[0]
-normed_anm_mag =  anm_mag / data_processor.scale_const_std[0]
-normed_anm_baseline = np.arange(len(df_raw)) * normed_anm_mag
-normed_anm_baseline[time_anomaly:] -= normed_anm_baseline[time_anomaly]
-normed_anm_baseline[:time_anomaly] = 0
-print("normalied anomaly magnitude", normed_anm_mag)
-# Get the normed lt baseline
-
-# print("normalied anomaly trend", anm_mag / data_processor.scale_const_std[0])
-
-
 ####################################################################
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "rb") as f:
+with open("saved_params/real_ts4_tsmodel_raw.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=52,
+        look_back_len=51,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -110,18 +69,19 @@ autoregression_index = model_dict["states_name"].index("autoregression")
 print("phi_AR =", model_dict['states_optimal'].mu_prior[-1][phi_index].item())
 print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()))
 pretrained_model = Model(
-    LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12]),
+    # LocalTrend(mu_states=model_dict["mu_states"][0:2].reshape(-1), var_states=np.diag(model_dict["var_states"][0:2, 0:2])),
+    LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                   mu_states=[model_dict['states_optimal'].mu_prior[0][autoregression_index].item()], 
+                   var_states=[model_dict['states_optimal'].var_prior[0][autoregression_index, autoregression_index].item()]),
 )
 print("phi_AR_gen =", model_dict['gen_phi_ar'])
 print("sigma_AR_gen =", model_dict['gen_sigma_ar'])
 gen_model = Model(
     # LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=np.diag(model_dict['states_optimal'].var_prior[0][0:2, 0:2])),\
-    LocalTrend(mu_states=[0, 0], var_states=[1e-12, 1e-12]),
+    LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1), var_states=[1e-12, 1e-12]),
     LSTM,
     Autoregression(phi=model_dict['gen_phi_ar'], std_error=model_dict['gen_sigma_ar'],
                    mu_states=[model_dict['states_optimal'].mu_prior[0][autoregression_index].item()], 
@@ -150,24 +110,22 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = 2.83129300946429e-07
-hsl_tsad_agent.LTd_std = 4.9551180011919054e-05
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
-# hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
-hsl_tsad_agent.detection_threshold = 0.1
+hsl_tsad_agent.mu_LTd = -2.677492272315089e-05
+hsl_tsad_agent.LTd_std = 0.00011202488689314238
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
+hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 
-# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv')
+# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts4.csv')
 
-# 3 intervention models, V2: itv_LLcLT:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.9965937e-05, 0.00038667532, 5.639841e-05, 0.0028442398
-hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.0001552, 0.02051892]), np.array([0.00674669, 0.897446])
-hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00027658]), np.array([0.69313806])
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.1949449e-05, 0.00029423836, 3.858304e-05, 0.0036375641
+hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([-0.00017714, -0.01595158]), np.array([0.00655022, 0.8563425])
+hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.01134379]), np.array([0.70018774])
 
 # hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv', 
 #                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv', 
-                                    load_lt_model_path='saved_params/NN_intervention_LT_model_syn_simple_phi05.pkl', 
-                                    load_ll_model_path='saved_params/NN_intervention_LL_model_syn_simple_phi05.pkl', 
+hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts4.csv', 
+                                    load_lt_model_path='saved_params/NN_intervention_LT_model_real_ts4.pkl', 
+                                    load_ll_model_path='saved_params/NN_intervention_LL_model_real_ts4.pkl', 
                                     max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
@@ -247,16 +205,6 @@ ax4.set_ylim(-0.05, 1.05)
 _add_dynamic_grids(ax4, time)
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
-
-m_logits = np.array(hsl_tsad_agent.pred_class_probs)
-std_logits = np.sqrt(np.array(hsl_tsad_agent.pred_class_probs_var))
-## ReMax(logits)
-from src.convert_to_class import hierachical_softmax
-m_probs, std_probs = [], []
-for t in range(m_logits.shape[0]):
-    pr_classes = hierachical_softmax(m_logits[t], std_logits[t])
-    m_probs.append(pr_classes.tolist())
-m_probs = np.array(m_probs)
 
 # # # Combine the m_probs with self.data_loglikelihoods to get final class probabilities
 # final_class_log_probs = []
