@@ -109,7 +109,7 @@ def _process_detection_df(
 
     if evaluate_itv_type:
         print('------------- Classification analysis --------------------')
-        print("In the true detections, the counts are as follows:")
+        print("Among all the true detections, the counts are as follows:")
         # 0: LL itv, 1: LT itv, 2: non-identified
         unique, counts = np.unique(true_detection, return_counts=True)
         detection_type_counts = dict(zip(unique, counts))
@@ -119,7 +119,7 @@ def _process_detection_df(
             ( 'LL itv' if k == 0 else 'LT itv' if k == 1 else 'non-identified' ): round(v / sum_count, 2)
             for k, v in detection_type_counts.items()}
         print(detection_type_counts)
-        print("In the false detections, the counts are as follows:")
+        print("Among all the false detections, the counts are as follows:")
         unique, counts = np.unique(false_detection, return_counts=True)
         false_detection_type_counts = dict(zip(unique, counts))
         sum_count = sum(false_detection_type_counts.values())

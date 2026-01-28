@@ -88,16 +88,16 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
     for k in range(num_test_ts):
         # First anomaly
         time_anomaly1 = np.random.randint(52, 52 * 2) + val_end_len
-        # anm1_mag_fixed = 0.5        # LL anomaly
-        anm1_mag_fixed = 0.2/52     # LT anomaly
+        anm1_mag_fixed = 0.5        # LL anomaly
+        # anm1_mag_fixed = 0.2/52     # LT anomaly
 
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm1_mag_fixed *= sign
         anm1_mag_unstandardize = anm1_mag_fixed * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
 
-        # anm1_baseline = np.ones(num_time_steps) * anm1_mag_unstandardize
-        anm1_baseline = np.arange(num_time_steps) * anm1_mag_unstandardize
-        anm1_baseline[time_anomaly1:] -= anm1_baseline[time_anomaly1]
+        anm1_baseline = np.ones(num_time_steps) * anm1_mag_unstandardize
+        # anm1_baseline = np.arange(num_time_steps) * anm1_mag_unstandardize
+        # anm1_baseline[time_anomaly1:] -= anm1_baseline[time_anomaly1]
         anm1_baseline[:time_anomaly1] = 0
         gen_anm_ts = gen_ts[i*num_test_ts + k, :] + anm1_baseline
 
@@ -119,7 +119,7 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 
 # Save to CSV
-saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv"
+saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv"
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row

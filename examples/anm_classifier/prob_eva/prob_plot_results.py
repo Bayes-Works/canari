@@ -25,14 +25,16 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_itv_info.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttolt.csv",
     evaluate_itv_type = True,
 )
 print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
 false_alarm_rate_rsi, df_rsi_group = _process_detection_df(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lttolt.csv",
 )
 print("False alarm rate for RSI: ", false_alarm_rate_rsi, "per 10 years")
 
