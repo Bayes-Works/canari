@@ -22,18 +22,17 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/benchmark_data/test_4_data.csv"
+data_file = "./data/benchmark_data/test_1_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
 df_raw.index = time_series
 df_raw.index.name = "date_time"
-df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
-df_raw = df_raw.iloc[:, :-3]
+df_raw.columns = ["obs"]
 
 # Data pre-processing
 output_col = [0]
-train_split=0.23
+train_split=0.25
 validation_split=0.07
 data_processor = DataProcess(
     data=df_raw,
@@ -51,11 +50,11 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts4_tsmodel_raw.pkl", "rb") as f:
+with open("saved_params/real_ts1_tsmodel_raw.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=51,
+        look_back_len=18,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -110,23 +109,23 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -2.677492272315089e-05
-hsl_tsad_agent.LTd_std = 0.00011202488689314238
+hsl_tsad_agent.mu_LTd =  8.841863466034498e-06
+hsl_tsad_agent.LTd_std = 8.361741253698168e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
 
-# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts4.csv')
+# hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts1.csv')
 
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.1949449e-05, 0.00029423836, 3.858304e-05, 0.0036375641
-hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([-0.00017714, -0.01595158]), np.array([0.00655022, 0.8563425])
-hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.01134379]), np.array([0.70018774])
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = -3.1612646e-05, 0.00089390157, -0.0002586385, 0.0078019314
+hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([-0.00023026, -0.02991184]), np.array([0.00649001, 0.8654894])
+hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([-0.01612032]), np.array([0.66438234])
 
 # hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv', 
 #                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
-hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts4.csv', 
-                                    load_lt_model_path='saved_params/NN_intervention_LT_model_real_ts4.pkl', 
-                                    load_ll_model_path='saved_params/NN_intervention_LL_model_real_ts4.pkl', 
+hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_real_ts1.csv', 
+                                    load_lt_model_path='saved_params/NN_intervention_LT_model_real_ts1.pkl', 
+                                    load_ll_model_path='saved_params/NN_intervention_LL_model_real_ts1.pkl', 
                                     max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=False)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
