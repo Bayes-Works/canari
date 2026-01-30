@@ -14,7 +14,7 @@ import copy
 from canari.common import likelihood, likelihood_laplace_approx
 import pandas as pd
 from tqdm import tqdm
-from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp, Remax
+from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp, Remax, MixtureReLU
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -777,13 +777,13 @@ class hsl_classification:
                     # EBMS
                     data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    data_ll_post_sum = np.sum(data_ll_post_n)
-                    data_lt_post_sum = np.sum(data_lt_post_n)
+                    data_ll_post_sum = np.nansum(data_ll_post_n)
+                    data_lt_post_sum = np.nansum(data_lt_post_n)
 
                     hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
-                    hs_ll_post_sum = np.sum(hs_ll_post_n)
-                    hs_lt_post_sum = np.sum(hs_lt_post_n)
+                    hs_ll_post_sum = np.nansum(hs_ll_post_n)
+                    hs_lt_post_sum = np.nansum(hs_lt_post_n)
                 else:
                     data_ll_post_sum = 1
                     data_lt_post_sum = 1
@@ -1841,10 +1841,10 @@ class TAGI_Net():
         self.net = Sequential(
                     Linear(n_observations, 64),
                     # Linear(n_observations, 64, gain_weight=0.1, gain_bias=0.1),
-                    ReLU(),
+                    MixtureReLU(),
                     Linear(64, 32),
                     # Linear(64, 32, gain_weight=0.1, gain_bias=0.1),
-                    ReLU(),
+                    MixtureReLU(),
                     Linear(32, n_actions * 2),
                     # Linear(32, n_actions * 2, gain_weight=0.1, gain_bias=0.1),
                     EvenExp()
