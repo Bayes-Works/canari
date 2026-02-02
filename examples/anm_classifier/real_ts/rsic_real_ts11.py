@@ -139,15 +139,15 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 state_type = "posterior"
 #  Plot states from pretrained model
 fig = plt.figure(figsize=(10, 8))
-gs = gridspec.GridSpec(8, 1)
+gs = gridspec.GridSpec(7, 1)
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1])
 ax2 = plt.subplot(gs[2])
 ax3 = plt.subplot(gs[3])
 ax4 = plt.subplot(gs[4])
 ax5 = plt.subplot(gs[5])
-ax6 = plt.subplot(gs[6])
-ax7 = plt.subplot(gs[7])
+# ax6 = plt.subplot(gs[6])
+ax7 = plt.subplot(gs[6])
 time = data_processor.get_time(split="all")
 plot_data(
     data_processor=data_processor,
@@ -165,6 +165,8 @@ plot_states(
     states_to_plot=['level'],
     sub_plot=ax0,
 )
+ax0.plot(time, np.array(hsl_tsad_agent.posterior_mu_states_no_itv)[:, 0, 0], color='grey', linestyle='--')
+ax0.fill_between(time, ax0.get_ylim()[0], ax0.get_ylim()[1], where=~np.isnan(np.array(hsl_tsad_agent.posterior_mu_states_no_itv)[:, 0, 0]), color='lightgrey', alpha=0.5)
 # ax0.axvline(x=time[anm_start_index], color='red', linestyle='--', label='Anomaly start')
 ax0.set_xticklabels([])
 # ax0.axhline(y=normed_anm_mag, color='purple', linestyle='--', label='Anomaly magnitude')
@@ -179,6 +181,8 @@ plot_states(
     states_to_plot=['trend'],
     sub_plot=ax1,
 )
+ax1.plot(time, np.array(hsl_tsad_agent.posterior_mu_states_no_itv)[:, 1, 0], color='grey', linestyle='--')
+ax1.fill_between(time, ax1.get_ylim()[0], ax1.get_ylim()[1], where=~np.isnan(np.array(hsl_tsad_agent.posterior_mu_states_no_itv)[:, 1, 0]), color='lightgrey', alpha=0.5)
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
