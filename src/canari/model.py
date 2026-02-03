@@ -1087,10 +1087,27 @@ class Model:
             var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
+        # lstm_index = self.get_states_index("lstm")
+        # self.lstm_output_history.update(
+        #     mu_states[lstm_index],
+        #     var_states[lstm_index, lstm_index],
+        # )
+
         lstm_index = self.get_states_index("lstm")
+        white_noise_index = self.get_states_index("white noise")
+        hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+        indices = [
+            idx for idx in (lstm_index, white_noise_index, hete_noise_index)
+            if idx is not None
+        ]
+        _observation_matrix = np.zeros_like(self.observation_matrix)
+        _observation_matrix[0, indices] = 1
+        var_lstm = _observation_matrix @ var_states @_observation_matrix.T
+
         self.lstm_output_history.update(
             mu_states[lstm_index],
-            var_states[lstm_index, lstm_index],
+            var_lstm.flatten(),
         )
 
     def get_dict(self, time_step: Optional[int] = None) -> dict:
