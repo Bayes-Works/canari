@@ -4,7 +4,6 @@ from pytagi import Normalizer as normalizer
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import pytagi.metric as metric
 from canari import (
     DataProcess,
     Model,
@@ -14,6 +13,7 @@ from canari import (
     plot_skf_states,
 )
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
+from canari.common import log_likelihood
 
 # # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -107,7 +107,7 @@ for epoch in tqdm(range(num_epoch), desc="Training Progress", unit="epoch"):
     )
 
     validation_obs = data_processor.get_data("validation").flatten()
-    validation_log_lik = metric.log_likelihood(
+    validation_log_lik = log_likelihood(
         prediction=mu_validation_preds_unnorm,
         observation=validation_obs,
         std=std_validation_preds_unnorm,
