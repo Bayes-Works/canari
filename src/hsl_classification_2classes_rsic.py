@@ -1224,7 +1224,7 @@ class hsl_classification:
             ssm.lstm_output_history = copy.deepcopy(output_history_temp)
             ssm.lstm_net.set_lstm_states(cell_states_temp)
 
-        return y_likelihood_all, x_likelihood_all,LL_intervened_value, LT_intervened_value, np.array(LL_track).flatten()
+        return y_likelihood_all, x_likelihood_all, LL_intervened_value, LT_intervened_value, np.array(LL_track).flatten()
     
     def _estimate_likelihoods(
             self, 
