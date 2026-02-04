@@ -1324,20 +1324,6 @@ class Model:
         self.mu_states = new_mu_states.copy()
         self.var_states = new_var_states.copy()
 
-    def initialize_states_with_smoother_estimates(self):
-        """
-        Set hidden states :attr:`~canari.model.Model.mu_states` and
-        :attr:`~canari.model.Model.var_states` using the smoothed estimates for hidden states
-        at the first time step `t=1` stored in :attr:`~canari.model.Model.states`. This new hidden
-        states act as the inital hidden states at `t=0` in the next epoch.
-        """
-
-        self.mu_states = self.states.mu_smooth[0].copy()
-        self.var_states = np.diag(np.diag(self.states.var_smooth[0])).copy()
-        if "level" in self.states_name and hasattr(self, "_mu_local_level"):
-            local_level_index = self.get_states_index("level")
-            self.mu_states[local_level_index] = self._mu_local_level
-
     def initialize_states_history(self):
         """
         Reinitialize prior, posterior, and smoothed values for hidden states in
@@ -1380,6 +1366,12 @@ class Model:
             if "level" in self.states_name and hasattr(self, "_mu_local_level"):
                 local_level_index = self.get_states_index("level")
                 mu_states[local_level_index] = self._mu_local_level
+
+            if "es" in self.states_name:
+                es_index = self.get_states_index("es")
+                es_prod_index = self.get_states_index("es prod")
+                mu_states[es_index] = 0
+                mu_states[es_prod_index] = 0
 
             if self.lstm_net:
                 if self.lstm_net.smooth:
@@ -1776,9 +1768,9 @@ class Model:
                 x
             )
 
-            # if "es" in self.states_name:
-            #     es_prod_index = self.get_states_index(states_name="es prod")
-            #     mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
+            if "es" in self.states_name:
+                es_prod_index = self.get_states_index(states_name="es prod")
+                mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)

@@ -8,7 +8,7 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-ts = 100
+ts = 1
 # training set
 data_train_file = "./data/tourism/quarterly_in.csv"
 df_train = pd.read_csv(data_train_file, skiprows=0, delimiter=",", header=None, usecols=[ts]).dropna()
@@ -55,20 +55,20 @@ train_data, validation_data, test_data, _ = data_processor.get_splits()
 model = Model(
     LocalTrend(),
     # ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
-    ExpSmoothing(mu_states=[0,0.5,0], var_states=[0,1e-1,0], es_order=1, activation=None),
+    ExpSmoothing(mu_states=[0,0.2,0], var_states=[0,1e-2,0], es_order=1, activation=None),
     LstmNetwork(
         look_back_len=4,
         num_features=2,
-        infer_len=4 * 3,
+        infer_len=4 *3,
         num_layer=1,
         num_hidden_unit=50,
         manual_seed=1,
         model_noise=True,
-        smoother=True,
+        # smoother=False,
     ),
 )
 
-model.auto_initialize_baseline_states(train_data["y"][0:4])
+model.auto_initialize_baseline_states(train_data["y"])
 
 # Training
 for epoch in range(num_epoch):
@@ -99,7 +99,8 @@ for epoch in range(num_epoch):
 
     # Early-stopping
     model.early_stopping(
-        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch,
+        # skip_epoch=20,
     )
 
     if model.stop_training:
