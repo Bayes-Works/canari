@@ -1087,12 +1087,7 @@ class Model:
             var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
-        # lstm_index = self.get_states_index("lstm")
-        # self.lstm_output_history.update(
-        #     mu_states[lstm_index],
-        #     var_states[lstm_index, lstm_index],
-        # )
-
+        ## 2
         lstm_index = self.get_states_index("lstm")
         white_noise_index = self.get_states_index("white noise")
         hete_noise_index = self.get_states_index("heteroscedastic noise")
@@ -1103,10 +1098,11 @@ class Model:
         ]
         _observation_matrix = np.zeros_like(self.observation_matrix)
         _observation_matrix[0, indices] = 1
+        mu_lstm = _observation_matrix @ mu_states
         var_lstm = _observation_matrix @ var_states @_observation_matrix.T
 
         self.lstm_output_history.update(
-            mu_states[lstm_index],
+            mu_lstm.flatten(),
             var_lstm.flatten(),
         )
 
@@ -1839,7 +1835,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
