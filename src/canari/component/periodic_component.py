@@ -92,3 +92,13 @@ class Periodic(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the periodic component."
             )
+        
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """

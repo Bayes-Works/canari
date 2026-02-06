@@ -59,3 +59,13 @@ class Intervention(BaseComponent):
 
     def initialize_var_states(self):
         self._var_states = np.zeros((self._num_states, 1))
+
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """

@@ -25,6 +25,7 @@ class BaseComponent(ABC):
         self._transition_matrix = None
         self._observation_matrix = None
         self._process_noise_matrix = None
+        self._model = None
 
         if not hasattr(self, "_mu_states"):
             self._mu_states = None
@@ -143,3 +144,36 @@ class BaseComponent(ABC):
         """
         Initialize the process noise covariance matrix. Output an 2D array.
         """
+
+    @abstractmethod
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    @abstractmethod
+    def backward(self):
+        """
+        Backward modification for each component
+        """
+
+    def bind(self, model) -> None:
+        """
+        Bind this component to a `Model` instance.
+        """
+
+        self._model = model
+
+    @property
+    def model(self):
+        """
+        Model: The bound model instance.
+
+        Raises:
+            RuntimeError: If the component has not been bound to a model yet.
+        """
+        if self._model is None:
+            raise RuntimeError(
+                f"{self.__class__.__name__} is not bound to a Model. "
+            )
+        return self._model

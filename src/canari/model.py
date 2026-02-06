@@ -132,14 +132,23 @@ class Model:
         """
 
         self._initialize_attributes()
-        self.components = {
-            f"{component.component_name} {i}": component
-            for i, component in enumerate(components)
-        }
+        self._initialize_components(*components)
         self._initialize_model()
         self.states = StatesHistory()
         self.output_history = OutputHistory()
 
+    def _initialize_components(self, *components: BaseComponent) -> None:
+        """
+        Create `self.components` and bind each component to this model.
+        """
+
+        self.components: Dict[str, BaseComponent] = {}
+
+        for i, component in enumerate(components):
+            key = f"{component.component_name} {i}"
+            self.components[key] = component
+            component.bind(self)
+    
     def __deepcopy__(self, memo):
         """
         Create a deep copy of the model while excluding the LSTM network.
@@ -192,12 +201,6 @@ class Model:
         self.lstm_output_history = LstmOutputHistory()
         self.lstm_states_history = []
 
-        # Autoregression-related attributes
-        self.mu_W2bar = None
-        self.var_W2bar = None
-        self.mu_W2_prior = None
-        self.var_W2_prior = None
-
         # Noise related attribute
         self.sched_sigma_v = None
         self._var_v2bar_prior = None
@@ -230,7 +233,6 @@ class Model:
         self._assemble_matrices()
         self._assemble_states()
         self._initialize_lstm_network()
-        self._initialize_autoregression()
 
     def _assemble_matrices(self):
         """
@@ -308,25 +310,6 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
-
-    def _initialize_autoregression(self):
-        """
-        Initialize autoregression-related attributes.
-        Only applicable when using the Autoregression component.
-        """
-
-        autoregression_component = next(
-            (
-                component
-                for component in self.components.values()
-                if "autoregression" in component.component_name
-            ),
-            None,
-        )
-
-        if "AR_error" in self.states_name:
-            self.mu_W2bar = autoregression_component.mu_states[-1]
-            self.var_W2bar = autoregression_component.var_states[-1]
 
     def _set_posterior_states(
         self,
@@ -535,214 +518,6 @@ class Model:
             mu_obs_predict,
             var_obs_predict,
         )
-
-    def _online_AR_forward_modification(self, mu_states_prior, var_states_prior):
-        """
-        Apply forward path autoregressive (AR) moment transformations.
-
-        Updates prior state means and variances based on the autoregressive error model,
-        propagating uncertainty from W2bar to AR_error. These are used during the forward
-        pass when AR components are present.
-
-        Args:
-            mu_states_prior (np.ndarray): Prior mean vector of the states.
-            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior).
-        """
-
-        if "AR_error" in self.states_name:
-            ar_index = self.get_states_index("autoregression")
-            ar_error_index = self.get_states_index("AR_error")
-            W2_index = self.get_states_index("W2")
-            W2bar_index = self.get_states_index("W2bar")
-
-            # Forward path to compute the moments of W
-            # # W2bar
-            mu_states_prior[W2bar_index] = self.mu_W2bar
-            var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar.item()
-
-            # # From W2bar to W2
-            self.mu_W2_prior = self.mu_W2bar
-            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-            mu_states_prior[W2_index] = self.mu_W2_prior
-            var_states_prior[W2_index, W2_index] = self.var_W2_prior.item()
-
-            # # From W2 to W
-            mu_states_prior[ar_error_index] = 0
-            var_states_prior[ar_error_index, :] = np.zeros_like(
-                var_states_prior[ar_error_index, :]
-            )
-            var_states_prior[:, ar_error_index] = np.zeros_like(
-                var_states_prior[:, ar_error_index]
-            )
-            var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar.item()
-            var_states_prior[ar_error_index, ar_index] = self.mu_W2bar.item()
-            var_states_prior[ar_index, ar_error_index] = self.mu_W2bar.item()
-        return mu_states_prior, var_states_prior
-
-    def _online_AR_backward_modification(
-        self,
-        mu_states_posterior,
-        var_states_posterior,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Apply backward AR moment updates during state-space filtering.
-
-        Computes the posterior distribution of W2 and W2bar from AR_error states,
-        and adjusts the autoregressive process noise accordingly. Also applies
-        GMA transformations when "phi" is involved in the model.
-
-        Args:
-            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
-            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
-        """
-
-        if "phi" in self.states_name:
-            # GMA operations
-            mu_states_posterior, var_states_posterior = GMA(
-                mu_states_posterior,
-                var_states_posterior,
-                index1=self.get_states_index("phi"),
-                index2=self.get_states_index("autoregression"),
-                replace_index=self.get_states_index("phi_autoregression"),
-            ).get_results()
-
-        if "AR_error" in self.states_name:
-            ar_index = self.get_states_index("autoregression")
-            ar_error_index = self.get_states_index("AR_error")
-            W2_index = self.get_states_index("W2")
-            W2bar_index = self.get_states_index("W2bar")
-
-            # Backward path to update W2 and W2bar
-            # # From W to W2
-            mu_W2_posterior = (
-                mu_states_posterior[ar_error_index] ** 2
-                + var_states_posterior[ar_error_index, ar_error_index]
-            )
-            var_W2_posterior = (
-                2 * var_states_posterior[ar_error_index, ar_error_index] ** 2
-                + 4
-                * var_states_posterior[ar_error_index, ar_error_index]
-                * mu_states_posterior[ar_error_index] ** 2
-            )
-            mu_states_posterior[W2_index] = mu_W2_posterior
-            var_states_posterior[W2_index, :] = np.zeros_like(
-                var_states_posterior[W2_index, :]
-            )
-            var_states_posterior[:, W2_index] = np.zeros_like(
-                var_states_posterior[:, W2_index]
-            )
-            var_states_posterior[W2_index, W2_index] = var_W2_posterior.item()
-
-            # # From W2 to W2bar
-            K = self.var_W2bar / self.var_W2_prior
-            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
-            self.var_W2bar = self.var_W2bar + K**2 * (
-                var_W2_posterior - self.var_W2_prior
-            )
-            mu_states_posterior[W2bar_index] = self.mu_W2bar
-            var_states_posterior[W2bar_index, :] = np.zeros_like(
-                var_states_posterior[W2bar_index, :]
-            )
-            var_states_posterior[:, W2bar_index] = np.zeros_like(
-                var_states_posterior[:, W2bar_index]
-            )
-            var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar.item()
-
-            self.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar.item()
-
-        return mu_states_posterior, var_states_posterior
-
-    def _BAR_backward_modification(
-        self, mu_states_posterior, var_states_posterior
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        BAR backward modification.
-
-        Apply backward BAR moment updates during state-space filtering.
-
-        Computes the constrained posterior distribution of AR state according to the bounding
-        coefficient gamma when it is provided.
-
-        Args:
-            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
-            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
-        """
-
-        ar_index = self.get_states_index("autoregression")
-        bar_index = self.get_states_index("bounded autoregression")
-
-        mu_AR = mu_states_posterior[ar_index].item()
-        var_AR = var_states_posterior[ar_index, ar_index].item()
-        cov_AR = var_states_posterior[ar_index, :]
-
-        bar_component = next(
-            (
-                component
-                for component in self.components.values()
-                if "bounded autoregression" in component.component_name
-            ),
-            None,
-        )
-
-        bound = bar_component.gamma * np.sqrt(
-            bar_component.std_error**2 / (1 - bar_component.phi**2)
-        )
-
-        l_bar = mu_AR + bound
-
-        mu_L = (
-            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
-            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
-            - bound
-        )
-        var_L = (
-            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
-            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
-            - (mu_L + bound) ** 2
-        )
-
-        u_bar = -mu_AR + bound
-        mu_U = (
-            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
-            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
-            + bound
-        )
-        var_U = (
-            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
-            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
-            - (-mu_U + bound) ** 2
-        )
-
-        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
-        cov_bar = cov_AR * (
-            common.norm_cdf(l_bar / np.sqrt(var_AR))
-            + common.norm_cdf(u_bar / np.sqrt(var_AR))
-            - 1
-        )
-        var_bar = (
-            var_L
-            + (mu_L - mu_AR) ** 2
-            + var_U
-            + (mu_U - mu_AR) ** 2
-            - (mu_states_posterior[bar_index] - mu_AR) ** 2
-            - var_AR
-        )
-        var_states_posterior[bar_index, :] = cov_bar
-        var_states_posterior[:, bar_index] = cov_bar
-        var_states_posterior[bar_index, bar_index] = np.maximum(
-            var_bar, 1e-8
-        ).item()  # For numerical stability
-
-        return mu_states_posterior, var_states_posterior
 
     def _prepare_covariates_generation(
         self, initial_covariate, num_generated_samples: int, time_covariates: List[str]
@@ -1442,7 +1217,7 @@ class Model:
                 self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
 
         # State-space model prediction:
-        mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
+        _, _, self.mu_states_prior, self.var_states_prior = common.forward(
             self.mu_states,
             self.var_states,
             self.transition_matrix,
@@ -1453,25 +1228,14 @@ class Model:
             lstm_states_index,
         )
 
-        if "exp" in self.states_name:
-            mu_states_prior, var_states_prior, mu_obs_pred, var_obs_pred = (
-                self._update_exp_and_scaled_exp(
-                    mu_states_prior, var_states_prior, self.var_states, "forward"
-                )
-            )
+        for component in self.components.values():
+            component.forward()
 
-        # Modification after SSM's prediction:
-        if "autoregression" in self.states_name:
-            mu_states_prior, var_states_prior = self._online_AR_forward_modification(
-                mu_states_prior, var_states_prior
-            )
+        self.mu_obs_predict, self.var_obs_predict = common.calc_observation(
+            self.mu_states_prior, self.var_states_prior, self.observation_matrix
+        )
 
-        self.mu_states_prior = mu_states_prior
-        self.var_states_prior = var_states_prior
-        self.mu_obs_predict = mu_obs_pred
-        self.var_obs_predict = var_obs_pred
-
-        return mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior
+        return self.mu_obs_predict, self.var_obs_predict , self.mu_states_prior, self.var_states_prior
 
     def backward(
         self,
@@ -1511,37 +1275,17 @@ class Model:
         # TODO: check replacing Nan could create problems
         delta_mu_states = np.nan_to_num(delta_mu_states, nan=0.0)
         delta_var_states = np.nan_to_num(delta_var_states, nan=0.0)
-        mu_states_posterior = self.mu_states_prior + delta_mu_states
-        var_states_posterior = self.var_states_prior + delta_var_states
+        self.mu_states_posterior = self.mu_states_prior + delta_mu_states
+        self.var_states_posterior = self.var_states_prior + delta_var_states
 
-        if "autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = (
-                self._online_AR_backward_modification(
-                    mu_states_posterior,
-                    var_states_posterior,
-                )
-            )
-
-        if "bounded autoregression" in self.states_name:
-            mu_states_posterior, var_states_posterior = self._BAR_backward_modification(
-                mu_states_posterior, var_states_posterior
-            )
-
-        if "exp" in self.states_name:
-            mu_states_posterior, var_states_posterior, *_ = (
-                self._update_exp_and_scaled_exp(
-                    mu_states_posterior, var_states_posterior, 0, "backward"
-                )
-            )
-
-        self.mu_states_posterior = mu_states_posterior
-        self.var_states_posterior = var_states_posterior
+        for component in self.components.values():
+            component.backward()
 
         return (
             delta_mu_states,
             delta_var_states,
-            mu_states_posterior,
-            var_states_posterior,
+            self.mu_states_posterior,
+            self.var_states_posterior,
         )
 
     def update_lstm_param(

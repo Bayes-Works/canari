@@ -258,3 +258,13 @@ class LstmNetwork(BaseComponent):
             lstm_network.load(filename=self.load_lstm_net)
 
         return lstm_network
+    
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """

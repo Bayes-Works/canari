@@ -1,6 +1,7 @@
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
+from canari.common import GMA
 
 
 class Autoregression(BaseComponent):
@@ -66,6 +67,11 @@ class Autoregression(BaseComponent):
         self.phi = phi  # When phi is None, use GMA to learn
         self._mu_states = mu_states
         self._var_states = var_states
+        self.mu_W2bar = None
+        self.var_W2bar = None
+        self.mu_W2_prior = None
+        self.var_W2_prior = None
+
         super().__init__()
 
     def initialize_component_name(self):
@@ -119,6 +125,9 @@ class Autoregression(BaseComponent):
             self._process_noise_matrix = np.array([[self.std_error**2]])
         else:
             self._process_noise_matrix = np.array([[self._mu_states[-1]]])
+            self.mu_W2bar = self._mu_states[-1]
+            self.var_W2bar = self._var_states[-1]
+
         if self.phi is None:
             self._process_noise_matrix = np.block(
                 [[self._process_noise_matrix, np.zeros((1, 2))], [np.zeros((2, 3))]]
@@ -150,3 +159,107 @@ class Autoregression(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the autoregression component."
             )
+
+    def forward(self):
+        """
+        Forward modification for AR component.
+        Apply forward path autoregressive (AR) moment transformations.
+
+        Updates prior state means and variances based on the autoregressive error model,
+        propagating uncertainty from W2bar to AR_error. These are used during the forward
+        pass when AR components are present.
+        """
+
+        model = self.model
+        ar_index = model.get_states_index("autoregression")
+        ar_error_index = model.get_states_index("AR_error")
+        W2_index = model.get_states_index("W2")
+        W2bar_index = model.get_states_index("W2bar")
+
+        # Forward path to compute the moments of W
+        # # W2bar
+        model.mu_states_prior[W2bar_index] = self.mu_W2bar
+        model.var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+
+        # # From W2bar to W2
+        self.mu_W2_prior = self.mu_W2bar
+        self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
+        model.mu_states_prior[W2_index] = self.mu_W2_prior
+        model.var_states_prior[W2_index, W2_index] = self.var_W2_prior
+
+        # # From W2 to W
+        model.mu_states_prior[ar_error_index] = 0
+        model.var_states_prior[ar_error_index, :] = np.zeros_like(
+            model.var_states_prior[ar_error_index, :]
+        )
+        model.var_states_prior[:, ar_error_index] = np.zeros_like(
+            model.var_states_prior[:, ar_error_index]
+        )
+        model.var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+        model.var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+        model.var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+
+    def backward(self):
+        """
+        Apply backward AR moment updates during state-space filtering.
+
+        Computes the posterior distribution of W2 and W2bar from AR_error states,
+        and adjusts the autoregressive process noise accordingly. Also applies
+        GMA transformations when "phi" is involved in the model.
+        """
+
+        model = self.model
+        if "phi" in self.states_name:
+            # GMA operations
+            model.mu_states_posterior, model.var_states_posterior = GMA(
+                model.mu_states_posterior,
+                model.var_states_posterior,
+                index1=model.get_states_index("phi"),
+                index2=model.get_states_index("autoregression"),
+                replace_index=model.get_states_index("phi_autoregression"),
+            ).get_results()
+
+        if "AR_error" in self.states_name:
+            ar_index = model.get_states_index("autoregression")
+            ar_error_index = model.get_states_index("AR_error")
+            W2_index = model.get_states_index("W2")
+            W2bar_index = model.get_states_index("W2bar")
+
+            # Backward path to update W2 and W2bar
+            # # From W to W2
+            mu_W2_posterior = (
+                model.mu_states_posterior[ar_error_index] ** 2
+                + model.var_states_posterior[ar_error_index, ar_error_index]
+            )
+            var_W2_posterior = (
+                2 * model.var_states_posterior[ar_error_index, ar_error_index] ** 2
+                + 4
+                * model.var_states_posterior[ar_error_index, ar_error_index]
+                * model.mu_states_posterior[ar_error_index] ** 2
+            )
+            model.mu_states_posterior[W2_index] = mu_W2_posterior
+            model.var_states_posterior[W2_index, :] = np.zeros_like(
+                model.var_states_posterior[W2_index, :]
+            )
+            model.var_states_posterior[:, W2_index] = np.zeros_like(
+                model.var_states_posterior[:, W2_index]
+            )
+            model.var_states_posterior[W2_index, W2_index] = var_W2_posterior.item()
+
+            # # From W2 to W2bar
+            K = self.var_W2bar / self.var_W2_prior
+            self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
+            self.var_W2bar = self.var_W2bar + K**2 * (
+                var_W2_posterior - self.var_W2_prior
+            )
+            model.mu_states_posterior[W2bar_index] = self.mu_W2bar
+            model.var_states_posterior[W2bar_index, :] = np.zeros_like(
+                model.var_states_posterior[W2bar_index, :]
+            )
+            model.var_states_posterior[:, W2bar_index] = np.zeros_like(
+                model.var_states_posterior[:, W2bar_index]
+            )
+            model.var_states_posterior[W2bar_index, W2bar_index] = self.var_W2bar
+
+            model.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
+

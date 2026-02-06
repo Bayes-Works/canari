@@ -847,7 +847,7 @@ class SKF:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:

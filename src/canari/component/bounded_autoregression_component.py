@@ -1,6 +1,7 @@
 from typing import Optional
 import numpy as np
 from canari.component.base_component import BaseComponent
+from canari import common
 
 
 class BoundedAutoregression(BaseComponent):
@@ -97,3 +98,89 @@ class BoundedAutoregression(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the autoregression component."
             )
+        
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        BAR backward modification.
+
+        Apply backward BAR moment updates during state-space filtering.
+
+        Computes the constrained posterior distribution of AR state according to the bounding
+        coefficient gamma when it is provided.
+
+        Args:
+            mu_states_posterior (np.ndarray): Posterior mean vector of the states.
+            var_states_posterior (np.ndarray): Posterior variance-covariance matrix of the states.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Updated (mu_states_posterior, var_states_posterior).
+        """
+
+        model = self.model
+
+        ar_index = model.get_states_index("autoregression")
+        bar_index = model.get_states_index("bounded autoregression")
+
+        mu_states_posterior = model.mu_states_posterior
+        var_states_posterior = model.var_states_posterior
+
+        mu_AR = mu_states_posterior[ar_index].item()
+        var_AR = var_states_posterior[ar_index, ar_index].item()
+        cov_AR = var_states_posterior[ar_index, :]
+
+        bound = self.gamma * np.sqrt(
+            self.std_error**2 / (1 - self.phi**2)
+        )
+
+        l_bar = mu_AR + bound
+
+        mu_L = (
+            l_bar * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - bound
+        )
+        var_L = (
+            (l_bar**2 + var_AR) * common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + l_bar * np.sqrt(var_AR) * common.norm_pdf(l_bar / np.sqrt(var_AR))
+            - (mu_L + bound) ** 2
+        )
+
+        u_bar = -mu_AR + bound
+        mu_U = (
+            -u_bar * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            + bound
+        )
+        var_U = (
+            (u_bar**2 + var_AR) * common.norm_cdf(u_bar / np.sqrt(var_AR))
+            + u_bar * np.sqrt(var_AR) * common.norm_pdf(u_bar / np.sqrt(var_AR))
+            - (-mu_U + bound) ** 2
+        )
+
+        mu_states_posterior[bar_index] = mu_L + mu_U - mu_AR
+        cov_bar = cov_AR * (
+            common.norm_cdf(l_bar / np.sqrt(var_AR))
+            + common.norm_cdf(u_bar / np.sqrt(var_AR))
+            - 1
+        )
+        var_bar = (
+            var_L
+            + (mu_L - mu_AR) ** 2
+            + var_U
+            + (mu_U - mu_AR) ** 2
+            - (mu_states_posterior[bar_index] - mu_AR) ** 2
+            - var_AR
+        )
+        var_states_posterior[bar_index, :] = cov_bar
+        var_states_posterior[:, bar_index] = cov_bar
+        var_states_posterior[bar_index, bar_index] = np.maximum(
+            var_bar, 1e-8
+        ).item()  # For numerical stability
+
+        model.mu_states_posterior = mu_states_posterior
+        model.var_states_posterior = var_states_posterior

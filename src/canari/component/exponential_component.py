@@ -2,9 +2,11 @@
 This module defines one component "exponential".
 """
 
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 from canari.component.base_component import BaseComponent
+from canari.common import GMA
+from canari import common
 
 
 class Exponential(BaseComponent):
@@ -114,3 +116,131 @@ class Exponential(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the exponential component."
             )
+
+    def _update_exp_and_scaled_exp(
+        self, mu_states, var_states, var_states_behind, method
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Apply forward path exponential moment transformations.
+
+        Updates prior state means and variances based on the exponential model.
+        The modification is applied after that `latent level`, `latent trend` and `exp scale factor`
+        are updated by the transition matrix.
+        After that,the closed form solutions to compute the prior distribution of `exp`
+        from `latent level` and `latent trend`.
+        GMA is also applied to `exp scale factor` and `exp` to get the prior distribution
+        of `scaled exp`.
+        These are used during the forward pass when exponential components are present.
+
+        Args:
+            mu_states_prior (np.ndarray): Prior mean vector of the states.
+            var_states_prior (np.ndarray): Prior variance-covariance matrix of the states.
+            var_states (np.ndarray): Variance-covariance matrix before the linear update
+                                        of the states
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Updated (mu_states_prior, var_states_prior, mu_obs_predict, var_obs_predict).
+        """
+
+        model = self.model
+        latent_level_index = model.get_states_index("latent level")
+        latent_trend_index = model.get_states_index("latent trend")
+        exp_scale_factor_index = model.get_states_index("exp scale factor")
+        exp_index = model.get_states_index("exp")
+        scaled_exp_index = model.get_states_index("scaled exp")
+
+        mu_ll = np.asarray(mu_states[latent_level_index]).item()
+        var_ll = np.asarray(var_states[latent_level_index, latent_level_index]).item()
+
+        mu_states[exp_index] = np.exp(-mu_ll + 0.5 * var_ll) - 1
+
+        var_states[exp_index, exp_index] = np.exp(-2 * mu_ll + var_ll) * (
+            np.exp(var_ll) - 1
+        )
+
+        var_states[latent_level_index, exp_index] = -var_ll * np.exp(
+            -mu_ll + 0.5 * var_ll
+        )
+
+        var_states[exp_index, latent_level_index] = var_states[
+            latent_level_index, exp_index
+        ]
+
+        if method == "forward":
+            skip_index = {latent_level_index, latent_trend_index, exp_index}
+            var_states[latent_trend_index, exp_index] = -np.exp(
+                -mu_ll + 0.5 * var_ll
+            ) * (
+                var_states_behind[latent_trend_index, latent_trend_index]
+                + var_states_behind[latent_level_index, latent_trend_index]
+            )
+            var_states[exp_index, latent_trend_index] = var_states[
+                latent_trend_index, exp_index
+            ]
+        elif method in {"backward", "smoother"}:
+            skip_index = {latent_level_index, exp_index}
+
+        magnitud_normal_space_exponential_space = (
+            var_states[exp_index, latent_level_index]
+            / var_states[latent_level_index, latent_level_index]
+        )
+        for other_component_index in range(len(mu_states)):
+            if other_component_index in skip_index:
+                continue
+            cov_other_component_index = (
+                magnitud_normal_space_exponential_space
+                * var_states[latent_level_index, other_component_index]
+            )
+            var_states[exp_index, other_component_index] = cov_other_component_index
+            var_states[other_component_index, exp_index] = cov_other_component_index
+
+        mu_states, var_states = GMA(
+            mu_states,
+            var_states,
+            index1=exp_scale_factor_index,
+            index2=exp_index,
+            replace_index=scaled_exp_index,
+        ).get_results()
+
+        return (
+            mu_states,
+            var_states,
+        )
+    
+    def forward(self):
+        """
+        Apply forward path exponential moment transformations.
+
+        Updates prior state means and variances based on the exponential model.
+        The modification is applied after that `latent level`, `latent trend` and `exp scale factor`
+        are updated by the transition matrix.
+        After that,the closed form solutions to compute the prior distribution of `exp`
+        from `latent level` and `latent trend`.
+        GMA is also applied to `exp scale factor` and `exp` to get the prior distribution
+        of `scaled exp`.
+        These are used during the forward pass when exponential components are present.
+        """
+
+        model = self.model
+
+        model.mu_states_prior, model.var_states_prior = (
+            self._update_exp_and_scaled_exp(
+                model.mu_states_prior, model.var_states_prior, model.var_states, "forward"
+            )
+        )
+
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """
+
+        model = self.model
+
+        model.mu_states_posterior, model.var_states_posterior = (
+            self._update_exp_and_scaled_exp(
+                model.mu_states_posterior, model.var_states_posterior, 0, "backward"
+            )
+        )
+
+

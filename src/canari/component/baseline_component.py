@@ -87,6 +87,16 @@ class LocalLevel(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the local level component."
             )
+    
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """
 
 
 class LocalTrend(BaseComponent):
@@ -173,6 +183,16 @@ class LocalTrend(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the local trend component."
             )
+        
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """
 
 
 class LocalAcceleration(BaseComponent):
@@ -255,3 +275,13 @@ class LocalAcceleration(BaseComponent):
             raise ValueError(
                 "Incorrect var_states dimension for the local acceleration component."
             )
+        
+    def forward(self):
+        """
+        Forward modification for each component
+        """
+
+    def backward(self):
+        """
+        Backward modification for each component
+        """
