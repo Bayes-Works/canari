@@ -737,7 +737,7 @@ class hsl_classification:
                 data_likelihoods_lt, hs_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
-                    level_intervention = [llclt_itv_at_trigger, 0],
+                    level_intervention = [llclt_itv_at_trigger, var_level_itv],
                     trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
@@ -819,13 +819,13 @@ class hsl_classification:
                 self.p_anm_all.append(p_a_I_Yt)
 
             cond_ll = all(
-                m[0] - m[1] > 3 * m[2]
-                for m in self.class_prob_moments[-13:]
+                m[0] - m[1] > 2 * m[2]
+                for m in self.class_prob_moments[-1:]
             )
 
             cond_lt = all(
-                m[1] - m[0] > 3 * m[2]
-                for m in self.class_prob_moments[-13:]
+                m[1] - m[0] > 2 * m[2]
+                for m in self.class_prob_moments[-1:]
             )
 
             if cond_ll and rerun_kf is False:
@@ -999,18 +999,19 @@ class hsl_classification:
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
 
-        # # Option 1: use smoothed values as the deterministic intervention
-        # # Perform smoother
-        # ssm_copy.smoother()
+        # Option 1: use smoothed values as the deterministic intervention
+        # Perform smoother
+        ssm_copy.smoother()
 
-        # # Get the smoothed value at -(num_steps_retract)
-        # mu_LL_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
-        # mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
+        # Get the smoothed value at -(num_steps_retract)
+        mu_LL_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
+        mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
+        LLcLT_deterministic_itv = mu_LL_deterministic_itv
 
-        # Option 2: use filtered values as the deterministic intervention
-        mu_LL_deterministic_itv = mu_states_prior[LL_index]
-        mu_LT_deterministic_itv = mu_states_prior[LT_index]
-        LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
+        # # Option 2: use filtered values as the deterministic intervention
+        # mu_LL_deterministic_itv = mu_states_prior[LL_index]
+        # mu_LT_deterministic_itv = mu_states_prior[LT_index]
+        # LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
 
         # Do the intervention again with the smoothed states
         ssm_copy = copy.deepcopy(ssm)
