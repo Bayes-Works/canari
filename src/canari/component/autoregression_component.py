@@ -170,34 +170,35 @@ class Autoregression(BaseComponent):
         pass when AR components are present.
         """
 
-        model = self.model
-        ar_index = model.get_states_index("autoregression")
-        ar_error_index = model.get_states_index("AR_error")
-        W2_index = model.get_states_index("W2")
-        W2bar_index = model.get_states_index("W2bar")
+        if "AR_error" in self.states_name:
+            model = self.model
+            ar_index = model.get_states_index("autoregression")
+            ar_error_index = model.get_states_index("AR_error")
+            W2_index = model.get_states_index("W2")
+            W2bar_index = model.get_states_index("W2bar")
 
-        # Forward path to compute the moments of W
-        # # W2bar
-        model.mu_states_prior[W2bar_index] = self.mu_W2bar
-        model.var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
+            # Forward path to compute the moments of W
+            # # W2bar
+            model.mu_states_prior[W2bar_index] = self.mu_W2bar
+            model.var_states_prior[W2bar_index, W2bar_index] = self.var_W2bar
 
-        # # From W2bar to W2
-        self.mu_W2_prior = self.mu_W2bar
-        self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
-        model.mu_states_prior[W2_index] = self.mu_W2_prior
-        model.var_states_prior[W2_index, W2_index] = self.var_W2_prior
+            # # From W2bar to W2
+            self.mu_W2_prior = self.mu_W2bar
+            self.var_W2_prior = 3 * self.var_W2bar + 2 * self.mu_W2bar**2
+            model.mu_states_prior[W2_index] = self.mu_W2_prior
+            model.var_states_prior[W2_index, W2_index] = self.var_W2_prior
 
-        # # From W2 to W
-        model.mu_states_prior[ar_error_index] = 0
-        model.var_states_prior[ar_error_index, :] = np.zeros_like(
-            model.var_states_prior[ar_error_index, :]
-        )
-        model.var_states_prior[:, ar_error_index] = np.zeros_like(
-            model.var_states_prior[:, ar_error_index]
-        )
-        model.var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
-        model.var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
-        model.var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
+            # # From W2 to W
+            model.mu_states_prior[ar_error_index] = 0
+            model.var_states_prior[ar_error_index, :] = np.zeros_like(
+                model.var_states_prior[ar_error_index, :]
+            )
+            model.var_states_prior[:, ar_error_index] = np.zeros_like(
+                model.var_states_prior[:, ar_error_index]
+            )
+            model.var_states_prior[ar_error_index, ar_error_index] = self.mu_W2bar
+            model.var_states_prior[ar_error_index, ar_index] = self.mu_W2bar
+            model.var_states_prior[ar_index, ar_error_index] = self.mu_W2bar
 
     def backward(self):
         """
