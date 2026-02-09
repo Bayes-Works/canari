@@ -69,3 +69,8 @@ class Intervention(BaseComponent):
         """
         Backward modification for each component
         """
+
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """

@@ -184,3 +184,8 @@ class BoundedAutoregression(BaseComponent):
 
         model.mu_states_posterior = mu_states_posterior
         model.var_states_posterior = var_states_posterior
+
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """

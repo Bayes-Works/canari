@@ -98,6 +98,11 @@ class LocalLevel(BaseComponent):
         Backward modification for each component
         """
 
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """
+
 
 class LocalTrend(BaseComponent):
     """
@@ -194,6 +199,11 @@ class LocalTrend(BaseComponent):
         Backward modification for each component
         """
 
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """
+
 
 class LocalAcceleration(BaseComponent):
     """
@@ -284,4 +294,9 @@ class LocalAcceleration(BaseComponent):
     def backward(self):
         """
         Backward modification for each component
+        """
+
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
         """

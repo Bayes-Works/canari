@@ -274,7 +274,7 @@ class ModelAssemble:
         use_val_posterior_covariate: Optional[bool] = False,
         update_param_covar_model: Optional[bool] = False,
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """

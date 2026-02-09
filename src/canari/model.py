@@ -1267,32 +1267,8 @@ class Model:
             tol_type,
         )
 
-        # if "exp" in self.states_name:
-
-        #     (
-        #         self.states.mu_smooth[time_step],
-        #         self.states.var_smooth[time_step],
-        #         *_,
-        #     ) = self._update_exp_and_scaled_exp(
-        #         self.states.mu_smooth[time_step],
-        #         self.states.var_smooth[time_step],
-        #         0,
-        #         "smoother",
-        #     )
-    
         for component in self.components.values():
-            if component.component_name == "exp":
-                (
-                    self.states.mu_smooth[time_step],
-                    self.states.var_smooth[time_step],
-                    *_,
-                ) = component._update_exp_and_scaled_exp(
-                    self.states.mu_smooth[time_step],
-                    self.states.var_smooth[time_step],
-                    0,
-                    "smoother",
-                )
-              
+            component.rts_smoother(time_step)  
 
     def forecast(
         self, 

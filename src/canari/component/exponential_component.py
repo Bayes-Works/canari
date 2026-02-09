@@ -243,4 +243,21 @@ class Exponential(BaseComponent):
             )
         )
 
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """
+
+        model = self.model
+
+        (
+            model.states.mu_smooth[time_step],
+            model.states.var_smooth[time_step]
+        ) = self._update_exp_and_scaled_exp(
+            model.states.mu_smooth[time_step],
+            model.states.var_smooth[time_step],
+            0,
+            "smoother",
+        )        
+
 

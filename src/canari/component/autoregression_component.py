@@ -264,3 +264,7 @@ class Autoregression(BaseComponent):
 
             model.process_noise_matrix[ar_index, ar_index] = self.mu_W2bar
 
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """

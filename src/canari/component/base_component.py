@@ -156,6 +156,12 @@ class BaseComponent(ABC):
         """
         Backward modification for each component
         """
+    
+    @abstractmethod
+    def rts_smoother(self, time_step:int):
+        """
+        RTS smoother modification for each component
+        """
 
     def bind(self, model) -> None:
         """
@@ -168,12 +174,7 @@ class BaseComponent(ABC):
     def model(self):
         """
         Model: The bound model instance.
-
-        Raises:
-            RuntimeError: If the component has not been bound to a model yet.
         """
-        if self._model is None:
-            raise RuntimeError(
-                f"{self.__class__.__name__} is not bound to a Model. "
-            )
+
         return self._model
+    
