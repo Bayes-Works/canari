@@ -8,7 +8,7 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-ts = 57
+ts = 1
 # training set
 data_train_file = "./data/m4/Hourly-train.csv"
 df_train = pd.read_csv(data_train_file, skiprows=1, delimiter=",", header=None)
@@ -55,36 +55,36 @@ train_data, validation_data, test_data, _ = data_processor.get_splits()
 
 # Model
 model = Model(
-    LocalTrend(),
-    # ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
-    ExpSmoothing(mu_states=[0,0.3,0], var_states=[0,1e-2,0], es_order=1, activation=None),
+    LocalLevel(),
+    ExpSmoothing(mu_states=[0,.5,0], var_states=[0,1e-2,0], es_order=1, activation=None),
     LstmNetwork(
-        look_back_len=168,
+        look_back_len=12,
         num_features=2,
-        # infer_len=168 * 3,
         num_layer=1,
+        infer_len=24 * 3,
         num_hidden_unit=50,
         manual_seed=1,
         model_noise=True,
-        smoother=False,
+        # smoother=False,
     ),
 )
 
-model.auto_initialize_baseline_states(train_data["y"][0:168])
+model.auto_initialize_baseline_states(train_data["y"])
 
-plot_data(
-    data_processor=data_processor,
-    standardization=True,
-    plot_column=output_col,
-    plot_test_data=False,
-)
-plt.show()
+# plot_data(
+#     data_processor=data_processor,
+#     standardization=True,
+#     plot_column=output_col,
+#     plot_test_data=False,
+# )
+# plt.show()
 
 # Training
 for epoch in range(num_epoch):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
+        white_noise_decay = False,
     )
 
     # Unstandardize the predictions
@@ -107,10 +107,36 @@ for epoch in range(num_epoch):
         std=std_validation_preds,
     )
 
+
+    # fig, ax = plot_states(
+    #     data_processor=data_processor,
+    #     states=model.states,
+    #     standardization=True,
+    #     color="b",
+    #     )
+    # plot_data(
+    #     data_processor=data_processor,
+    #     standardization=True,
+    #     plot_column=output_col,
+    #     plot_test_data=False,
+    #     sub_plot=ax[0],
+    # )
+    # fig.suptitle(f"Epoch #{epoch}", fontsize=10, y=1)
+    # plt.show()
+
     # Early-stopping
     model.early_stopping(
-        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
+        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch,
+        skip_epoch=5,
     )
+
+    # # Calculate the log-likelihood metric
+    # validation_obs = data_processor.get_data("validation").flatten()
+    # mse = metric.mse(mu_validation_preds, validation_obs)
+
+    # # Early-stopping
+    # model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch,
+    #                      skip_epoch=5)
 
     if model.stop_training:
         break
@@ -142,7 +168,7 @@ std_test_preds = normalizer.unstandardize_std(
 # calculate the test metrics
 test_obs = data_processor.get_data("all").flatten()
 
-# plot the test data
+# # plot the test data
 level_sum = model.states.get_mean(states_name="level") + model.states.get_mean(states_name="es")
 
 for i in range(len(model.states.mu_posterior)):
@@ -182,9 +208,6 @@ plot_prediction(
     data_processor=data_processor,
     mean_test_pred=mu_test_preds,
     std_test_pred=std_test_preds,
-    test_label=[r"$\mu^{\prime}$", r"$\pm\sigma^{\prime}$"],
-    color="purple",
 )
-plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
 plt.tight_layout()
 plt.show()

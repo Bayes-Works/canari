@@ -8,7 +8,7 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-ts = 30
+ts = 11
 # training set
 data_train_file = "./data/tourism/monthly_in.csv"
 df_train = pd.read_csv(data_train_file, skiprows=0, delimiter=",", header=None, usecols=[ts]).dropna()
