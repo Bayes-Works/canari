@@ -25,6 +25,7 @@ import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
 import pandas as pd
+import scipy.special
 from pytagi import Normalizer as normalizer
 from pytagi.nn import OutputUpdater
 from canari.component.base_component import BaseComponent
@@ -820,12 +821,22 @@ class Model:
 
         if self.get_states_index("heteroscedastic noise") is not None:
             noise_index = self.get_states_index("heteroscedastic noise")
-            self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
-            self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
-                np.exp(var_v2bar_prior) - 1
-            )
-            self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+
+            # Exponential activation function
+            # self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
+            # self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
+            #     np.exp(var_v2bar_prior) - 1
+            # )
+            # self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+            # self._var_v2bar_prior = var_v2bar_prior
+
+            # Softplus activation function
+            self._mu_v2bar_tilde = np.log(1 + np.exp(mu_v2bar_prior))
+            tmp = 1 / (1 + np.exp(-mu_v2bar_prior))
+            self._var_v2bar_tilde = tmp**2 * var_v2bar_prior
+            self._cov_v2bar_tilde = tmp * var_v2bar_prior
             self._var_v2bar_prior = var_v2bar_prior
+
             self.process_noise_matrix[noise_index, noise_index] = (
                 self._mu_v2bar_tilde.item()
             )
@@ -1709,6 +1720,7 @@ class Model:
         train_lstm: Optional[bool] = True,
         intervention: Optional[dict] = None,
         update_embedding: Optional[bool] = False,
+        update_mask: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1768,9 +1780,15 @@ class Model:
 
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
-                self.update_lstm_output_history(
-                    mu_states_posterior, var_states_posterior
-                )
+                # Use observation unless it is NaN, then fall back to the posterior)
+                obs_valid = not np.any(np.isnan(y))
+                if obs_valid:
+                    self.lstm_output_history.update(y, np.zeros_like(y))
+                else:
+                    self.update_lstm_output_history(
+                        mu_states_posterior,
+                        var_states_posterior,
+                    )
 
                 if update_embedding and getattr(self.lstm_net, "embed_len", 0) > 0:
                     embed_len = self.lstm_net.embed_len
@@ -1779,6 +1797,12 @@ class Model:
                     delta_input_mu, delta_input_var = self.lstm_net.get_input_states()
                     embed_mu = np.asarray(delta_input_mu)[..., -embed_len:].copy()
                     embed_var = np.asarray(delta_input_var)[..., -embed_len:].copy()
+                    # TODO: this needs to be an user input
+                    # decide on vector indices to update
+                    if update_mask is not None:
+                        embed_mu = embed_mu * np.array(update_mask)
+                        embed_var = embed_var * np.array(update_mask)
+
                     self.lstm_embedding.update(embed_mu, embed_var)
                     self.lstm_net.embedding = (
                         self.lstm_embedding.as_tuple()

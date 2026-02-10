@@ -100,6 +100,7 @@ class LstmNetwork(BaseComponent):
         model_noise: Optional[bool] = False,
         embed_len: Optional[int] = 0,
         embedding: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        finetune: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -118,8 +119,11 @@ class LstmNetwork(BaseComponent):
         self.smoother = smoother
         self.model_noise = model_noise
         self.num_output = 2 * num_output if self.model_noise else num_output
-        self.embed_len = embed_len if embedding is None else embedding[0].flatten().shape[0]
+        self.embed_len = (
+            embed_len if embedding is None else embedding[0].flatten().shape[0]
+        )
         self.embedding = embedding
+        self.finetune = finetune
         super().__init__()
 
     def initialize_component_name(self):
@@ -263,6 +267,24 @@ class LstmNetwork(BaseComponent):
             lstm_network.input_state_update = True
 
         if self.load_lstm_net:
+            original_params = lstm_network.state_dict()
             lstm_network.load(filename=self.load_lstm_net)
+
+            if self.finetune:
+                # use variances from original params
+                loaded_params = lstm_network.state_dict()
+                for layer_name in original_params.keys():
+                    if layer_name in loaded_params:
+                        mu_w, var_w, mu_b, var_b = loaded_params[layer_name]
+                        original_mu_w, original_var_w, original_mu_b, original_var_b = (
+                            original_params[layer_name]
+                        )
+                        # Update the variances while keeping the means from the loaded params
+                        lstm_network.state_dict()[layer_name] = (
+                            mu_w,
+                            original_var_w,
+                            mu_b,
+                            original_var_b,
+                        )
 
         return lstm_network
