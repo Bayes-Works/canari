@@ -118,10 +118,14 @@ hsl_tsad_agent.detection_threshold = 0.1
 
 # hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv')
 
-# 3 intervention models, V2: itv_LLcLT:
-hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.9965937e-05, 0.00038667532, 5.639841e-05, 0.0028442398
-hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.0001552, 0.02051892]), np.array([0.00674669, 0.897446])
-hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00027658]), np.array([0.69313806])
+# # 3 intervention models, V2: itv_LLcLT:
+# hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class,hsl_tsad_agent.mean_LTd2_class, hsl_tsad_agent.std_LTd2_class = 1.9965937e-05, 0.00038667532, 5.639841e-05, 0.0028442398
+# hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.0001552, 0.02051892]), np.array([0.00674669, 0.897446])
+# hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00027658]), np.array([0.69313806])
+
+hsl_tsad_agent.mean_LTd_class, hsl_tsad_agent.std_LTd_class = 2.0454983e-05, 0.000387628
+hsl_tsad_agent.mean_target_lt_model, hsl_tsad_agent.std_target_lt_model = np.array([0.00014448, 0.01961236]), np.array([0.00675291, 0.8995139])
+hsl_tsad_agent.mean_target_ll_model, hsl_tsad_agent.std_target_ll_model = np.array([0.00261593]), np.array([0.6945869])
 
 # hsl_tsad_agent.learn_classification(training_samples_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv', 
 #                                     load_model_path='saved_params/NN_classification_model_syn_simple_ts_datall_newMP.pkl', max_training_epoch=50)
@@ -143,9 +147,9 @@ drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.states)
 mu_drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.mu_states)
 var_drift_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model.var_states)
 
-drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.states)
-mu_drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.mu_states)
-var_drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.var_states)
+# drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.states)
+# mu_drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.mu_states)
+# var_drift2_states_temp = copy.deepcopy(hsl_tsad_agent.drift_model2.var_states)
 
 current_time_step_temp = copy.deepcopy(hsl_tsad_agent.current_time_step)
 p_anm_all_temp = copy.deepcopy(hsl_tsad_agent.p_anm_all)
@@ -159,9 +163,9 @@ test_mu_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.mu_obs_preds)     # To imp
 test_std_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.std_obs_preds)   # To improve naming, hsl_tsad_agent.std_obs_preds only store the test part
 
 results_all = []
-# for k in tqdm(range(len(restored_data))):
-for k in tqdm(range(5)):
-    k = 146 + k * 10 + 1
+for k in tqdm(range(len(restored_data))):
+# for k in tqdm(range(1)):
+    # k = 146 + k * 10 + 1
     # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
     df_k = pd.DataFrame()
     df_k["obs"] = restored_data[k][0]
@@ -292,9 +296,9 @@ for k in tqdm(range(5)):
     hsl_tsad_agent.drift_model.states = copy.deepcopy(drift_states_temp)
     hsl_tsad_agent.drift_model.mu_states = copy.deepcopy(mu_drift_states_temp)
     hsl_tsad_agent.drift_model.var_states = copy.deepcopy(var_drift_states_temp)
-    hsl_tsad_agent.drift_model2.states = copy.deepcopy(drift2_states_temp)
-    hsl_tsad_agent.drift_model2.mu_states = copy.deepcopy(mu_drift2_states_temp)
-    hsl_tsad_agent.drift_model2.var_states = copy.deepcopy(var_drift2_states_temp)
+    # hsl_tsad_agent.drift_model2.states = copy.deepcopy(drift2_states_temp)
+    # hsl_tsad_agent.drift_model2.mu_states = copy.deepcopy(mu_drift2_states_temp)
+    # hsl_tsad_agent.drift_model2.var_states = copy.deepcopy(var_drift2_states_temp)
     hsl_tsad_agent.current_time_step = copy.deepcopy(current_time_step_temp)
     hsl_tsad_agent.p_anm_all = copy.deepcopy(p_anm_all_temp)
     hsl_tsad_agent.mu_itv_all = copy.deepcopy(mu_itv_all_temp)
@@ -311,4 +315,4 @@ plt.show()
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_dummy.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv", index=False)
