@@ -689,32 +689,21 @@ class hsl_classification:
                     trigger_time = self.current_time_step
                     first_time_trigger = True
                 itvtime_from_det = self.current_time_step - trigger_time + 1
-
-                # Option #1: Inverse transition of the full states
-                # Get current states and the transition matrix
-                mu_states_prior = np.array(self.base_model.mu_states)
-                var_states_prior = np.array(self.base_model.var_states)
-                transition_matrix = self.base_model.transition_matrix
-                # Remove the lstm component in the states and transition matrix for the intervention estimation
-                lstm_index = self.base_model.get_states_index("lstm")
-                mu_states_prior = np.delete(mu_states_prior, lstm_index).reshape(-1, 1)
-                var_states_prior = np.delete(np.delete(var_states_prior, lstm_index, axis=0), lstm_index, axis=1)
-                transition_matrix = np.delete(np.delete(transition_matrix, lstm_index, axis=0), lstm_index, axis=1)
-
-                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_states_prior, var_states_prior, transition_matrix, itvtime_from_det)
-                # # For verify the forward gives me the same states:
-                # mu_states_prior2, var_states_prior2 = transition_lt_states(itv_at_trigger, var_itv_at_trigger, transition_matrix, itvtime_from_det)
                 
-                # Option #2: Inverse transition of the intervention variables
+                # Get the trend intervention at the detection time
+                # Option #1: Inverse transition of the intervention variables
                 mu_lt_t = np.array([[llclt_itv], [trend_itv]])
                 var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
-                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, np.array([[1, itvtime_from_det], [0, 1]]), itvtime_from_det)
+                transition_matrix_itv = np.array([[1, itvtime_from_det], [0, 1]])
+                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
                 llclt_itv_at_trigger = itv_at_trigger[0, 0]
                 var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
+                trend_itv_at_trigger = itv_at_trigger[1, 0]
+                var_trend_itv_at_trigger = var_itv_at_trigger[1, 1]
                 # # For verify the forward gives me the same states:
-                # mu_lt_t, var_lt_t = transition_lt_states(llclt_itv_at_trigger, var_llclt_itv_at_trigger, np.array([[1, itvtime_from_det], [0, 1]]), itvtime_from_det)
+                # mu_lt_t, var_lt_t = transition_lt_states(llclt_itv_at_trigger, var_llclt_itv_at_trigger, transition_matrix_itv, itvtime_from_det)
 
-                # # Option #3: Naive propagation of uncertainties
+                # # Option #2: Naive propagation of uncertainties
                 # llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
                 # var_llclt_itv_at_trigger = var_llclt_itv + var_trend_itv * itvtime_from_det**2
 
@@ -740,8 +729,7 @@ class hsl_classification:
                     ssm=self.base_model,
                     drift_model=self.drift_model,
                     level_intervention = [llclt_itv_at_trigger, var_llclt_itv_at_trigger],
-                    # level_intervention = [llclt_itv_at_trigger, 0],
-                    trend_intervention = [trend_itv, var_trend_itv],
+                    trend_intervention = [trend_itv_at_trigger, var_trend_itv_at_trigger],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
@@ -1917,6 +1905,7 @@ def reverse_lt_states(mu_t, var_t, transition_matrix, steps_back):
     Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
     """
     import sympy as sp
+    # Use sympy inverse for higher accuracy
     transition_matrix_steps_back = np.linalg.matrix_power(transition_matrix, steps_back)
 
     mu_t_sym = sp.Matrix(mu_t)
@@ -1925,6 +1914,10 @@ def reverse_lt_states(mu_t, var_t, transition_matrix, steps_back):
 
     reversed_mu = transition_matrix_sym.inv() * mu_t_sym
     reversed_var = transition_matrix_sym.inv() * var_t_sym * transition_matrix_sym.inv().T
+
+    # Convert back to numpy arrays
+    reversed_mu = np.array(reversed_mu).astype(np.float64)
+    reversed_var = np.array(reversed_var).astype(np.float64)
     return reversed_mu, reversed_var
 
 def transition_lt_states(mu_t, var_t, transition_matrix, steps_forward):
