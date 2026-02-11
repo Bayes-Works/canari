@@ -1306,6 +1306,11 @@ class Model:
                     self.var_states[i, i] = 1e-5
 
         self._mu_local_level = trend[0]
+        
+        if "es" in self.states_name:
+            es_coeff_index = self.get_states_index("es coeff")
+            self._mu_es_coeff = self.mu_states[es_coeff_index]
+            self._var_es_coeff = self.var_states[es_coeff_index, es_coeff_index]
 
     def set_states(
         self,
@@ -1367,11 +1372,19 @@ class Model:
                 local_level_index = self.get_states_index("level")
                 mu_states[local_level_index] = self._mu_local_level
 
+            es_index = self.get_states_index("es")
+            es_prod_index = self.get_states_index("es prod")
+
             if "es" in self.states_name:
-                es_index = self.get_states_index("es")
-                es_prod_index = self.get_states_index("es prod")
                 mu_states[es_index] = 0
                 mu_states[es_prod_index] = 0
+                var_states[es_index, es_index] = 0
+                var_states[es_prod_index, es_prod_index] = 0
+                if self._current_epoch < 5:
+                    es_coeff_index = self.get_states_index("es coeff")
+                    mu_states[es_coeff_index] = self._mu_es_coeff
+                    var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
+
 
             if self.lstm_net:
                 if self.lstm_net.smooth:
@@ -1927,7 +1940,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 1,
+        white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
