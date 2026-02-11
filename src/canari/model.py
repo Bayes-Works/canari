@@ -1313,6 +1313,11 @@ class Model:
             es_coeff_index = self.get_states_index("es coeff")
             self._mu_es_coeff = self.mu_states[es_coeff_index]
             self._var_es_coeff = self.var_states[es_coeff_index, es_coeff_index]
+        
+        if "es trend coeff" in self.states_name:
+            es_coeff_trend_index = self.get_states_index("es trend coeff")
+            self._mu_es_trend_coeff = self.mu_states[es_coeff_trend_index]
+            self._var_es_trend_coeff = self.var_states[es_coeff_trend_index, es_coeff_trend_index]
 
     def set_states(
         self,
@@ -1376,17 +1381,26 @@ class Model:
 
             es_index = self.get_states_index("es")
             es_prod_index = self.get_states_index("es prod")
+            es_trend_index = self.get_states_index("es trend")
+            es_trend_prod_index = self.get_states_index("es trend prod")
 
             if "es" in self.states_name:
                 mu_states[es_index] = 0
                 mu_states[es_prod_index] = 0
-                var_states[es_index, es_index] = 0
-                var_states[es_prod_index, es_prod_index] = 0
+
                 if self._current_epoch < 5:
                     es_coeff_index = self.get_states_index("es coeff")
                     mu_states[es_coeff_index] = self._mu_es_coeff
                     var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
 
+            if "es trend" in self.states_name:
+                var_states[es_trend_index, es_trend_index] = 0
+                var_states[es_trend_prod_index, es_trend_prod_index] = 0
+
+                if self._current_epoch < 5:
+                    es_coeff_trend_index = self.get_states_index("es trend coeff")
+                    mu_states[es_coeff_trend_index] = self._mu_es_trend_coeff
+                    var_states[es_coeff_trend_index, es_coeff_trend_index] = self._var_es_trend_coeff
 
             if self.lstm_net:
                 if self.lstm_net.smooth:
@@ -1783,9 +1797,9 @@ class Model:
                 x
             )
 
-            if "es" in self.states_name:
-                es_prod_index = self.get_states_index(states_name="es prod")
-                mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
+            # if "es" in self.states_name:
+            #     es_prod_index = self.get_states_index(states_name="es prod")
+            #     mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)
@@ -1942,7 +1956,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 1,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
