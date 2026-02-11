@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic import hsl_classification
+from src.hsl_classification_2classes_rsic_joint import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -163,9 +163,10 @@ test_mu_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.mu_obs_preds)     # To imp
 test_std_obs_preds_temp = copy.deepcopy(hsl_tsad_agent.std_obs_preds)   # To improve naming, hsl_tsad_agent.std_obs_preds only store the test part
 
 results_all = []
-for k in tqdm(range(len(restored_data))):
-# for k in tqdm(range(1)):
+# for k in tqdm(range(len(restored_data))):
+for k in tqdm(range(1)):
     # k = 146 + k * 10 + 1
+    k = 146 + 2 * 10 + 1
     # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
     df_k = pd.DataFrame()
     df_k["obs"] = restored_data[k][0]

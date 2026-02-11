@@ -22,7 +22,7 @@ import torch
 import stumpy
 from src.convert_to_class import hierachical_softmax
 from typing import List
-from scipy.stats import norm
+from scipy.stats import beta
 
 
 class hsl_classification:
@@ -61,7 +61,7 @@ class hsl_classification:
         self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
         self.mean_LTd_class, self.std_LTd_class = None, None
         self.class_prob_moments = []
-        self.itv_probs_all = []
+        self.itv_decisions = []
         self.ll_itv_all, self.lt_itv_all = [], []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
@@ -168,7 +168,7 @@ class hsl_classification:
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
             self.class_prob_moments.append([0.5, 0.5, 0, 0])
-            self.itv_probs_all.append([0, 0])
+            self.itv_decisions.append(0)
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
             self.posterior_mu_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
@@ -644,6 +644,8 @@ class hsl_classification:
                 first_time_trigger = False
 
             # Apply intervention to estimate data likelihood
+            # if self.current_time_step > 52 *5:
+            #     p_a_I_Yt = 0.95
             if p_a_I_Yt > self.detection_threshold and rerun_kf is False:
                 # # Track what classifier learns
                 LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
@@ -683,15 +685,38 @@ class hsl_classification:
                 else:
                     self.p_anm_all.append(p_a_I_Yt)
                 
-                # Option 2: use the detection time
                 if first_time_trigger is False:
                     trigger_time = self.current_time_step
                     first_time_trigger = True
                 itvtime_from_det = self.current_time_step - trigger_time + 1
 
-                # Option 3: use the detection time and calibrated LL at that time step
-                llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
-                var_llclt_itv_at_trigger = var_llclt_itv + var_trend_itv * itvtime_from_det**2
+                # Option #1: Inverse transition of the full states
+                # Get current states and the transition matrix
+                mu_states_prior = np.array(self.base_model.mu_states)
+                var_states_prior = np.array(self.base_model.var_states)
+                transition_matrix = self.base_model.transition_matrix
+                # Remove the lstm component in the states and transition matrix for the intervention estimation
+                lstm_index = self.base_model.get_states_index("lstm")
+                mu_states_prior = np.delete(mu_states_prior, lstm_index).reshape(-1, 1)
+                var_states_prior = np.delete(np.delete(var_states_prior, lstm_index, axis=0), lstm_index, axis=1)
+                transition_matrix = np.delete(np.delete(transition_matrix, lstm_index, axis=0), lstm_index, axis=1)
+
+                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_states_prior, var_states_prior, transition_matrix, itvtime_from_det)
+                # # For verify the forward gives me the same states:
+                # mu_states_prior2, var_states_prior2 = transition_lt_states(itv_at_trigger, var_itv_at_trigger, transition_matrix, itvtime_from_det)
+                
+                # Option #2: Inverse transition of the intervention variables
+                mu_lt_t = np.array([[llclt_itv], [trend_itv]])
+                var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
+                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, np.array([[1, itvtime_from_det], [0, 1]]), itvtime_from_det)
+                llclt_itv_at_trigger = itv_at_trigger[0, 0]
+                var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
+                # # For verify the forward gives me the same states:
+                # mu_lt_t, var_lt_t = transition_lt_states(llclt_itv_at_trigger, var_llclt_itv_at_trigger, np.array([[1, itvtime_from_det], [0, 1]]), itvtime_from_det)
+
+                # # Option #3: Naive propagation of uncertainties
+                # llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
+                # var_llclt_itv_at_trigger = var_llclt_itv + var_trend_itv * itvtime_from_det**2
 
                 # Intervention time step option to choose:
                 num_steps_retract = itvtime_from_det
@@ -715,6 +740,7 @@ class hsl_classification:
                     ssm=self.base_model,
                     drift_model=self.drift_model,
                     level_intervention = [llclt_itv_at_trigger, var_llclt_itv_at_trigger],
+                    # level_intervention = [llclt_itv_at_trigger, 0],
                     trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
@@ -757,58 +783,67 @@ class hsl_classification:
                     # EBMS
                     data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    data_ll_post_sum = np.nansum(data_ll_post_n)
-                    data_lt_post_sum = np.nansum(data_lt_post_n)
+                    # data_ll_post_sum = np.nansum(data_ll_post_n)
+                    # data_lt_post_sum = np.nansum(data_lt_post_n)
 
                     hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
-                    hs_ll_post_sum = np.nansum(hs_ll_post_n)
-                    hs_lt_post_sum = np.nansum(hs_lt_post_n)
+                    # hs_ll_post_sum = np.nansum(hs_ll_post_n)
+                    # hs_lt_post_sum = np.nansum(hs_lt_post_n)
+
+                    joint_data_hs_ll_post_n = data_ll_post_n * hs_ll_post_n
+                    joint_data_hs_lt_post_n = data_lt_post_n * hs_lt_post_n
+                    joint_data_hs_ll_post_sum = np.nansum(joint_data_hs_ll_post_n)
+                    joint_data_hs_lt_post_sum = np.nansum(joint_data_hs_lt_post_n)
                 else:
-                    data_ll_post_sum = 1
-                    data_lt_post_sum = 1
-                    hs_ll_post_sum = 1
-                    hs_lt_post_sum = 1
+                    # data_ll_post_sum = 1
+                    # data_lt_post_sum = 1
+                    # hs_ll_post_sum = 1
+                    # hs_lt_post_sum = 1
+                    joint_data_hs_ll_post_sum = 1
+                    joint_data_hs_lt_post_sum = 1
 
-                data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
+                # data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                # data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                # data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
 
-                hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
+                # hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                # hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                # hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
 
-                # Get mixture coefficient
-                data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
-                hs_prob_coeff = 1 - data_prob_coeff
-                # Combine data and hidden states likelihoods
-                llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
-                ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
-                llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
-                                         + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
+                # # Get mixture coefficient
+                # data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
+                # hs_prob_coeff = 1 - data_prob_coeff
+                # # Combine data and hidden states likelihoods
+                # # llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
+                # # ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
+                # # llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
+                # #                          + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
+                
+                # # llitv_prob_mean = hs_llitv_prob_mean
+                # # ltitv_prob_mean = hs_ltitv_prob_mean
+                # # llitv_prob_std = hs_llitv_prob_std
+
+                # # llitv_prob_mean = data_llitv_prob_mean
+                # # ltitv_prob_mean = data_ltitv_prob_mean
+                # # llitv_prob_std = data_llitv_prob_std
+
+                llitv_prob_mean = joint_data_hs_ll_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                ltitv_prob_mean = joint_data_hs_lt_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                llitv_prob_std = np.sqrt(joint_data_hs_ll_post_sum * joint_data_hs_lt_post_sum / (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)**2/(joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum + 1))
+
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
-                delta = llitv_prob_mean - ltitv_prob_mean
-                sd = np.sqrt(2) * llitv_prob_std
-                if sd == 0:
-                    level_prob = max(delta, 0)
-                else:
-                    level_prob = sd * norm.pdf(delta/sd) + delta * norm.cdf(delta/sd)
-                    
-                delta = ltitv_prob_mean - llitv_prob_mean
-                if sd == 0:
-                    trend_prob = max(delta, 0)
-                else:
-                    trend_prob = sd * norm.pdf(delta/sd) + delta * norm.cdf(delta/sd)
-                self.itv_probs_all.append([level_prob, trend_prob])
+                itv_decision = choose_by_credible_interval(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
+                # itv_decision = choose_by_certainty(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
+                self.itv_decisions.append(itv_decision)
             elif rerun_kf is False:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
                 self.p_anm_all.append(p_a_I_Yt)
-                level_prob = 0
-                self.itv_probs_all.append([0, 0])
+                self.itv_decisions.append(0)
 
             # cond_ll = all(
             #     m[0] - m[1] > 4 * m[2]
@@ -820,15 +855,14 @@ class hsl_classification:
             #     for m in self.class_prob_moments[-1:]
             # )
 
-            cond_ll = all(
-                m[0] > 0.2
-                for m in self.itv_probs_all[-1:]
-            )
+            # cond_ll = True if self.itv_decisions[-1] == 1 else False
+            # cond_lt = True if self.itv_decisions[-1] == 2 else False
 
-            cond_lt = all(
-                m[1] > 0.2
-                for m in self.itv_probs_all[-1:]
-            )
+            cond_ll = all([decision == 1 for decision in self.itv_decisions[-13:]])
+            cond_lt = all([decision == 2 for decision in self.itv_decisions[-13:]])
+
+            # cond_ll = False
+            # cond_lt = False
 
             if cond_ll and rerun_kf is False:
                 apply_intervention = True
@@ -1159,6 +1193,11 @@ class hsl_classification:
         #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
         #                  np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
         #                  color='gray', alpha=0.5)
+        # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
+        # ax0.fill_between(range(len(mu_level_plot)),
+        #                  mu_level_plot.flatten() - std_level_plot.flatten(),
+        #                  mu_level_plot.flatten() + std_level_plot.flatten(),
+        #                  color='tab:blue', alpha=0.2)
         # # ax0.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
         # # ax0.fill_between(range(len(original_mu_obs_preds)),
         # #                  np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
@@ -1854,3 +1893,45 @@ def get_data_dist_coeff(n, target=0, n_converge=52):
     """
     alpha = np.log(2) / (n_converge - 1)  # ensures f(52) ≈ 0.5
     return target + (1 - target) * np.exp(-alpha * (n - 1))
+    
+
+def choose_by_credible_interval(alpha, beta_, level=0.95, threshold=0.5):
+    lo = beta.ppf((1-level)/2, alpha, beta_)
+    hi = beta.ppf(1-(1-level)/2, alpha, beta_)
+    if lo > threshold:
+        return 1
+    if hi < threshold:
+        return 2
+    return 0
+
+def choose_by_certainty(alpha, beta_, tau=0.95, threshold=0.5):
+    p1_wins = beta.sf(threshold, alpha, beta_)  # P(p1 > threshold)
+    if p1_wins > tau:
+        return 1
+    if (1 - p1_wins) > tau:  # P(p1 < threshold)
+        return 2
+    return 0  # abstain
+
+def reverse_lt_states(mu_t, var_t, transition_matrix, steps_back):
+    """
+    Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
+    """
+    import sympy as sp
+    transition_matrix_steps_back = np.linalg.matrix_power(transition_matrix, steps_back)
+
+    mu_t_sym = sp.Matrix(mu_t)
+    var_t_sym = sp.Matrix(var_t)
+    transition_matrix_sym = sp.Matrix(transition_matrix_steps_back)
+
+    reversed_mu = transition_matrix_sym.inv() * mu_t_sym
+    reversed_var = transition_matrix_sym.inv() * var_t_sym * transition_matrix_sym.inv().T
+    return reversed_mu, reversed_var
+
+def transition_lt_states(mu_t, var_t, transition_matrix, steps_forward):
+    """
+    Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
+    """
+    transition_matrix_steps_forward = np.linalg.matrix_power(transition_matrix, steps_forward)
+    reversed_mu = transition_matrix_steps_forward @ mu_t
+    reversed_var = transition_matrix_steps_forward @ var_t @ transition_matrix_steps_forward.T
+    return reversed_mu, reversed_var

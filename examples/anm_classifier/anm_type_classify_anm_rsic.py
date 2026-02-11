@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic import hsl_classification
+from src.hsl_classification_2classes_rsic_joint import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -30,23 +30,23 @@ df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["obs"]
 
-# LT anomaly
-anm_type = 'LT'
-time_anomaly = 52*5
-anm_mag = 12/52
-anm_baseline = np.arange(len(df_raw)) * anm_mag
-# Set the first 52*12 values in anm_baseline to be 0
-anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
-
-# # LL anomaly
-# anm_type = 'LL'
-# time_anomaly = 52*7
-# anm_mag = 8
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# # LT anomaly
+# anm_type = 'LT'
+# time_anomaly = 52*5
+# anm_mag = 12/52
+# anm_baseline = np.arange(len(df_raw)) * anm_mag
+# # Set the first 52*12 values in anm_baseline to be 0
+# anm_baseline[time_anomaly:] -= anm_baseline[time_anomaly]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
+
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*7
+anm_mag = 8
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # Second anomaly
 # anm2_type = 'LL'
@@ -273,9 +273,6 @@ colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
 # final_class_log_probs = np.array(final_class_log_probs)
 # final_class_prob_stds = np.array(final_class_prob_stds)
 
-final_class_log_probs = np.array(hsl_tsad_agent.class_prob_moments)[:, 0:2]
-final_class_prob_stds = np.array(hsl_tsad_agent.class_prob_moments)[:, 2]
-
 gen_ar_phi = model_dict['gen_phi_ar']
 gen_ar_sigma =model_dict['gen_sigma_ar']
 stationary_ar_std = np.sqrt(gen_ar_sigma**2 / (1 - gen_ar_phi**2))
@@ -315,17 +312,22 @@ ax5.set_ylabel("itv")
 
 # for class_idx in range(final_class_log_probs.shape[1]):
 #     ax7.plot(time, 0.5 + hsl_tsad_agent.prob_coeff * (final_class_log_probs[:, class_idx].flatten()-0.5), color=colors[class_idx])
+
+final_class_log_probs = np.array(hsl_tsad_agent.class_prob_moments)[:, 0:2]
+final_class_prob_stds = np.array(hsl_tsad_agent.class_prob_moments)[:, 2]
 for class_idx in range(final_class_log_probs.shape[1]):
-    ax7.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
-    ax7.fill_between(time, final_class_log_probs[:, class_idx] - final_class_prob_stds, 
+    ax6.plot(time, final_class_log_probs[:, class_idx], color=colors[class_idx])
+    ax6.fill_between(time, final_class_log_probs[:, class_idx] - final_class_prob_stds, 
                      final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
 # Set legend labels to ['LT', 'LL', 'PD']
 # ax7.legend(['LT', 'LL'], loc='upper left', ncol=2)
-ax7.set_ylim(-0.05, 1.05)
+ax6.set_ylim(-0.05, 1.05)
 # ax7.set_ylim(0.35, 0.65)
-ax7.set_ylabel("Pr(anm)")
+ax6.set_ylabel("Pr(class)")
 
-# ax7.plot(time, hsl_tsad_agent.prob_coeff, '--', label='Certain zone value', color='black')
+ax7.plot(time, np.array(hsl_tsad_agent.itv_decisions))
+ax7.set_ylabel("itv")
+ax7.set_ylim(-0.05, 2.05)
 
 
 
