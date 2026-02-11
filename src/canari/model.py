@@ -746,8 +746,10 @@ class Model:
         Modify backward function for exponential smoothing component.
         """
 
-        # noise_index = self.get_states_index(states_name="white noise")
-        noise_index = self.get_states_index(states_name="heteroscedastic noise")
+        white_noise_index = self.get_states_index(states_name="white noise")
+        hete_noise_index  = self.get_states_index(states_name="heteroscedastic noise")
+        noise_index = white_noise_index if white_noise_index is not None else hete_noise_index
+
         exp_coeff_index = self.get_states_index(states_name="es coeff")
         exp_prod_index = self.get_states_index(states_name="es prod")
         es_index = self.get_states_index(states_name="es")
