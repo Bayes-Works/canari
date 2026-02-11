@@ -24,6 +24,8 @@ saved_result = {
     "mu_test": {},
     "std_test": {},
     "test_obs": {},
+    "p50": {},
+    "p90": {},
 }
 
 for ts in tqdm(time_series, desc="Time series"):
@@ -33,9 +35,14 @@ for ts in tqdm(time_series, desc="Time series"):
     std_test_all[:,ts] = std_test.flatten()
     test_obs_all[:,ts] = test_obs.flatten()
 
+# Metrics
+p50_overall = p50(test_obs_all, mu_test_all, std_test_all)
+p90_overall = p90(test_obs_all, mu_test_all, std_test_all)
+
 saved_result["mu_test"] = mu_test_all
 saved_result["std_test"] = std_test_all
-saved_result["test_obs"] = test_obs_all
+saved_result["p50"] = p50_overall
+saved_result["p90"] = p90_overall
 
 with open("bm/results/tourism_quarter.pkl", "wb") as f:
     pickle.dump(saved_result, f)
@@ -43,8 +50,6 @@ with open("bm/results/tourism_quarter.pkl", "wb") as f:
 time_end = time.time()
 print(f"Runtime: {time_end - time_start:.2f} seconds")
 
-# Metrics
-p50_overall = p50(test_obs_all, mu_test_all, std_test_all)
-p90_overall = p90(test_obs_all, mu_test_all, std_test_all)
+
 print(f"p50: {p50_overall:.4f}")
 print(f"p90: {p90_overall:.4f}")
