@@ -73,7 +73,7 @@ def tourism_month(df_train, df_test, ts):
         ),
     )
 
-    model.auto_initialize_baseline_states(train_data["y"][0:12])
+    model.auto_initialize_baseline_states(train_data["y"])
 
     # Training
     for epoch in range(num_epoch):
@@ -119,6 +119,36 @@ def tourism_month(df_train, df_test, ts):
         data=test_data,
     )
 
+
+    _states_plot = copy.copy(model.states)
+    # plot the test data
+    level_sum = _states_plot.get_mean(states_name="level") + _states_plot.get_mean(states_name="es")
+    for i in range(len(states.mu_posterior)):
+        _states_plot.mu_posterior[i][0] = level_sum[i]
+
+    fig, ax = plot_states(
+        data_processor=data_processor,
+        states=_states_plot,
+        standardization=True,
+        color="k",
+    )
+    plot_data(
+        data_processor=data_processor,
+        standardization=True,
+        plot_column=output_col,
+        plot_test_data=True,
+        sub_plot=ax[0],
+    )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_test_pred=mu_test_preds,
+        std_test_pred=std_test_preds,
+        sub_plot=ax[0],
+    )
+    fig.suptitle(f"TS #{ts}", fontsize=10, y=1)
+    plt.savefig(f"bm/results/tourism_month/TS_{ts}.png", dpi=200, bbox_inches="tight")
+    plt.close() 
+
     # Unstandardize the predictions
     mu_test_preds = normalizer.unstandardize(
         mu_test_preds,
@@ -130,6 +160,8 @@ def tourism_month(df_train, df_test, ts):
         data_processor.scale_const_std[output_col],
     )
 
-    return mu_test_preds.flatten(), std_test_preds.flatten(), model.states
+    test_obs = data_processor.get_data(split="test", standardization = False).flatten()
+
+    return mu_test_preds.flatten(), std_test_preds.flatten(), model.states, test_obs
 
 

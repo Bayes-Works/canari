@@ -44,12 +44,11 @@ saved_result["std_test"] = std_test_all
 saved_result["p50"] = p50_overall
 saved_result["p90"] = p90_overall
 
-with open("bm/results/tourism_quarter.pkl", "wb") as f:
+with open("bm/results/tourism_quarter_1.pkl", "wb") as f:
     pickle.dump(saved_result, f)
 
 time_end = time.time()
 print(f"Runtime: {time_end - time_start:.2f} seconds")
-
 
 print(f"p50: {p50_overall:.4f}")
 print(f"p90: {p90_overall:.4f}")
