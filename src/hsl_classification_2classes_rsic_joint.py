@@ -696,8 +696,6 @@ class hsl_classification:
                 var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
                 transition_matrix_itv = np.array([[1, itvtime_from_det], [0, 1]])
                 itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
-                # Enforce the shape of LT intervention
-                itv_at_trigger[0, 0] = 0 if itv_at_trigger[0, 0] * var_itv_at_trigger[0, 0] < 0 else itv_at_trigger[0, 0]
                 llclt_itv_at_trigger = itv_at_trigger[0, 0]
                 var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
                 trend_itv_at_trigger = itv_at_trigger[1, 0]
@@ -1087,11 +1085,6 @@ class hsl_classification:
         LL_index = ssm_copy.states_name.index("level")
         LT_index = ssm_copy.states_name.index("trend")
         if trend_intervention[0] != 0:
-            # Enforce the shape of LT intervention
-            delta_trend = mu_LT_deterministic_itv - ssm_copy.mu_states[LT_index]
-            delta_level = LLcLT_deterministic_itv - ssm_copy.mu_states[LL_index]
-            mu_LT_deterministic_itv = 0 if delta_trend * delta_level < 0 else mu_LT_deterministic_itv
-
             ssm_copy.mu_states[LL_index] = LLcLT_deterministic_itv
             ssm_copy.mu_states[LT_index] = mu_LT_deterministic_itv
         else:
