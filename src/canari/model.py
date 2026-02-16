@@ -1797,9 +1797,9 @@ class Model:
                 x
             )
 
-            # if "es" in self.states_name:
-            #     es_prod_index = self.get_states_index(states_name="es prod")
-            #     mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
+            if "es" in self.states_name:
+                es_prod_index = self.get_states_index(states_name="es prod")
+                mu_states_prior[es_prod_index] = self.mu_states[es_prod_index] 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)

@@ -71,9 +71,9 @@ def tourism_quarter(df_train, df_test, ts):
             infer_len=4 * 3,
             num_layer=1,
             num_hidden_unit=50,
-            manual_seed=4,
+            manual_seed=2,
             model_noise=True,
-            smoother=True,
+            smoother=False,
         ),
     )
 
@@ -87,7 +87,7 @@ def tourism_quarter(df_train, df_test, ts):
             white_noise_decay_factor=0.9,
         )
 
-        model.pretraining_filter(trainval)
+        # model.pretraining_filter(trainval)
 
         model.filter(
             data=trainval,
@@ -132,7 +132,7 @@ def tourism_quarter(df_train, df_test, ts):
         sub_plot=ax[0],
     )
     fig.suptitle(f"TS #{ts}", fontsize=10, y=1)
-    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_1.png", dpi=200, bbox_inches="tight")
+    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_2.png", dpi=200, bbox_inches="tight")
     plt.close() 
 
     # Unstandardize the predictions
