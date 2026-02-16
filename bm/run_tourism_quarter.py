@@ -1,7 +1,7 @@
 # # Run tourism monthly 
 import pandas as pd
 import numpy as np
-from bm.tourism_quarter import tourism_quarter
+from bm.tourism_quarter_filter import tourism_quarter
 import pickle
 import time
 from tqdm import tqdm
@@ -44,7 +44,7 @@ saved_result["std_test"] = std_test_all
 saved_result["p50"] = p50_overall
 saved_result["p90"] = p90_overall
 
-with open("bm/results/tourism_quarter_1.pkl", "wb") as f:
+with open("bm/results/tourism_quarter_2.pkl", "wb") as f:
     pickle.dump(saved_result, f)
 
 time_end = time.time()

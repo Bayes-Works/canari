@@ -317,7 +317,11 @@ class DataProcess:
                 "time": time[self.train_start : self.validation_end],
                 "covariates_col": self.covariates_col,
                 "data_col_names": self.data.columns.tolist(),
+                "cov_names": self.data.columns[self.covariates_col].tolist(),
                 "freq": freq,
+                "scale_const_mean": self.scale_const_mean,
+                "scale_const_std": self.scale_const_std,
+                "time_covariates": self.time_covariates,
             }
 
     def get_data(

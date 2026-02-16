@@ -56,21 +56,24 @@ def tourism_quarter(df_train, df_test, ts):
     )
     # split data
     train_data, validation_data, test_data, _ = data_processor.get_splits()
+    trainval = data_processor.get_splits(split="train_val")
 
     # Model
     model = Model(
-        LocalTrend(mu_states=[1e-1, 1e-2], var_states=[1e-1,1e-1]),
+        # LocalTrend(mu_states=[1e-1, 1e-2], var_states=[1e-1,1e-1]),
         # ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
-        ExpSmoothing(mu_states=[0,0.4,0], var_states=[0,1e-2,0], es_order=1, activation="sigmoid"),
+        # ExpSmoothing(mu_states=[0,0.4,0], var_states=[0,1e-2,0], es_order=1, activation="sigmoid"),
+        LocalTrend(),
+        ExpSmoothing(mu_states=[0, 0.4, 0], var_states=[0, 1e-2, 0], es_order=1, activation=None),
         LstmNetwork(
             look_back_len=4,
             num_features=2,
             infer_len=4 * 3,
             num_layer=1,
             num_hidden_unit=50,
-            manual_seed=1,
+            manual_seed=4,
             model_noise=True,
-            smoother=False,
+            smoother=True,
         ),
     )
 
@@ -78,45 +81,28 @@ def tourism_quarter(df_train, df_test, ts):
 
     # Training
     for epoch in range(num_epoch):
-        (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
-            train_data=train_data,
-            validation_data=validation_data,
+        model.white_noise_decay(
+            epoch,
+            white_noise_max_std=3,
+            white_noise_decay_factor=0.9,
         )
 
-        # Unstandardize the predictions
-        mu_validation_preds = normalizer.unstandardize(
-            mu_validation_preds,
-            data_processor.scale_const_mean[output_col],
-            data_processor.scale_const_std[output_col],
-        )
-        std_validation_preds = normalizer.unstandardize_std(
-            std_validation_preds,
-            data_processor.scale_const_std[output_col],
-        )
+        model.pretraining_filter(trainval)
 
-
-        # Calculate the metric
-        validation_obs = data_processor.get_data("validation").flatten()
-        validation_log_lik = metric.log_likelihood(
-            prediction=mu_validation_preds,
-            observation=validation_obs,
-            std=std_validation_preds,
+        model.filter(
+            data=trainval,
         )
+        model.smoother()
+        model.set_memory(time_step=0)
+        model._current_epoch += 1
 
-        # Early-stopping
-        model.early_stopping(
-            evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch
-        )
-
-        if model.stop_training:
-            break
 
     model.set_memory(
         time_step=data_processor.test_start - 1,
     )
 
     # forecat on the test set
-    mu_test_preds, std_test_preds, _ = model.forecast(
+    mu_test_preds, std_test_preds, states = model.forecast(
         data=test_data,
     )
 
@@ -146,7 +132,7 @@ def tourism_quarter(df_train, df_test, ts):
         sub_plot=ax[0],
     )
     fig.suptitle(f"TS #{ts}", fontsize=10, y=1)
-    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}.png", dpi=200, bbox_inches="tight")
+    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_1.png", dpi=200, bbox_inches="tight")
     plt.close() 
 
     # Unstandardize the predictions

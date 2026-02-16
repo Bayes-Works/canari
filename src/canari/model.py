@@ -1388,19 +1388,19 @@ class Model:
                 mu_states[es_index] = 0
                 mu_states[es_prod_index] = 0
 
-                if self._current_epoch < 5:
-                    es_coeff_index = self.get_states_index("es coeff")
-                    mu_states[es_coeff_index] = self._mu_es_coeff
-                    var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
+                # if self._current_epoch < 5:
+                es_coeff_index = self.get_states_index("es coeff")
+                mu_states[es_coeff_index] = self._mu_es_coeff
+                var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
 
             if "es trend" in self.states_name:
                 var_states[es_trend_index, es_trend_index] = 0
                 var_states[es_trend_prod_index, es_trend_prod_index] = 0
 
-                if self._current_epoch < 5:
-                    es_coeff_trend_index = self.get_states_index("es trend coeff")
-                    mu_states[es_coeff_trend_index] = self._mu_es_trend_coeff
-                    var_states[es_coeff_trend_index, es_coeff_trend_index] = self._var_es_trend_coeff
+                # if self._current_epoch < 5:
+                es_coeff_trend_index = self.get_states_index("es trend coeff")
+                mu_states[es_coeff_trend_index] = self._mu_es_trend_coeff
+                var_states[es_coeff_trend_index, es_coeff_trend_index] = self._var_es_trend_coeff
 
             if self.lstm_net:
                 if self.lstm_net.smooth:
