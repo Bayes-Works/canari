@@ -8,7 +8,7 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-ts = 129
+ts = 133
 # training set
 data_train_file = "./data/m4/Hourly-train.csv"
 df_train = pd.read_csv(data_train_file, skiprows=1, delimiter=",", header=None)
@@ -52,8 +52,10 @@ data_processor = DataProcess(
 )
 # split data
 train_data, validation_data, test_data, _ = data_processor.get_splits()
+trainval = data_processor.get_splits(split="train_val")
 
 # Model
+lstm_smoother = True
 model = Model(
     # LocalLevel(),
     LocalTrend(var_states=[1e-2, 1e-4]),
@@ -62,11 +64,11 @@ model = Model(
         look_back_len=12,
         num_features=2,
         num_layer=1,
-        infer_len=24 * 3,
+        infer_len=24*3,
         num_hidden_unit=50,
         manual_seed=1,
         model_noise=True,
-        # smoother=False,
+        smoother=lstm_smoother,
     ),
 )
 
@@ -82,32 +84,56 @@ model.auto_initialize_baseline_states(train_data["y"])
 
 # Training
 for epoch in range(num_epoch):
-    (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
-        train_data=train_data,
-        validation_data=validation_data,
-        white_noise_decay = True,
-    )
+    # (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
+    #     train_data=train_data,
+    #     validation_data=validation_data,
+    #     white_noise_decay = True,
+    # )
 
-    # Unstandardize the predictions
-    mu_validation_preds = normalizer.unstandardize(
-        mu_validation_preds,
-        data_processor.scale_const_mean[output_col],
-        data_processor.scale_const_std[output_col],
-    )
-    std_validation_preds = normalizer.unstandardize_std(
-        std_validation_preds,
-        data_processor.scale_const_std[output_col],
-    )
+    # # Unstandardize the predictions
+    # mu_validation_preds = normalizer.unstandardize(
+    #     mu_validation_preds,
+    #     data_processor.scale_const_mean[output_col],
+    #     data_processor.scale_const_std[output_col],
+    # )
+    # std_validation_preds = normalizer.unstandardize_std(
+    #     std_validation_preds,
+    #     data_processor.scale_const_std[output_col],
+    # )
 
 
-    # Calculate the metric
-    validation_obs = data_processor.get_data("validation").flatten()
-    validation_log_lik = metric.log_likelihood(
-        prediction=mu_validation_preds,
-        observation=validation_obs,
-        std=std_validation_preds,
-    )
+    # # Calculate the metric
+    # validation_obs = data_processor.get_data("validation").flatten()
+    # validation_log_lik = metric.log_likelihood(
+    #     prediction=mu_validation_preds,
+    #     observation=validation_obs,
+    #     std=std_validation_preds,
+    # )
 
+    # # Early-stopping
+    # model.early_stopping(
+    #     evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch,
+    #     skip_epoch=5,
+    # )
+
+    # if model.stop_training:
+    #     break
+
+    model.white_noise_decay(
+            epoch,
+            white_noise_max_std=3,
+            white_noise_decay_factor=0.9,
+        )
+
+    if lstm_smoother:
+        model.pretraining_filter(trainval)
+
+    model.filter(
+        data=trainval,
+    )
+    model.smoother()
+    model.set_memory(time_step=0)
+    model._current_epoch += 1
 
     # fig, ax = plot_states(
     #     data_processor=data_processor,
@@ -125,26 +151,9 @@ for epoch in range(num_epoch):
     # fig.suptitle(f"Epoch #{epoch}", fontsize=10, y=1)
     # plt.show()
 
-    # Early-stopping
-    model.early_stopping(
-        evaluate_metric=-validation_log_lik, current_epoch=epoch, max_epoch=num_epoch,
-        skip_epoch=5,
-    )
 
-    # # Calculate the log-likelihood metric
-    # validation_obs = data_processor.get_data("validation").flatten()
-    # mse = metric.mse(mu_validation_preds, validation_obs)
-
-    # # Early-stopping
-    # model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch,
-    #                      skip_epoch=5)
-
-    if model.stop_training:
-        break
-
-
-print(f"Optimal epoch       : {model.optimal_epoch}")
-print(f"Validation log-likelihood      :{model.early_stop_metric: 0.4f}")
+# print(f"Optimal epoch       : {model.optimal_epoch}")
+# print(f"Validation log-likelihood      :{model.early_stop_metric: 0.4f}")
 
 model.set_memory(
     time_step=data_processor.test_start - 1,

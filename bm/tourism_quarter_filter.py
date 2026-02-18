@@ -72,9 +72,10 @@ def tourism_quarter(df_train, df_test, ts):
             num_layer=1,
             num_hidden_unit=50,
             manual_seed=2,
-            model_noise=True,
+            # model_noise=True,
             smoother=False,
         ),
+        WhiteNoise(std_error=1e-2),
     )
 
     model.auto_initialize_baseline_states(train_data["y"])
@@ -132,7 +133,7 @@ def tourism_quarter(df_train, df_test, ts):
         sub_plot=ax[0],
     )
     fig.suptitle(f"TS #{ts}", fontsize=10, y=1)
-    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_2.png", dpi=200, bbox_inches="tight")
+    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_5.png", dpi=200, bbox_inches="tight")
     plt.close() 
 
     # Unstandardize the predictions
