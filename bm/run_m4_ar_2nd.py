@@ -120,15 +120,16 @@ def m4_hour(df_train, df_test, ts):
     model = Model(
         LocalTrend(var_states=[1e-2, 1e-4]),
         # ExpSmoothing(mu_states=[0,-3,0], var_states=[0,1e-2,0], es_order=1, activation="sigmoid"),
-        ExpSmoothing(mu_states=[0,.9,0], var_states=[0,1e-2,0], es_order=1, activation=None),
+        # ExpSmoothing(mu_states=[0,.5,0], var_states=[0,1e-2,0], es_order=1, activation=None),
+        ExpSmoothing(mu_states=[0,.5,0,0,1e-3,0], var_states=[0,1e-2,0,0,1e-6,0], es_order=2, activation=None),
         LstmNetwork(
-            look_back_len=24,
+            look_back_len=12,
             num_features=2,
             infer_len=24 * 3,
-            num_layer=2,
-            num_hidden_unit=40,
+            num_layer=1,
+            num_hidden_unit=50,
             # manual_seed=1,
-            model_noise=False,
+            model_noise=True,
             smoother=lstm_smoother,
         ),
         Autoregression(
@@ -216,7 +217,7 @@ def m4_hour(df_train, df_test, ts):
         data_processor=data_processor,
         states=_states_plot,
         standardization=True,
-        states_to_plot=["level", "trend", "es", "es coeff", "es prod", "lstm", "autoregression", "AR_error"],
+        # states_to_plot=["level", "trend", "es", "es coeff", "es prod", "lstm", "autoregression", "AR_error"],
         color="k",
     )
     plot_data(
