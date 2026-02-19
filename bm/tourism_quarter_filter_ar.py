@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
-from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
+from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel, Autoregression
 
 def _prepare_series(df_train, df_test, ts):
     quarter_to_month = {1: 1, 2: 4, 3: 7, 4: 10}
@@ -59,6 +59,7 @@ def tourism_quarter(df_train, df_test, ts):
     trainval = data_processor.get_splits(split="train_val")
 
     # Model
+    var_noise = 1e-2
     model = Model(
         # LocalTrend(mu_states=[1e-1, 1e-2], var_states=[1e-1,1e-1]),
         # ExpSmoothing(mu_states=[0,-0.5,0], var_states=[0,0.2,0], es_order=1, activation="sigmoid"),
@@ -71,9 +72,20 @@ def tourism_quarter(df_train, df_test, ts):
             infer_len=4 * 3,
             num_layer=1,
             num_hidden_unit=50,
-            # manual_seed=2,
-            model_noise=True,
+            manual_seed=2,
+            # model_noise=True,
             smoother=False,
+        ),
+        Autoregression(
+            mu_states=[0, 0.9, 0, 0, 0, var_noise],
+            var_states=[
+                1e-5,
+                0.25,
+                0,
+                var_noise,
+                1e-6,
+                1e-2,
+            ],
         ),
     )
 
@@ -116,6 +128,7 @@ def tourism_quarter(df_train, df_test, ts):
         data_processor=data_processor,
         states=_states_plot,
         standardization=True,
+        states_to_plot=["level", "trend", "es", "es coeff", "es prod", "lstm", "autoregression", "AR_error"],
         color="k",
     )
     plot_data(
@@ -132,7 +145,7 @@ def tourism_quarter(df_train, df_test, ts):
         sub_plot=ax[0],
     )
     fig.suptitle(f"TS #{ts}", fontsize=10, y=1)
-    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_6.png", dpi=200, bbox_inches="tight")
+    plt.savefig(f"saved_results/bm/tourism_quarter/TS_{ts}_ar.png", dpi=200, bbox_inches="tight")
     plt.close() 
 
     # Unstandardize the predictions

@@ -746,11 +746,11 @@ class Model:
         Modify backward function for exponential smoothing component.
         """
 
-        # white_noise_index = self.get_states_index(states_name="white noise")
-        # hete_noise_index  = self.get_states_index(states_name="heteroscedastic noise")
-        # noise_index = white_noise_index if white_noise_index is not None else hete_noise_index
+        white_noise_index = self.get_states_index(states_name="white noise")
+        hete_noise_index  = self.get_states_index(states_name="heteroscedastic noise")
+        noise_index = white_noise_index if white_noise_index is not None else hete_noise_index
 
-        noise_index = self.get_states_index(states_name="AR_error")
+        # noise_index = self.get_states_index(states_name="AR_error")
 
         exp_coeff_index = self.get_states_index(states_name="es coeff")
         exp_prod_index = self.get_states_index(states_name="es prod")
@@ -1392,19 +1392,19 @@ class Model:
                 var_states[es_index, es_index] = 0
                 var_states[es_prod_index, es_prod_index] = 0
 
-                if self._current_epoch < 5:
-                    es_coeff_index = self.get_states_index("es coeff")
-                    mu_states[es_coeff_index] = self._mu_es_coeff
-                    var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
+                # if self._current_epoch < 5:
+                es_coeff_index = self.get_states_index("es coeff")
+                mu_states[es_coeff_index] = self._mu_es_coeff
+                var_states[es_coeff_index, es_coeff_index] = self._var_es_coeff
 
             if "es trend" in self.states_name:
                 var_states[es_trend_index, es_trend_index] = 0
                 var_states[es_trend_prod_index, es_trend_prod_index] = 0
 
-                if self._current_epoch < 5:
-                    es_coeff_trend_index = self.get_states_index("es trend coeff")
-                    mu_states[es_coeff_trend_index] = self._mu_es_trend_coeff
-                    var_states[es_coeff_trend_index, es_coeff_trend_index] = self._var_es_trend_coeff
+                # if self._current_epoch < 5:
+                es_coeff_trend_index = self.get_states_index("es trend coeff")
+                mu_states[es_coeff_trend_index] = self._mu_es_trend_coeff
+                var_states[es_coeff_trend_index, es_coeff_trend_index] = self._var_es_trend_coeff
 
             if self.lstm_net:
                 if self.lstm_net.smooth:

@@ -222,7 +222,7 @@ def m4_hour(df_train, df_test, ts):
         data_processor=data_processor,
         states=_states_plot,
         standardization=True,
-            states_to_plot=["level", "trend", "es", "es coeff", "es prod", "lstm", "autoregression", "AR_error"],
+        states_to_plot=["level", "trend", "es", "es coeff", "es prod", "lstm", "autoregression", "AR_error"],
         color="k",
     )
     plot_data(
