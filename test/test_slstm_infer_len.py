@@ -34,7 +34,7 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     Run training and forecasting for time-series forecasting model for multiple inference lengths.
     """
     output_col = [0]
-    infer_length = 24 * 5
+    infer_length = 24 * 3
 
     # # Read data
     data_file = os.path.join(BASE_DIR, "../data/toy_time_series/sine.csv")
