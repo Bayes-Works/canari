@@ -170,6 +170,12 @@ class BaseComponent(ABC):
 
         self._model = model
 
+    def un_bind(self):
+        """
+        Un-Bind this component to a `Model` instance.
+        """
+        self._model = None
+
     @property
     def model(self):
         """

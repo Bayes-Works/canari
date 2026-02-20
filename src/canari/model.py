@@ -811,6 +811,9 @@ class Model:
         if self.lstm_net:
             save_dict["lstm_network_params"] = self.lstm_net.state_dict()
 
+        # un-binding components
+        for component in save_dict["components"].values():
+            component.un_bind()
         return save_dict
 
     @staticmethod

@@ -1,4 +1,5 @@
 import copy
+import pickle
 import pandas as pd
 from pytagi import Normalizer as normalizer
 import numpy as np
