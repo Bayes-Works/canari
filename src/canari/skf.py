@@ -343,6 +343,11 @@ class SKF:
         self.model["norm_abnorm"] = norm_abnorm
         self.model["abnorm_norm"] = abnorm_norm
 
+        # Re-binding components to models
+        for transition_model in self.model.values():
+            for component in transition_model.components.values():
+                component.bind(transition_model)
+
     def _link_skf_to_model(self):
         """Attach SKF attributes (state count, names, LSTM) from 'norm_norm' model.
 
