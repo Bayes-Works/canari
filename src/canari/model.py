@@ -749,7 +749,7 @@ class Model:
         _interv_index_var = np.nonzero(delta_var)[0].tolist()
         _interv_index = list(dict.fromkeys(_interv_index_mu + _interv_index_var))
         _interv_index = _interv_index[0]
-        _interv_hs_index = self.get_states_index("intervention")
+        _interv_hs_index = [i for i, s in enumerate(self.states_name) if "intervention" in s]
 
         if isinstance(_interv_hs_index, int):
             _interv_hs_index = [_interv_hs_index]
