@@ -41,7 +41,7 @@ localtrend = LocalTrend(
     mu_states=[1.95, -0.00], var_states=[0.1**2, 0.0075**2], std_error=0
 )
 periodic = Periodic(mu_states=[1.9, 1.9], var_states=[0.1**2, 0.1**2], period=52)
-
+print(all_data["x"])
 # Model
 model = Model(exponential, noise, periodic, localtrend)
 model.filter(data=all_data)

@@ -255,7 +255,8 @@ class DataProcess:
         """
 
         data = self.standardize_data()
-        time = self.data.index[self.train_start:self.test_end]
+        # time = self.data.index[self.train_start:self.test_end]
+        time = self.data.index
         if isinstance(self.data.index, pd.DatetimeIndex):
             freq = pd.infer_freq(self.data.index)
         else:
@@ -267,6 +268,7 @@ class DataProcess:
                 {
                     "x": data[self.train_start : self.train_end, self.covariates_col],
                     "y": data[self.train_start : self.train_end, self.output_col],
+                    # "time": time[0 : self.train_end-self.train_start],
                     "time": time[self.train_start : self.train_end],
                     "covariates_col": self.covariates_col,
                     "data_col_names": self.data.columns.tolist(),
@@ -285,6 +287,7 @@ class DataProcess:
                     "y": data[
                         self.validation_start : self.validation_end, self.output_col
                     ],
+                    # "time": time[self.validation_start-self.train_start : self.validation_end-self.train_start],
                     "time": time[self.validation_start : self.validation_end],
                     "covariates_col": self.covariates_col,
                     "data_col_names": self.data.columns.tolist(),
@@ -294,6 +297,7 @@ class DataProcess:
                 {
                     "x": data[self.test_start : self.test_end, self.covariates_col],
                     "y": data[self.test_start : self.test_end, self.output_col],
+                    # "time": time[self.test_start-self.train_start : self.test_end-self.train_start],
                     "time": time[self.test_start : self.test_end],
                     "covariates_col": self.covariates_col,
                     "data_col_names": self.data.columns.tolist(),
@@ -303,7 +307,8 @@ class DataProcess:
                 {
                     "x": data[self.train_start : self.test_end, self.covariates_col],
                     "y": data[self.train_start : self.test_end, self.output_col],
-                    "time": time,
+                    "time": time[self.train_start : self.test_end],
+                    # "time": time,
                     "start_date": self.data.index[self.train_start],
                     "covariates_col": self.covariates_col,
                     "data_col_names": self.data.columns.tolist(),

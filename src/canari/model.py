@@ -33,6 +33,8 @@ from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
 
 class Model:
@@ -633,7 +635,7 @@ class Model:
             var_states_posterior[W2_index, W2_index] = var_W2_posterior.item()
 
             # # From W2 to W2bar
-            K = self.var_W2bar / self.var_W2_prior
+            K = self.var_W2bar / self.var_W2_prior ##comment initialiser varw2prior
             self.mu_W2bar = self.mu_W2bar + K * (mu_W2_posterior - self.mu_W2_prior)
             self.var_W2bar = self.var_W2bar + K**2 * (
                 var_W2_posterior - self.var_W2_prior
@@ -1200,6 +1202,347 @@ class Model:
 
         self._mu_local_level = trend[0]
 
+    def auto_initialize_comp(self,
+                             data_training: pd.DataFrame,
+                             ratio_training:float):
+        """
+        Automatically assign initial means and variances for level, trend, acceleration,
+        periodic, exponential, white noise and autoregression states from input data.
+
+        Args:
+            data_training (np.ndarray): Time series data containing the training series.
+            ratio_training (float): Ratio of the training set used to tunes the initials values.
+        
+        Examples:
+            >>> df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
+            >>> df_train.index.name="date"
+            >>> expo=Exponential()
+            >>> local_level=LocalLevel()
+            >>> ar=Autoregression(phi=0,)
+            >>> wn=WhiteNoise()
+            >>> periodic=Periodic(period=12)
+            >>> model = Model(expo,ar,periodic,local_level)
+            >>> model.auto_initialize_comp(data_training=df_train,ratio_training=0.6)
+        """
+        period=None
+        data_processor= DataProcess(data=data_training,
+                                    train_split=ratio_training,
+                                    validation_split=1-ratio_training,
+                                    output_col=[0],
+                                    standardization=False,)
+        
+        train_data,val_data,_,_=data_processor.get_splits()
+        mask_s= ~np.isnan(train_data["y"].flatten())
+
+        def modular_mse(params,t,y_true,components_list,period):
+            y_pred=np.zeros_like(t,dtype=float)
+            idx=0
+
+            if "level" in components_list:
+                level_val=params[idx]
+                y_pred+=level_val
+                idx+=1
+
+            if "trend" in components_list:
+                slope= params[idx]
+                y_pred+=slope*t
+                idx+=1
+
+            if "acceleration" in components_list:
+                acc=params[idx]
+                y_pred+=0.5*acc*t**2
+                idx+=1
+            if "periodic 1" in components_list:
+                amp=params[idx]
+                phase=params[idx+1]
+                w=2*np.pi/period
+                y_pred+=amp*np.sin(w*(t+phase))
+                idx+=2
+            if "exp" in components_list:
+                latent_trend=params[idx]
+                scale=params[idx+1]
+                y_pred+=scale*(np.exp(-latent_trend*t)-1)
+                idx+=2
+            mask=~np.isnan(y_true)
+            return np.mean((y_true[mask]-y_pred[mask])**2)
+        
+        def circular_mean(angles_list, period):
+            if not angles_list:
+                return np.nan
+            angles_rad = np.array(angles_list) * (2 * np.pi / period)
+            x_mean = np.nanmean(np.cos(angles_rad))
+            y_mean = np.nanmean(np.sin(angles_rad))
+            mean_rad = np.arctan2(y_mean, x_mean)
+            mean_period_angle = mean_rad * (period / (2 * np.pi))
+            return mean_period_angle % period
+    
+        x0=[]
+        bounds=[]
+
+        if "level" in self.states_name:
+            start_date_level = data_training.index.min()
+            end_date_level = start_date_level + pd.DateOffset(months=12)
+            df_start_end_date= data_training.loc[start_date_level:end_date_level]
+            level_mean= np.mean(df_start_end_date,axis=0)
+            level_mean= level_mean.iloc[0]
+            level_std= np.std(df_start_end_date,axis=0)
+            level_std= level_std.iloc[0]
+            x0.append(level_mean)
+            bounds.append((level_mean-level_std,level_mean+level_std))
+            
+        if "trend" in self.states_name:
+            trend_estimate= np.mean(np.diff(train_data["y"].flatten()[mask_s]))
+            x0.append(trend_estimate)
+            margin = 2 * abs(trend_estimate) if trend_estimate != 0 else 0.01
+            bounds.append((trend_estimate - margin, trend_estimate + margin))
+            print(trend_estimate)
+        if "acceleration" in self.states_name:
+            acceleration_estimate = np.mean(np.diff(np.diff(train_data["y"].flatten()[mask_s])))
+            x0.append(acceleration_estimate)
+            margin = 2 * abs(acceleration_estimate) if acceleration_estimate != 0 else 0.0001
+            bounds.append((acceleration_estimate - margin, acceleration_estimate + margin))
+        if "periodic 1" in self.states_name:
+            index_periodic = self.states_name.index("periodic 1")
+            period = self.components[self._states_comp[index_periodic]].period
+            amplitude_found = []
+            phase_found = []
+            w=2*np.pi/period
+            min_cycle=[]
+            max_cycle=[]
+            phase_segment=[]
+            sinus_detrend=[]
+            trend_approximation=np.zeros_like(train_data["y"].flatten())
+            half_left=(period-1)//2
+            half_right= period//2
+            for i in range(0,len(train_data["y"].flatten())):
+                start=max(0,i-half_left)
+                end=min(len(train_data["y"].flatten()),i+half_right+1)
+                segment=train_data["y"].flatten()[start:end]
+                mask_segment=~np.isnan(segment)
+                trend_approximation[i]=np.mean(segment[mask_segment])
+            sinus_detrend=train_data["y"].flatten()-trend_approximation
+            for j in range(0,len(train_data["y"].flatten())-period+1):
+                segment= sinus_detrend[j:j+period]
+                mask_segment= ~np.isnan(segment)
+                if len(segment) == period:
+                    min_cycle.append(np.min(segment[mask_segment]))
+                    max_cycle.append(np.max(segment[mask_segment]))
+                    phase_u=[]
+                    for k in range(len(segment)-1):
+                        val1=segment[k]
+                        val2=segment[k + 1]
+                    
+                        if np.isnan(val1) or np.isnan(val2):
+                            continue
+                        num = val1*np.sin(w)
+                        den= val2 - val1*np.cos(w)
+                        θ_k = np.arctan2(num, den)
+                        φ_k = (θ_k / w - (k + j)) % period
+                        phase_u.append(φ_k)
+                    phase_segment.append(circular_mean(phase_u,period))
+            max_moy=np.mean(max_cycle)
+            min_moy=np.mean(min_cycle)
+            amplitude_found.append((max_moy - min_moy) / 2)
+            phase_found = circular_mean(phase_segment,period)
+            x0.append(amplitude_found[0])
+            x0.append(phase_found)
+            bounds.append((amplitude_found[0]-0.5,amplitude_found[0]+0.5))
+            bounds.append((-period//2,period+(period//2)))
+            
+        grid_points=[]
+        if "exp" in self.states_name:
+            scale_list=np.linspace(1,35,10)
+            trend_list=np.logspace(-6,-1,6)
+            for s in scale_list:
+                for t in trend_list:
+                    grid_points.append((s,t))
+                    
+        best_params = None
+
+        y_train = train_data["y"].flatten()
+        t_train = np.arange(len(y_train))
+        
+        if val_data is not None:
+            y_val = val_data["y"].flatten()
+            t_val = np.arange(len(y_train), len(y_train) + len(y_val))
+        else:
+            y_val = None
+            t_val = None
+        
+        if val_data is not None:
+            y_full = np.concatenate([y_train, y_val])
+            t_full = np.arange(len(y_full))
+        else:
+            y_full = y_train
+            t_full = t_train
+            
+        if not grid_points:
+            grid_points = [(None, None)]
+            
+        base_x0 = list(x0)
+        base_bounds = list(bounds)
+        
+        best_validation_mse = np.inf
+        best_bounds = None
+        best_initial_guess=None
+
+        for (scale_start, trend_start) in grid_points:
+            
+            current_x0 = base_x0.copy()
+            current_bounds = base_bounds.copy()
+
+            if scale_start is not None:
+                current_x0.append(trend_start)
+                current_x0.append(scale_start)
+                current_bounds.append((1e-6, 1.0))
+                current_bounds.append((1, 50))
+
+            try:
+                result = minimize(
+                    modular_mse,
+                    np.array(current_x0),
+                    args=(t_train, y_train, self.states_name, period),
+                    method="L-BFGS-B",
+                    bounds=current_bounds
+                )
+                if y_val is not None:
+                    current_score = modular_mse(
+                        result.x, t_val, y_val, self.states_name, period
+                    )
+                else:
+                    current_score = result.fun
+
+                if current_score < best_validation_mse:
+                    best_validation_mse = current_score
+
+                    best_initial_guess = current_x0
+                    best_bounds = current_bounds
+                    
+            except Exception:
+                continue
+
+        if best_initial_guess is not None:
+            try:
+                final_result = minimize(
+                    modular_mse,
+                    np.array(best_initial_guess), 
+                    args=(t_full, y_full, self.states_name, period), 
+                    method="L-BFGS-B",
+                    bounds=best_bounds
+                )
+                best_params = final_result.x
+                final_mse =modular_mse(best_params,t_full,y_full,self.states_name,period)
+            except Exception as e:
+                best_params = None 
+        else:
+            best_params = None
+
+        idx = 0
+        print(final_mse)
+        
+        if "level" in self.states_name and "trend" not in self.states_name and "acceleration" not in self.states_name:
+            self.mu_states[self.get_states_index("level")] = best_params[idx]
+            self.var_states[self.get_states_index("level"),self.get_states_index("level")]=(best_params[idx]*0.15)**2
+            idx += 1
+            
+        if "trend" in self.states_name and "acceleration" not in self.states_name:
+            A_trend_inv = np.array([[1, -1], [0, 1]])
+            mu_trend = A_trend_inv @ np.array([[best_params[idx]], [best_params[idx+1]]])
+            var_trend = A_trend_inv @ np.array([[(best_params[idx]*0.15)**2,0],[0,(best_params[idx+1]*0.45)**2]])@ A_trend_inv.T
+            self.mu_states[self.get_states_index("level")] = mu_trend[0].item()
+            self.var_states[self.get_states_index("level"),self.get_states_index("level")]=var_trend[0,0].item()
+            self.mu_states[self.get_states_index("trend")] = mu_trend[1].item()
+            self.mu_states[self.get_states_index("trend")] =0
+            self.var_states[self.get_states_index("trend"),self.get_states_index("trend")]=var_trend[1,1].item()
+            idx += 2
+            
+        if "acceleration" in self.states_name:
+            A_acc_inv = np.array([[1, -1, 0.5], [0, 1, -1], [0, 0, 1]])
+            mu_acc = A_acc_inv @ np.array([[best_params[idx]], [best_params[idx+1]], [best_params[idx+2]]])
+            var_acc= A_acc_inv @ np.array([[(best_params[idx]*0.15)**2,0,0],[0,(best_params[idx+1]*0.45)**2,0],[0,0,(best_params[idx+2]*0.45)**2]])
+            self.mu_states[self.get_states_index("level")] = mu_acc[0]
+            self.var_states[self.get_states_index("level"),self.get_states_index("level")]=var_acc[0,0]
+            self.mu_states[self.get_states_index("trend")] = mu_acc[1]
+            self.var_states[self.get_states_index("trend"),self.get_states_index("trend")]=var_acc[1,1]
+            self.mu_states[self.get_states_index("acceleration")] = mu_acc[2]
+            self.var_states[self.get_states_index("acceleration"),self.get_states_index("acceleration")]=var_acc[2,2]
+            idx += 3
+            
+        if "periodic 1" in self.states_name:
+            A_periodic_inv=np.array([[np.cos(w), -np.sin(w)], [np.sin(w), np.cos(w)]])
+            a0=best_params[idx]*np.sin(w*best_params[idx+1])
+            b0=best_params[idx]*np.cos(w*best_params[idx+1])
+            signal = A_periodic_inv @ np.array([[a0], [b0]])
+            variance_periodic=(best_params[idx]*0.075)**2
+            variance_signal = (
+    A_periodic_inv @ np.array([[variance_periodic, 0], [0, variance_periodic]]) @ A_periodic_inv.T
+)
+            self.mu_states[self.get_states_index("periodic 1")] = signal[0].item()
+            self.mu_states[self.get_states_index("periodic 2")] = signal[1].item()
+            self.var_states[self.get_states_index("periodic 1"),self.get_states_index("periodic 1")] = variance_signal[0,0].item()
+            self.var_states[self.get_states_index("periodic 2"),self.get_states_index("periodic 2")] = variance_signal[1,1].item()
+            idx += 2
+            
+        if "exp" in self.states_name:
+            self.mu_states[self.get_states_index("latent trend")] = best_params[idx]
+            self.mu_states[self.get_states_index("latent level")]= -best_params[idx]
+            self.mu_states[self.get_states_index("exp scale factor")] = best_params[idx+1]
+            self.var_states[self.get_states_index("latent level"),self.get_states_index("latent level")]=0.00001**2
+            self.var_states[self.get_states_index("latent trend"),self.get_states_index("latent trend")]=(best_params[idx]*0.45)**2
+            self.var_states[self.get_states_index("exp scale factor"),self.get_states_index("exp scale factor")]=(best_params[idx+1]*0.4)**2
+            idx += 2
+        # print(self.components[self._states_comp[self.get_states_index("white noise")]].std_error)
+        if "white noise" in self.states_name and self.components[self._states_comp[self.get_states_index("white noise")]].std_error is None:
+            self.process_noise_matrix[self.get_states_index("white noise"),self.get_states_index("white noise")]=final_mse
+        # print(self.components[self._states_comp[self.get_states_index("autoregression")]]._var_states)
+        if "autoregression" in self.states_name:
+            autoregression_index = self.get_states_index(states_name="autoregression")
+            phi = self.components[self._states_comp[autoregression_index]].phi
+            std_error = self.components[self._states_comp[autoregression_index]].std_error
+
+            if phi!=None and std_error!=None:
+                self.mu_states[self.get_states_index("autoregression")]=0
+                self.var_states[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+                self.process_noise_matrix[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+
+            if phi==None and std_error!=None:
+                self.mu_states[self.get_states_index("autoregression")]=0
+                self.var_states[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+                self.mu_states[self.get_states_index("phi")]=0.5
+                self.var_states[self.get_states_index("phi"),self.get_states_index("phi")]=0.25
+                self.process_noise_matrix[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+                
+
+            if phi!=None and std_error==None:
+                self.mu_states[self.get_states_index("autoregression")]=0
+                self.var_states[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+                self.mu_states[self.get_states_index("AR_error")]=0
+                self.var_states[self.get_states_index("AR_error"),self.get_states_index("AR_error")]=final_mse*(1-phi**2)
+                self.mu_states[self.get_states_index("W2")]=0
+                self.var_states[self.get_states_index("W2"),self.get_states_index("W2")]=1e-6
+                self.mu_states[self.get_states_index("W2bar")]=final_mse*(1-phi**2)
+                self.var_states[self.get_states_index("W2bar"),self.get_states_index("W2bar")]=((final_mse*(1-phi**2))/2)**2
+                self.mu_W2bar=final_mse*(1-phi**2)
+                self.var_W2bar=((final_mse*(1-phi**2))/2)**2
+                self.process_noise_matrix[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+
+            if phi==None and std_error==None : 
+                self.mu_states[self.get_states_index("autoregression")]=0
+                self.var_states[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+                self.mu_states[self.get_states_index("phi")]=0.5
+                self.var_states[self.get_states_index("phi"),self.get_states_index("phi")]=0.25
+                phi=0.5
+                self.mu_states[self.get_states_index("AR_error")]=0
+                self.var_states[self.get_states_index("AR_error"),self.get_states_index("AR_error")]=final_mse*(1-phi**2)
+                self.mu_states[self.get_states_index("W2")]=0
+                self.var_states[self.get_states_index("W2"),self.get_states_index("W2")]=1e-6
+                self.mu_states[self.get_states_index("W2bar")]=final_mse*(1-phi**2)
+                self.var_states[self.get_states_index("W2bar"),self.get_states_index("W2bar")]=((final_mse*(1-phi**2))/2)**2
+                self.mu_W2bar=final_mse*(1-phi**2)
+                self.var_W2bar=((final_mse*(1-phi**2))/2)**2
+                self.process_noise_matrix[self.get_states_index("autoregression"),self.get_states_index("autoregression")]=final_mse
+
+            
     def set_states(
         self,
         new_mu_states: np.ndarray,
@@ -1736,6 +2079,11 @@ class Model:
                 mu_states_posterior,
                 var_states_posterior,
             ) = self.backward(y)
+            # for x in np.diag(var_states_posterior):
+            #     if x < 0 :
+            #         # print("valeur neg dans diag var_post")
+            #         print(index)
+            #         print(np.diag(var_states_posterior))
 
             # Update LSTM parameters
             if self.lstm_net:
