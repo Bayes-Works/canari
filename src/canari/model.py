@@ -36,6 +36,7 @@ from canari.data_struct import (
     OutputHistory,
     LstmEmbedding,
 )
+from scipy.optimize import minimize
 from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
@@ -1061,7 +1062,7 @@ class Model:
             dummy[:, col_idx] = normed[:, 0]
 
         return dummy
-    
+
     def _states_intervention(self, delta_mu, delta_var):
         """
         States intervention.
@@ -1070,17 +1071,15 @@ class Model:
         :param delta_var: intervention for states variances
         """
 
-        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+        if len(delta_mu) == self.num_states and len(delta_var) == self.num_states:
             delta_mu = np.atleast_2d(delta_mu).T
             delta_var = np.diag(delta_var)
             self.mu_states = self.mu_states + delta_mu
             self.var_states = self.var_states + delta_var
         else:
-            raise ValueError(
-                "Incorrect mu and/or var dimension for inverventions."
-            )
+            raise ValueError("Incorrect mu and/or var dimension for inverventions.")
 
-    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+    def _transition_matrix_interv(self, delta_mu: list, delta_var: list, value: float):
         """
         Transition matrix intervention.
         """
@@ -1097,7 +1096,9 @@ class Model:
             _interv_hs_index = []
 
         if _interv_index in _interv_hs_index:
-            _interv_state_index = self.components[self._states_comp[_interv_index]].interv_state_index
+            _interv_state_index = self.components[
+                self._states_comp[_interv_index]
+            ].interv_state_index
             self.transition_matrix[_interv_state_index, _interv_index] = value
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
@@ -1109,10 +1110,31 @@ class Model:
             var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
+        # 1
+        # lstm_index = self.get_states_index("lstm")
+        # self.lstm_output_history.update(
+        #     mu_states[lstm_index],
+        #     var_states[lstm_index, lstm_index],
+        # )
+
+        # 2
         lstm_index = self.get_states_index("lstm")
+        white_noise_index = self.get_states_index("white noise")
+        hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+        indices = [
+            idx
+            for idx in (lstm_index, white_noise_index, hete_noise_index)
+            if idx is not None
+        ]
+        _observation_matrix = np.zeros_like(self.observation_matrix)
+        _observation_matrix[0, indices] = 1
+        mu_lstm = _observation_matrix @ mu_states
+        var_lstm = _observation_matrix @ var_states @ _observation_matrix.T
+
         self.lstm_output_history.update(
-            mu_states[lstm_index],
-            var_states[lstm_index, lstm_index],
+            mu_lstm.flatten(),
+            var_lstm.flatten(),
         )
 
     def get_dict(self, time_step: Optional[int] = None) -> dict:
@@ -1186,17 +1208,15 @@ class Model:
         """
 
         indices = [
-                index
-                for index, name in enumerate(self.states_name)
-                if name == states_name
-            ]
+            index for index, name in enumerate(self.states_name) if name == states_name
+        ]
 
         if not indices:
             return None
         if len(indices) == 1:
             return indices[0]
         return indices
-    
+
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
         Automatically assign initial means and variances for baseline hidden states (level,
@@ -1217,15 +1237,15 @@ class Model:
             if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 0
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 0
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-6
 
         self._mu_local_level = trend[0]
 
@@ -1644,7 +1664,7 @@ class Model:
             )
 
     def forecast(
-        self, 
+        self,
         data: Dict[str, np.ndarray],
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1689,6 +1709,7 @@ class Model:
                 self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
+            # self.lstm_net.reset_lstm_states()
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
                 x
             )
@@ -1721,6 +1742,8 @@ class Model:
         intervention: Optional[dict] = None,
         update_embedding: Optional[bool] = False,
         update_mask: Optional[List[int]] = None,
+        yes_init=True,
+        stateless: Optional[bool] = False,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1754,7 +1777,10 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
-        self.initialize_states_history()
+
+        # only intialize if empty
+        if yes_init:
+            self.initialize_states_history()
 
         # set lstm to train modes
         if self.lstm_net and train_lstm:
@@ -1776,19 +1802,13 @@ class Model:
 
             # Update LSTM parameters
             if self.lstm_net:
-                self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
 
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
-                # Use observation unless it is NaN, then fall back to the posterior)
-                obs_valid = not np.any(np.isnan(y))
-                if obs_valid:
-                    self.lstm_output_history.update(y, np.zeros_like(y))
-                else:
-                    self.update_lstm_output_history(
-                        mu_states_posterior,
-                        var_states_posterior,
-                    )
+                self.update_lstm_output_history(
+                    mu_states_posterior,
+                    var_states_posterior,
+                )
 
                 if update_embedding and getattr(self.lstm_net, "embed_len", 0) > 0:
                     embed_len = self.lstm_net.embed_len
@@ -1797,8 +1817,6 @@ class Model:
                     delta_input_mu, delta_input_var = self.lstm_net.get_input_states()
                     embed_mu = np.asarray(delta_input_mu)[..., -embed_len:].copy()
                     embed_var = np.asarray(delta_input_var)[..., -embed_len:].copy()
-                    # TODO: this needs to be an user input
-                    # decide on vector indices to update
                     if update_mask is not None:
                         embed_mu = embed_mu * np.array(update_mask)
                         embed_var = embed_var * np.array(update_mask)
@@ -1817,7 +1835,7 @@ class Model:
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
                 self._reset_transition_matrix_interv(interv["mu"], interv["var"])
-            
+
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1933,8 +1951,14 @@ class Model:
         if self.lstm_net.smooth:
             self.pretraining_filter(train_data)
 
-        self.filter(data=train_data, intervention=intervention)
-        mu_validation_preds, std_validation_preds, _ = self.forecast(data=validation_data, intervention=intervention)
+        self.filter(data=train_data, intervention=intervention, stateless=False)
+        mu_validation_preds, std_validation_preds, _ = self.filter(
+            data=validation_data,
+            train_lstm=False,
+            intervention=intervention,
+            yes_init=False,
+            stateless=False,
+        )
         self.smoother()
         self.set_memory(time_step=0)
         self._current_epoch += 1

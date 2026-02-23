@@ -271,9 +271,11 @@ class LstmNetwork(BaseComponent):
             lstm_network.load(filename=self.load_lstm_net)
 
             if self.finetune:
-                # use variances from original params
+                # Build a new state dict: pretrained means + fresh variances
                 loaded_params = lstm_network.state_dict()
-                for layer_name in original_params.keys():
+                layer_names = list(original_params.keys())
+                new_params = {}
+                for layer_name in layer_names:
                     if layer_name in loaded_params:
                         mu_w, var_w, mu_b, var_b = loaded_params[layer_name]
                         original_mu_w, original_var_w, original_mu_b, original_var_b = (
@@ -286,5 +288,6 @@ class LstmNetwork(BaseComponent):
                             mu_b,
                             original_var_b,
                         )
+                lstm_network.load_state_dict(new_params)
 
         return lstm_network

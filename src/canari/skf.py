@@ -293,11 +293,15 @@ class SKF:
                 soure_model._states_comp = target_model._states_comp.copy()
                 states_diff.append(state)
 
-        if "white noise" in soure_model.states_name:
-            index_noise = soure_model.states_name.index("white noise")
-            target_model.process_noise_matrix[index_noise, index_noise] = (
-                soure_model.process_noise_matrix[index_noise, index_noise]
-            )
+        for noise_state in ("white noise", "heteroscedastic noise"):
+            if (
+                noise_state in soure_model.states_name
+                and noise_state in target_model.states_name
+            ):
+                index_noise = soure_model.states_name.index(noise_state)
+                target_model.process_noise_matrix[index_noise, index_noise] = (
+                    soure_model.process_noise_matrix[index_noise, index_noise]
+                )
         return soure_model, target_model, states_diff
 
     def _create_transition_model(
@@ -1000,9 +1004,14 @@ class SKF:
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
-                )
+                for transition_model in self.model.values():
+                    if (
+                        transition_model.get_states_index("heteroscedastic noise")
+                        is not None
+                    ):
+                        transition_model._estim_hete_noise(
+                            mu_v2bar_prior, var_v2bar_prior
+                        )
 
         else:
             mu_lstm_pred = None
