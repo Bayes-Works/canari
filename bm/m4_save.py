@@ -8,7 +8,7 @@ from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend, ExpSmoothing, LocalLevel
 
 # # Read data
-ts = 133
+ts = 57
 # training set
 data_train_file = "./data/m4/Hourly-train.csv"
 df_train = pd.read_csv(data_train_file, skiprows=1, delimiter=",", header=None)
@@ -57,7 +57,6 @@ trainval = data_processor.get_splits(split="train_val")
 # Model
 lstm_smoother = True
 model = Model(
-    # LocalLevel(),
     LocalTrend(var_states=[1e-2, 1e-4]),
     ExpSmoothing(mu_states=[0,.5,0], var_states=[0,1e-2,0], es_order=1, activation=None),
     LstmNetwork(
@@ -189,6 +188,7 @@ fig, ax = plot_states(
     states=model.states,
     standardization=True,
     color="b",
+    # states_type="prior",
 )
 plot_data(
     data_processor=data_processor,
@@ -221,3 +221,4 @@ plot_prediction(
 )
 plt.tight_layout()
 plt.show()
+

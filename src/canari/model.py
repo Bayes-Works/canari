@@ -768,6 +768,9 @@ class Model:
 
         # noise 
         mu_v = mu_states[noise_index]
+        threshold = 1
+        if np.abs(mu_v) > threshold:
+            mu_v = np.sign(mu_v) * threshold
         var_v = var_states[noise_index, noise_index]
         cov_v_others = var_states[noise_index,:]
 
