@@ -60,6 +60,10 @@ def train_lstm_skf(
             warmup_lookback, np.zeros_like(warmup_lookback)
         )  # important for global model
 
+        # warm-up for infer_len steps
+        if model.lstm_net.smooth:
+            model.pretraining_filter(train_set)
+
         model.filter(
             train_set,
             update_embedding=False,
@@ -207,7 +211,7 @@ def load_data(df, col, train_split):
 
 def main(
     experiment_name: str = "G_finetuned_CDF",
-    num_trial_optim_model: int = 40,
+    num_trial_optim_model: int = 70,
     model_noise: bool = True,
     pretrained_parameters: str = None,
     zeroshot: bool = False,
@@ -240,12 +244,18 @@ def main(
     df_raw.set_index("Date", inplace=True)
     df_raw.index.name = "date_time"
 
+    # df = pd.read_csv("data/exp02_data/LTU007PIAEVA920_x_cleaned.csv")
+    # df["Date"] = pd.to_datetime(df["Date"])
+    # df.set_index("Date", inplace=True)
+    # df.index.name = "date_time"
+    # df_raw =df
+
     # ofsset time with one week
     # df_raw.index = df_raw.index + pd.Timedelta(weeks=1)
 
     # Add synthetic anomaly to data
     trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 700
+    time_anomaly = 700  # 200
     new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
     trend[time_anomaly:] = trend[time_anomaly:] + new_trend
     df_raw = df_raw.add(trend, axis=0)
@@ -267,10 +277,9 @@ def main(
             load_lstm_net=pretrained_parameters,
             finetune=pretrained_parameters is not None and not zeroshot,
             model_noise=model_noise,
-            reinit_last_layer=True,
             smoother=False,
         ),
-        # WhiteNoise(std_error=0.05),
+        WhiteNoise(std_error=0.11),
     )
 
     if zeroshot and pretrained_parameters is not None:
@@ -289,24 +298,48 @@ def main(
     # Save the trained LSTM parameters and learned initial states
     learned_mu_states = model.mu_states.copy()
     learned_var_states = model.var_states.copy()
+    warmup_lookback_mu = warmup_lookback.copy()
+    warmup_lookback_var = np.zeros_like(warmup_lookback_mu)
+
+    # Save the trained LSTM to disk so the objective can reconstruct
+    # the model without capturing the unpicklable pytagi C++ object.
+    import tempfile
+
+    _lstm_tmp = tempfile.NamedTemporaryFile(suffix=".bin", delete=False)
+    _lstm_save_path = _lstm_tmp.name
+    _lstm_tmp.close()
+    model.lstm_net.save(_lstm_save_path)
+
+    # Drop the reference so the closure never sees the pytagi object
+    del model
 
     def run_skf_with_parameters(param):
 
-        # Reconstruct the full model to avoid Ray pickle issues
-        norm_model = model
+        # Reconstruct the full model from scratch to avoid Ray pickle issues
+        norm_model = Model(
+            LocalTrend(),
+            LstmNetwork(
+                look_back_len=52,
+                num_features=2,
+                num_layer=3,
+                num_hidden_unit=40,
+                manual_seed=42,
+                load_lstm_net=_lstm_save_path,
+                model_noise=model_noise,
+                smoother=False,
+            ),
+            WhiteNoise(std_error=0.11),
+        )
 
         # Use the learned initial states from training
-        norm_model.mu_states[:] = learned_mu_states
-        norm_model.var_states[:] = learned_var_states
-        norm_model.lstm_output_history.set(
-            warmup_lookback, np.zeros_like(warmup_lookback)
-        )
+        norm_model.set_states(learned_mu_states, learned_var_states)
+        norm_model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
 
         #  Define SKF model with parameters
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(model_noise=model_noise),
-            # WhiteNoise(),
+            WhiteNoise(),
         )
         skf = SKF(
             norm_model=norm_model,
@@ -331,56 +364,60 @@ def main(
     param_space = {
         "std_transition_error": [1e-6, 1e-4],
         "norm_to_abnorm_prob": [1e-6, 1e-4],
-        "sigma_v": [1e-3, 2e-1],
+        # "sigma_v": [1e-3, 2e-1],
     }
     # Define optimizer
-    # model_optimizer = Optimizer(
-    #     model=run_skf_with_parameters,
-    #     param=param_space,
-    #     num_optimization_trial=num_trial_optim_model,
-    #     num_startup_trials=50,
-    # )
-
-    # # Get best model
-    # model_optimizer.optimize()
-    # param = model_optimizer.get_best_param()
-    skf_optim = run_skf_with_parameters(param_space)
-
-    ######### Detect anomaly #########
-    filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
-
-    fig, ax = plot_skf_states(
-        data_processor=data_processor,
-        states=states,
-        model_prob=filter_marginal_abnorm_prob,
-        standardization=True,
+    model_optimizer = Optimizer(
+        model=run_skf_with_parameters,
+        param=param_space,
+        num_optimization_trial=num_trial_optim_model,
+        num_startup_trials=30,
     )
-    anomaly_idx = time_anomaly - data_start_idx - 52
-    ax[0].axvline(
-        x=data_processor.data.index[anomaly_idx],
-        color="r",
-        linestyle="--",
-        label="Anomaly",
-    )
-    ax[5].axvline(
-        x=data_processor.data.index[anomaly_idx],
-        color="r",
-        linestyle="--",
-        label="Anomaly",
-    )
-    fig.suptitle("SKF hidden states", fontsize=10, y=1)
-    plt.savefig(f"results/{experiment_name}.svg", bbox_inches="tight")
-    plt.show()
+
+    try:
+        # Get best SKF hyperparameters
+        model_optimizer.optimize()
+        param = model_optimizer.get_best_param()
+        skf_optim = run_skf_with_parameters(param)
+
+        ######### Detect anomaly #########
+        filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
+
+        fig, ax = plot_skf_states(
+            data_processor=data_processor,
+            states=states,
+            model_prob=filter_marginal_abnorm_prob,
+            standardization=True,
+        )
+        anomaly_idx = time_anomaly - data_start_idx - 52
+        ax[0].axvline(
+            x=data_processor.data.index[anomaly_idx],
+            color="r",
+            linestyle="--",
+            label="Anomaly",
+        )
+        ax[5].axvline(
+            x=data_processor.data.index[anomaly_idx],
+            color="r",
+            linestyle="--",
+            label="Anomaly",
+        )
+        fig.suptitle("SKF hidden states", fontsize=10, y=1)
+        plt.savefig(f"results/{experiment_name}.svg", bbox_inches="tight")
+        plt.show()
+    finally:
+        if os.path.exists(_lstm_save_path):
+            os.remove(_lstm_save_path)
 
 
 if __name__ == "__main__":
     main(
-        experiment_name="G_finetuned_LL_trainedY_ZO_TAGIV",
-        num_trial_optim_model=100,
+        experiment_name="agvi-check-local",
+        num_trial_optim_model=70,
         # pretrained_parameters="saved_params/global_models/ByWindow_global-small_no-embeddings_seed42_whitenoise.bin",
-        # pretrained_parameters="saved_params/global_models/ByWindow_global_no-embeddings_seed42_whitenoise.bin",
-        pretrained_parameters="saved_params/global_models/BySeries_global_no-embeddings_seed11.bin",
-        model_noise=True,
-        zeroshot=True,
+        pretrained_parameters="saved_params/global_models/ByWindow_global_no-embeddings_seed42_whitenoise.bin",
+        # pretrained_parameters="saved_params/global_models/ByWindow_global_no-embeddings_seed42.bin",
+        model_noise=False,
+        zeroshot=False,
         train_split=1.0,
     )

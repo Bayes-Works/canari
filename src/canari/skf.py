@@ -659,7 +659,7 @@ class SKF:
                 )
 
         return transition_coef
-    
+
     def _states_intervention(self, delta_mu, delta_var):
         """
         States intervention.
@@ -674,15 +674,15 @@ class SKF:
         #     for transition_model in self.model.values():
         #         transition_model.mu_states = transition_model.mu_states + delta_mu
         #         transition_model.var_states = transition_model.var_states + delta_var
-                
+
         # else:
         #     raise ValueError(
         #         "Incorrect mu and/or var dimension for inverventions."
         #     )
         for transition_model in self.model.values():
             transition_model._states_intervention(delta_mu, delta_var)
-        
-    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+
+    def _transition_matrix_interv(self, delta_mu: list, delta_var: list, value: float):
         """
         Transition matrix intervention.
         """
@@ -1012,6 +1012,8 @@ class SKF:
                         transition_model._estim_hete_noise(
                             mu_v2bar_prior, var_v2bar_prior
                         )
+            if self.lstm_net.stateless:
+                self.lstm_net.reset_lstm_states()
 
         else:
             mu_lstm_pred = None

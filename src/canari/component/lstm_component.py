@@ -101,6 +101,7 @@ class LstmNetwork(BaseComponent):
         embed_len: Optional[int] = 0,
         embedding: Optional[Tuple[np.ndarray, np.ndarray]] = None,
         finetune: Optional[bool] = False,
+        stateless: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -124,6 +125,7 @@ class LstmNetwork(BaseComponent):
         )
         self.embedding = embedding
         self.finetune = finetune
+        self.stateless = stateless
         super().__init__()
 
     def initialize_component_name(self):
@@ -246,6 +248,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.model_noise = self.model_noise
         lstm_network.embed_len = self.embed_len
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
+        lstm_network.stateless = self.stateless
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
@@ -269,20 +272,19 @@ class LstmNetwork(BaseComponent):
         if self.load_lstm_net:
             original_params = lstm_network.state_dict()
             lstm_network.load(filename=self.load_lstm_net)
+            loaded_params = lstm_network.state_dict()
 
             if self.finetune:
                 # Build a new state dict: pretrained means + fresh variances
-                loaded_params = lstm_network.state_dict()
-                layer_names = list(original_params.keys())
                 new_params = {}
-                for layer_name in layer_names:
+                for layer_name in original_params.keys():
                     if layer_name in loaded_params:
-                        mu_w, var_w, mu_b, var_b = loaded_params[layer_name]
-                        original_mu_w, original_var_w, original_mu_b, original_var_b = (
-                            original_params[layer_name]
-                        )
-                        # Update the variances while keeping the means from the loaded params
-                        lstm_network.state_dict()[layer_name] = (
+                        mu_w, _, mu_b, _ = loaded_params[layer_name]
+                        _, original_var_w, _, original_var_b = original_params[
+                            layer_name
+                        ]
+                        # Keep pretrained means, restore fresh variances
+                        new_params[layer_name] = (
                             mu_w,
                             original_var_w,
                             mu_b,

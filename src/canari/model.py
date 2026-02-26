@@ -1245,7 +1245,7 @@ class Model:
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-6
+                    self.var_states[i, i] = 0
 
         self._mu_local_level = trend[0]
 
@@ -1466,6 +1466,8 @@ class Model:
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
+            if self.lstm_net.stateless:
+                self.lstm_net.reset_lstm_states()
 
             # Heteroscedastic noise
             if self.lstm_net.model_noise:

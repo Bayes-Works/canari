@@ -306,7 +306,7 @@ def run_experiments(df, train_split, seed):
         data_processor, local_model_preds[0], local_model_preds[1]
     )
     metrics["local_model"] = local_model_metrics
-    # plot_results(data_processor, local_model_preds[0], local_model_preds[1], title)
+    plot_results(data_processor, local_model_preds[0], local_model_preds[1], title)
 
     # 1-2.Run local model stateless
     title = f"Local Model_s{seed}_t{train_split}"
