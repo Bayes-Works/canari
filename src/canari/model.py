@@ -1727,7 +1727,7 @@ class Model:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1755,7 +1755,7 @@ class Model:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
             
         return (
             np.array(mu_obs_preds).flatten(),

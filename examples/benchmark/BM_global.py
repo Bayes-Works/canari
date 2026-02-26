@@ -25,7 +25,7 @@ with open("examples/benchmark/BM_metadata.json", "r") as f:
 
 def main(
     num_trial_optim_model: int = 70,
-    param_optimization: bool = True,
+    param_optimization: bool = False,
     benchmark_no: str = ["2"],
 ):
     for benchmark in benchmark_no:
@@ -42,6 +42,8 @@ def main(
         df = pd.read_csv(data_file, skiprows=0, delimiter=",")
         date_time = pd.to_datetime(df["date"])
         df = df.drop("date", axis=1)
+        df = df.iloc[:, [0]]
+        # df = df.interpolate(method="linear")
         df.index = date_time
         df.index.name = "date_time"
         # Data pre-processing
@@ -61,15 +63,16 @@ def main(
             model = Model(
                 LocalTrend(),
                 LstmNetwork(
-                    look_back_len=param["look_back_len"],
+                    look_back_len=52,
                     num_features=config["num_feature"],
-                    num_layer=1,
+                    num_layer=3,
                     infer_len=config["infer_len"],
-                    num_hidden_unit=50,
+                    num_hidden_unit=40,
                     manual_seed=1,
                     smoother=config["smoother"],
+                    model_noise=True,
+                    load_lstm_net="saved_params/BySeries_global_no-embeddings_seed11.bin",
                 ),
-                WhiteNoise(std_error=param["sigma_v"]),
             )
 
             model.auto_initialize_baseline_states(
@@ -82,6 +85,7 @@ def main(
                 mu_validation_preds, std_validation_preds, states = model.lstm_train(
                     train_data=train_data,
                     validation_data=validation_data,
+                    white_noise_decay=False,
                 )
 
                 mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -115,8 +119,7 @@ def main(
             #### Define SKF model with parameters #########
             abnorm_model = Model(
                 LocalAcceleration(),
-                LstmNetwork(),
-                WhiteNoise(),
+                LstmNetwork(model_noise=True),
             )
             skf = SKF(
                 norm_model=model,
@@ -149,7 +152,7 @@ def main(
                 model=model_with_parameters,
                 param=param_space,
                 num_optimization_trial=num_trial_optim_model,
-                num_startup_trials=40,
+                num_startup_trials=30,
             )
             model_optimizer.optimize()
             # Get best model
@@ -159,11 +162,51 @@ def main(
             skf_optim_dict = skf_optim.get_dict()
             skf_optim_dict["model_param"] = param
             skf_optim_dict["cov_names"] = train_data["cov_names"]
-            with open(f"{config['saved_model_path']}_LL_obj.pkl", "wb") as f:
+            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "wb") as f:
                 pickle.dump(skf_optim_dict, f)
         else:
             # # Load saved skf model
-            with open(f"{config['saved_model_path']}_LL_obj.pkl", "rb") as f:
+            # model = Model(
+            #     LocalTrend(),
+            #     LstmNetwork(
+            #         look_back_len=52,
+            #         num_features=2,
+            #         num_layer=3,
+            #         infer_len=156,
+            #         num_hidden_unit=40,
+            #         manual_seed=1,
+            #         smoother=True,
+            #         model_noise=True,
+            #     ),
+            # )
+
+
+            # with open("saved_params/lstm_global_dict.pkl", "rb") as f:
+            #     lstm_global_dict = pickle.load(f)
+            # model.lstm_net.load_state_dict(lstm_global_dict)
+            # model_dict = model.lstm_net.state_dict()
+            # model_dict["SLinear.3"] = model_dict.pop("Linear.3")
+            # model_dict["SLSTM.2"] = model_dict.pop("LSTM.2")
+            # model_dict["SLSTM.1"] = model_dict.pop("LSTM.1")
+            # model_dict["SLSTM.0"] = model_dict.pop("LSTM.0")
+            # with open(f"saved_params/lstm_global_dict.pkl", "wb") as f:
+            #     pickle.dump(model_dict, f)
+            
+            # abnorm_model = Model(
+            #     LocalAcceleration(),
+            #     LstmNetwork(model_noise=True),
+            # )
+            # skf_optim = SKF(
+            #     norm_model=model,
+            #     abnorm_model=abnorm_model,
+            #     # std_transition_error=param["std_transition_error"],
+            #     # norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
+            #     std_transition_error=1e-4,
+            #     norm_to_abnorm_prob=1e-5,
+            # )
+
+                        
+            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "rb") as f:
                 skf_optim_dict = pickle.load(f)
             skf_optim = SKF.load_dict(skf_optim_dict)
 
@@ -179,7 +222,7 @@ def main(
             standardization=True,
         )
         fig.suptitle("SKF hidden states", fontsize=10, y=1)
-        plt.savefig(f"{config['saved_result_path']}_LL_obj.png")
+        plt.savefig(f"{config['saved_result_path']}_LL_obj_agvi_1.png")
         plt.show()
 
 

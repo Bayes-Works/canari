@@ -25,8 +25,8 @@ with open("examples/benchmark/BM_metadata.json", "r") as f:
 
 def main(
     num_trial_optim_model: int = 70,
-    param_optimization: bool = True,
-    benchmark_no: str = ["2"],
+    param_optimization: bool = False,
+    benchmark_no: str = ["5"],
 ):
     for benchmark in benchmark_no:
 
@@ -42,6 +42,8 @@ def main(
         df = pd.read_csv(data_file, skiprows=0, delimiter=",")
         date_time = pd.to_datetime(df["date"])
         df = df.drop("date", axis=1)
+        # df = df[["yP"]]
+        # df = df.interpolate(method="linear")
         df.index = date_time
         df.index.name = "date_time"
         # Data pre-processing
@@ -68,8 +70,8 @@ def main(
                     num_hidden_unit=50,
                     manual_seed=1,
                     smoother=config["smoother"],
+                    model_noise=True,
                 ),
-                WhiteNoise(std_error=param["sigma_v"]),
             )
 
             model.auto_initialize_baseline_states(
@@ -115,8 +117,7 @@ def main(
             #### Define SKF model with parameters #########
             abnorm_model = Model(
                 LocalAcceleration(),
-                LstmNetwork(),
-                WhiteNoise(),
+                LstmNetwork(model_noise=True),
             )
             skf = SKF(
                 norm_model=model,
@@ -159,11 +160,11 @@ def main(
             skf_optim_dict = skf_optim.get_dict()
             skf_optim_dict["model_param"] = param
             skf_optim_dict["cov_names"] = train_data["cov_names"]
-            with open(f"{config['saved_model_path']}_LL_obj.pkl", "wb") as f:
+            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "wb") as f:
                 pickle.dump(skf_optim_dict, f)
         else:
             # # Load saved skf model
-            with open(f"{config['saved_model_path']}_LL_obj.pkl", "rb") as f:
+            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "rb") as f:
                 skf_optim_dict = pickle.load(f)
             skf_optim = SKF.load_dict(skf_optim_dict)
 
@@ -179,7 +180,7 @@ def main(
             standardization=True,
         )
         fig.suptitle("SKF hidden states", fontsize=10, y=1)
-        plt.savefig(f"{config['saved_result_path']}_LL_obj.png")
+        plt.savefig(f"{config['saved_result_path']}_LL_obj_agvi_1.png")
         plt.show()
 
 

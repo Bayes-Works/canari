@@ -1000,9 +1000,10 @@ class SKF:
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
-                )
+                for model in self.model.values():
+                    model._estim_hete_noise(
+                        mu_v2bar_prior, var_v2bar_prior
+                    )
 
         else:
             mu_lstm_pred = None
