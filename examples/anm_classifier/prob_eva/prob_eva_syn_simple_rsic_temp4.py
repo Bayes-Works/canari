@@ -42,7 +42,7 @@ data_processor = DataProcess(
 )
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt_feb.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll_feb.csv")
 
 # Containers for restored data
 restored_data = []
@@ -317,4 +317,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_1_bnnitv.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_1_bnnitv.csv", index=False)

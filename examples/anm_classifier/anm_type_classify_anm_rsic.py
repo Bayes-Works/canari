@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -42,8 +42,8 @@ df_raw.columns = ["obs"]
 
 # LL anomaly
 anm_type = 'LL'
-time_anomaly = 52*7
-anm_mag = 8
+time_anomaly = 52*6
+anm_mag = 17
 anm_baseline = np.ones(len(df_raw)) * anm_mag
 anm_baseline[:time_anomaly] = 0
 df_raw = df_raw.add(anm_baseline, axis=0)

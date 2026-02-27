@@ -640,7 +640,7 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            if first_time_trigger and self.current_time_step - trigger_time >= 52 * 5:
+            if first_time_trigger and self.current_time_step - trigger_time >= 52 *3:
                 first_time_trigger = False
 
             # Apply intervention to estimate data likelihood
@@ -694,7 +694,7 @@ class hsl_classification:
                 # Option #1: Inverse transition of the intervention variables
                 mu_lt_t = np.array([[llclt_itv], [trend_itv]])
                 var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
-                transition_matrix_itv = np.array([[1, 1], [0, 1]])
+                transition_matrix_itv = np.array([[1, itvtime_from_det], [0, 1]])
                 itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
                 llclt_itv_at_trigger = itv_at_trigger[0, 0]
                 var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
@@ -771,60 +771,66 @@ class hsl_classification:
                     # EBMS
                     data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    # data_ll_post_sum = np.nansum(data_ll_post_n)
-                    # data_lt_post_sum = np.nansum(data_lt_post_n)
+                    data_ll_post_sum = np.nansum(data_ll_post_n)
+                    data_lt_post_sum = np.nansum(data_lt_post_n)
 
                     hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
-                    # hs_ll_post_sum = np.nansum(hs_ll_post_n)
-                    # hs_lt_post_sum = np.nansum(hs_lt_post_n)
+                    hs_ll_post_sum = np.nansum(hs_ll_post_n)
+                    hs_lt_post_sum = np.nansum(hs_lt_post_n)
 
-                    joint_data_hs_ll_post_n = data_ll_post_n * hs_ll_post_n
-                    joint_data_hs_lt_post_n = data_lt_post_n * hs_lt_post_n
-                    joint_data_hs_ll_post_sum = np.nansum(joint_data_hs_ll_post_n)
-                    joint_data_hs_lt_post_sum = np.nansum(joint_data_hs_lt_post_n)
+                    # joint_data_hs_ll_post_n = data_ll_post_n * hs_ll_post_n
+                    # joint_data_hs_lt_post_n = data_lt_post_n * hs_lt_post_n
+                    # joint_data_hs_ll_post_sum = np.nansum(joint_data_hs_ll_post_n)
+                    # joint_data_hs_lt_post_sum = np.nansum(joint_data_hs_lt_post_n)
                 else:
-                    # data_ll_post_sum = 1
-                    # data_lt_post_sum = 1
-                    # hs_ll_post_sum = 1
-                    # hs_lt_post_sum = 1
-                    joint_data_hs_ll_post_sum = 1
-                    joint_data_hs_lt_post_sum = 1
+                    data_ll_post_sum = 1
+                    data_lt_post_sum = 1
+                    hs_ll_post_sum = 1
+                    hs_lt_post_sum = 1
+                    # joint_data_hs_ll_post_sum = 1
+                    # joint_data_hs_lt_post_sum = 1
 
-                # data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                # data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                # data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
+                data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
 
-                # hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                # hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                # hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
+                hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
 
-                # # Get mixture coefficient
-                # data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
-                # hs_prob_coeff = 1 - data_prob_coeff
-                # # Combine data and hidden states likelihoods
-                # # llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
-                # # ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
-                # # llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
-                # #                          + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
+                # Get mixture coefficient
+                data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
+                hs_prob_coeff = 1 - data_prob_coeff
+                # Combine data and hidden states likelihoods
+                llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
+                ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
+                llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
+                                         + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
                 
-                # # llitv_prob_mean = hs_llitv_prob_mean
-                # # ltitv_prob_mean = hs_ltitv_prob_mean
-                # # llitv_prob_std = hs_llitv_prob_std
+                # llitv_prob_mean = hs_llitv_prob_mean
+                # ltitv_prob_mean = hs_ltitv_prob_mean
+                # llitv_prob_std = hs_llitv_prob_std
 
-                # # llitv_prob_mean = data_llitv_prob_mean
-                # # ltitv_prob_mean = data_ltitv_prob_mean
-                # # llitv_prob_std = data_llitv_prob_std
+                # llitv_prob_mean = data_llitv_prob_mean
+                # ltitv_prob_mean = data_ltitv_prob_mean
+                # llitv_prob_std = data_llitv_prob_std
 
-                llitv_prob_mean = joint_data_hs_ll_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
-                ltitv_prob_mean = joint_data_hs_lt_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
-                llitv_prob_std = np.sqrt(joint_data_hs_ll_post_sum * joint_data_hs_lt_post_sum / (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)**2/(joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum + 1))
+                # llitv_prob_mean = joint_data_hs_ll_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                # ltitv_prob_mean = joint_data_hs_lt_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                # llitv_prob_std = np.sqrt(joint_data_hs_ll_post_sum * joint_data_hs_lt_post_sum / (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)**2/(joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum + 1))
 
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
-                itv_decision = choose_by_credible_interval(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
+                # itv_decision = choose_by_credible_interval(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
                 # itv_decision = choose_by_certainty(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
+                if llitv_prob_mean - ltitv_prob_mean > 3 * llitv_prob_std:
+                    itv_decision = 1
+                elif ltitv_prob_mean - llitv_prob_mean > 3 * llitv_prob_std:
+                    itv_decision = 2
+                else:
+                    itv_decision = 0
                 self.itv_decisions.append(itv_decision)
             elif rerun_kf is False:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])
@@ -854,20 +860,14 @@ class hsl_classification:
 
             if cond_ll and rerun_kf is False:
                 apply_intervention = True
-                # ll_intervened_mu = itv_LL[0]
-                ll_intervened_mu = level_itv
-                ll_intervened_var = var_level_itv
+                ll_intervened_mu = itv_LL[0]
                 itv_log.append(0)
                 itv_applied_times.append(trigger_time)
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
             elif cond_lt and rerun_kf is False:
                 apply_intervention = True
-                # ll_intervened_mu = itv_LT[0]
-                # lt_intervened_mu = itv_LT[1]
-                ll_intervened_mu = llclt_itv_at_trigger
-                lt_intervened_mu = trend_itv_at_trigger
-                ll_intervened_var = var_llclt_itv_at_trigger
-                lt_intervened_var = var_trend_itv_at_trigger
+                ll_intervened_mu = itv_LT[0]
+                lt_intervened_mu = itv_LT[1]
                 itv_log.append(1)
                 itv_applied_times.append(trigger_time)
                 print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
@@ -890,11 +890,9 @@ class hsl_classification:
                     # Apply intervention on base_model hidden states
                     LL_index = self.base_model.states_name.index("level")
                     LT_index = self.base_model.states_name.index("trend")
-                    self.base_model.mu_states[LL_index] += ll_intervened_mu
-                    self.base_model.var_states[LL_index, LL_index] += ll_intervened_var
+                    self.base_model.mu_states[LL_index] = ll_intervened_mu
                     if cond_lt:
-                        self.base_model.mu_states[LT_index] += lt_intervened_mu
-                        self.base_model.var_states[LT_index, LT_index] += lt_intervened_var
+                        self.base_model.mu_states[LT_index] = lt_intervened_mu
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd

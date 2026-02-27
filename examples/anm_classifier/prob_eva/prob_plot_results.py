@@ -25,9 +25,28 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll.csv",
-    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttolt.csv",
+    # csv_path="saved_results/prob_eva/class_results_before_simp/syn_simple_ts_results_rsic_lltoll.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug1_remove_drift2.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_1_bnnitv.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug3_joint.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug3_1_joint_bnnitv.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug4_smooth_itv.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug5_detllclt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug6_joint_bnnitv.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll_debug7_detllclt_bnnitv.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_cap5years.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll_debug2_1_bnnitv.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_2_smooth.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_3_llitv0uncertain.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_2_1_joint.csv",
+    ########################################################################################################
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_joint.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_add_uncertainty.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_add_uncertainty_v3.csv",
     evaluate_itv_type = True,
+    plot_detection_map = True,
+    first_anm_type = 'LT',
 )
 print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
@@ -44,14 +63,14 @@ fig, ax = plt.subplots(2, 1, figsize=(3, 2.5), constrained_layout=True)
 
 
 # Plot for detection_time
-ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSI}")
+ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSIC}")
 ax[0].fill_between(
     df_rsic_group.index,
     df_rsic_group["detection_time"]["mean"] - df_rsic_group["detection_time"]["std"],
     df_rsic_group["detection_time"]["mean"] + df_rsic_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label="RSI")
+ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label=r"\textbf{RSI}")
 ax[0].fill_between(
     df_rsi_group.index,
     df_rsi_group["detection_time"]["mean"] - df_rsi_group["detection_time"]["std"],
@@ -71,8 +90,8 @@ ax[0].set_xticklabels([])
 # ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=4)
 
 # Plot for detection_rate
-ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label="RSIC")
-ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label="RSI")
+ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}")
+ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")

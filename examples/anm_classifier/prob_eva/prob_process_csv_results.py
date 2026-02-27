@@ -2,6 +2,7 @@ import ast
 import numpy as np
 import pandas as pd
 from typing import Optional, Tuple
+import matplotlib.pyplot as plt
 
 
 def _process_detection_df(
@@ -9,6 +10,7 @@ def _process_detection_df(
     csv_path: str,
     *,
     evaluate_itv_type: Optional[bool] = False,
+    plot_detection_map: Optional[bool] = False,
     detection_col: str = "anomaly_detected_index",
     anm1_col: str = "anomaly_start_index1",
     anm2_col: str = "anomaly_start_index2",
@@ -16,6 +18,7 @@ def _process_detection_df(
     itv_log_col: str = "intervention_log",
     default_years: int = 3,
     freq_per_year: int = 52,
+    first_anm_type = None,
 ) -> pd.DataFrame:
     """
     Load a CSV and reproduce your processing:
@@ -56,6 +59,38 @@ def _process_detection_df(
 
     true_detection = []
     false_detection = []
+    first_classification = []
+
+    # Plot the detection map
+    if plot_detection_map:
+        plt.figure(figsize=(10, 6))
+        for idx, row in df.iterrows():
+            anm1_start = row[anm1_col]
+            anm2_start = row[anm2_col]
+            detected_indices = row[detection_col]
+
+            # Safety: handle missing / NaN / non-list
+            if not isinstance(detected_indices, list) or pd.isna(anm1_start) or pd.isna(anm2_start):
+                continue
+
+            plt.scatter(detected_indices, [idx] * len(detected_indices), label="Detected", color="grey", marker="o", alpha=0.5, s=5)
+            plt.scatter(anm1_start, idx, label="Anomaly 1 Start", color="red", marker="o", s=5)
+            plt.scatter(anm2_start, idx, label="Anomaly 2 Start", color="red", marker="o", s=5)
+            # Plot intervention log if available
+            if itv_log_col in row and isinstance(row[itv_log_col], list):
+                for idx_itv, itv_time in enumerate(row["intervention_applied_times"]):
+                    if row[itv_log_col][idx_itv] == 0:
+                        plt.scatter(itv_time, idx, label="Intervention", color="tab:blue", marker="o", s=5)
+                    elif row[itv_log_col][idx_itv] == 1:
+                        plt.scatter(itv_time, idx, label="Intervention", color="tab:orange", marker="o", s=5)
+
+        plt.xlabel("Time Index")
+        plt.ylabel("Sample Index")
+        plt.title("Detection Map")
+        # Add horizontal grid lines for each index
+        plt.yticks(np.arange(0, len(df), 10))
+        plt.grid(axis='y', linestyle='--', alpha=0.5)
+        # plt.show()
 
     for idx, row in df.iterrows():
         anm1_start = row[anm1_col]
@@ -78,6 +113,13 @@ def _process_detection_df(
         first_anm_detect_index = min(between)
         df.at[idx, "first_anm_detect_index"] = first_anm_detect_index
 
+        if evaluate_itv_type:
+            if first_anm_detect_index in row["intervention_applied_times"]:
+                itv_idx = row["intervention_applied_times"].index(first_anm_detect_index)
+                first_classification.append(row[itv_log_col][itv_idx])
+            else:
+                first_classification.append(2)
+
         # Remove <= first_anm_detect_index
         after = [d for d in detected_indices if d > first_anm_detect_index]
         df.at[idx, "detection_index_after_anm1"] = after
@@ -88,27 +130,40 @@ def _process_detection_df(
             if d >= anm2_start:
                 detection_time = d - anm2_start
                 if evaluate_itv_type:
-                    # Evaluate the classification among true detections
-                    if d in row["intervention_applied_times"]:
-                        itv_idx = row["intervention_applied_times"].index(d)
-                        true_detection.append(row[itv_log_col][itv_idx])
-                    else:
-                        true_detection.append(2)
-
-                    # Evaluate the classification among false detections
-                    after_false_detections = after.copy()
-                    after_false_detections.remove(d)
-                    for fd in after_false_detections:
-                        if fd in row["intervention_applied_times"]:
-                            itv_idx = row["intervention_applied_times"].index(fd)
-                            false_detection.append(row[itv_log_col][itv_idx])
+                    # Only consider the first detection matches the first anomaly type
+                    if first_classification[-1] == (0 if first_anm_type == 'LL' else 1):
+                        # Evaluate the classification among true detections
+                        if d in row["intervention_applied_times"]:
+                            itv_idx = row["intervention_applied_times"].index(d)
+                            true_detection.append(row[itv_log_col][itv_idx])
                         else:
-                            false_detection.append(2)
+                            true_detection.append(2)
+
+                        # Evaluate the classification among false detections
+                        after_false_detections = after.copy()
+                        after_false_detections.remove(d)
+                        for fd in after_false_detections:
+                            if fd in row["intervention_applied_times"]:
+                                itv_idx = row["intervention_applied_times"].index(fd)
+                                false_detection.append(row[itv_log_col][itv_idx])
+                            else:
+                                false_detection.append(2)
                 break
         df.at[idx, "detection_time"] = detection_time
 
     if evaluate_itv_type:
         print('------------- Classification analysis --------------------')
+        print('------------- First detection --------------------')
+        print("For the detection of the first anomaly, the counts are as follows:")
+        unique, counts = np.unique(first_classification, return_counts=True)
+        first_classification_counts = dict(zip(unique, counts))
+        sum_count = sum(first_classification_counts.values())
+        # Change keys from 0 -> 'LL itv', 1 -> 'LT itv', 2 -> 'non-identified'
+        first_classification_counts = {
+            ( 'LL itv' if k == 0 else 'LT itv' if k == 1 else 'non-identified' ): round(v / sum_count, 2)
+            for k, v in first_classification_counts.items()}
+        print(first_classification_counts)
+        print('------------- Second detection --------------------')
         print("Among all the true detections, the counts are as follows:")
         # 0: LL itv, 1: LT itv, 2: non-identified
         unique, counts = np.unique(true_detection, return_counts=True)

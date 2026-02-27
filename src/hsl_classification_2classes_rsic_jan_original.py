@@ -22,7 +22,6 @@ import torch
 import stumpy
 from src.convert_to_class import hierachical_softmax
 from typing import List
-from scipy.stats import beta
 
 
 class hsl_classification:
@@ -47,6 +46,7 @@ class hsl_classification:
         self.base_model.initialize_states_history()
         self.generate_model.initialize_states_history()
         self.drift_model.initialize_states_history()
+        self.drift_model2.initialize_states_history()
         self.AR_index = base_model.states_name.index("autoregression")
         self.LTd_buffer = []
         self.p_anm_all = []
@@ -59,9 +59,8 @@ class hsl_classification:
         self.lstm_history = []
         self.lstm_cell_states = []
         self.mean_target_lt_model, self.std_target_lt_model, self.mean_target_ll_model, self.std_target_ll_model = None, None, None, None
-        self.mean_LTd_class, self.std_LTd_class = None, None
+        self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class = None, None, None, None
         self.class_prob_moments = []
-        self.itv_decisions = []
         self.ll_itv_all, self.lt_itv_all = [], []
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
@@ -74,12 +73,14 @@ class hsl_classification:
         """
         self.init_base_model = copy.deepcopy(self.base_model)
         self.init_drift_model = copy.deepcopy(self.drift_model)
+        self.init_drift_model2 = copy.deepcopy(self.drift_model2)
         if "lstm" in self.base_model.states_name:
             self.init_base_model.lstm_net = self.base_model.lstm_net
             self.init_base_model.lstm_output_history = copy.deepcopy(self.base_model.lstm_output_history)
             self.init_base_model.lstm_net.set_lstm_states(copy.deepcopy(self.base_model.lstm_net.get_lstm_states()))
         self.init_base_model.initialize_states_history()
         self.init_drift_model.initialize_states_history()
+        self.init_drift_model2.initialize_states_history()
 
     def _create_drift_model(self, baseline_process_error_std):
         ar_component_key = [key for key in self.base_model.components.keys() if 'autoregression' in key][0]
@@ -96,6 +97,20 @@ class hsl_classification:
                    mu_states=self.ar_component.mu_states, 
                    var_states=self.ar_component.var_states
                 ),
+        )
+
+        self.drift_model2 = Model(
+            LocalTrend(
+                mu_states=[0, 0],
+                var_states=[baseline_process_error_std**2, baseline_process_error_std**2],
+                std_error=1e-3,
+            ),
+            Autoregression(
+                std_error=self.ar_component.std_error,
+                phi=self.ar_component.phi,
+                mu_states=self.ar_component.mu_states,
+                var_states=self.ar_component.var_states
+            ),
         )
 
     def filter(self, data, buffer_LTd: Optional[bool] = False):
@@ -159,6 +174,14 @@ class hsl_classification:
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
             std_ar_preds.append(var_ar_pred**0.5)
+            mu_ar_pred2, var_ar_pred2, mu_drift_states_prior2, _ = self.drift_model2.forward()
+            _, _, mu_drift_states_posterior2, var_drift_states_posterior2 = self.drift_model2.backward(
+                obs=self.base_model.mu_states_posterior[self.AR_index], 
+                obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
+            self.drift_model2._save_states_history()
+            self.drift_model2.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
+            mu_ar_preds2.append(mu_ar_pred2)
+            std_ar_preds2.append(var_ar_pred2**0.5)
 
             if buffer_LTd:
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
@@ -168,7 +191,6 @@ class hsl_classification:
             self.mu_itv_all.append([np.nan, np.nan, np.nan])
             self.std_itv_all.append([np.nan, np.nan, np.nan])
             self.class_prob_moments.append([0.5, 0.5, 0, 0])
-            self.itv_decisions.append(0)
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
             self.posterior_mu_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
@@ -640,26 +662,27 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            if first_time_trigger and self.current_time_step - trigger_time >= 52 * 5:
+            if first_time_trigger and self.current_time_step - trigger_time >= 52 *3:
                 first_time_trigger = False
 
             # Apply intervention to estimate data likelihood
-            # if self.current_time_step > 52 *5:
-            #     p_a_I_Yt = 0.95
             if p_a_I_Yt > self.detection_threshold and rerun_kf is False:
                 # # Track what classifier learns
                 LTd_mu_prior = np.array(self.drift_model.states.mu_prior)[:, 1].flatten()
+                LTd2_mu_prior = np.array(self.drift_model2.states.mu_prior)[:, 1].flatten()
                 # LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior)
                 LTd_history = self._hidden_states_collector(self.current_time_step - 1, LTd_mu_prior, step_look_back=128)
+                LTd2_history = self._hidden_states_collector(self.current_time_step - 1, LTd2_mu_prior, step_look_back=128)
 
                 # Normalize the histories
                 LTd_history = (LTd_history - self.mean_LTd_class) / self.std_LTd_class
+                LTd2_history = (LTd2_history - self.mean_LTd2_class) / self.std_LTd2_class  
                
                 # Get interventions predicted by the model
                 self.lt_itv_model.net.eval()
                 self.ll_itv_model.net.eval()
 
-                itv_input_history = np.array(LTd_history.tolist())
+                itv_input_history = np.array(LTd_history.tolist()+LTd2_history.tolist())
                 itv_input_history = itv_input_history.astype(np.float32)
                 output_pred_lt_mu, output_pred_lt_var = self.lt_itv_model.net(itv_input_history)
                 itv_pred_lt_mu = output_pred_lt_mu[::2]
@@ -676,7 +699,6 @@ class hsl_classification:
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
-                var_llclt_itv = itv_pred_lt_var_denorm[1]
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_level_itv = itv_pred_ll_var_denorm[0]
 
@@ -685,27 +707,14 @@ class hsl_classification:
                 else:
                     self.p_anm_all.append(p_a_I_Yt)
                 
+                # Option 2: use the detection time
                 if first_time_trigger is False:
                     trigger_time = self.current_time_step
                     first_time_trigger = True
                 itvtime_from_det = self.current_time_step - trigger_time + 1
-                
-                # Get the trend intervention at the detection time
-                # Option #1: Inverse transition of the intervention variables
-                mu_lt_t = np.array([[llclt_itv], [trend_itv]])
-                var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
-                transition_matrix_itv = np.array([[1, 1], [0, 1]])
-                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
-                llclt_itv_at_trigger = itv_at_trigger[0, 0]
-                var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
-                trend_itv_at_trigger = itv_at_trigger[1, 0]
-                var_trend_itv_at_trigger = var_itv_at_trigger[1, 1]
-                # # For verify the forward gives me the same states:
-                # mu_lt_t, var_lt_t = transition_lt_states(llclt_itv_at_trigger, var_llclt_itv_at_trigger, transition_matrix_itv, itvtime_from_det)
 
-                # # Option #2: Naive propagation of uncertainties
-                # llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
-                # var_llclt_itv_at_trigger = var_llclt_itv + var_trend_itv * itvtime_from_det**2
+                # Option 3: use the detection time and calibrated LL at that time step
+                llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
 
                 # Intervention time step option to choose:
                 num_steps_retract = itvtime_from_det
@@ -728,8 +737,8 @@ class hsl_classification:
                 data_likelihoods_lt, hs_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
-                    level_intervention = [llclt_itv_at_trigger, var_llclt_itv_at_trigger],
-                    trend_intervention = [trend_itv_at_trigger, var_trend_itv_at_trigger],
+                    level_intervention = [llclt_itv_at_trigger, 0],
+                    trend_intervention = [trend_itv, var_trend_itv],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
@@ -771,103 +780,64 @@ class hsl_classification:
                     # EBMS
                     data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    # data_ll_post_sum = np.nansum(data_ll_post_n)
-                    # data_lt_post_sum = np.nansum(data_lt_post_n)
+                    data_ll_post_sum = np.nansum(data_ll_post_n)
+                    data_lt_post_sum = np.nansum(data_lt_post_n)
 
                     hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
-                    # hs_ll_post_sum = np.nansum(hs_ll_post_n)
-                    # hs_lt_post_sum = np.nansum(hs_lt_post_n)
-
-                    joint_data_hs_ll_post_n = data_ll_post_n * hs_ll_post_n
-                    joint_data_hs_lt_post_n = data_lt_post_n * hs_lt_post_n
-                    joint_data_hs_ll_post_sum = np.nansum(joint_data_hs_ll_post_n)
-                    joint_data_hs_lt_post_sum = np.nansum(joint_data_hs_lt_post_n)
+                    hs_ll_post_sum = np.nansum(hs_ll_post_n)
+                    hs_lt_post_sum = np.nansum(hs_lt_post_n)
                 else:
-                    # data_ll_post_sum = 1
-                    # data_lt_post_sum = 1
-                    # hs_ll_post_sum = 1
-                    # hs_lt_post_sum = 1
-                    joint_data_hs_ll_post_sum = 1
-                    joint_data_hs_lt_post_sum = 1
+                    data_ll_post_sum = 1
+                    data_lt_post_sum = 1
+                    hs_ll_post_sum = 1
+                    hs_lt_post_sum = 1
 
-                # data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                # data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                # data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
+                data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
 
-                # hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                # hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                # hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
+                hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
 
-                # # Get mixture coefficient
-                # data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
-                # hs_prob_coeff = 1 - data_prob_coeff
-                # # Combine data and hidden states likelihoods
-                # # llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
-                # # ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
-                # # llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
-                # #                          + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
-                
-                # # llitv_prob_mean = hs_llitv_prob_mean
-                # # ltitv_prob_mean = hs_ltitv_prob_mean
-                # # llitv_prob_std = hs_llitv_prob_std
-
-                # # llitv_prob_mean = data_llitv_prob_mean
-                # # ltitv_prob_mean = data_ltitv_prob_mean
-                # # llitv_prob_std = data_llitv_prob_std
-
-                llitv_prob_mean = joint_data_hs_ll_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
-                ltitv_prob_mean = joint_data_hs_lt_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
-                llitv_prob_std = np.sqrt(joint_data_hs_ll_post_sum * joint_data_hs_lt_post_sum / (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)**2/(joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum + 1))
-
+                # Get mixture coefficient
+                data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
+                hs_prob_coeff = 1 - data_prob_coeff
+                # Combine data and hidden states likelihoods
+                llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
+                ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
+                llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
+                                         + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
-                itv_decision = choose_by_credible_interval(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
-                # itv_decision = choose_by_certainty(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum)
-                self.itv_decisions.append(itv_decision)
             elif rerun_kf is False:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])
                 self.ll_itv_all.append(0)
                 self.lt_itv_all.append(0)
                 self.p_anm_all.append(p_a_I_Yt)
-                self.itv_decisions.append(0)
 
-            # cond_ll = all(
-            #     m[0] - m[1] > 4 * m[2]
-            #     for m in self.class_prob_moments[-1:]
-            # )
+            cond_ll = all(
+                m[0] - m[1] > 3 * m[2]
+                for m in self.class_prob_moments[-13:]
+            )
 
-            # cond_lt = all(
-            #     m[1] - m[0] > 4 * m[2] 
-            #     for m in self.class_prob_moments[-1:]
-            # )
-
-            # cond_ll = True if self.itv_decisions[-1] == 1 else False
-            # cond_lt = True if self.itv_decisions[-1] == 2 else False
-
-            cond_ll = all([decision == 1 for decision in self.itv_decisions[-13:]])
-            cond_lt = all([decision == 2 for decision in self.itv_decisions[-13:]])
-
-            # cond_ll = False
-            # cond_lt = False
+            cond_lt = all(
+                m[1] - m[0] > 3 * m[2]
+                for m in self.class_prob_moments[-13:]
+            )
 
             if cond_ll and rerun_kf is False:
                 apply_intervention = True
-                # ll_intervened_mu = itv_LL[0]
-                ll_intervened_mu = level_itv
-                ll_intervened_var = var_level_itv
+                ll_intervened_mu = itv_LL[0]
                 itv_log.append(0)
                 itv_applied_times.append(trigger_time)
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
             elif cond_lt and rerun_kf is False:
                 apply_intervention = True
-                # ll_intervened_mu = itv_LT[0]
-                # lt_intervened_mu = itv_LT[1]
-                ll_intervened_mu = llclt_itv_at_trigger
-                lt_intervened_mu = trend_itv_at_trigger
-                ll_intervened_var = var_llclt_itv_at_trigger
-                lt_intervened_var = var_trend_itv_at_trigger
+                ll_intervened_mu = itv_LT[0]
+                lt_intervened_mu = itv_LT[1]
                 itv_log.append(1)
                 itv_applied_times.append(trigger_time)
                 print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
@@ -890,11 +860,9 @@ class hsl_classification:
                     # Apply intervention on base_model hidden states
                     LL_index = self.base_model.states_name.index("level")
                     LT_index = self.base_model.states_name.index("trend")
-                    self.base_model.mu_states[LL_index] += ll_intervened_mu
-                    self.base_model.var_states[LL_index, LL_index] += ll_intervened_var
+                    self.base_model.mu_states[LL_index] = ll_intervened_mu
                     if cond_lt:
-                        self.base_model.mu_states[LT_index] += lt_intervened_mu
-                        self.base_model.var_states[LT_index, LT_index] += lt_intervened_var
+                        self.base_model.mu_states[LT_index] = lt_intervened_mu
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd
@@ -941,6 +909,13 @@ class hsl_classification:
                 obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
             self.drift_model._save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+
+            mu_ar_pred2, var_ar_pred2, mu_drift_states_prior2, _ = self.drift_model2.forward()
+            _, _, mu_drift_states_posterior2, var_drift_states_posterior2 = self.drift_model2.backward(
+                obs=self.base_model.mu_states_posterior[self.AR_index], 
+                obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
+            self.drift_model2._save_states_history()
+            self.drift_model2.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
 
             self.current_time_step += 1
             i += 1
@@ -1024,19 +999,18 @@ class hsl_classification:
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
 
-        # Option 1: use smoothed values as the deterministic intervention
-        # Perform smoother
-        ssm_copy.smoother()
+        # # Option 1: use smoothed values as the deterministic intervention
+        # # Perform smoother
+        # ssm_copy.smoother()
 
-        # Get the smoothed value at -(num_steps_retract)
-        mu_LL_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
-        mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
-        LLcLT_deterministic_itv = mu_LL_deterministic_itv
+        # # Get the smoothed value at -(num_steps_retract)
+        # mu_LL_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LL_index]
+        # mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
 
-        # # Option 2: use filtered values as the deterministic intervention
-        # mu_LL_deterministic_itv = mu_states_prior[LL_index]
-        # mu_LT_deterministic_itv = mu_states_prior[LT_index]
-        # LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
+        # Option 2: use filtered values as the deterministic intervention
+        mu_LL_deterministic_itv = mu_states_prior[LL_index]
+        mu_LT_deterministic_itv = mu_states_prior[LT_index]
+        LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
 
         # Do the intervention again with the smoothed states
         ssm_copy = copy.deepcopy(ssm)
@@ -1189,11 +1163,6 @@ class hsl_classification:
         #                  np.array(mu_y_preds).flatten() - np.array(std_y_preds).flatten(),
         #                  np.array(mu_y_preds).flatten() + np.array(std_y_preds).flatten(),
         #                  color='gray', alpha=0.5)
-        # ax0.plot(range(len(mu_level_plot)), np.array(mu_level_plot).flatten(),color='tab:blue')
-        # ax0.fill_between(range(len(mu_level_plot)),
-        #                  mu_level_plot.flatten() - std_level_plot.flatten(),
-        #                  mu_level_plot.flatten() + std_level_plot.flatten(),
-        #                  color='tab:blue', alpha=0.2)
         # # ax0.plot(range(len(mu_y_preds)), np.array(original_mu_obs_preds).flatten(), label='No itv')
         # # ax0.fill_between(range(len(original_mu_obs_preds)),
         # #                  np.array(original_mu_obs_preds).flatten() - np.array(original_std_obs_preds).flatten(),
@@ -1328,7 +1297,7 @@ class hsl_classification:
     
     def collect_anmtype_samples(self, num_time_series: int = 10, save_to_path: Optional[str] = 'data/hsl_tsad_training_samples/hsl_tsad_train_samples.csv'):
         # Collect samples from synthetic time series
-        samples = {'LTd_history': [], 'anm_type': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
+        samples = {'LTd_history': [], 'LTd2_history': [], 'anm_type': [], 'itv_LT': [], 'itv_LL': [], 'anm_develop_time': [], 'p_anm': []}
         # # # Anomaly type: no_anomaly = 0, LT = 1, LL = 2, PD = 3
 
         # Anomly feature range define
@@ -1405,6 +1374,7 @@ class hsl_classification:
                 base_model_copy.lstm_output_history = copy.deepcopy(output_history_temp)
                 base_model_copy.lstm_net.set_lstm_states(lstm_cell_states)
             drift_model_copy = copy.deepcopy(self.drift_model)
+            drift_model2_copy = copy.deepcopy(self.drift_model2)
 
             mu_obs_preds, std_obs_preds = [], []
             mu_ar_preds, std_ar_preds = [], []
@@ -1413,6 +1383,7 @@ class hsl_classification:
             x_likelihood_a_one_ts, x_likelihood_na_one_ts = [], []
             base_model_copy.initialize_states_history()
             drift_model_copy.initialize_states_history()
+            drift_model2_copy.initialize_states_history()
 
             for i, (x, y) in enumerate(zip(time_covariate, generated_ts[k])):
                 # Estimate likelihood without intervention
@@ -1436,8 +1407,11 @@ class hsl_classification:
                 # Collect sample input
                 if i > 129:
                     LTd_mu_prior = np.array(drift_model_copy.states.mu_prior)[:, 1].flatten()
+                    LTd_mu_prior2 = np.array(drift_model2_copy.states.mu_prior)[:, 1].flatten()
                     mu_LTd_history = self._hidden_states_collector(i - 1, LTd_mu_prior, step_look_back=128)
+                    mu_LTd_history2 = self._hidden_states_collector(i - 1, LTd_mu_prior2, step_look_back=128)
                     samples['LTd_history'].append(mu_LTd_history.tolist())
+                    samples['LTd2_history'].append(mu_LTd_history2.tolist())
                 if i > 129 and i < anm_begin_list[k]:
                     samples['anm_type'].append(0)  # No anomaly
                     samples['p_anm'].append(0.)
@@ -1489,11 +1463,17 @@ class hsl_classification:
                 std_obs_preds.append(var_obs_pred**0.5)
 
                 mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
+                mu_ar_pred2, var_ar_pred2, _, _ = drift_model2_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
+                    obs=base_model_copy.mu_states_posterior[self.AR_index], 
+                    obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
+                _, _, mu_drift_states_posterior2, var_drift_states_posterior2 = drift_model2_copy.backward(
                     obs=base_model_copy.mu_states_posterior[self.AR_index], 
                     obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
                 drift_model_copy._save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
+                drift_model2_copy._save_states_history()
+                drift_model2_copy.set_states(mu_drift_states_posterior2, var_drift_states_posterior2)
                 mu_ar_preds.append(mu_ar_pred)
                 std_ar_preds.append(var_ar_pred**0.5)
 
@@ -1590,6 +1570,7 @@ class hsl_classification:
     def learn_intervention(self, training_samples_path, save_lt_model_path=None, save_ll_model_path=None, load_lt_model_path=None, load_ll_model_path=None, max_training_epoch=10):
         samples = pd.read_csv(training_samples_path)
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
+        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: list(map(float, x[1:-1].split(','))))
         # Convert samples['anm_develop_time'] to float
         samples['anm_develop_time'] = samples['anm_develop_time'].apply(lambda x: float(x))
         # Create a new column that times itv_LT by anm_develop_time
@@ -1603,14 +1584,18 @@ class hsl_classification:
 
         # Get the moments of samples['LTd_history'] for normalization
         train_LTd = np.array(samples['LTd_history'].values.tolist()[:n_train], dtype=np.float32)
-        if self.mean_LTd_class is None or self.std_LTd_class is None:
+        train_LTd2 = np.array(samples['LTd2_history'].values.tolist()[:n_train], dtype=np.float32)
+        if self.mean_LTd_class is None or self.std_LTd_class is None or self.mean_LTd2_class is None or self.std_LTd2_class is None:
             self.mean_LTd_class = np.nanmean(train_LTd)
             self.std_LTd_class = np.nanstd(train_LTd)
-        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class)
+            self.mean_LTd2_class = np.nanmean(train_LTd2)
+            self.std_LTd2_class = np.nanstd(train_LTd2)
+        print('mean and std of training input', self.mean_LTd_class, self.std_LTd_class, self.mean_LTd2_class, self.std_LTd2_class)
         # Normalize the two columns
         samples['LTd_history'] = samples['LTd_history'].apply(lambda x: [(val - self.mean_LTd_class) / self.std_LTd_class for val in x])
+        samples['LTd2_history'] = samples['LTd2_history'].apply(lambda x: [(val - self.mean_LTd2_class) / self.std_LTd2_class for val in x])
         # Combine the two columns for input feature
-        samples['input_feature'] = samples.apply(lambda row: row['LTd_history'], axis=1)
+        samples['input_feature'] = samples.apply(lambda row: row['LTd_history'] + row['LTd2_history'], axis=1)
 
         # Remove the samples with samples['anm_type'] == 1
         samples_lt = samples[samples['anm_type'] != 2].reset_index(drop=True)
@@ -1844,6 +1829,14 @@ class hsl_classification:
         self.drift_model.states.mu_smooth = self.drift_model.states.mu_smooth[:remove_until_index]
         self.drift_model.states.var_smooth = self.drift_model.states.var_smooth[:remove_until_index]
 
+        self.drift_model2.states.mu_prior = self.drift_model2.states.mu_prior[:remove_until_index]
+        self.drift_model2.states.var_prior = self.drift_model2.states.var_prior[:remove_until_index]
+        self.drift_model2.states.mu_posterior = self.drift_model2.states.mu_posterior[:remove_until_index]
+        self.drift_model2.states.var_posterior = self.drift_model2.states.var_posterior[:remove_until_index]
+        self.drift_model2.states.cov_states = self.drift_model2.states.cov_states[:remove_until_index]
+        self.drift_model2.states.mu_smooth = self.drift_model2.states.mu_smooth[:remove_until_index]
+        self.drift_model2.states.var_smooth = self.drift_model2.states.var_smooth[:remove_until_index]
+
         self.lstm_history = self.lstm_history[:remove_until_index]
         self.lstm_cell_states = self.lstm_cell_states[:remove_until_index]
         self.mu_obs_preds = self.mu_obs_preds[:remove_until_index]
@@ -1855,8 +1848,11 @@ class hsl_classification:
         new_base_var_states = self.base_model.states.var_posterior[-1]
         new_drift_mu_states = self.drift_model.states.mu_posterior[-1]
         new_drift_var_states = self.drift_model.states.var_posterior[-1]
+        new_drift_mu_states2 = self.drift_model2.states.mu_posterior[-1]
+        new_drift_var_states2 = self.drift_model2.states.var_posterior[-1]
         self.base_model.set_states(new_base_mu_states, new_base_var_states)
         self.drift_model.set_states(new_drift_mu_states, new_drift_var_states)
+        self.drift_model2.set_states(new_drift_mu_states2, new_drift_var_states2)
         self.base_model.lstm_output_history = self.lstm_history[-1]
         self.base_model.lstm_net.set_lstm_states(self.lstm_cell_states[-1])
 
@@ -1889,50 +1885,3 @@ def get_data_dist_coeff(n, target=0, n_converge=52):
     """
     alpha = np.log(2) / (n_converge - 1)  # ensures f(52) ≈ 0.5
     return target + (1 - target) * np.exp(-alpha * (n - 1))
-    
-
-def choose_by_credible_interval(alpha, beta_, level=0.95, threshold=0.5):
-    lo = beta.ppf((1-level)/2, alpha, beta_)
-    hi = beta.ppf(1-(1-level)/2, alpha, beta_)
-    if lo > threshold:
-        return 1
-    if hi < threshold:
-        return 2
-    return 0
-
-def choose_by_certainty(alpha, beta_, tau=0.95, threshold=0.5):
-    p1_wins = beta.sf(threshold, alpha, beta_)  # P(p1 > threshold)
-    if p1_wins > tau:
-        return 1
-    if (1 - p1_wins) > tau:  # P(p1 < threshold)
-        return 2
-    return 0  # abstain
-
-def reverse_lt_states(mu_t, var_t, transition_matrix, steps_back):
-    """
-    Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
-    """
-    import sympy as sp
-    # Use sympy inverse for higher accuracy
-    transition_matrix_steps_back = np.linalg.matrix_power(transition_matrix, steps_back)
-
-    mu_t_sym = sp.Matrix(mu_t)
-    var_t_sym = sp.Matrix(var_t)
-    transition_matrix_sym = sp.Matrix(transition_matrix_steps_back)
-
-    reversed_mu = transition_matrix_sym.inv() * mu_t_sym
-    reversed_var = transition_matrix_sym.inv() * var_t_sym * transition_matrix_sym.inv().T
-
-    # Convert back to numpy arrays
-    reversed_mu = np.array(reversed_mu).astype(np.float64)
-    reversed_var = np.array(reversed_var).astype(np.float64)
-    return reversed_mu, reversed_var
-
-def transition_lt_states(mu_t, var_t, transition_matrix, steps_forward):
-    """
-    Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
-    """
-    transition_matrix_steps_forward = np.linalg.matrix_power(transition_matrix, steps_forward)
-    reversed_mu = transition_matrix_steps_forward @ mu_t
-    reversed_var = transition_matrix_steps_forward @ var_t @ transition_matrix_steps_forward.T
-    return reversed_mu, reversed_var
