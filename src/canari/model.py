@@ -1237,15 +1237,15 @@ class Model:
             if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 0
+                    self.var_states[i, i] = 1e-8
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 0
+                    self.var_states[i, i] = 1e-8
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 0
+                    self.var_states[i, i] = 1e-8
 
         self._mu_local_level = trend[0]
 
