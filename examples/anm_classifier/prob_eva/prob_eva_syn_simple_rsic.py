@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_jan2_1_bnnitv import hsl_classification
+from src.hsl_classification_2classes_rsic_v1 import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast

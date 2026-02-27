@@ -129,8 +129,8 @@ class hsl_classification:
             #################################### Repeat with generate_model ###################################
             # Base model filter process, same as in model.py
             _,_,_,_ = self.generate_model.forward(x,
-                                                    mu_lstm_pred=mu_lstm_pred,
-                                                    var_lstm_pred=var_lstm_pred,)
+                                                mu_lstm_pred=mu_lstm_pred,
+                                                var_lstm_pred=var_lstm_pred,)
             (
                 _, _,
                 mu_states_posterior_gen,
@@ -670,6 +670,7 @@ class hsl_classification:
                 trend_itv = itv_pred_lt_mu_denorm[0]
                 llclt_itv = itv_pred_lt_mu_denorm[1]
                 var_trend_itv = itv_pred_lt_var_denorm[0]
+                var_llclt_itv = itv_pred_lt_var_denorm[1]
                 level_itv = itv_pred_ll_mu_denorm[0]
                 var_level_itv = itv_pred_ll_var_denorm[0]
 
@@ -684,8 +685,18 @@ class hsl_classification:
                     first_time_trigger = True
                 itvtime_from_det = self.current_time_step - trigger_time + 1
 
-                # Option 3: use the detection time and calibrated LL at that time step
-                llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
+                # # Option 3: use the detection time and calibrated LL at that time step
+                # llclt_itv_at_trigger = llclt_itv - trend_itv * itvtime_from_det
+
+                mu_lt_t = np.array([[llclt_itv], [trend_itv]])
+                var_lt_t = np.array([[var_llclt_itv, 0], [0, var_trend_itv]])
+                transition_matrix_itv = np.array([[1, 1], [0, 1]])
+                itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
+                llclt_itv_at_trigger = itv_at_trigger[0, 0]
+                # var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
+                var_llclt_itv_at_trigger = 0
+                trend_itv_at_trigger = itv_at_trigger[1, 0]
+                var_trend_itv_at_trigger = var_itv_at_trigger[1, 1]
 
                 # Intervention time step option to choose:
                 num_steps_retract = itvtime_from_det
@@ -708,8 +719,8 @@ class hsl_classification:
                 data_likelihoods_lt, hs_likelihoods_lt, _, itv_LT, lt_itv_baseline = self._estimate_likelihoods_with_intervention(
                     ssm=self.base_model,
                     drift_model=self.drift_model,
-                    level_intervention = [llclt_itv_at_trigger, 0],
-                    trend_intervention = [trend_itv, var_trend_itv],
+                    level_intervention = [llclt_itv_at_trigger, var_llclt_itv_at_trigger],
+                    trend_intervention = [trend_itv_at_trigger, var_trend_itv_at_trigger],
                     num_steps_retract = num_steps_retract,
                     data = data,
                     make_mask=False
@@ -751,35 +762,46 @@ class hsl_classification:
                     # EBMS
                     data_ll_post_n = np.array(data_likelihoods_ll) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
                     data_lt_post_n = np.array(data_likelihoods_lt) / (np.array(data_likelihoods_ll) + np.array(data_likelihoods_lt))
-                    data_ll_post_sum = np.nansum(data_ll_post_n)
-                    data_lt_post_sum = np.nansum(data_lt_post_n)
+                    # data_ll_post_sum = np.nansum(data_ll_post_n)
+                    # data_lt_post_sum = np.nansum(data_lt_post_n)
 
                     hs_ll_post_n = np.array(hs_likelihoods_ll) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
                     hs_lt_post_n = np.array(hs_likelihoods_lt) / (np.array(hs_likelihoods_ll) + np.array(hs_likelihoods_lt))
-                    hs_ll_post_sum = np.nansum(hs_ll_post_n)
-                    hs_lt_post_sum = np.nansum(hs_lt_post_n)
+                    # hs_ll_post_sum = np.nansum(hs_ll_post_n)
+                    # hs_lt_post_sum = np.nansum(hs_lt_post_n)
+
+                    joint_data_hs_ll_post_n = data_ll_post_n * hs_ll_post_n
+                    joint_data_hs_lt_post_n = data_lt_post_n * hs_lt_post_n
+                    joint_data_hs_ll_post_sum = np.nansum(joint_data_hs_ll_post_n)
+                    joint_data_hs_lt_post_sum = np.nansum(joint_data_hs_lt_post_n)
                 else:
-                    data_ll_post_sum = 1
-                    data_lt_post_sum = 1
-                    hs_ll_post_sum = 1
-                    hs_lt_post_sum = 1
+                    # data_ll_post_sum = 1
+                    # data_lt_post_sum = 1
+                    # hs_ll_post_sum = 1
+                    # hs_lt_post_sum = 1
+                    joint_data_hs_ll_post_sum = 1
+                    joint_data_hs_lt_post_sum = 1
 
-                data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
-                data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
+                # data_llitv_prob_mean = data_ll_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                # data_ltitv_prob_mean = data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)
+                # data_llitv_prob_std = np.sqrt(data_ll_post_sum * data_lt_post_sum / (data_ll_post_sum + data_lt_post_sum)**2/(data_ll_post_sum + data_lt_post_sum + 1))
 
-                hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
-                hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
+                # hs_llitv_prob_mean = hs_ll_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                # hs_ltitv_prob_mean = hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)
+                # hs_llitv_prob_std = np.sqrt(hs_ll_post_sum * hs_lt_post_sum / (hs_ll_post_sum + hs_lt_post_sum)**2/(hs_ll_post_sum + hs_lt_post_sum + 1))
 
-                # Get mixture coefficient
-                data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
-                hs_prob_coeff = 1 - data_prob_coeff
-                # Combine data and hidden states likelihoods
-                llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
-                ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
-                llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
-                                         + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
+                # # Get mixture coefficient
+                # data_prob_coeff = get_data_dist_coeff(len(data_likelihoods_ll))
+                # hs_prob_coeff = 1 - data_prob_coeff
+                # # Combine data and hidden states likelihoods
+                # llitv_prob_mean = data_llitv_prob_mean * data_prob_coeff + hs_llitv_prob_mean * hs_prob_coeff
+                # ltitv_prob_mean = data_ltitv_prob_mean * data_prob_coeff + hs_ltitv_prob_mean * hs_prob_coeff
+                # llitv_prob_std = np.sqrt(data_llitv_prob_std**2 * data_prob_coeff + hs_llitv_prob_std**2 * hs_prob_coeff 
+                #                          + data_prob_coeff * hs_prob_coeff * (data_llitv_prob_mean - hs_llitv_prob_mean)**2)
+
+                llitv_prob_mean = joint_data_hs_ll_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                ltitv_prob_mean = joint_data_hs_lt_post_sum/ (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)
+                llitv_prob_std = np.sqrt(joint_data_hs_ll_post_sum * joint_data_hs_lt_post_sum / (joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum)**2/(joint_data_hs_ll_post_sum + joint_data_hs_lt_post_sum + 1))
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
@@ -801,14 +823,17 @@ class hsl_classification:
 
             if cond_ll and rerun_kf is False:
                 apply_intervention = True
-                ll_intervened_mu = itv_LL[0]
+                ll_intervened_mu = level_itv
+                ll_intervened_var = var_level_itv
                 itv_log.append(0)
                 itv_applied_times.append(trigger_time)
                 print(f"LL intervention {itv_LL} is applied at time step {self.current_time_step}.")
             elif cond_lt and rerun_kf is False:
                 apply_intervention = True
-                ll_intervened_mu = itv_LT[0]
-                lt_intervened_mu = itv_LT[1]
+                ll_intervened_mu = llclt_itv_at_trigger
+                lt_intervened_mu = trend_itv_at_trigger
+                ll_intervened_var = var_llclt_itv_at_trigger
+                lt_intervened_var = var_trend_itv_at_trigger
                 itv_log.append(1)
                 itv_applied_times.append(trigger_time)
                 print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
@@ -831,9 +856,11 @@ class hsl_classification:
                     # Apply intervention on base_model hidden states
                     LL_index = self.base_model.states_name.index("level")
                     LT_index = self.base_model.states_name.index("trend")
-                    self.base_model.mu_states[LL_index] = ll_intervened_mu
+                    self.base_model.mu_states[LL_index] += ll_intervened_mu
+                    self.base_model.var_states[LL_index, LL_index] += ll_intervened_var
                     if cond_lt:
-                        self.base_model.mu_states[LT_index] = lt_intervened_mu
+                        self.base_model.mu_states[LT_index] += lt_intervened_mu
+                        self.base_model.var_states[LT_index, LT_index] += lt_intervened_var
 
                     self.drift_model.mu_states[0] = 0
                     self.drift_model.mu_states[1] = self.mu_LTd
@@ -892,8 +919,6 @@ class hsl_classification:
         """
         ssm_copy = copy.deepcopy(ssm)
         data_all = copy.deepcopy(data)
-        original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
-        original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
 
         mu_y_preds = copy.deepcopy(self.mu_obs_preds)
         std_y_preds = copy.deepcopy(self.std_obs_preds)
@@ -963,8 +988,6 @@ class hsl_classification:
                                     data_all["y"][i])
             y_likelihood_all.append(y_likelihood.item())
 
-        # Option 1: use smoothed values as the deterministic intervention
-        # Perform smoother
         ssm_copy.smoother()
 
         # Get the smoothed value at -(num_steps_retract)
@@ -972,17 +995,10 @@ class hsl_classification:
         mu_LT_deterministic_itv = ssm_copy.states.mu_smooth[-num_steps_retract][LT_index]
         LLcLT_deterministic_itv = mu_LL_deterministic_itv
 
-        # # Option 2: use filtered values as the deterministic intervention
-        # mu_LL_deterministic_itv = mu_states_prior[LL_index]
-        # mu_LT_deterministic_itv = mu_states_prior[LT_index]
-        # LLcLT_deterministic_itv = mu_LL_deterministic_itv - mu_LT_deterministic_itv * num_steps_retract
-
         # Do the intervention again with the smoothed states
         ssm_copy = copy.deepcopy(ssm)
         drift_model_copy = copy.deepcopy(drift_model)
         data_all = copy.deepcopy(data)
-        original_mu_obs_preds = copy.deepcopy(self.mu_obs_preds)
-        original_std_obs_preds = copy.deepcopy(self.std_obs_preds)
 
         mu_y_preds = copy.deepcopy(self.mu_obs_preds)
         std_y_preds = copy.deepcopy(self.std_obs_preds)
@@ -1073,22 +1089,6 @@ class hsl_classification:
             y_likelihood = likelihood(mu_obs_pred, 
                                     np.sqrt(var_obs_pred), 
                                     data_all["y"][i])
-            
-            # # Laplace approximated likelihood
-            # y_likelihood = likelihood_laplace_approx(
-            #                     mu_obs_pred, 
-            #                     np.sqrt(var_obs_pred), 
-            #                     data_all["y"][i])
-
-            # # Clip likelihood at 3 standard deviations
-            # y_ll_lb = likelihood(mu_obs_pred, 
-            #                     np.sqrt(var_obs_pred), 
-            #                     mu_obs_pred - 3 * np.sqrt(var_obs_pred))
-            # y_likelihood = max(y_likelihood, y_ll_lb)
-
-            # print(mu_drift_states_posterior[1].item(), self.mu_LTd, self.LTd_std)
-            # print(data_all["y"][i], mu_obs_pred, np.sqrt(var_obs_pred))
-            # print(y_likelihood.item(), x_likelihood.item())
 
             y_likelihood_all.append(y_likelihood.item())
             x_likelihood_all.append(x_likelihood.item())
@@ -1821,3 +1821,24 @@ def get_data_dist_coeff(n, target=0, n_converge=52):
     """
     alpha = np.log(2) / (n_converge - 1)  # ensures f(52) ≈ 0.5
     return target + (1 - target) * np.exp(-alpha * (n - 1))
+
+
+def reverse_lt_states(mu_t, var_t, transition_matrix, steps_back):
+    """
+    Reverse the local trend states back by steps_back steps, to get the local level states at that time step.
+    """
+    import sympy as sp
+    # Use sympy inverse for higher accuracy
+    transition_matrix_steps_back = np.linalg.matrix_power(transition_matrix, steps_back)
+
+    mu_t_sym = sp.Matrix(mu_t)
+    var_t_sym = sp.Matrix(var_t)
+    transition_matrix_sym = sp.Matrix(transition_matrix_steps_back)
+
+    reversed_mu = transition_matrix_sym.inv() * mu_t_sym
+    reversed_var = transition_matrix_sym.inv() * var_t_sym * transition_matrix_sym.inv().T
+
+    # Convert back to numpy arrays
+    reversed_mu = np.array(reversed_mu).astype(np.float64)
+    reversed_var = np.array(reversed_var).astype(np.float64)
+    return reversed_mu, reversed_var
