@@ -34,7 +34,6 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
 
-
 class Model:
     """
     `Model` class for the Hybrid LSTM/SSM model.
@@ -273,14 +272,17 @@ class Model:
         )
         self.var_states = np.diagflat(self.var_states)
 
+        _states_name = [
+            state
+            for component in self.components.values()
+            for state in component.states_name
+        ]
+        _state_counts = {}
         self.states_name = []
-        for component in self.components.values():
-            for state in component.states_name:
-                count = sum(s.startswith(state) for s in self.states_name)
-                if count == 0:
-                    self.states_name.append(state)
-                else:
-                    self.states_name.append(f"{state}_{count}")
+        for name in _states_name:
+            k = _state_counts.get(name, 0)
+            self.states_name.append(name if k == 0 else f"{name}_{k}")
+            _state_counts[name] = k + 1
 
         self._states_comp = [
             comp_name
