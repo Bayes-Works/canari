@@ -35,6 +35,7 @@ from canari.data_process import DataProcess
 from canari.component import Intervention
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
+from prophet import Prophet
 
 
 class Model:
@@ -1231,8 +1232,24 @@ class Model:
                                     output_col=[0],
                                     standardization=False,)
         
-        train_data,val_data,_,_=data_processor.get_splits()
+        train_data,val_data,_,all_data=data_processor.get_splits()
         mask_s= ~np.isnan(train_data["y"].flatten())
+
+        if "lstm" in self.states_name:
+            m = Prophet(
+                # yearly_seasonality=True,
+                # weekly_seasonality=True,
+                # daily_seasonality=True,
+                # n_changepoints=0,
+            )
+            df=pd.DataFrame({"ds": np.asarray(all_data["time"]).reshape(-1),
+                "y":  np.asarray(all_data["y"]).reshape(-1),})
+            m.fit(df)
+            fcst= m.predict(df[["ds"]])
+            trend=fcst["trend"]
+            season_cols = [c for c in ["yearly", "weekly", "daily", "holidays"] if c in fcst.columns]
+            seasonality = fcst[season_cols].sum(axis=1) if season_cols else 0.0
+            residual = df["y"].values - fcst["yhat"].values
 
         def modular_mse(params,t,y_true,components_list,period):
             y_pred=np.zeros_like(t,dtype=float)
@@ -1263,6 +1280,9 @@ class Model:
                 scale=params[idx+1]
                 y_pred+=scale*(np.exp(-latent_trend*t)-1)
                 idx+=2
+            if "lstm" in components_list:
+                t_idx = t.astype(int)
+                y_pred += seasonality.values[t_idx]
             mask=~np.isnan(y_true)
             return np.mean((y_true[mask]-y_pred[mask])**2)
         
@@ -1295,7 +1315,6 @@ class Model:
             x0.append(trend_estimate)
             margin = 2 * abs(trend_estimate) if trend_estimate != 0 else 0.01
             bounds.append((trend_estimate - margin, trend_estimate + margin))
-            print(trend_estimate)
         if "acceleration" in self.states_name:
             acceleration_estimate = np.mean(np.diff(np.diff(train_data["y"].flatten()[mask_s])))
             x0.append(acceleration_estimate)
@@ -1438,7 +1457,6 @@ class Model:
             best_params = None
 
         idx = 0
-        print(final_mse)
         
         if "level" in self.states_name and "trend" not in self.states_name and "acceleration" not in self.states_name:
             self.mu_states[self.get_states_index("level")] = best_params[idx]
@@ -1491,10 +1509,8 @@ class Model:
             self.var_states[self.get_states_index("latent trend"),self.get_states_index("latent trend")]=(best_params[idx]*0.45)**2
             self.var_states[self.get_states_index("exp scale factor"),self.get_states_index("exp scale factor")]=(best_params[idx+1]*0.4)**2
             idx += 2
-        # print(self.components[self._states_comp[self.get_states_index("white noise")]].std_error)
         if "white noise" in self.states_name and self.components[self._states_comp[self.get_states_index("white noise")]].std_error is None:
             self.process_noise_matrix[self.get_states_index("white noise"),self.get_states_index("white noise")]=final_mse
-        # print(self.components[self._states_comp[self.get_states_index("autoregression")]]._var_states)
         if "autoregression" in self.states_name:
             autoregression_index = self.get_states_index(states_name="autoregression")
             phi = self.components[self._states_comp[autoregression_index]].phi
@@ -2079,11 +2095,6 @@ class Model:
                 mu_states_posterior,
                 var_states_posterior,
             ) = self.backward(y)
-            # for x in np.diag(var_states_posterior):
-            #     if x < 0 :
-            #         # print("valeur neg dans diag var_post")
-            #         print(index)
-            #         print(np.diag(var_states_posterior))
 
             # Update LSTM parameters
             if self.lstm_net:

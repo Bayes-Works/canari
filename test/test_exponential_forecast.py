@@ -68,7 +68,7 @@ def test_model_forecast(run_mode, plot_mode):
     localtrend = LocalTrend(
         mu_states=[1.95, -0.00], var_states=[0.1**2, 0.0075**2], std_error=0
     )
-    periodic = Periodic(mu_states=[1.9, 1.9], var_states=[0.1**2, 0.1**2], period=52)
+    periodic = Periodic(mu_states=[1.9, 0], var_states=[0.1**2, 0.1**2], period=52)
 
     # Model
     model = Model(exponential, noise, periodic, localtrend)
