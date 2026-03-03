@@ -410,3 +410,25 @@ def norm_pdf(x) -> np.ndarray:
         float or np.ndarray: PDF value(s) for the input.
     """
     return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x**2)
+
+def log_likelihood(
+    prediction: np.ndarray, observation: np.ndarray, std: np.ndarray
+) -> float:
+    """Computes the log-likelihood.
+
+    This function assumes the likelihood of the observation given the prediction
+    is a Gaussian distribution with a given standard deviation.
+
+    :param prediction: The predicted mean of the distribution.
+    :type prediction: np.ndarray
+    :param observation: The observed data points.
+    :type observation: np.ndarray
+    :param std: The standard deviation of the distribution.
+    :type std: np.ndarray
+    :return: The average log-likelihood value.
+    :rtype: float
+    """
+    log_lik = -0.5 * np.log(2 * np.pi * (std**2)) - 0.5 * (
+        ((observation - prediction) / std) ** 2
+    )
+    return np.nansum(log_lik)

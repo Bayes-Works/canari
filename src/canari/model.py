@@ -34,7 +34,6 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
 
-
 class Model:
     """
     `Model` class for the Hybrid LSTM/SSM model.
@@ -267,20 +266,30 @@ class Model:
         self.mu_states = np.vstack(
             [component.mu_states for component in self.components.values()]
         )
+
         self.var_states = np.vstack(
             [component.var_states for component in self.components.values()]
         )
         self.var_states = np.diagflat(self.var_states)
-        self.states_name = [
+
+        _states_name = [
             state
             for component in self.components.values()
             for state in component.states_name
         ]
+        _state_counts = {}
+        self.states_name = []
+        for name in _states_name:
+            k = _state_counts.get(name, 0)
+            self.states_name.append(name if k == 0 else f"{name}_{k}")
+            _state_counts[name] = k + 1
+
         self._states_comp = [
             comp_name
             for comp_name, component in self.components.items()
             for _ in component.states_name
         ]
+
         self.num_states = sum(
             component.num_states for component in self.components.values()
         )
@@ -1727,7 +1736,7 @@ class Model:
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])
-                self._transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(x)
             (
@@ -1755,7 +1764,7 @@ class Model:
 
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
-                self._reset_transition_matrix_interv(interv["mu"], interv["var"])
+                self._transition_matrix_interv(interv["mu"], interv["var"], 0)
             
         return (
             np.array(mu_obs_preds).flatten(),

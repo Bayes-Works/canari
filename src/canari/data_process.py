@@ -255,7 +255,7 @@ class DataProcess:
         """
 
         data = self.standardize_data()
-        time = self.data.index[self.train_start:self.test_end]
+        time = self.data.index
         if isinstance(self.data.index, pd.DatetimeIndex):
             freq = pd.infer_freq(self.data.index)
         else:
