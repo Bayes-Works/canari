@@ -690,8 +690,8 @@ class hsl_classification:
                 transition_matrix_itv = np.array([[1, 1], [0, 1]])
                 itv_at_trigger, var_itv_at_trigger = reverse_lt_states(mu_lt_t, var_lt_t, transition_matrix_itv, itvtime_from_det)
                 llclt_itv_at_trigger = itv_at_trigger[0, 0]
-                var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
-                # var_llclt_itv_at_trigger = 0
+                # var_llclt_itv_at_trigger = var_itv_at_trigger[0, 0]
+                var_llclt_itv_at_trigger = 0
                 trend_itv_at_trigger = itv_at_trigger[1, 0]
                 var_trend_itv_at_trigger = var_itv_at_trigger[1, 1]
 
