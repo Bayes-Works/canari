@@ -7,6 +7,7 @@ import ast
 
 from matplotlib import ticker
 from examples.anm_classifier.prob_eva.prob_process_csv_results import _process_detection_df
+from examples.anm_classifier.prob_eva.prob_process_csv_results_bl import _process_detection_df_bl
 
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True) 
@@ -34,11 +35,13 @@ false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug5_detllclt.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug6_joint_bnnitv.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll_debug7_detllclt_bnnitv.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_cap5years.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_cap5years.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll_debug2_1_bnnitv.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_2_smooth.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_3_llitv0uncertain.csv",
-    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_2_1_joint.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_2_1_joint.csv",
+    ########################################################################################################
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltoll.csv",
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_joint.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv",
@@ -52,7 +55,7 @@ print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
 false_alarm_rate_rsi, df_rsi_group = _process_detection_df(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lltoll.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lttolt.csv",
 )
 print("False alarm rate for RSI: ", false_alarm_rate_rsi, "per 10 years")

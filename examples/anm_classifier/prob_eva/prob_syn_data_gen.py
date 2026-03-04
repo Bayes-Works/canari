@@ -65,11 +65,11 @@ model = Model(
     ),
 )
 
-num_test_ts = 1
-# LL anomaly magnitude
-# anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])
-anm_mag_all = np.concatenate([np.arange(0.1, 2.01, 0.1)])
-anm_mag_all = anm_mag_all[-5:]
+num_test_ts = 10
+# LT anomaly magnitude
+anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])
+# # LL anomaly magnitude
+# anm_mag_all = np.concatenate([np.arange(0.1, 2.01, 0.1)])
 num_time_steps = 52 * 19
 gen_ts, _, _, _ = model.generate_time_series(num_time_series=num_test_ts*len(anm_mag_all),
                                             num_time_steps=num_time_steps)
@@ -91,11 +91,13 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         # First anomaly
         time_anomaly1 = np.random.randint(52, 52 * 2) + val_end_len
         # anm1_mag_fixed = 1        # LL anomaly
-        anm1_mag_fixed = 0.2/52     # LT anomaly
+        anm1_mag_fixed = 0.2        # LT anomaly
+        
 
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm1_mag_fixed *= sign
-        anm1_mag_unstandardize = anm1_mag_fixed * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
+        anm1_mag_perweek = anm1_mag_fixed / 52
+        anm1_mag_unstandardize = anm1_mag_perweek * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
 
         # anm1_baseline = np.ones(num_time_steps) * anm1_mag_unstandardize
         anm1_baseline = np.arange(num_time_steps) * anm1_mag_unstandardize
@@ -106,32 +108,32 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         # Second anomaly
         time_anomaly2 = time_anomaly1 + 52 * 6
 
-        # # LT anomaly
-        # anm2_mag = anm_mag/52
-        # sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
-        # anm2_mag *= sign
-        # anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
-        # anm2_baseline = np.arange(num_time_steps) * anm2_mag_unstandardize
-        # anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
-        # anm2_baseline[:time_anomaly2] = 0
-        # gen_anm_ts += anm2_baseline
-
-        # LL anomaly
-        anm2_mag = anm_mag
+        # LT anomaly
+        anm2_mag = anm_mag/52
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm2_mag *= sign
-        anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)
-        anm2_baseline = np.ones(num_time_steps) * anm2_mag_unstandardize
+        anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
+        anm2_baseline = np.arange(num_time_steps) * anm2_mag_unstandardize
+        anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
         anm2_baseline[:time_anomaly2] = 0
         gen_anm_ts += anm2_baseline
 
+        # # LL anomaly
+        # anm2_mag = anm_mag
+        # sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
+        # anm2_mag *= sign
+        # anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)
+        # anm2_baseline = np.ones(num_time_steps) * anm2_mag_unstandardize
+        # anm2_baseline[:time_anomaly2] = 0
+        # gen_anm_ts += anm2_baseline
+
         values_str = str(list(gen_anm_ts))
-        time_series_all.append([values_str, anm_mag, time_anomaly1, time_anomaly2])
+        time_series_all.append([values_str, anm1_mag_fixed, time_anomaly1, anm_mag, time_anomaly2])
 
 
 # Save to CSV
-saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll_feb_dummy.csv"
-df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2"])
+saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv"
+df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly1_magnitude", "anomaly_start_index1", "anomaly2_magnitude", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row
 df_time_series_all.insert(0, 'timestamp', [str(list(time_stamps))] + ['']*(df_time_series_all.shape[0]-1))
@@ -144,11 +146,12 @@ restored_data = []
 time_stamps = eval(df.iloc[0]["timestamp"], {"nan": float("nan")})
 for _, row in df.iterrows():
     values = np.array(eval(row["values"], {"nan": float("nan")}), dtype=float)
-    anomaly_magnitude = float(row["anomaly_magnitude"])
+    anomaly1_magnitude = float(row["anomaly1_magnitude"])
+    anomaly2_magnitude = float(row["anomaly2_magnitude"])
     anomaly_start_index1 = int(row["anomaly_start_index1"])
     anomaly_start_index2 = int(row["anomaly_start_index2"])
     
-    restored_data.append((values, anomaly_magnitude, anomaly_start_index1, anomaly_start_index2))
+    restored_data.append((values, anomaly1_magnitude, anomaly2_magnitude, anomaly_start_index1, anomaly_start_index2))
 
 # Plot generated time series
 fig = plt.figure(figsize=(10, 6))
@@ -159,8 +162,8 @@ ax0 = plt.subplot(gs[0])
 # for j in random_indices:
 for j in range(len(restored_data)):
     ax0.plot(time_stamps, restored_data[j][0])
-    ax0.axvline(x=restored_data[j][2], color='g', linestyle='--')
-    ax0.axvline(x=restored_data[j][3], color='r', linestyle='--')
+    ax0.axvline(x=restored_data[j][3], color='g', linestyle='--')
+    ax0.axvline(x=restored_data[j][4], color='r', linestyle='--')
 # ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
 ax0.set_title("Data generation")
 # Only show x ticks for every 52 * 4 weeks

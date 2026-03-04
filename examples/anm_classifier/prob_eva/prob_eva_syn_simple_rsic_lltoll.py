@@ -45,7 +45,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltoll.csv")
 
 # Containers for restored data
 restored_data = []
@@ -215,17 +215,31 @@ for m in range(10):
         true_LT_baseline = np.zeros(len(df_k))
         anm_LL_baseline = np.zeros(len(df_k))
         anm_LT_baseline = np.zeros(len(df_k))
-        anm_mag2_perweek = anm_mag2 / 52
-        # LL to LT anomaly
+        # LL to LL anomaly
         true_LL_baseline[anm_start_index1:] = anm_mag1
-        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+        true_LL_baseline[anm_start_index2:] += np.ones(len(true_LL_baseline)-anm_start_index2) * anm_mag2
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
         true_LT_baseline_str = str(true_LT_baseline.tolist())
         estimate_LL_baseline_str = str(mu_LL_states.tolist())
         estimate_LT_baseline_str = str(mu_LT_states.tolist())
+
+        # # Plot true baselines and estimated baselines
+        # fig = plt.figure(figsize=(10, 2))
+        # gs = gridspec.GridSpec(2, 1)
+        # ax0 = plt.subplot(gs[0])
+        # ax1 = plt.subplot(gs[1])
+        # time = data_processor_k.get_time(split="all")
+        # ax0.plot(time, true_LL_baseline, label='True LL baseline', color='tab:orange')
+        # ax0.plot(time, mu_LL_states, label='Estimated LL baseline', color='tab:blue')
+        # ax1.plot(time, true_LT_baseline, label='True LT baseline', color='tab:orange')
+        # ax1.plot(time, mu_LT_states, label='Estimated LT baseline', color='tab:blue')
+        # ax0.axvline(x=time[anm_start_index1], color='g', linestyle='--', label='Anomaly 1 start')
+        # ax0.axvline(x=time[anm_start_index2], color='r', linestyle='--', label='Anomaly 2 start')
+        # ax1.axvline(x=time[anm_start_index1], color='g', linestyle='--', label='Anomaly 1 start')
+        # ax1.axvline(x=time[anm_start_index2], color='r', linestyle='--', label='Anomaly 2 start')
+        # plt.show()
         
         results_all.append([anm_mag2, anm_start_index1, anm_start_index2, all_detection_points, itv_log, itv_applied_times, true_LL_baseline_str, true_LT_baseline_str, estimate_LL_baseline_str, estimate_LT_baseline_str])
 
@@ -345,4 +359,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltoll.csv", index=False)
