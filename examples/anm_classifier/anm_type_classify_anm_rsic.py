@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_joint import hsl_classification
+from src.hsl_classification_2classes_rsic_v1 import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -325,9 +325,9 @@ ax6.set_ylim(-0.05, 1.05)
 # ax7.set_ylim(0.35, 0.65)
 ax6.set_ylabel("Pr(class)")
 
-ax7.plot(time, np.array(hsl_tsad_agent.itv_decisions))
-ax7.set_ylabel("itv")
-ax7.set_ylim(-0.05, 2.05)
+# ax7.plot(time, np.array(hsl_tsad_agent.itv_decisions))
+# ax7.set_ylabel("itv")
+# ax7.set_ylim(-0.05, 2.05)
 
 
 

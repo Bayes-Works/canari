@@ -64,6 +64,7 @@ class hsl_classification:
         self.y_std_scale = y_std_scale
         self._copy_initial_models()
         self.start_idx_mp = start_idx_mp
+        self.posterior_mu_states_no_itv, self.posterior_var_states_no_itv = [], []
 
     def _copy_initial_models(self):
         """
@@ -166,6 +167,8 @@ class hsl_classification:
             self.class_prob_moments.append([0.5, 0.5, 0, 0])
             self.ll_itv_all.append(0)
             self.lt_itv_all.append(0)
+            self.posterior_mu_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
+            self.posterior_var_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
 
             self.current_time_step += 1
 
@@ -834,6 +837,10 @@ class hsl_classification:
                 itv_log.append(1)
                 itv_applied_times.append(trigger_time)
                 print(f"LT intervention {itv_LT} is applied at time step {self.current_time_step}.")
+
+            if rerun_kf is False:
+                self.posterior_mu_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
+                self.posterior_var_states_no_itv.append(np.zeros_like(self.base_model.states.mu_posterior[0])*np.nan)
 
             if apply_intervention:
                 if rerun_kf is False:
@@ -1737,6 +1744,9 @@ class hsl_classification:
     def _erase_history(self, num_steps_to_erase):
         # Erase the last num_steps_to_erase steps of the lstm history
         remove_until_index = -(num_steps_to_erase)
+
+        self.posterior_mu_states_no_itv[remove_until_index:]  = self.base_model.states.mu_posterior[remove_until_index:]
+        self.posterior_var_states_no_itv[remove_until_index:] = self.base_model.states.var_posterior[remove_until_index:]
 
         self.base_model.states.mu_prior = self.base_model.states.mu_prior[:remove_until_index]
         self.base_model.states.var_prior = self.base_model.states.var_prior[:remove_until_index]
