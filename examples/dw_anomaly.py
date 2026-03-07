@@ -71,9 +71,9 @@ def _skf_log_lik_without_hete_noise(skf: SKF, data: dict) -> float:
 
 
 def main(
-    num_trial_optim_model: int = 70,
-    param_optimization: bool = True,
-    zero_shot: bool = True,
+    num_trial_optim_model: int = 100,
+    param_optimization: bool = False,
+    zero_shot: bool = False,
     skf_objective: str = "ll",
 ):
     skf_objective = skf_objective.lower()
@@ -89,37 +89,37 @@ def main(
     # df_raw.index = date_time
     # df_raw.index.name = "date_time"
 
-    # # Read data from experiment 01
-    # ts = 17
-    # # ts = 18
-    # df_raw = pd.read_csv(
-    #     "data/exp01_data/ts_weekly_values.csv",
-    #     skiprows=1,
-    #     delimiter=",",
-    #     header=None,
-    #     usecols=[ts],
-    # )
-    # df_dates = pd.read_csv(
-    #     "data/exp01_data/ts_weekly_datetimes.csv",
-    #     skiprows=1,
-    #     delimiter=",",
-    #     header=None,
-    #     usecols=[ts],
-    # )
-    # values, dates = _trim_trailing_nans(
-    #     df_raw.values.flatten(), df_dates.values.flatten()
-    # )
+    # Read data from experiment 01
+    ts = 17
+    # ts = 18
+    df_raw = pd.read_csv(
+        "data/exp01_data/ts_weekly_values.csv",
+        skiprows=1,
+        delimiter=",",
+        header=None,
+        usecols=[ts],
+    )
+    df_dates = pd.read_csv(
+        "data/exp01_data/ts_weekly_datetimes.csv",
+        skiprows=1,
+        delimiter=",",
+        header=None,
+        usecols=[ts],
+    )
+    values, dates = _trim_trailing_nans(
+        df_raw.values.flatten(), df_dates.values.flatten()
+    )
 
-    # df_raw = pd.DataFrame(values, columns=[0])
-    # df_raw["Date"] = pd.to_datetime(dates)
-    # df_raw.set_index("Date", inplace=True)
-    # df_raw.index.name = "date_time"
+    df_raw = pd.DataFrame(values, columns=[0])
+    df_raw["Date"] = pd.to_datetime(dates)
+    df_raw.set_index("Date", inplace=True)
+    df_raw.index.name = "date_time"
 
-    df = pd.read_csv("data/exp02_data/LGA002EFAPRG910_cleaned.csv")
-    df["Date"] = pd.to_datetime(df["Date"])
-    df.set_index("Date", inplace=True)
-    df.index.name = "date_time"
-    df_raw = df
+    # df = pd.read_csv("data/exp02_data/LGA002EFAPRG910_cleaned.csv")
+    # df["Date"] = pd.to_datetime(df["Date"])
+    # df.set_index("Date", inplace=True)
+    # df.index.name = "date_time"
+    # df_raw = df
 
     # # slice first n weeks of data for faster training and testing
     df_lookback = df_raw.iloc[:52]
@@ -135,7 +135,7 @@ def main(
     trend = np.linspace(0, 0, num=len(df_raw))
     time_anomaly = 700  # 200
     if 0 <= time_anomaly < len(df_raw):
-        new_trend = np.linspace(0, 0.25, num=len(df_raw) - time_anomaly)
+        new_trend = np.linspace(0, 1, num=len(df_raw) - time_anomaly)
         trend[time_anomaly:] = trend[time_anomaly:] + new_trend
     else:
         time_anomaly = None
@@ -146,7 +146,7 @@ def main(
     data_processor = DataProcess(
         data=df,
         time_covariates=["week_of_year"],
-        train_split=0.4,
+        train_split=0.5,
         validation_split=0.08,
         output_col=output_col,
     )
@@ -158,9 +158,6 @@ def main(
         standardization=False,
         plot_column=output_col,
         sub_plot=ax_split,
-        train_label="Train",
-        validation_label="Validation",
-        test_label="Test",
     )
     if time_anomaly is not None and 0 <= time_anomaly < len(df):
         ax_split.axvline(
@@ -187,8 +184,10 @@ def main(
     )
     warmup_lookback_var = np.zeros_like(warmup_lookback_mu)
     # load_lstm_path = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/Stateless_global_no-embeddings_seed42.bin"
+    # load_lstm_path = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/ByWindow_global_no-embeddings_seed42_whitenoise.bin"
     load_lstm_path = None
-    lstm_stateless = True
+    lstm_stateless = False
+    smoother = False
 
     ######### Define model with parameters #########
     def model_with_parameters(param):
@@ -197,18 +196,20 @@ def main(
             LstmNetwork(
                 look_back_len=52,
                 num_features=2,
-                num_layer=1,
+                num_layer=3,
                 num_hidden_unit=40,
-                manual_seed=42,
-                smoother=False,
-                model_noise=True,
+                manual_seed=1,
+                infer_len=52 * 3,
+                smoother=smoother,
+                model_noise=False,
                 load_lstm_net=load_lstm_path,
-                finetune=False,
+                finetune=not zero_shot,
                 stateless=lstm_stateless,
             ),
+            WhiteNoise(std_error=0.11)
         )
 
-        model.auto_initialize_baseline_states(train_data["y"][0:52*4])
+        model.auto_initialize_baseline_states(train_data["y"][0 : 52 * 3])
 
         if len(warmup_lookback_mu) != model.lstm_net.lstm_look_back_len:
             raise ValueError(
@@ -218,13 +219,20 @@ def main(
 
         if zero_shot:
             print("Using zero-shot model without LSTM finetuning")
+            # filter on train data without training LSTM
+            model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+            model.filter(train_data, stateless=lstm_stateless, train_lstm=False)
+            model.smoother()
+            model.set_memory(time_step=0)
         else:
             num_epoch = 50
             for epoch in range(num_epoch):
-                model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
-                mu_validation_preds, std_validation_preds, states = model.lstm_train(
+                if lstm_stateless and not smoother:
+                    model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+                mu_validation_preds, std_validation_preds, _ = model.lstm_train(
                     train_data=train_data,
                     validation_data=validation_data,
+                    stateless=lstm_stateless,
                 )
 
                 mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -258,10 +266,11 @@ def main(
         #### Define SKF model with parameters #########
         abnorm_model = Model(
             LocalAcceleration(),
-            LstmNetwork(model_noise=True),
-            # WhiteNoise(),
+            LstmNetwork(),
+            WhiteNoise(),
         )
-        model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+        if lstm_stateless and not smoother:
+            model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
         skf = SKF(
             norm_model=model,
             abnorm_model=abnorm_model,
@@ -269,9 +278,10 @@ def main(
             norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
         )
 
-        skf.model["norm_norm"].lstm_output_history.set(
-            warmup_lookback_mu, warmup_lookback_var
-        )
+        if lstm_stateless and not smoother:
+            skf.model["norm_norm"].lstm_output_history.set(
+                warmup_lookback_mu, warmup_lookback_var
+            )
         skf.save_initial_states()
 
         if skf_objective == "ll":
@@ -311,8 +321,8 @@ def main(
     ######### Parameter optimization #########
     if param_optimization:
         param_space = {
-            "std_transition_error": [1e-5, 1e-3],
-            "norm_to_abnorm_prob": [1e-5, 1e-3],
+            "std_transition_error": [1e-6, 1e-4],
+            "norm_to_abnorm_prob": [1e-6, 1e-4],
         }
         if skf_objective == "cdf":
             param_space["slope"] = [0.1, 0.6]
@@ -334,11 +344,15 @@ def main(
         skf_optim_dict["model_param"] = param
     else:
         param = {
-            "std_transition_error": 1e-4,
-            "norm_to_abnorm_prob": 1e-3,
+            # "std_transition_error": 7.903603112254471e-06,
+            # "norm_to_abnorm_prob": 0.0006883558358436098,
+            # "std_transition_error": 3e-5,
+            # "norm_to_abnorm_prob": 3e-4,
+            "std_transition_error": 1e-5,
+            "norm_to_abnorm_prob": 1e-4,
         }
         if skf_objective == "cdf":
-            param["slope"] = 0.3
+            param["slope"] = 0.10011508529571668
         skf_optim = model_with_parameters(param)
         skf_optim_dict = skf_optim.get_dict()
         skf_optim_dict["model_param"] = param
@@ -347,9 +361,10 @@ def main(
     print("Model parameters used:", skf_optim_dict["model_param"])
     print("SKF optimization objective:", skf_objective)
 
-    skf_optim.model["norm_norm"].lstm_output_history.set(
-        warmup_lookback_mu, warmup_lookback_var
-    )
+    if lstm_stateless:
+        skf_optim.model["norm_norm"].lstm_output_history.set(
+            warmup_lookback_mu, warmup_lookback_var
+        )
     filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
 
     fig, ax = plot_skf_states(

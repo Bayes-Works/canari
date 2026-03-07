@@ -102,6 +102,7 @@ class LstmNetwork(BaseComponent):
         embedding: Optional[Tuple[np.ndarray, np.ndarray]] = None,
         finetune: Optional[bool] = False,
         stateless: Optional[bool] = False,
+        zero_shot: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -126,6 +127,7 @@ class LstmNetwork(BaseComponent):
         self.embedding = embedding
         self.finetune = finetune
         self.stateless = stateless
+        self.zero_shot = zero_shot
         super().__init__()
 
     def initialize_component_name(self):
@@ -249,6 +251,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.embed_len = self.embed_len
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         lstm_network.stateless = self.stateless
+        lstm_network.zero_shot = self.zero_shot
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":

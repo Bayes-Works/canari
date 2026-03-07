@@ -8,6 +8,7 @@ saved_params/*
 *.egg-info/
 *.png
 *.pgf
+*.svg
 dist/
 data/**
 
