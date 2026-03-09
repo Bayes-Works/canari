@@ -664,17 +664,6 @@ class SKF:
         :param delta_var: intervention for states variances
         """
 
-        # if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
-        #     delta_mu = np.atleast_2d(delta_mu).T
-        #     delta_var = np.diag(delta_var)
-        #     for transition_model in self.model.values():
-        #         transition_model.mu_states = transition_model.mu_states + delta_mu
-        #         transition_model.var_states = transition_model.var_states + delta_var
-                
-        # else:
-        #     raise ValueError(
-        #         "Incorrect mu and/or var dimension for inverventions."
-        #     )
         for transition_model in self.model.values():
             transition_model._states_intervention(delta_mu, delta_var)
         
@@ -1000,9 +989,10 @@ class SKF:
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
-                )
+                for model in self.model.values():
+                    model._estim_hete_noise(
+                        mu_v2bar_prior, var_v2bar_prior
+                    )
 
         else:
             mu_lstm_pred = None
