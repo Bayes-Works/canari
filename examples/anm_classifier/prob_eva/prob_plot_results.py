@@ -24,7 +24,7 @@ plt.rcParams.update(params)
 test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
 test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
-false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
+false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     test_ts_len=test_ts_len,
     # csv_path="saved_results/prob_eva/class_results_before_simp/syn_simple_ts_results_rsic_lltoll.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug1_remove_drift2.csv",
@@ -39,9 +39,11 @@ false_alarm_rate_rsic, df_rsic_group = _process_detection_df(
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltoll_debug2_1_bnnitv.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lttoll_debug2_2_smooth.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_3_llitv0uncertain.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_2_1_joint.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_debug2_2_1_joint.csv",
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltoll.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_mscrediblebeta_lttolt.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint2_lttolt.csv",
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_joint.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv",

@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v1 import hsl_classification
+from src.hsl_classification_2classes_rsic_v1_realjoint2 import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -25,7 +25,7 @@ from canari.data_visualization import _add_dynamic_grids
 data_file = "./data/benchmark_data/test_10_data.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
-df_raw = df_raw.iloc[:, 1:]
+df_raw = df_raw.iloc[:, 1:] 
 df_raw.index = time_series
 df_raw.index.name = "date_time"
 df_raw.columns = ["values", "water_level", "temp_min", "temp_max"]
