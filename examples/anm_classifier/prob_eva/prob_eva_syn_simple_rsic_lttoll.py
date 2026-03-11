@@ -213,8 +213,6 @@ for m in range(10):
         # True baselines
         true_LL_baseline = np.zeros(len(df_k))
         true_LT_baseline = np.zeros(len(df_k))
-        anm_LL_baseline = np.zeros(len(df_k))
-        anm_LT_baseline = np.zeros(len(df_k))
         # LT to LL anomaly
         anm_mag1_perweek = anm_mag1 / 52
         true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
@@ -361,4 +359,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait3_lttoll.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait7_lttoll.csv", index=False)

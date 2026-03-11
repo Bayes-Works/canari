@@ -66,10 +66,10 @@ model = Model(
 )
 
 num_test_ts = 10
-# LT anomaly magnitude
-anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])
-# # LL anomaly magnitude
-# anm_mag_all = np.concatenate([np.arange(0.1, 2.01, 0.1)])
+# # LT anomaly magnitude
+# anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])
+# LL anomaly magnitude
+anm_mag_all = np.concatenate([np.arange(0.1, 2.01, 0.1)])
 num_time_steps = 52 * 19
 gen_ts, _, _, _ = model.generate_time_series(num_time_series=num_test_ts*len(anm_mag_all),
                                             num_time_steps=num_time_steps)
@@ -96,6 +96,9 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
         sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         anm1_mag_fixed *= sign
+        # # LL anomaly
+        # anm1_mag_unstandardize = anm1_mag_fixed * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
+        # LT anomaly
         anm1_mag_perweek = anm1_mag_fixed / 52
         anm1_mag_unstandardize = anm1_mag_perweek * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
 
@@ -108,31 +111,31 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
         # Second anomaly
         time_anomaly2 = time_anomaly1 + 52 * 6
 
-        # LT anomaly
-        anm2_mag = anm_mag/52
-        sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
-        anm2_mag *= sign
-        anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
-        anm2_baseline = np.arange(num_time_steps) * anm2_mag_unstandardize
-        anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
-        anm2_baseline[:time_anomaly2] = 0
-        gen_anm_ts += anm2_baseline
-
-        # # LL anomaly
-        # anm2_mag = anm_mag
+        # # LT anomaly
+        # anm2_mag = anm_mag/52
         # sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
         # anm2_mag *= sign
-        # anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)
-        # anm2_baseline = np.ones(num_time_steps) * anm2_mag_unstandardize
+        # anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)  # Unstandardize the anomaly magnitude
+        # anm2_baseline = np.arange(num_time_steps) * anm2_mag_unstandardize
+        # anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
         # anm2_baseline[:time_anomaly2] = 0
         # gen_anm_ts += anm2_baseline
 
+        # LL anomaly
+        anm2_mag = copy.deepcopy(anm_mag)
+        sign = -1. if np.random.rand() < 0.5 else 1. # Randomly assign positive and negative anomalies
+        anm2_mag *= sign
+        anm2_mag_unstandardize = anm2_mag * (scale_const_std[0] + 1e-10)
+        anm2_baseline = np.ones(num_time_steps) * anm2_mag_unstandardize
+        anm2_baseline[:time_anomaly2] = 0
+        gen_anm_ts += anm2_baseline
+
         values_str = str(list(gen_anm_ts))
-        time_series_all.append([values_str, anm1_mag_fixed, time_anomaly1, anm_mag, time_anomaly2])
+        time_series_all.append([values_str, anm1_mag_fixed, time_anomaly1, anm_mag*sign, time_anomaly2])
 
 
 # Save to CSV
-saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv"
+saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll.csv"
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly1_magnitude", "anomaly_start_index1", "anomaly2_magnitude", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row
@@ -157,10 +160,10 @@ for _, row in df.iterrows():
 fig = plt.figure(figsize=(10, 6))
 gs = gridspec.GridSpec(1, 1)
 ax0 = plt.subplot(gs[0])
-# # Randomly plot samples time series
-# random_indices = np.random.choice(len(restored_data), size=2, replace=False)
-# for j in random_indices:
-for j in range(len(restored_data)):
+# Randomly plot samples time series
+random_indices = np.random.choice(len(restored_data), size=2, replace=False)
+for j in random_indices:
+# for j in range(len(restored_data)):
     ax0.plot(time_stamps, restored_data[j][0])
     ax0.axvline(x=restored_data[j][3], color='g', linestyle='--')
     ax0.axvline(x=restored_data[j][4], color='r', linestyle='--')

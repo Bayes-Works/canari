@@ -638,7 +638,7 @@ class hsl_classification:
             if "lstm" in self.base_model.states_name:
                 self._save_lstm_input()
 
-            if first_time_trigger and self.current_time_step - trigger_time >= 52 *3:
+            if first_time_trigger and self.current_time_step - trigger_time >= 52 *7:
                 first_time_trigger = False
 
             # Apply intervention to estimate data likelihood

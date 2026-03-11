@@ -40,6 +40,8 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
+scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
+scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 validation_start = df_raw.index[data_processor.validation_start]
 test_start = df_raw.index[data_processor.test_start]
@@ -238,6 +240,32 @@ for m in range(10):
         p_anm_all = filter_marginal_abnorm_prob
 
         all_detection_points = str(np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist())
+        itv_log = []
+        itv_applied_times = []
+
+        # Get baselines for comparison
+        # Baseline estimation
+        mu_LL_states = states.get_mean(states_type='prior', states_name="level", standardization=True)
+        mu_LT_states = states.get_mean(states_type='prior', states_name="trend", standardization=True, scale_const_mean=scale_const_mean[0], scale_const_std=scale_const_std[0])
+        # True baselines
+        true_LL_baseline = np.zeros(len(df_k))
+        true_LT_baseline = np.zeros(len(df_k))
+        anm_LL_baseline = np.zeros(len(df_k))
+        anm_LT_baseline = np.zeros(len(df_k))
+        anm_mag2_perweek = anm_mag2 / 52
+        # LL to LT anomaly
+        true_LL_baseline[anm_start_index1:] = anm_mag1
+        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+
+        # Convert the baselines to strings and save to results_all
+        true_LL_baseline_str = str(true_LL_baseline.tolist())
+        true_LT_baseline_str = str(true_LT_baseline.tolist())
+        estimate_LL_baseline_str = str(mu_LL_states.tolist())
+        estimate_LT_baseline_str = str(mu_LT_states.tolist())
+
+        results_all.append([anm_mag2, anm_start_index1, anm_start_index2, all_detection_points, itv_log, itv_applied_times, true_LL_baseline_str, true_LT_baseline_str, estimate_LL_baseline_str, estimate_LT_baseline_str])
+
 
         if (np.array(p_anm_all) > prob_anm_threshold).any():
             anm_detected_index = np.where(np.array(p_anm_all) > prob_anm_threshold)[0][0]
@@ -303,8 +331,12 @@ for m in range(10):
         # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
         # ax0.set_xticklabels([])
         # ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-        # ax0.plot(time, LL_baseline_true, color='k', linestyle='--')
-        # ax1.plot(time, LT_baseline_true, color='k', linestyle='--')
+        all_detection_points_list = np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist()
+        for detection_point in all_detection_points_list:
+            ax0.axvline(x=time[int(detection_point)], color='r', linestyle='--')
+            ax4.axvline(x=time[int(detection_point)], color='r', linestyle='--')
+        ax0.plot(time, true_LL_baseline, color='k', linestyle='--')
+        ax1.plot(time, true_LT_baseline, color='k', linestyle='--')
         plot_states(
             data_processor=data_processor_k,
             standardization=True,
