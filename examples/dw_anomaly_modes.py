@@ -191,17 +191,36 @@ def _first_detection_index(
     return int(detected[0])
 
 
+def _resolve_anomaly_index(index: pd.DatetimeIndex, anomaly_start_time: str) -> int:
+    """Resolve anomaly start to a valid index position."""
+    if len(index) == 0:
+        raise ValueError("Cannot resolve anomaly time on an empty index.")
+    try:
+        target_time = pd.Timestamp(anomaly_start_time)
+    except Exception as exc:
+        raise ValueError(
+            f"`anomaly_start_time` must be parseable by pandas.Timestamp, got: {anomaly_start_time!r}"
+        ) from exc
+
+    anomaly_idx = int(index.searchsorted(target_time, side="left"))
+    if anomaly_idx >= len(index):
+        anomaly_idx = len(index) - 1
+    return anomaly_idx
+
+
 def main(
-    num_trial_optim_model: int = 70,
-    param_optimization: bool = True,
-    stateful_global_lstm_path: str = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/ByWindow_global_no-embeddings_seed42.bin",
-    stateless_global_lstm_path: str = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/Stateless_global_no-embeddings_seed42.bin",
-    skf_objective: str = "cdf",
+    num_trial_optim_model: int = 100,
+    param_optimization: bool = False,
+    stateful_global_lstm_path: str = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/ByWindow_global_no-embeddings_seed42_whitenoise_lb12.bin",
+    stateless_global_lstm_path: str = "/Users/davidwardan/Library/CloudStorage/OneDrive-Personal/Projects/canari/saved_params/global_models/Stateless_global_no-embeddings_seed42_whitenoise.bin",
+    skf_objective: str = "ll",
     smoother: bool = False,
     finetune: bool = True,
-    use_tagiv: bool = True,
-    train_split: float = 0.5,
-    anomaly_slope: float = 1.0,
+    use_tagiv: bool = False,
+    train_split: float = 0.125,
+    anomaly_slope: float = 0.125,
+    anomaly_start_time: str = "2017-12-30",
+    manual_seed: int = 1,
 ):
     skf_objective = skf_objective.lower()
     if skf_objective not in {"ll", "cdf"}:
@@ -219,9 +238,10 @@ def main(
     )
     save_dir.mkdir(parents=True, exist_ok=True)
     print("Saving plots to:", save_dir.resolve())
+    seed_tag = f"seed{manual_seed}"
 
     ######### Data processing #########
-    # # Read data
+    # Read data
     # data_file = "data/benchmark_data/test_2_data.csv"
     # df_raw = pd.read_csv(data_file, skiprows=0, delimiter=",")
     # date_time = pd.to_datetime(df_raw["date"])
@@ -229,37 +249,37 @@ def main(
     # df_raw.index = date_time
     # df_raw.index.name = "date_time"
 
-    # Read data from experiment 01
-    ts = 17
-    # ts = 18
-    df_raw = pd.read_csv(
-        "data/exp01_data/ts_weekly_values.csv",
-        skiprows=1,
-        delimiter=",",
-        header=None,
-        usecols=[ts],
-    )
-    df_dates = pd.read_csv(
-        "data/exp01_data/ts_weekly_datetimes.csv",
-        skiprows=1,
-        delimiter=",",
-        header=None,
-        usecols=[ts],
-    )
-    values, dates = _trim_trailing_nans(
-        df_raw.values.flatten(), df_dates.values.flatten()
-    )
+    # # Read data from experiment 01
+    # ts = 17
+    # # ts = 18
+    # df_raw = pd.read_csv(
+    #     "data/exp01_data/ts_weekly_values.csv",
+    #     skiprows=1,
+    #     delimiter=",",
+    #     header=None,
+    #     usecols=[ts],
+    # )
+    # df_dates = pd.read_csv(
+    #     "data/exp01_data/ts_weekly_datetimes.csv",
+    #     skiprows=1,
+    #     delimiter=",",
+    #     header=None,
+    #     usecols=[ts],
+    # )
+    # values, dates = _trim_trailing_nans(
+    #     df_raw.values.flatten(), df_dates.values.flatten()
+    # )
 
-    df_raw = pd.DataFrame(values, columns=[0])
-    df_raw["Date"] = pd.to_datetime(dates)
-    df_raw.set_index("Date", inplace=True)
-    df_raw.index.name = "date_time"
+    # df_raw = pd.DataFrame(values, columns=[0])
+    # df_raw["Date"] = pd.to_datetime(dates)
+    # df_raw.set_index("Date", inplace=True)
+    # df_raw.index.name = "date_time"
 
-    # df = pd.read_csv("data/exp02_data/LGA002EFAPRG910_cleaned.csv")
-    # df["Date"] = pd.to_datetime(df["Date"])
-    # df.set_index("Date", inplace=True)
-    # df.index.name = "date_time"
-    # df_raw = df
+    df = pd.read_csv("data/exp02_data/LGA002EFAPRG910_cleaned.csv")
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index("Date", inplace=True)
+    df.index.name = "date_time"
+    df_raw = df
 
     # get scaling constants from data processor fitted on raw data (before anomaly injection)
     data_pro_scale = DataProcess(
@@ -270,8 +290,11 @@ def main(
     )
 
     # Prepare warmup looback
-    df_lookback = df_raw.iloc[:52]
-    df_raw = df_raw.iloc[52:]
+    part_to_remove = 52 * 4
+    df_raw = df_raw.iloc[part_to_remove:]
+
+    df_lookback = df_raw.iloc[:12]
+    df_raw = df_raw.iloc[12:]
     warmup_lookback_mu = df_lookback.iloc[:, 0].values.flatten()
     warmup_lookback_mu = normalizer.standardize(
         warmup_lookback_mu,
@@ -281,9 +304,8 @@ def main(
     warmup_lookback_var = np.zeros_like(warmup_lookback_mu)
 
     # Add synthetic anomaly to data
-    df = df_raw.copy()
     trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = 700  # 200
+    time_anomaly = _resolve_anomaly_index(df_raw.index, anomaly_start_time)
     new_trend = np.linspace(0, anomaly_slope, num=len(df_raw) - time_anomaly)
     trend[time_anomaly:] = trend[time_anomaly:] + new_trend
     df = df_raw.add(trend, axis=0)
@@ -292,13 +314,34 @@ def main(
     data_processor = DataProcess(
         data=df,
         time_covariates=["week_of_year"],
-        train_split=train_split,
-        validation_split=0.08,
+        validation_start="2012-12-30 00:00:00",
+        test_start="2014-08-31 00:00:00",
         output_col=[0],
         scale_const_mean=data_pro_scale.scale_const_mean,
         scale_const_std=data_pro_scale.scale_const_std,
     )
     train_data, validation_data, _, all_data = data_processor.get_splits()
+
+    # print time step of each data split
+    print("Data split time steps:")
+    print(
+        "Train:",
+        data_processor.data.index[data_processor.train_start],
+        "to",
+        data_processor.data.index[data_processor.train_end - 1],
+    )
+    print(
+        "Validation:",
+        data_processor.data.index[data_processor.validation_start],
+        "to",
+        data_processor.data.index[data_processor.validation_end - 1],
+    )
+    print(
+        "Test:",
+        data_processor.data.index[data_processor.test_start],
+        "to",
+        data_processor.data.index[data_processor.test_end - 1],
+    )
 
     fig_split, ax_split = plt.subplots(figsize=(10, 3))
     plot_data(
@@ -316,7 +359,7 @@ def main(
     )
     ax_split.legend(loc="best")
     fig_split.tight_layout()
-    fig_split_name = save_dir / "DATA_split_anomaly.svg"
+    fig_split_name = save_dir / f"DATA_split_anomaly_{seed_tag}.svg"
     fig_split.savefig(fig_split_name, bbox_inches="tight")
     print("Saved figure:", fig_split_name)
     plt.show()
@@ -327,7 +370,7 @@ def main(
             "run_name": "stateful_local",
             "model_mode": "local",
             "stateless": False,
-            "global_lstm_path": stateful_global_lstm_path,
+            "global_lstm_path": None,
         },
         {
             "run_name": "stateful_global",
@@ -335,24 +378,24 @@ def main(
             "stateless": False,
             "global_lstm_path": stateful_global_lstm_path,
         },
-        {
-            "run_name": "stateful_global_zero_shot",
-            "model_mode": "zero_shot",
-            "stateless": False,
-            "global_lstm_path": stateful_global_lstm_path,
-        },
-        {
-            "run_name": "stateless_global",
-            "model_mode": "global",
-            "stateless": True,
-            "global_lstm_path": stateless_global_lstm_path,
-        },
-        {
-            "run_name": "stateless_global_zero_shot",
-            "model_mode": "zero_shot",
-            "stateless": True,
-            "global_lstm_path": stateless_global_lstm_path,
-        },
+        # {
+        #     "run_name": "stateful_global_zero_shot",
+        #     "model_mode": "zero_shot",
+        #     "stateless": False,
+        #     "global_lstm_path": stateful_global_lstm_path,
+        # },
+        # {
+        #     "run_name": "stateless_global",
+        #     "model_mode": "global",
+        #     "stateless": True,
+        #     "global_lstm_path": stateless_global_lstm_path,
+        # },
+        # {
+        #     "run_name": "stateless_global_zero_shot",
+        #     "model_mode": "zero_shot",
+        #     "stateless": True,
+        #     "global_lstm_path": stateless_global_lstm_path,
+        # },
     )
     run_results = []
     anomaly_time = df.index[time_anomaly]
@@ -383,15 +426,18 @@ def main(
         )
 
         ######### Define model with parameters #########
+        default_sigma_v = 0.09
+
         def model_with_parameters(param):
+            sigma_v = param.get("sigma_v", default_sigma_v)
             model = Model(
                 LocalTrend(),
                 LstmNetwork(
-                    look_back_len=52,
+                    look_back_len=12,
                     num_features=2,
                     num_layer=1 if model_mode == "local" else 3,
                     num_hidden_unit=40,
-                    manual_seed=1,
+                    manual_seed=manual_seed,
                     infer_len=52 * 3,
                     smoother=smoother,
                     model_noise=use_tagiv,
@@ -400,7 +446,7 @@ def main(
                     stateless=run_stateless,
                     zero_shot=(model_mode == "zero_shot"),
                 ),
-                # WhiteNoise(std_error=0.11),
+                WhiteNoise(std_error=sigma_v),
             )
 
             model.auto_initialize_baseline_states(train_data["y"][0:52])
@@ -456,7 +502,7 @@ def main(
             abnorm_model = Model(
                 LocalAcceleration(),
                 LstmNetwork(model_noise=use_tagiv, stateless=run_stateless),
-                # WhiteNoise(),
+                WhiteNoise(),
             )
             model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
             skf = SKF(
@@ -473,10 +519,10 @@ def main(
             skf.save_initial_states()
 
             if skf_objective == "ll":
-                skf.filter(data=all_data)
-                log_lik_all = _skf_log_lik_without_hete_noise(skf, all_data)
-                skf.metric_optim = -log_lik_all
-                skf.print_metric = {"log_lik_all": log_lik_all}
+                skf.filter(data=train_data)
+                log_lik_train = _skf_log_lik_without_hete_noise(skf, train_data)
+                skf.metric_optim = -log_lik_train
+                skf.print_metric = {"log_lik_train": log_lik_train}
             else:
                 num_anomaly = 50
                 detection_rate, false_rate, false_alarm_train = (
@@ -509,6 +555,7 @@ def main(
         ######### Parameter optimization #########
         if param_optimization:
             param_space = {
+                "sigma_v": [1e-3, 1e-1],
                 "std_transition_error": [1e-6, 1e-4],
                 "norm_to_abnorm_prob": [1e-6, 1e-4],
             }
@@ -532,8 +579,9 @@ def main(
             skf_optim_dict["model_param"] = param
         else:
             param = {
-                "std_transition_error": 5e-5,
-                "norm_to_abnorm_prob": 5e-5,
+                "sigma_v": default_sigma_v,
+                "std_transition_error": 1e-5,
+                "norm_to_abnorm_prob": 1e-4,
             }
             if skf_objective == "cdf":
                 param["slope"] = 0.1
@@ -556,12 +604,12 @@ def main(
         )
         detection_time = (
             data_processor.data.index[detection_idx]
-            if detection_idx is not None and detection_idx < len(data_processor.data.index)
+            if detection_idx is not None
+            and detection_idx < len(data_processor.data.index)
             else None
         )
         print(
-            "First detection time (threshold "
-            f"{DETECTION_THRESHOLD:.2f}):",
+            "First detection time (threshold " f"{DETECTION_THRESHOLD:.2f}):",
             detection_time if detection_time is not None else "not detected",
         )
         run_results.append(
@@ -596,7 +644,7 @@ def main(
             "zero_shot": "G-zeroshot",
         }[model_mode]
         mode_tag = "stateless" if run_stateless else "stateful"
-        fig_name = f"{model_tag}_{mode_tag}_SKF_{skf_objective.upper()}.svg"
+        fig_name = f"{model_tag}_{mode_tag}_SKF_{skf_objective.upper()}_{seed_tag}.svg"
         fig_path = save_dir / fig_name
         plt.savefig(fig_path, bbox_inches="tight")
         print("Saved figure:", fig_path)
@@ -658,7 +706,7 @@ def main(
     ax_cmp.set_title("Anomaly Detection Comparison")
     ax_cmp.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False)
     fig_cmp.tight_layout()
-    fig_cmp_name = f"ALL_detection_compare_SKF_{skf_objective.upper()}.svg"
+    fig_cmp_name = f"ALL_detection_compare_SKF_{skf_objective.upper()}_{seed_tag}.svg"
     fig_cmp_path = save_dir / fig_cmp_name
     fig_cmp.savefig(fig_cmp_path, bbox_inches="tight")
     print("Saved figure:", fig_cmp_path)
