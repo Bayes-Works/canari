@@ -44,6 +44,7 @@ false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltoll.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_mscrediblebeta_lttolt.csv",
     csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint2_lttolt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait3_lltoll.csv",
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_joint.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv",

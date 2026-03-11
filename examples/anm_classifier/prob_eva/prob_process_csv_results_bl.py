@@ -61,9 +61,13 @@ def _process_detection_df_bl(
     df[true_LT_baseline_col] = df[true_LT_baseline_col].apply(
         lambda x: ast.literal_eval(x) if isinstance(x, str) else x
     )
+    df["estimated_LL_baseline"] = df["estimated_LL_baseline"].apply(
+        lambda x: ast.literal_eval(x.replace("nan", "None")))
     df[estimated_LL_baseline_col] = df[estimated_LL_baseline_col].apply(
         lambda x: ast.literal_eval(x) if isinstance(x, str) else x
     )
+    df["estimated_LT_baseline"] = df["estimated_LT_baseline"].apply(
+        lambda x: ast.literal_eval(x.replace("nan", "None")))
     df[estimated_LT_baseline_col] = df[estimated_LT_baseline_col].apply(
         lambda x: ast.literal_eval(x) if isinstance(x, str) else x
     )
@@ -79,9 +83,22 @@ def _process_detection_df_bl(
     first_classification = []
 
     # Compute the sum of mse after anomaly_start_index1 for LL and LT baselines for each row, and add two new columns "mse_LL" and "mse_LT" to the dataframe
-    df["mse_LL"] = df.apply(lambda row: np.mean((np.array(row[true_LL_baseline_col])[row[anm1_col]:] - np.array(row[estimated_LL_baseline_col])[row[anm1_col]:]) ** 2), axis=1)
-    df["mse_LT"] = df.apply(lambda row: np.mean((np.array(row[true_LT_baseline_col])[row[anm1_col]:] - np.array(row[estimated_LT_baseline_col])[row[anm1_col]:]) ** 2), axis=1)
+    # Remove rows with None in true_LL_baseline_col or estimated_LL_baseline_col for mse_LL calculation, and similarly for mse_LT calculation
+    df["mse_LL"] = df.apply(
+        lambda row: np.nanmean(
+            (np.array(row[true_LL_baseline_col], dtype=float)[row[anm1_col]:] -
+            np.array(row[estimated_LL_baseline_col], dtype=float)[row[anm1_col]:]) ** 2
+        ),
+        axis=1
+    )
 
+    df["mse_LT"] = df.apply(
+        lambda row: np.nanmean(
+            (np.array(row[true_LT_baseline_col], dtype=float)[row[anm1_col]:] -
+            np.array(row[estimated_LT_baseline_col], dtype=float)[row[anm1_col]:]) ** 2
+        ),
+        axis=1
+    )
     # Plot the detection map
     if plot_detection_map:
         plt.figure(figsize=(10, 6))
