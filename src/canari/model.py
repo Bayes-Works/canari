@@ -1225,7 +1225,6 @@ class Model:
         
         Examples:
             >>> df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
-            >>> df_train.index.name="date"
             >>> expo=Exponential()
             >>> local_level=LocalLevel()
             >>> ar=Autoregression(phi=0,)
@@ -1244,7 +1243,7 @@ class Model:
         train_data,val_data,_,all_data=data_processor.get_splits()
         mask_s= ~np.isnan(train_data["y"].flatten())
 
-        if "lstm" in self.states_name:
+        if "lstm" in self.states_name or "trend" in self.states_name:
             m = Prophet(
                 # yearly_seasonality=True,
                 # weekly_seasonality=True,
@@ -1258,7 +1257,6 @@ class Model:
             trend=fcst["trend"]
             season_cols = [c for c in ["yearly", "weekly", "daily", "holidays"] if c in fcst.columns]
             seasonality = fcst[season_cols].sum(axis=1) if season_cols else 0.0
-            residual = df["y"].values - fcst["yhat"].values
 
         def modular_mse(params,t,y_true,components_list,period):
             y_pred=np.zeros_like(t,dtype=float)
@@ -1320,7 +1318,8 @@ class Model:
             bounds.append((level_mean-level_std,level_mean+level_std))
             
         if "trend" in self.states_name:
-            trend_estimate= np.mean(np.diff(train_data["y"].flatten()[mask_s]))
+            # trend_estimate= np.mean(np.diff(train_data["y"].flatten()[mask_s]))
+            trend_estimate= np.mean(np.diff(trend.values))
             x0.append(trend_estimate)
             margin = 2 * abs(trend_estimate) if trend_estimate != 0 else 0.01
             bounds.append((trend_estimate - margin, trend_estimate + margin))
