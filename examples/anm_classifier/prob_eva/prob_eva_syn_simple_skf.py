@@ -145,7 +145,7 @@ norm_const_std = data_processor.scale_const_std[data_processor.output_col]
 
 # # # Read test data
 # df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv")
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -253,10 +253,28 @@ for m in range(10):
         anm_LL_baseline = np.zeros(len(df_k))
         anm_LT_baseline = np.zeros(len(df_k))
         anm_mag2_perweek = anm_mag2 / 52
-        # LL to LT anomaly
-        true_LL_baseline[anm_start_index1:] = anm_mag1
+        # # LL to LT anomaly
+        # true_LL_baseline[anm_start_index1:] = anm_mag1
+        # true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        # true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+
+        # # # LL to LL anomaly
+        # true_LL_baseline[anm_start_index1:] = anm_mag1
+        # true_LL_baseline[anm_start_index2:] += np.ones(len(true_LL_baseline)-anm_start_index2) * anm_mag2
+
+        # # LT to LL anomaly
+        # anm_mag1_perweek = anm_mag1 / 52
+        # true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        # true_LL_baseline[anm_start_index2:] += anm_mag2
+        # true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
+
+        # LT to LT anomaly
+        anm_mag1_perweek = anm_mag1 / 52
+        anm_mag2_perweek = anm_mag2 / 52
+        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
         true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
+        true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -272,133 +290,87 @@ for m in range(10):
         else:
             anm_detected_index = len(p_anm_all) - 1
 
-        # # Get true baseline
-        # anm_mag_normed = anm_mag
-        # LL_baseline_true = np.zeros_like(df_raw)
-        # LT_baseline_true = np.zeros_like(df_raw)
-        # for i in range(1, len(df_raw)):
-        #     if i > anm_start_index_global:
-        #         LL_baseline_true[i] += anm_mag_normed * (i - anm_start_index_global)
-        #         LT_baseline_true[i] += anm_mag_normed
+        # #  Plot
+        # state_type = "prior"
+        # #  Plot states from pretrained model
+        # fig = plt.figure(figsize=(10, 8))
+        # gs = gridspec.GridSpec(5, 1)
+        # ax0 = plt.subplot(gs[0])
+        # ax1 = plt.subplot(gs[1])
+        # ax2 = plt.subplot(gs[2])
+        # ax3 = plt.subplot(gs[3])
+        # ax4 = plt.subplot(gs[4])
 
-        # LL_baseline_true += model_dict['early_stop_init_mu_states'][0].item()
-        # LL_baseline_true = LL_baseline_true.flatten()
-        # LT_baseline_true = LT_baseline_true.flatten()
-
-        # # Compute MSE for SKF baselines
-        # mu_LL_states = states.get_mean(states_type='prior', states_name="level")
-        # mu_LT_states = states.get_mean(states_type='prior', states_name="trend")
-        # mse_LL = metric.mse(
-        #     mu_LL_states[anm_start_index_global+1:],
-        #     LL_baseline_true[anm_start_index_global+1:],
+        # plot_data(
+        #     data_processor=data_processor_k,
+        #     standardization=True,
+        #     plot_column=output_col,
+        #     validation_label="y",
+        #     sub_plot=ax0,
         # )
-        # mse_LT = metric.mse(
-        #     mu_LT_states[anm_start_index_global+1:],
-        #     LT_baseline_true[anm_start_index_global+1:],
+        # plot_states(
+        #     data_processor=data_processor_k,
+        #     standardization=True,
+        #     # states=pretrained_model.states,
+        #     states=states,
+        #     states_type=state_type,
+        #     states_to_plot=['level'],
+        #     sub_plot=ax0,
         # )
+        # # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
+        # # ax0.set_xticklabels([])
+        # # ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
+        # all_detection_points_list = np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist()
+        # for detection_point in all_detection_points_list:
+        #     ax0.axvline(x=time[int(detection_point)], color='r', linestyle='--')
+        #     ax4.axvline(x=time[int(detection_point)], color='r', linestyle='--')
+        # ax0.plot(time, true_LL_baseline, color='k', linestyle='--')
+        # ax1.plot(time, true_LT_baseline, color='k', linestyle='--')
+        # plot_states(
+        #     data_processor=data_processor_k,
+        #     standardization=True,
+        #     states=states,
+        #     states_type=state_type,
+        #     states_to_plot=['trend'],
+        #     sub_plot=ax1,
+        # )
+        # ax1.set_xticklabels([])
+        # # ax1.set_ylim(-0.002, 0.005)
 
-        # detection_time = anm_detected_index - anm_start_index_global
+        # plot_states(
+        #     data_processor=data_processor_k,
+        #     standardization=True,
+        #     states=states,
+        #     states_type=state_type,
+        #     states_to_plot=['lstm'],
+        #     sub_plot=ax2,
+        # )
+        # ax2.set_xticklabels([])
+        # plot_states(
+        #     data_processor=data_processor_k,
+        #     standardization=True,
+        #     states=states,
+        #     states_type=state_type,
+        #     states_to_plot=['autoregression'],
+        #     sub_plot=ax3,
+        # )
+        # ax3.set_xticklabels([])
 
-        # results_all.append([anm_mag, anm_start_index_global, all_detection_points, mse_LL, mse_LT, detection_time])
+        # ax4.plot(time, p_anm_all, color='b')
+        # ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
+        # ax4.set_xlim(ax0.get_xlim())
+        # # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
+        # ax4.set_ylim(-0.05, 1.05)
+        # ax4.set_yticks([0, 1])
+        # # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
+        # # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
+        # ax4.set_xlim(ax0.get_xlim())
+        # ax4.axvline(x=time[anm_detected_index], color='r', linestyle='--', label='Anomaly start')
+        # # for n in np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist():
+        # #     ax4.axvline(x=time[n], color='r', linestyle='--', label='Anomaly start')
 
-        #  Plot
-        state_type = "prior"
-        #  Plot states from pretrained model
-        fig = plt.figure(figsize=(10, 8))
-        gs = gridspec.GridSpec(5, 1)
-        ax0 = plt.subplot(gs[0])
-        ax1 = plt.subplot(gs[1])
-        ax2 = plt.subplot(gs[2])
-        ax3 = plt.subplot(gs[3])
-        ax4 = plt.subplot(gs[4])
-
-        plot_data(
-            data_processor=data_processor_k,
-            standardization=True,
-            plot_column=output_col,
-            validation_label="y",
-            sub_plot=ax0,
-        )
-        plot_states(
-            data_processor=data_processor_k,
-            standardization=True,
-            # states=pretrained_model.states,
-            states=states,
-            states_type=state_type,
-            states_to_plot=['level'],
-            sub_plot=ax0,
-        )
-        # ax0.axvline(x=time[anm_start_index_global], color='r', linestyle='--')
-        # ax0.set_xticklabels([])
-        # ax0.set_title(f"SKF, mse_LL = {mse_LL:.3e}, mse_LT = {mse_LT:.3e}, detection_time = {detection_time}")
-        all_detection_points_list = np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist()
-        for detection_point in all_detection_points_list:
-            ax0.axvline(x=time[int(detection_point)], color='r', linestyle='--')
-            ax4.axvline(x=time[int(detection_point)], color='r', linestyle='--')
-        ax0.plot(time, true_LL_baseline, color='k', linestyle='--')
-        ax1.plot(time, true_LT_baseline, color='k', linestyle='--')
-        plot_states(
-            data_processor=data_processor_k,
-            standardization=True,
-            states=states,
-            states_type=state_type,
-            states_to_plot=['trend'],
-            sub_plot=ax1,
-        )
-        ax1.set_xticklabels([])
-        # ax1.set_ylim(-0.002, 0.005)
-
-        plot_states(
-            data_processor=data_processor_k,
-            standardization=True,
-            states=states,
-            states_type=state_type,
-            states_to_plot=['lstm'],
-            sub_plot=ax2,
-        )
-        ax2.set_xticklabels([])
-        plot_states(
-            data_processor=data_processor_k,
-            standardization=True,
-            states=states,
-            states_type=state_type,
-            states_to_plot=['autoregression'],
-            sub_plot=ax3,
-        )
-        ax3.set_xticklabels([])
-
-        ax4.plot(time, p_anm_all, color='b')
-        ax4.set_ylabel(r'$p_{\mathrm{anm}}$')
-        ax4.set_xlim(ax0.get_xlim())
-        # ax4.axvline(x=time[anm_start_index], color='r', linestyle='--')
-        ax4.set_ylim(-0.05, 1.05)
-        ax4.set_yticks([0, 1])
-        # ax4.set_xticks([time[int(len(time)*1/9)-1], time[int(len(time)*3/9)-1],time[int(len(time)*5/9)-1],time[int(len(time)*7/9)-1],time[int(-1)]])
-        # ax4.set_xticklabels(['2016', '2018', '2020', '2022', '2024'])
-        ax4.set_xlim(ax0.get_xlim())
-        ax4.axvline(x=time[anm_detected_index], color='r', linestyle='--', label='Anomaly start')
-        # for n in np.where(np.array(p_anm_all) > prob_anm_threshold)[0].tolist():
-        #     ax4.axvline(x=time[n], color='r', linestyle='--', label='Anomaly start')
-
-        plt.show()
-
-        # # Plot all the baselines, true and estimated
-        # time = data_processor_k.get_time(split="all")
-        # plt.figure()
-        # plt.plot(time, LL_baseline_true, label="True", color='blue')
-        # plt.plot(time, mu_LL_states, label="Online", color='red')
-        # plt.axvline(x=time[anm_start_index], color='k', linestyle='--')
-        # plt.legend()
-        # plt.ylabel('LL')
-
-        # plt.figure()
-        # plt.plot(time, LT_baseline_true, label="True", color='blue')
-        # plt.plot(time, mu_LT_states, label="Online", color='red')
-        # plt.axvline(x=time[anm_start_index], color='k', linestyle='--')
-        # plt.legend()
-        # plt.ylabel('LT')
         # plt.show()
 
 # Save the results to a CSV file
-results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index", "anomaly_detected_index", "mse_LL", "mse_LT", "detection_time"])
-# results_df.to_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv", index=False)
+results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_skf_lttolt.csv", index=False)

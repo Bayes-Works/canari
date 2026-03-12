@@ -8,6 +8,7 @@ import ast
 from matplotlib import ticker
 from examples.anm_classifier.prob_eva.prob_process_csv_results import _process_detection_df
 from examples.anm_classifier.prob_eva.prob_process_csv_results_bl import _process_detection_df_bl
+from examples.anm_classifier.prob_eva.prob_process_csv_results_skf import _process_detection_df_skf
 
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True) 
@@ -43,8 +44,9 @@ false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_sigmall_lltoll.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_mscrediblebeta_lttolt.csv",
-    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint2_lltolt.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait3_lttolt.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint2_lltolt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait7_lttolt.csv",
+    # csv_path="saved_results/prob_eva/syn_simple_ts_results_skf_lttolt.csv",
     ########################################################################################################
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt_joint.csv",
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_lltolt.csv",
@@ -56,10 +58,17 @@ false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
 )
 print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
-false_alarm_rate_rsi, df_rsi_group = _process_detection_df(
+# false_alarm_rate_rsi, df_rsi_group = _process_detection_df(
+#     test_ts_len=test_ts_len,
+#     csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt.csv",
+#     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lttolt.csv",
+# )
+false_alarm_rate_rsi, df_rsi_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt.csv",
-    # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsi_lttolt.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_skf_lltolt.csv",
+    evaluate_itv_type = True,
+    plot_detection_map = True,
+    first_anm_type = 'LT',
 )
 print("False alarm rate for RSI: ", false_alarm_rate_rsi, "per 10 years")
 
@@ -97,7 +106,8 @@ ax[0].set_xticklabels([])
 
 # Plot for detection_rate
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}")
-ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
+# ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
+ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{SKF}")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")

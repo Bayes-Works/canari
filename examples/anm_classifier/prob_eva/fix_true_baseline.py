@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 # Read csv saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint2_lttolt.csv
-df_result = pd.read_csv("saved_results/prob_eva/rsic_bugged_results/syn_simple_ts_results_rsic_v1_wait3_lttolt_bug.csv")
+df_result = pd.read_csv("saved_results/prob_eva/rsic_bugged_results/syn_simple_ts_results_rsic_v1_wait7_lttolt_bug.csv")
 
 df_result["true_LL_baseline"] = df_result["true_LL_baseline"].apply(
     lambda x: ast.literal_eval(x) if isinstance(x, str) else x
@@ -81,4 +81,4 @@ for m in range(10):
         k_result_idx += 1
 
 # Save the updated df_result to a new CSV
-df_result.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait3_lttolt.csv", index=False)
+df_result.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait7_lttolt.csv", index=False)
