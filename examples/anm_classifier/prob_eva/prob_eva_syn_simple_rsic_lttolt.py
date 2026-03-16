@@ -11,7 +11,8 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v1_realjoint2 import hsl_classification
+# from src.hsl_classification_2classes_rsic_v1_realjoint3 import hsl_classification
+from src.hsl_classification_2classes_rsic_v1_realjoint3_estellafterdet import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -118,7 +119,9 @@ hsl_tsad_agent.mu_LTd = 2.83129300946429e-07
 hsl_tsad_agent.LTd_std = 4.9551180011919054e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
-hsl_tsad_agent.detection_threshold = 0.1
+hsl_tsad_agent.detection_threshold = 0.5545706309885293
+# hsl_tsad_agent.detection_threshold = 0.30586614547577723
+# hsl_tsad_agent.detection_threshold = 0.1
 
 # hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv')
 
@@ -332,6 +335,7 @@ for m in range(10):
         #                     final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
         # ax7.set_ylim(-0.05, 1.05)
         # ax7.set_ylabel("Pr(anm)")
+        # plt.show()
 
         # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
         hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -361,4 +365,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_wait7_lttolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_lttolt.csv", index=False)

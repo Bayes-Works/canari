@@ -16,6 +16,10 @@ def _process_detection_df(
     anm2_col: str = "anomaly_start_index2",
     magnitude_col: str = "anomaly_magnitude",
     itv_log_col: str = "intervention_log",
+    true_LL_baseline_col: str = "true_LL_baseline",
+    true_LT_baseline_col: str = "true_LT_baseline",
+    estimated_LL_baseline_col: str = "estimated_LL_baseline",
+    estimated_LT_baseline_col: str = "estimated_LT_baseline",
     default_years: int = 3,
     freq_per_year: int = 52,
     first_anm_type = None,
@@ -50,16 +54,47 @@ def _process_detection_df(
         df["intervention_applied_times"] = df["intervention_applied_times"].apply(
             lambda x: ast.literal_eval(x) if isinstance(x, str) else x
         )
+    
+    df[true_LL_baseline_col] = df[true_LL_baseline_col].apply(
+        lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+    )
+    df[true_LT_baseline_col] = df[true_LT_baseline_col].apply(
+        lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+    )
+    df[estimated_LL_baseline_col] = df[estimated_LL_baseline_col].apply(
+        lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+    )
+    df[estimated_LT_baseline_col] = df[estimated_LT_baseline_col].apply(
+        lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+    )
+
     # Output columns
     df["detection_index_after_anm1"] = pd.Series([None] * len(df), dtype=object)
     df["first_anm_detect_index"] = pd.Series([None] * len(df), dtype=object)
     df["detection_time"] = pd.Series([None] * len(df), dtype=object)
+    
 
     default_detection_time = freq_per_year * default_years + 1
 
     true_detection = []
     false_detection = []
     first_classification = []
+
+    df["mse_LL"] = df.apply(
+        lambda row: np.nanmean(
+            (np.array(row[true_LL_baseline_col], dtype=float)[row[anm1_col]:] -
+            np.array(row[estimated_LL_baseline_col], dtype=float)[row[anm1_col]:]) ** 2
+        ),
+        axis=1
+    )
+
+    df["mse_LT"] = df.apply(
+        lambda row: np.nanmean(
+            (np.array(row[true_LT_baseline_col], dtype=float)[row[anm1_col]:] -
+            np.array(row[estimated_LT_baseline_col], dtype=float)[row[anm1_col]:]) ** 2
+        ),
+        axis=1
+    )
 
     # Plot the detection map
     if plot_detection_map:
@@ -206,5 +241,11 @@ def _process_detection_df(
         "detection_rate": ["mean", "std"],
     }
     )
+
+    # Sum the column df["mse_LL"] and df["mse_LT"] for all rows
+    total_mse_LL = df["mse_LL"].sum()
+    total_mse_LT = df["mse_LT"].sum()
+    print("Total MSE for LL baseline: ", total_mse_LL)
+    print("Total MSE for LT baseline: ", total_mse_LT)
 
     return false_alarm_rate, df_group

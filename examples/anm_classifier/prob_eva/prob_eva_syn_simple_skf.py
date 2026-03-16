@@ -70,15 +70,15 @@ print("sigma_AR =", np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_inde
 
 stdtrans_normtoab_probthred_combs = [
                                      [0.00058540561184052, 1.781048611155288e-05, 0.01856760759164357],
-                                    #  [7.374493944956498e-05, 2.3964863102703695e-06, 0.06633948717161109],
-                                    #  [5.952173244769044e-05, 2.820337832175992e-06, 0.12449169965336978],
-                                    #  [6.966914482559759e-05, 1.0933282904607644e-06, 0.56406166304168602],
-                                    #  [4.471188431839439e-05, 0.0003199513506302794, 0.11629614421165259],
-                                    #  [0.000252303150190864, 3.4338343221193907e-05, 0.16922952097869445],
-                                    #  [3.0075775375881952e-05, 0.00014087260031204994, 0.18086475784666017],
-                                    #  [1.4984866680322357e-05, 0.0009906033035675128, 0.3637495229603723],
-                                    #  [1.7578354405475338e-05, 4.587107733586499e-05, 0.040363168265581215],
-                                    #  [3.661762975642531e-05, 0.0014125590060904748, 0.04464206823801334],
+                                     [0.0005400179445756177, 0.0001968681383225995, 0.12707745623164831],
+                                     [0.0005691735027308731, 7.291704860580095e-06, 0.19581591960636593],
+                                     [0.00022547346182363125, 0.0001733910644685438, 0.21764965538565006],
+                                     [0.0004224169073912224, 0.00020793011231319818, 0.12256566121836052],
+                                     [0.00031510712466808344, 1.4627517849594637e-05, 0.19753506269426185],
+                                     [0.0009462122086358204, 4.0916994522061656e-06, 0.033800877887952],
+                                     [0.000221523179913848, 1.8046578036748165e-06, 0.02493252994353446],
+                                     [0.0005077883621933604, 1.881122017025267e-05, 0.01812488763085486],
+                                     [0.00012707683933180027, 0.0005275225946085323, 0.024338754772420652],
                                      ]
 
 # # False alarms check
@@ -145,7 +145,7 @@ norm_const_std = data_processor.scale_const_std[data_processor.output_col]
 
 # # # Read test data
 # df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv")
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -253,10 +253,10 @@ for m in range(10):
         anm_LL_baseline = np.zeros(len(df_k))
         anm_LT_baseline = np.zeros(len(df_k))
         anm_mag2_perweek = anm_mag2 / 52
-        # # LL to LT anomaly
-        # true_LL_baseline[anm_start_index1:] = anm_mag1
-        # true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        # true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+        # LL to LT anomaly
+        true_LL_baseline[anm_start_index1:] = anm_mag1
+        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
 
         # # # LL to LL anomaly
         # true_LL_baseline[anm_start_index1:] = anm_mag1
@@ -268,13 +268,13 @@ for m in range(10):
         # true_LL_baseline[anm_start_index2:] += anm_mag2
         # true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
 
-        # LT to LT anomaly
-        anm_mag1_perweek = anm_mag1 / 52
-        anm_mag2_perweek = anm_mag2 / 52
-        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
-        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
-        true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
+        # # LT to LT anomaly
+        # anm_mag1_perweek = anm_mag1 / 52
+        # anm_mag2_perweek = anm_mag2 / 52
+        # true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        # true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        # true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
+        # true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -373,4 +373,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_skf_lttolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_skf_lltolt.csv", index=False)

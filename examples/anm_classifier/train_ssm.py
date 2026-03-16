@@ -46,7 +46,7 @@ AR_process_error_var_prior = 1e2
 var_W2bar_prior = 1e2
 AR = Autoregression(mu_states=[0, 0, 0, 0, 0, AR_process_error_var_prior],var_states=[1e-06, 0.01, 0, AR_process_error_var_prior, 0, var_W2bar_prior])
 LSTM = LstmNetwork(
-        look_back_len=52,
+        look_back_len=11,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,

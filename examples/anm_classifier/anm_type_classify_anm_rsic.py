@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v1 import hsl_classification
+from src.hsl_classification_2classes_rsic_v1_realjoint3 import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -22,7 +22,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05_v2.csv"
+data_file = "./data/toy_time_series/syn_data_anmtype_simple_phi05.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -40,13 +40,13 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# LL anomaly
-anm_type = 'LL'
-time_anomaly = 52*6
-anm_mag = 17
-anm_baseline = np.ones(len(df_raw)) * anm_mag
-anm_baseline[:time_anomaly] = 0
-df_raw = df_raw.add(anm_baseline, axis=0)
+# # LL anomaly
+# anm_type = 'LL'
+# time_anomaly = 52*6
+# anm_mag = 17
+# anm_baseline = np.ones(len(df_raw)) * anm_mag
+# anm_baseline[:time_anomaly] = 0
+# df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # Second anomaly
 # anm2_type = 'LL'
@@ -81,14 +81,13 @@ train_val_data = copy.deepcopy(normalized_data)
 train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]
 train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 
-# Normalize the trend anomaly
-# normed_anm_mag =  (anm_mag - data_processor.scale_const_mean[0]) / data_processor.scale_const_std[0]
-normed_anm_mag =  anm_mag / data_processor.scale_const_std[0]
-normed_anm_baseline = np.arange(len(df_raw)) * normed_anm_mag
-normed_anm_baseline[time_anomaly:] -= normed_anm_baseline[time_anomaly]
-normed_anm_baseline[:time_anomaly] = 0
-print("normalied anomaly magnitude", normed_anm_mag)
-# Get the normed lt baseline
+# # Normalize the trend anomaly
+# # normed_anm_mag =  (anm_mag - data_processor.scale_const_mean[0]) / data_processor.scale_const_std[0]
+# normed_anm_mag =  anm_mag / data_processor.scale_const_std[0]
+# normed_anm_baseline = np.arange(len(df_raw)) * normed_anm_mag
+# normed_anm_baseline[time_anomaly:] -= normed_anm_baseline[time_anomaly]
+# normed_anm_baseline[:time_anomaly] = 0
+# print("normalied anomaly magnitude", normed_anm_mag)
 
 # print("normalied anomaly trend", anm_mag / data_processor.scale_const_std[0])
 
@@ -158,8 +157,9 @@ std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 hsl_tsad_agent.mu_LTd = 2.83129300946429e-07
 hsl_tsad_agent.LTd_std = 4.9551180011919054e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
-# hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
-hsl_tsad_agent.detection_threshold = 0.1
+hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
+# hsl_tsad_agent.detection_threshold = 0.5545706309885293
+# Train_val: 0.30586614547577723
 
 # hsl_tsad_agent.collect_anmtype_samples(num_time_series=1000, save_to_path='data/anm_type_class_train_samples/classifier_learn_samples_syn_simple_phi05.csv')
 

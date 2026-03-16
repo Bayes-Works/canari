@@ -136,8 +136,11 @@ def _process_detection_df_skf(
         plt.title("Detection Map")
         # Add horizontal grid lines for each index
         plt.yticks(np.arange(0, len(df), 10))
+        plt.xlim(0, test_ts_len)
         plt.grid(axis='y', linestyle='--', alpha=0.5)
         # plt.show()
+
+        # _plot_detection_bars(df, anm1_col, anm2_col, detection_col, itv_log_col, test_ts_len)
 
     for idx, row in df.iterrows():
         anm1_start = row[anm1_col]
@@ -178,7 +181,7 @@ def _process_detection_df_skf(
                 detection_time = d - anm2_start
                 if evaluate_itv_type:
                     # Only consider the first detection matches the first anomaly type
-                    if first_classification[-1] == (0 if first_anm_type == 'LL' else 1):
+                    if first_classification[-1] == (0 if first_anm_type == 'll' else 1):
                         # Evaluate the classification among true detections
                         if d in row["intervention_applied_times"]:
                             itv_idx = row["intervention_applied_times"].index(d)
@@ -261,3 +264,95 @@ def _process_detection_df_skf(
     print("Total MSE for LT baseline: ", total_mse_LT)
 
     return false_alarm_rate, df_group
+
+def _plot_detection_bars(df, anm1_col, anm2_col, detection_col, itv_log_col, test_ts_len):
+    # Collect all (time, sample_idx) points per category
+    red_points = []
+    gray_points = []
+    blue_points = []
+    orange_points = []
+
+    for idx, row in df.iterrows():
+        anm1_start = row[anm1_col]
+        anm2_start = row[anm2_col]
+        detected_indices = row[detection_col]
+
+        if not isinstance(detected_indices, list) or pd.isna(anm1_start) or pd.isna(anm2_start):
+            continue
+
+        # Gray: detected
+        for t in detected_indices:
+            gray_points.append((t, idx))
+
+        # Red: anomaly starts
+        red_points.append((anm1_start, idx))
+        red_points.append((anm2_start, idx))
+
+        # Blue / Orange: interventions
+        if itv_log_col in row and isinstance(row[itv_log_col], list):
+            for idx_itv, itv_time in enumerate(row["intervention_applied_times"]):
+                if row[itv_log_col][idx_itv] == 0:
+                    blue_points.append((itv_time, idx))
+                elif row[itv_log_col][idx_itv] == 1:
+                    orange_points.append((itv_time, idx))
+
+    # --- Build the figure with 2 horizontal bar subplots ---
+    solo_categories = [
+        ("Anomaly Start", red_points, "red"),
+    ]
+    combined_categories = [
+        ("Detected",        gray_points,   "gray"),
+        ("LL Intervention", blue_points,   "tab:blue"),
+        ("LT Intervention", orange_points, "tab:orange"),
+    ]
+
+    fig, axes = plt.subplots(
+        2, 1,
+        figsize=(8, 1.5),
+        sharex=True,
+        gridspec_kw={"hspace": 0.3, "height_ratios": [1, 1]}
+    )
+
+    # Resolution for the density bar (pixels along x)
+    x_bins = np.linspace(0, test_ts_len, 700)
+    bin_width = x_bins[1] - x_bins[0]
+
+    # --- Subplot 0: Red only ---
+    ax = axes[0]
+    times = np.array([p[0] for p in red_points])
+    counts, edges = np.histogram(times, bins=x_bins)
+    norm_counts = counts / counts.max() if counts.max() > 0 else counts
+    for val, left in zip(norm_counts, edges[:-1]):
+        if val > 0:
+            ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                       color="red", alpha=float(val) * 0.85)
+    ax.set_yticks([])
+    # ax.set_ylabel("Anomaly Start", rotation=0, labelpad=100, va="center", fontsize=9)
+    ax.set_xlim(0, test_ts_len)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+
+    # --- Subplot 1: Gray + Blue + Orange combined ---
+    ax = axes[1]
+    combined_label_parts = []
+    for label, points, color in combined_categories:
+        if not points:
+            continue
+        times = np.array([p[0] for p in points])
+        counts, edges = np.histogram(times, bins=x_bins)
+        norm_counts = counts / counts.max() if counts.max() > 0 else counts
+        for val, left in zip(norm_counts, edges[:-1]):
+            if val > 0:
+                ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                           color=color, alpha=float(val) * 0.5)
+        combined_label_parts.append(label)
+    ax.set_yticks([])
+    # ax.set_ylabel("Detection", rotation=0, labelpad=100, va="center", fontsize=9)
+    ax.set_xlim(0, test_ts_len)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+
+    # axes[-1].set_xlabel("Time Index")
+    fig.suptitle("Detection Map")
+    
+    # Fix title + label clipping
+    plt.tight_layout()
+    plt.subplots_adjust(left=0.06, top=0.88, bottom=0.15)
