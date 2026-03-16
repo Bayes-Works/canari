@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import yaml
 from ray import tune
 from pytagi import metric
 from pytagi import Normalizer as normalizer
@@ -45,9 +46,9 @@ DEFAULT_TRAIN_SPLITS = [1.0, 0.8, 0.6, 0.4]
 LOOK_BACK_LEN_CANDIDATES = [4, 8, 12, 13, 16, 24, 26, 36, 52]
 GLOBAL_WARMUP_LOOKBACK_LEN = 52
 DEFAULT_LOOK_BACK_LEN = 52
-DEFAULT_SIGMA_V = 0.07
-DEFAULT_STD_TRANSITION_ERROR = 5e-5
-DEFAULT_NORM_TO_ABNORM_PROB = 5e-5
+DEFAULT_SIGMA_V = 0.09
+DEFAULT_STD_TRANSITION_ERROR = 1e-5
+DEFAULT_NORM_TO_ABNORM_PROB = 1e-4
 DEFAULT_CDF_SLOPE = 0.1
 DEFAULT_LL_FALSE_ALARM_PENALTY_WEIGHT = 1.0
 BASELINE_INIT_LEN = 52 * 4
@@ -55,9 +56,12 @@ LSTM_NUM_FEATURES = 2
 LSTM_NUM_HIDDEN_UNITS = 40
 LSTM_INFER_LEN = 52 * 3
 LSTM_NUM_EPOCH = 50
-VALIDATION_START = "2012-12-30 00:00:00"
-TEST_START = "2014-08-31 00:00:00"
-DATA_FILE = "data/exp02_data/LGA002EFAPRG910_cleaned.csv"
+REQUIRED_CONFIG_KEYS = (
+    "data_file",
+    "validation_start",
+    "test_start",
+    "anomaly_start_time",
+)
 
 
 def _format_float_tag(value: float) -> str:
@@ -72,8 +76,46 @@ def _parse_list(values, cast):
     return [cast(values)]
 
 
-def _load_base_dataframe() -> pd.DataFrame:
-    df = pd.read_csv(DATA_FILE)
+def _load_experiment_config(config_path: str) -> dict:
+    config_file = Path(config_path).expanduser()
+    if not config_file.exists():
+        raise FileNotFoundError(f"Config file not found: {config_file}")
+
+    with config_file.open("r", encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
+    if not isinstance(config, dict):
+        raise ValueError(f"Config file must contain a YAML mapping: {config_file}")
+
+    missing_keys = [key for key in REQUIRED_CONFIG_KEYS if not config.get(key)]
+    if missing_keys:
+        raise ValueError(
+            f"Config file is missing required values {missing_keys}: {config_file}"
+        )
+
+    validated_config = {"config_path": str(config_file.resolve())}
+    data_file = Path(str(config["data_file"])).expanduser()
+    if not data_file.exists():
+        raise FileNotFoundError(f"Configured data file not found: {data_file}")
+    validated_config["data_file"] = str(data_file.resolve())
+
+    for key in ("validation_start", "test_start", "anomaly_start_time"):
+        validated_config[key] = str(pd.Timestamp(config[key]))
+
+    return validated_config
+
+
+def _print_experiment_config(experiment_config: dict):
+    print("Experiment config:")
+    print("  config_path:", experiment_config["config_path"])
+    print("  data_file:", experiment_config["data_file"])
+    print("  validation_start:", experiment_config["validation_start"])
+    print("  test_start:", experiment_config["test_start"])
+    print("  anomaly_start_time:", experiment_config["anomaly_start_time"])
+
+
+def _load_base_dataframe(experiment_config: dict) -> pd.DataFrame:
+    df = pd.read_csv(experiment_config["data_file"])
     df["Date"] = pd.to_datetime(df["Date"])
     df.set_index("Date", inplace=True)
     df.index.name = "date_time"
@@ -81,9 +123,11 @@ def _load_base_dataframe() -> pd.DataFrame:
 
 
 def _apply_train_split_via_part_to_remove(
-    df_raw_full: pd.DataFrame, train_split: float
+    df_raw_full: pd.DataFrame,
+    train_split: float,
+    validation_start: str,
 ):
-    validation_ts = pd.Timestamp(VALIDATION_START)
+    validation_ts = pd.Timestamp(validation_start)
     n_train_total = int(df_raw_full.index.searchsorted(validation_ts, side="left"))
     if n_train_total <= GLOBAL_WARMUP_LOOKBACK_LEN:
         raise ValueError("Training window is too short after preprocessing.")
@@ -109,10 +153,10 @@ def _resolve_anomaly_index(index: pd.DatetimeIndex, anomaly_start_time: str) -> 
 def _prepare_dataset(
     train_split: float,
     anomaly_slope: float,
-    anomaly_start_time: str,
+    experiment_config: dict,
     warmup_len: int = GLOBAL_WARMUP_LOOKBACK_LEN,
 ):
-    df_original = _load_base_dataframe()
+    df_original = _load_base_dataframe(experiment_config)
     data_pro_scale = DataProcess(
         data=df_original,
         time_covariates=["week_of_year"],
@@ -121,7 +165,11 @@ def _prepare_dataset(
     )
 
     df_raw, n_train_total, n_train_use, part_to_remove = (
-        _apply_train_split_via_part_to_remove(df_original, train_split)
+        _apply_train_split_via_part_to_remove(
+            df_original,
+            train_split,
+            experiment_config["validation_start"],
+        )
     )
 
     warmup_lookback_mu = None
@@ -141,14 +189,18 @@ def _prepare_dataset(
     warmup_lookback_var = np.zeros_like(warmup_lookback_mu)
 
     trend = np.linspace(0, 0, num=len(df_raw))
-    time_anomaly = _resolve_anomaly_index(df_raw.index, anomaly_start_time)
+    time_anomaly = _resolve_anomaly_index(
+        df_raw.index, experiment_config["anomaly_start_time"]
+    )
     new_trend = np.linspace(0, anomaly_slope, num=len(df_raw) - time_anomaly)
     trend[time_anomaly:] = trend[time_anomaly:] + new_trend
     df = df_raw.add(trend, axis=0)
 
     df_plot_full = df_original.iloc[warmup_len:].copy()
     plot_trend = np.linspace(0, 0, num=len(df_plot_full))
-    plot_time_anomaly = _resolve_anomaly_index(df_plot_full.index, anomaly_start_time)
+    plot_time_anomaly = _resolve_anomaly_index(
+        df_plot_full.index, experiment_config["anomaly_start_time"]
+    )
     plot_new_trend = np.linspace(
         0, anomaly_slope, num=len(df_plot_full) - plot_time_anomaly
     )
@@ -158,8 +210,8 @@ def _prepare_dataset(
     data_processor = DataProcess(
         data=df,
         time_covariates=["week_of_year"],
-        validation_start=VALIDATION_START,
-        test_start=TEST_START,
+        validation_start=experiment_config["validation_start"],
+        test_start=experiment_config["test_start"],
         output_col=[0],
         scale_const_mean=data_pro_scale.scale_const_mean,
         scale_const_std=data_pro_scale.scale_const_std,
@@ -167,8 +219,8 @@ def _prepare_dataset(
     plot_data_processor = DataProcess(
         data=df_plot_full,
         time_covariates=["week_of_year"],
-        validation_start=VALIDATION_START,
-        test_start=TEST_START,
+        validation_start=experiment_config["validation_start"],
+        test_start=experiment_config["test_start"],
         output_col=[0],
         scale_const_mean=data_pro_scale.scale_const_mean,
         scale_const_std=data_pro_scale.scale_const_std,
@@ -493,7 +545,7 @@ def _run_single_mode(
             look_back_len,
         )
         norm_model = Model(
-            LocalTrend(),
+            LocalTrend(mu_states=[0,0], var_states=[1e-6, 1e-6]),
             LstmNetwork(
                 look_back_len=look_back_len,
                 num_features=LSTM_NUM_FEATURES,
@@ -511,7 +563,7 @@ def _run_single_mode(
             WhiteNoise(std_error=sigma_v),
         )
 
-        norm_model.auto_initialize_baseline_states(train_data["y"][0:BASELINE_INIT_LEN])
+        # norm_model.auto_initialize_baseline_states(train_data["y"][0:BASELINE_INIT_LEN])
 
         for epoch in range(LSTM_NUM_EPOCH):
             if use_warmup_lookback:
@@ -733,7 +785,7 @@ def _run_single_mode(
         states=states,
         model_prob=filter_marginal_abnorm_prob,
         standardization=True,
-        states_type="posterior",
+        states_type="prior",
     )
     anomaly_time = data_processor.data.index[anomaly_idx]
     ax[-1].axvline(
@@ -1002,7 +1054,7 @@ def main(
     num_trial_optim_skf: int = 70,
     ll_false_alarm_penalty_weight: float = DEFAULT_LL_FALSE_ALARM_PENALTY_WEIGHT,
     model_param_optimization: bool = False,
-    skf_param_optimization: bool = True,
+    skf_param_optimization: bool = False,
     global_lstm_dir: str = "saved_params/global_models",
     skf_objective: str = "ll_false_alarm",
     smoother: bool = False,
@@ -1010,8 +1062,8 @@ def main(
     use_tagiv: bool = False,
     train_splits: str = "1.0,0.8,0.6",
     anomaly_slope: float = 0.125,
-    anomaly_start_time: str = "2017-12-30",
     seeds: str = "1, 42",
+    config_path: str = "examples/config/skf_experiment_LGA008EFAPRG910.yaml",
 ):
     skf_objective = skf_objective.lower()
     if skf_objective not in {"ll", "ll_false_alarm", "cdf"}:
@@ -1036,6 +1088,8 @@ def main(
     train_splits = list(train_splits)
     seeds = list(seeds)
     global_lstm_dir = str(Path(global_lstm_dir).resolve())
+    experiment_config = _load_experiment_config(config_path)
+    _print_experiment_config(experiment_config)
 
     save_dir = (
         Path("saved_results")
@@ -1069,7 +1123,7 @@ def main(
             dataset_bundle = _prepare_dataset(
                 train_split,
                 anomaly_slope,
-                anomaly_start_time,
+                experiment_config,
                 warmup_len=GLOBAL_WARMUP_LOOKBACK_LEN,
             )
 

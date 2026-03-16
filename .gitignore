@@ -11,6 +11,8 @@ saved_params/*
 *.svg
 dist/
 data/**
+*.yaml
+*.log
 
 # Data
 !data/toy_time_series/
