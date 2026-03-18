@@ -27,3 +27,7 @@ docs/_build/
 
 # Metadata 
 !examples/benchmark/BM_metadata.json
+
+# Experiments
+experiments/config/*
+experiments/out/*

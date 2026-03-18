@@ -215,7 +215,7 @@ class LstmNetwork(BaseComponent):
         if smoother:
             layers.append(
                 SLSTM(
-                    self.num_features + self.look_back_len + self.embed_len - 1,
+                    self.num_features + self.look_back_len - 1,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
@@ -238,7 +238,7 @@ class LstmNetwork(BaseComponent):
         else:
             layers.append(
                 LSTM(
-                    self.num_features + self.look_back_len + self.embed_len - 1,
+                    self.num_features + self.look_back_len - 1,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
