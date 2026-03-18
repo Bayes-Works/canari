@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 import pytagi
 from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
@@ -6,6 +6,12 @@ from canari.component.base_component import BaseComponent
 
 
 class LstmNetwork(BaseComponent):
+    _LAYER_NAME_ALIASES = {
+        "LSTM": "SLSTM",
+        "SLSTM": "LSTM",
+        "Linear": "SLinear",
+        "SLinear": "Linear",
+    }
     """
     `LstmNetwork` class, inheriting from Canari's `BaseComponent`.
     This component configures a Bayesian LSTM neural network from `pyTAGI` library, and
@@ -98,6 +104,8 @@ class LstmNetwork(BaseComponent):
         var_states: Optional[list[float]] = None,
         smoother: Optional[bool] = True,
         model_noise: Optional[bool] = False,
+        finetune: Optional[bool] = False,
+        stateless: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -116,6 +124,8 @@ class LstmNetwork(BaseComponent):
         self.smoother = smoother
         self.model_noise = model_noise
         self.num_output = 2 * num_output if self.model_noise else num_output
+        self.finetune = finetune
+        self.stateless = stateless
         super().__init__()
 
     def initialize_component_name(self):
@@ -164,6 +174,132 @@ class LstmNetwork(BaseComponent):
         else:
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
+    def _normalize_hidden_units(self) -> None:
+        if isinstance(self.num_hidden_unit, int):
+            self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
+
+    @classmethod
+    def _remap_layer_names(cls, state_dict: dict, target_state_dict: dict) -> dict:
+        if set(state_dict.keys()) == set(target_state_dict.keys()):
+            return state_dict
+
+        remapped_state_dict = {}
+        for layer_name, params in state_dict.items():
+            target_layer_name = layer_name
+            if layer_name not in target_state_dict and "." in layer_name:
+                layer_prefix, layer_suffix = layer_name.split(".", 1)
+                target_prefix = cls._LAYER_NAME_ALIASES.get(layer_prefix)
+                if target_prefix is not None:
+                    candidate_name = f"{target_prefix}.{layer_suffix}"
+                    if candidate_name in target_state_dict:
+                        target_layer_name = candidate_name
+
+            if target_layer_name not in target_state_dict:
+                raise KeyError(
+                    f"Incompatible layer name '{layer_name}' when loading LSTM parameters."
+                )
+
+            remapped_state_dict[target_layer_name] = params
+
+        if set(remapped_state_dict.keys()) != set(target_state_dict.keys()):
+            raise KeyError(
+                "Loaded LSTM parameters do not cover the current network architecture."
+            )
+
+        return remapped_state_dict
+
+    def _build_lstm_network(self, smoother: bool) -> Sequential:
+        self._normalize_hidden_units()
+
+        layers = []
+        if smoother:
+            layers.append(
+                SLSTM(
+                    self.num_features + self.look_back_len + self.embed_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+            for i in range(1, self.num_layer):
+                layers.append(
+                    SLSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1)
+                )
+            layers.append(
+                SLinear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+        else:
+            layers.append(
+                LSTM(
+                    self.num_features + self.look_back_len + self.embed_len - 1,
+                    self.num_hidden_unit[0],
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+            for i in range(1, self.num_layer):
+                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
+            layers.append(
+                Linear(
+                    self.num_hidden_unit[-1],
+                    self.num_output,
+                    1,
+                    gain_weight=self.gain_weight,
+                    gain_bias=self.gain_bias,
+                )
+            )
+
+        lstm_network = Sequential(*layers)
+        lstm_network.lstm_look_back_len = self.look_back_len
+        lstm_network.lstm_infer_len = self.infer_len
+        lstm_network.model_noise = self.model_noise
+        lstm_network.num_samples = 1  # dummy intialization until otherwise specified
+        lstm_network.stateless = self.stateless
+        if self.device == "cpu":
+            lstm_network.set_threads(self.num_thread)
+        elif self.device == "cuda":
+            # TODO: remove this warning when SLSTM supports GPU
+            if self.smoother:
+                print(
+                    "Warning: pytagi SLSTM does not support GPU yet. Resetting to CPU."
+                )
+                lstm_network.set_threads(self.num_thread)
+            else:
+                lstm_network.to_device("cuda")
+
+        lstm_network.smooth = smoother
+
+        return lstm_network
+
+    def _load_lstm_network_params(self, lstm_network: Sequential) -> dict:
+        original_params = lstm_network.state_dict()
+
+        try:
+            lstm_network.load(filename=self.load_lstm_net)
+            return lstm_network.state_dict()
+        except RuntimeError:
+            alternate_network = self._build_lstm_network(smoother=not self.smoother)
+            try:
+                alternate_network.load(filename=self.load_lstm_net)
+            except RuntimeError as compatibility_error:
+                raise RuntimeError(
+                    f"Failed to load LSTM network from '{self.load_lstm_net}'."
+                ) from compatibility_error
+
+            remapped_params = self._remap_layer_names(
+                alternate_network.state_dict(), original_params
+            )
+            lstm_network.load_state_dict(remapped_params)
+            return lstm_network.state_dict()
+
     def initialize_lstm_network(self) -> Sequential:
         """
         Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
@@ -182,79 +318,28 @@ class LstmNetwork(BaseComponent):
         if self.manual_seed:
             pytagi.manual_seed(self.manual_seed)
 
-        layers = []
-        if isinstance(self.num_hidden_unit, int):
-            self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
-        if self.smoother:
-            layers.append(
-                SLSTM(
-                    self.num_features + self.look_back_len - 1,
-                    self.num_hidden_unit[0],
-                    1,
-                    gain_weight=self.gain_weight,
-                    gain_bias=self.gain_bias,
-                )
-            )
-            for i in range(1, self.num_layer):
-                layers.append(
-                    SLSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1)
-                )
-            # Last layer
-            layers.append(
-                SLinear(
-                    self.num_hidden_unit[-1],
-                    self.num_output,
-                    1,
-                    gain_weight=self.gain_weight,
-                    gain_bias=self.gain_bias,
-                )
-            )
-        else:
-            layers.append(
-                LSTM(
-                    self.num_features + self.look_back_len - 1,
-                    self.num_hidden_unit[0],
-                    1,
-                    gain_weight=self.gain_weight,
-                    gain_bias=self.gain_bias,
-                )
-            )
-            for i in range(1, self.num_layer):
-                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
-            # Last layer
-            layers.append(
-                Linear(
-                    self.num_hidden_unit[-1],
-                    self.num_output,
-                    1,
-                    gain_weight=self.gain_weight,
-                    gain_bias=self.gain_bias,
-                )
-            )
-        # Initialize lstm network
-        lstm_network = Sequential(*layers)
-        lstm_network.lstm_look_back_len = self.look_back_len
-        lstm_network.lstm_infer_len = self.infer_len
-        lstm_network.model_noise = self.model_noise
-        lstm_network.num_samples = 1  # dummy intialization until otherwise specified
-        if self.device == "cpu":
-            lstm_network.set_threads(self.num_thread)
-        elif self.device == "cuda":
-            # TODO: remove this warning when SLSTM supports GPU
-            if self.smoother:
-                print(
-                    "Warning: pytagi SLSTM does not support GPU yet. Resetting to CPU."
-                )
-                lstm_network.set_threads(self.num_thread)
-            else:
-                lstm_network.to_device("cuda")
-
-        if self.smoother:
-            lstm_network.smooth = True
-        else:
-            lstm_network.smooth = False
+        lstm_network = self._build_lstm_network(smoother=self.smoother)
 
         if self.load_lstm_net:
-            lstm_network.load(filename=self.load_lstm_net)
+            original_params = lstm_network.state_dict()
+            loaded_params = self._load_lstm_network_params(lstm_network)
+
+            if self.finetune:
+                # Build a new state dict: pretrained means + fresh variances
+                new_params = {}
+                for layer_name in original_params.keys():
+                    if layer_name in loaded_params:
+                        mu_w, _, mu_b, _ = loaded_params[layer_name]
+                        _, original_var_w, _, original_var_b = original_params[
+                            layer_name
+                        ]
+                        # Keep pretrained means, restore fresh variances
+                        new_params[layer_name] = (
+                            mu_w,
+                            original_var_w,
+                            mu_b,
+                            original_var_b,
+                        )
+                lstm_network.load_state_dict(new_params)
 
         return lstm_network
