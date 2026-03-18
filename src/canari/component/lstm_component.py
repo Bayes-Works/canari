@@ -6,6 +6,12 @@ from canari.component.base_component import BaseComponent
 
 
 class LstmNetwork(BaseComponent):
+    _LAYER_NAME_ALIASES = {
+        "LSTM": "SLSTM",
+        "SLSTM": "LSTM",
+        "Linear": "SLinear",
+        "SLinear": "Linear",
+    }
     """
     `LstmNetwork` class, inheriting from Canari's `BaseComponent`.
     This component configures a Bayesian LSTM neural network from `pyTAGI` library, and
@@ -176,28 +182,47 @@ class LstmNetwork(BaseComponent):
         else:
             raise ValueError(f"Incorrect var_states dimension for the lstm component.")
 
-    def initialize_lstm_network(self) -> Sequential:
-        """
-        Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
-
-        The network consists of:
-
-        - One or multiple LSTM layers, each with specified hidden units.
-        - A final Linear layer mapping the LSTM's output to the desired output size.
-
-        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
-
-        Returns:
-            Sequential: a :class:`pytagi.Sequential` instance representing the LSTM network.
-        """
-
-        if self.manual_seed:
-            pytagi.manual_seed(self.manual_seed)
-
-        layers = []
+    def _normalize_hidden_units(self) -> None:
         if isinstance(self.num_hidden_unit, int):
             self.num_hidden_unit = [self.num_hidden_unit] * self.num_layer
-        if self.smoother:
+
+    @classmethod
+    def _remap_layer_names(
+        cls, state_dict: dict, target_state_dict: dict
+    ) -> dict:
+        if set(state_dict.keys()) == set(target_state_dict.keys()):
+            return state_dict
+
+        remapped_state_dict = {}
+        for layer_name, params in state_dict.items():
+            target_layer_name = layer_name
+            if layer_name not in target_state_dict and "." in layer_name:
+                layer_prefix, layer_suffix = layer_name.split(".", 1)
+                target_prefix = cls._LAYER_NAME_ALIASES.get(layer_prefix)
+                if target_prefix is not None:
+                    candidate_name = f"{target_prefix}.{layer_suffix}"
+                    if candidate_name in target_state_dict:
+                        target_layer_name = candidate_name
+
+            if target_layer_name not in target_state_dict:
+                raise KeyError(
+                    f"Incompatible layer name '{layer_name}' when loading LSTM parameters."
+                )
+
+            remapped_state_dict[target_layer_name] = params
+
+        if set(remapped_state_dict.keys()) != set(target_state_dict.keys()):
+            raise KeyError(
+                "Loaded LSTM parameters do not cover the current network architecture."
+            )
+
+        return remapped_state_dict
+
+    def _build_lstm_network(self, smoother: bool) -> Sequential:
+        self._normalize_hidden_units()
+
+        layers = []
+        if smoother:
             layers.append(
                 SLSTM(
                     self.num_features + self.look_back_len + self.embed_len - 1,
@@ -211,7 +236,6 @@ class LstmNetwork(BaseComponent):
                 layers.append(
                     SLSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1)
                 )
-            # Last layer
             layers.append(
                 SLinear(
                     self.num_hidden_unit[-1],
@@ -233,7 +257,6 @@ class LstmNetwork(BaseComponent):
             )
             for i in range(1, self.num_layer):
                 layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
-            # Last layer
             layers.append(
                 Linear(
                     self.num_hidden_unit[-1],
@@ -243,7 +266,7 @@ class LstmNetwork(BaseComponent):
                     gain_bias=self.gain_bias,
                 )
             )
-        # Initialize lstm network
+
         lstm_network = Sequential(*layers)
         lstm_network.lstm_look_back_len = self.look_back_len
         lstm_network.lstm_infer_len = self.infer_len
@@ -256,7 +279,7 @@ class LstmNetwork(BaseComponent):
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":
             # TODO: remove this warning when SLSTM supports GPU
-            if self.smoother:
+            if smoother:
                 print(
                     "Warning: pytagi SLSTM does not support GPU yet. Resetting to CPU."
                 )
@@ -264,18 +287,56 @@ class LstmNetwork(BaseComponent):
             else:
                 lstm_network.to_device("cuda")
 
-        if self.smoother:
-            lstm_network.smooth = True
-        else:
-            lstm_network.smooth = False
-
+        lstm_network.smooth = smoother
         if self.embed_len > 0:
             lstm_network.input_state_update = True
 
+        return lstm_network
+
+    def _load_lstm_network_params(self, lstm_network: Sequential) -> dict:
+        original_params = lstm_network.state_dict()
+
+        try:
+            lstm_network.load(filename=self.load_lstm_net)
+            return lstm_network.state_dict()
+        except RuntimeError:
+            alternate_network = self._build_lstm_network(smoother=not self.smoother)
+            try:
+                alternate_network.load(filename=self.load_lstm_net)
+            except RuntimeError as compatibility_error:
+                raise RuntimeError(
+                    f"Failed to load LSTM network from '{self.load_lstm_net}'."
+                ) from compatibility_error
+
+            remapped_params = self._remap_layer_names(
+                alternate_network.state_dict(), original_params
+            )
+            lstm_network.load_state_dict(remapped_params)
+            return lstm_network.state_dict()
+
+    def initialize_lstm_network(self) -> Sequential:
+        """
+        Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
+
+        The network consists of:
+
+        - One or multiple LSTM layers, each with specified hidden units.
+        - A final Linear layer mapping the LSTM's output to the desired output size.
+
+        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
+
+        Returns:
+            Sequential: a :class:`pytagi.Sequential` instance representing the LSTM network.
+        """
+
+        if self.manual_seed:
+            pytagi.manual_seed(self.manual_seed)
+
+        lstm_network = self._build_lstm_network(smoother=self.smoother)
+
         if self.load_lstm_net:
             original_params = lstm_network.state_dict()
-            lstm_network.load(filename=self.load_lstm_net)
-            loaded_params = lstm_network.state_dict()
+            loaded_params = self._load_lstm_network_params(lstm_network)
 
             if self.finetune:
                 # Build a new state dict: pretrained means + fresh variances
