@@ -1430,6 +1430,10 @@ class Model:
                 var_lstm_pred = var_lstm_pred[0::2]
                 self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
 
+            # Allows model to go stateless
+            if self.lstm_net.stateless:
+                self.lstm_net.reset_lstm_states()
+
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
