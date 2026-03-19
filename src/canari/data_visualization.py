@@ -12,6 +12,7 @@ This module provides functions to plot:
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from typing import Optional, List
 from canari.data_process import DataProcess
 from canari.data_struct import StatesHistory
@@ -36,10 +37,19 @@ def _add_dynamic_grids(ax, time):
         time (np.ndarray): Time array (datetime-indexed).
     """
 
-    # Calculate the time range
-    start_date = time[0]
-    end_date = time[-1]
+    # Sanitize time first: drop invalid datetimes (NaT) before computing ranges/locators
+    time_arr = np.asarray(time).ravel()
+    time_valid = pd.to_datetime(time_arr, errors="coerce")
+    time_valid = time_valid[~pd.isna(time_valid)]
+    if len(time_valid) < 2:
+        return
+
+    # Calculate the valid time range
+    start_date = time_valid[0]
+    end_date = time_valid[-1]
     time_range = end_date - start_date
+    if pd.isna(time_range):
+        return
 
     if time_range > np.timedelta64(15 * 365, "D"):  # More than 15 years
         major_locator = YearLocator(3)

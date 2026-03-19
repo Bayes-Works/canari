@@ -34,6 +34,7 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
 
+
 class Model:
     """
     `Model` class for the Hybrid LSTM/SSM model.
@@ -812,13 +813,24 @@ class Model:
         """
 
         if self.get_states_index("heteroscedastic noise") is not None:
+
             noise_index = self.get_states_index("heteroscedastic noise")
-            self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
-            self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
-                np.exp(var_v2bar_prior) - 1
-            )
-            self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+
+            # Exponential activation function
+            # self._mu_v2bar_tilde = np.exp(mu_v2bar_prior + 0.5 * var_v2bar_prior)
+            # self._var_v2bar_tilde = np.exp(2 * mu_v2bar_prior + var_v2bar_prior) * (
+            #     np.exp(var_v2bar_prior) - 1
+            # )
+            # self._cov_v2bar_tilde = var_v2bar_prior * self._mu_v2bar_tilde
+            # self._var_v2bar_prior = var_v2bar_prior
+
+            # Softplus activation function
+            self._mu_v2bar_tilde = np.log(1 + np.exp(mu_v2bar_prior))
+            tmp = 1 / (1 + np.exp(-mu_v2bar_prior))
+            self._var_v2bar_tilde = tmp**2 * var_v2bar_prior
+            self._cov_v2bar_tilde = tmp * var_v2bar_prior
             self._var_v2bar_prior = var_v2bar_prior
+
             self.process_noise_matrix[noise_index, noise_index] = (
                 self._mu_v2bar_tilde.item()
             )
@@ -1041,7 +1053,7 @@ class Model:
             dummy[:, col_idx] = normed[:, 0]
 
         return dummy
-    
+
     def _states_intervention(self, delta_mu, delta_var):
         """
         States intervention.
@@ -1050,17 +1062,15 @@ class Model:
         :param delta_var: intervention for states variances
         """
 
-        if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
+        if len(delta_mu) == self.num_states and len(delta_var) == self.num_states:
             delta_mu = np.atleast_2d(delta_mu).T
             delta_var = np.diag(delta_var)
             self.mu_states = self.mu_states + delta_mu
             self.var_states = self.var_states + delta_var
         else:
-            raise ValueError(
-                "Incorrect mu and/or var dimension for inverventions."
-            )
+            raise ValueError("Incorrect mu and/or var dimension for inverventions.")
 
-    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+    def _transition_matrix_interv(self, delta_mu: list, delta_var: list, value: float):
         """
         Transition matrix intervention.
         """
@@ -1077,7 +1087,9 @@ class Model:
             _interv_hs_index = []
 
         if _interv_index in _interv_hs_index:
-            _interv_state_index = self.components[self._states_comp[_interv_index]].interv_state_index
+            _interv_state_index = self.components[
+                self._states_comp[_interv_index]
+            ].interv_state_index
             self.transition_matrix[_interv_state_index, _interv_index] = value
 
     def update_lstm_output_history(self, mu_states: np.ndarray, var_states: np.ndarray):
@@ -1166,17 +1178,15 @@ class Model:
         """
 
         indices = [
-                index
-                for index, name in enumerate(self.states_name)
-                if name == states_name
-            ]
+            index for index, name in enumerate(self.states_name) if name == states_name
+        ]
 
         if not indices:
             return None
         if len(indices) == 1:
             return indices[0]
         return indices
-    
+
     def auto_initialize_baseline_states(self, data: np.ndarray):
         """
         Automatically assign initial means and variances for baseline hidden states (level,
@@ -1197,11 +1207,11 @@ class Model:
             if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 1e-5
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 1e-5
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
@@ -1623,7 +1633,7 @@ class Model:
             )
 
     def forecast(
-        self, 
+        self,
         data: Dict[str, np.ndarray],
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -1769,7 +1779,7 @@ class Model:
             # Intervention, reset transition matrix
             if intervention and (interv := intervention.get(time)) is not None:
                 self._transition_matrix_interv(interv["mu"], interv["var"], 0)
-            
+
         return (
             np.array(mu_obs_preds).flatten(),
             np.array(std_obs_preds).flatten(),
@@ -1885,8 +1895,14 @@ class Model:
         if self.lstm_net.smooth:
             self.pretraining_filter(train_data)
 
-        self.filter(data=train_data, intervention=intervention)
-        mu_validation_preds, std_validation_preds, _ = self.forecast(data=validation_data, intervention=intervention)
+        update_params= True
+        if self.lstm_net.zeroshot:
+            update_params =False
+            print("LSTM parameters are not being updated!")
+        self.filter(data=train_data, intervention=intervention, train_lstm=update_params)
+        mu_validation_preds, std_validation_preds, _ = self.forecast(
+            data=validation_data, intervention=intervention
+        )
         self.smoother()
         self.set_memory(time_step=0)
         self._current_epoch += 1

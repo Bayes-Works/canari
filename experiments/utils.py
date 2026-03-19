@@ -139,8 +139,8 @@ def prepare_dataset(
         validation_start=validation_date_time,
         test_start=test_date_time,
         output_col=[0],
-        # scale_const_mean=data_pro_scale.scale_const_mean,
-        # scale_const_std=data_pro_scale.scale_const_std,
+        scale_const_mean=data_pro_scale.scale_const_mean,
+        scale_const_std=data_pro_scale.scale_const_std,
     )
     plot_data_processor = DataProcess(
         data=df_plot_full,
@@ -148,8 +148,8 @@ def prepare_dataset(
         validation_start=validation_date_time,
         test_start=test_date_time,
         output_col=[0],
-        # scale_const_mean=data_pro_scale.scale_const_mean,
-        # scale_const_std=data_pro_scale.scale_const_std,
+        scale_const_mean=data_pro_scale.scale_const_mean,
+        scale_const_std=data_pro_scale.scale_const_std,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 

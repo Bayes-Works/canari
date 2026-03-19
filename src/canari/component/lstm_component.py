@@ -106,6 +106,7 @@ class LstmNetwork(BaseComponent):
         model_noise: Optional[bool] = False,
         finetune: Optional[bool] = False,
         stateless: Optional[bool] = False,
+        zeroshot: Optional[bool] = False,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -126,6 +127,7 @@ class LstmNetwork(BaseComponent):
         self.num_output = 2 * num_output if self.model_noise else num_output
         self.finetune = finetune
         self.stateless = stateless
+        self.zeroshot = zeroshot
         super().__init__()
 
     def initialize_component_name(self):
@@ -263,6 +265,8 @@ class LstmNetwork(BaseComponent):
         lstm_network.model_noise = self.model_noise
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         lstm_network.stateless = self.stateless
+        lstm_network.zeroshot = self.zeroshot
+
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
         elif self.device == "cuda":

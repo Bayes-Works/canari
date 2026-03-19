@@ -175,6 +175,24 @@ class SKF:
         }
 
     @staticmethod
+    def _transition_history():
+        """Create a transition-keyed dictionary where each value is an empty history list."""
+
+        transition_history = SKF._transition()
+        for transit in transition_history:
+            transition_history[transit] = []
+        return transition_history
+
+    @staticmethod
+    def _to_scalar(value) -> float:
+        """Convert scalar-like array values to float for diagnostics."""
+
+        arr = np.asarray(value)
+        if arr.size == 0:
+            return np.nan
+        return float(arr.reshape(-1)[0])
+
+    @staticmethod
     def _marginal():
         """
         Create a dictionary for mariginal: normal and abnormal
@@ -216,6 +234,7 @@ class SKF:
         self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
 
         self.ll_history = []
+        self._reset_filter_diagnostics()
 
         # LSTM-related attributes
         self.lstm_net = None
@@ -229,6 +248,54 @@ class SKF:
         # Optimization
         self.metric_optim = None
         self.print_metric = None
+
+    def _reset_filter_diagnostics(self):
+        """Reset per-filter transition diagnostics histories."""
+
+        self.transition_mu_pred_history = self._transition_history()
+        self.transition_var_pred_history = self._transition_history()
+        self.transition_zscore_history = self._transition_history()
+        self.transition_likelihood_history = self._transition_history()
+        self.transition_log_likelihood_history = self._transition_history()
+        self.transition_posterior_prob_history = self._transition_history()
+
+    def _record_transition_step_diagnostics(
+        self,
+        obs: float,
+        mu_pred_transit: Dict[str, np.ndarray],
+        var_pred_transit: Dict[str, np.ndarray],
+        transition_likelihood: Dict[str, float],
+        trans_prob: Dict[str, float],
+    ):
+        """Store one-step transition diagnostics for later inspection/plotting."""
+
+        epsilon = 1e-30
+        obs_scalar = self._to_scalar(obs)
+        obs_is_nan = np.isnan(obs_scalar)
+
+        for transit in self._transition():
+            mu_scalar = self._to_scalar(mu_pred_transit[transit])
+            var_scalar = self._to_scalar(var_pred_transit[transit])
+            var_scalar = np.maximum(var_scalar, 0.0)
+            std_scalar = np.sqrt(np.maximum(var_scalar, epsilon))
+            likelihood_scalar = self._to_scalar(transition_likelihood[transit])
+            posterior_prob_scalar = self._to_scalar(trans_prob[transit])
+
+            if obs_is_nan:
+                z_score = np.nan
+            else:
+                z_score = (obs_scalar - mu_scalar) / std_scalar
+
+            self.transition_mu_pred_history[transit].append(mu_scalar)
+            self.transition_var_pred_history[transit].append(var_scalar)
+            self.transition_zscore_history[transit].append(z_score)
+            self.transition_likelihood_history[transit].append(likelihood_scalar)
+            self.transition_log_likelihood_history[transit].append(
+                np.log(np.maximum(likelihood_scalar, epsilon))
+            )
+            self.transition_posterior_prob_history[transit].append(
+                posterior_prob_scalar
+            )
 
     def _initialize_model(self, norm_model: Model, abnorm_model: Model):
         """Initialize transition models and link SKF to these new models.
@@ -293,11 +360,15 @@ class SKF:
                 soure_model._states_comp = target_model._states_comp.copy()
                 states_diff.append(state)
 
-        if "white noise" in soure_model.states_name:
-            index_noise = soure_model.states_name.index("white noise")
-            target_model.process_noise_matrix[index_noise, index_noise] = (
-                soure_model.process_noise_matrix[index_noise, index_noise]
-            )
+        for noise_state in ("white noise", "heteroscedastic noise"):
+            if (
+                noise_state in soure_model.states_name
+                and noise_state in target_model.states_name
+            ):
+                index_noise = soure_model.states_name.index(noise_state)
+                target_model.process_noise_matrix[index_noise, index_noise] = (
+                    soure_model.process_noise_matrix[index_noise, index_noise]
+                )
         return soure_model, target_model, states_diff
 
     def _create_transition_model(
@@ -641,6 +712,14 @@ class SKF:
                 sum_trans_prob, epsilon
             )
 
+        self._record_transition_step_diagnostics(
+            obs=obs,
+            mu_pred_transit=mu_pred_transit,
+            var_pred_transit=var_pred_transit,
+            transition_likelihood=transition_likelihood,
+            trans_prob=trans_prob,
+        )
+
         #
         self.marginal_prob["norm"] = trans_prob["norm_norm"] + trans_prob["abnorm_norm"]
         self.marginal_prob["abnorm"] = (
@@ -655,7 +734,7 @@ class SKF:
                 )
 
         return transition_coef
-    
+
     def _states_intervention(self, delta_mu, delta_var):
         """
         States intervention.
@@ -670,15 +749,15 @@ class SKF:
         #     for transition_model in self.model.values():
         #         transition_model.mu_states = transition_model.mu_states + delta_mu
         #         transition_model.var_states = transition_model.var_states + delta_var
-                
+
         # else:
         #     raise ValueError(
         #         "Incorrect mu and/or var dimension for inverventions."
         #     )
         for transition_model in self.model.values():
             transition_model._states_intervention(delta_mu, delta_var)
-        
-    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+
+    def _transition_matrix_interv(self, delta_mu: list, delta_var: list, value: float):
         """
         Transition matrix intervention.
         """
@@ -1000,9 +1079,16 @@ class SKF:
                 var_v2bar_prior = var_lstm_pred[1::2]
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
-                )
+                for transition_model in self.model.values():
+                    if (
+                        transition_model.get_states_index("heteroscedastic noise")
+                        is not None
+                    ):
+                        transition_model._estim_hete_noise(
+                            mu_v2bar_prior, var_v2bar_prior
+                        )
+            if self.lstm_net.stateless:
+                self.lstm_net.reset_lstm_states()
 
         else:
             mu_lstm_pred = None
@@ -1225,6 +1311,7 @@ class SKF:
         mu_obs_preds = []
         std_obs_preds = []
         self.filter_marginal_prob_history = self._prob_history()
+        self._reset_filter_diagnostics()
 
         # Initialize hidden states
         self._set_same_states_transition_models()
