@@ -19,12 +19,12 @@ from canari import (
 )
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
-with open("examples/benchmark/BM_metadata.json", "r") as f:
+with open("examples/benchmark/BM_metadata_global.json", "r") as f:
     metadata = json.load(f)
 
 
 def main(
-    num_trial_optim_model: int = 70,
+    num_trial_optim_model: int = 50,
     param_optimization: bool = False,
     benchmark_no: str = ["2"],
 ):
@@ -49,43 +49,85 @@ def main(
         # Data pre-processing
         df = DataProcess.add_lagged_columns(df, config["lag_vector"])
         output_col = config["output_col"]
+
+        ped = 52
+        const_mean = np.nanmean(df.iloc[:ped, 0])
+        const_std = np.nanstd(df.iloc[:ped, 0])
+
         data_processor = DataProcess(
             data=df,
             time_covariates=config["time_covariates"],
             train_split=config["train_split"],
             validation_split=config["validation_split"],
             output_col=output_col,
+            # scale_const_mean=const_mean,
+            # scale_const_std=const_std,
         )
         train_data, validation_data, _, all_data = data_processor.get_splits()
 
         ######### Define model with parameters #########
+        look_back_len = 52
+        # lstm = Model(
+        #     LstmNetwork(
+        #             look_back_len=look_back_len,
+        #             num_features=config["num_feature"],
+        #             num_layer=1,
+        #             infer_len=config["infer_len"],
+        #             num_hidden_unit=40,
+        #             smoother=False,
+        #             load_lstm_net="saved_params/hq_g_seq_52.bin",
+        #         )
+        # )
+        # lstm_dict = lstm.lstm_net.state_dict()
+
+        # lstm_dict["SLSTM.0"] = lstm_dict.pop("LSTM.0")
+        # lstm_dict["SLSTM.1"] = lstm_dict.pop("LSTM.1")
+        # lstm_dict["SLSTM.2"] = lstm_dict.pop("LSTM.2")
+        # lstm_dict["SLinear.3"] = lstm_dict.pop("Linear.3")
+        
+        std_residual = 5e-2
         def model_with_parameters(param):
             model = Model(
                 LocalTrend(),
                 LstmNetwork(
                     look_back_len=52,
                     num_features=config["num_feature"],
-                    num_layer=3,
-                    infer_len=config["infer_len"],
+                    num_layer=1,
+                    infer_len=52*1,
                     num_hidden_unit=40,
+                    smoother=False,
                     manual_seed=1,
-                    smoother=config["smoother"],
-                    model_noise=True,
-                    load_lstm_net="saved_params/BySeries_global_no-embeddings_seed11.bin",
                 ),
+                WhiteNoise(std_error=std_residual),
             )
+            
+            # init_lstm_dict = model.lstm_net.state_dict()
+            # for key, value in init_lstm_dict.items():
+            #     tmp = list(lstm_dict[key])
+            #     tmp[1] = value[1]
+            #     tmp[3] = value[3]
+            #     lstm_dict[key] = tuple(tmp)
+            # model.lstm_net.load_state_dict(lstm_dict)
+
+            # lstm_states = model.lstm_net.get_lstm_states()
+            # for key in lstm_states:
+            #     values = 1*np.ones((40))
+            #     lstm_states[key] = (values, values, values, values)
+            # model.lstm_net.set_lstm_states(lstm_states)
 
             model.auto_initialize_baseline_states(
                 train_data["y"][
                     config["init_period_states"][0] : config["init_period_states"][1]
                 ]
             )
-            num_epoch = config["num_epoch"]
+            # model.var_states[0,0] = 0
+            # model.var_states[1,1] = 0
+
+            num_epoch = 50
             for epoch in range(num_epoch):
                 mu_validation_preds, std_validation_preds, states = model.lstm_train(
                     train_data=train_data,
                     validation_data=validation_data,
-                    white_noise_decay=False,
                 )
 
                 mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -116,18 +158,18 @@ def main(
                 if model.stop_training:
                     break
 
-            #### Define SKF model with parameters #########
+            print(f"Optimal epoch: #{model.optimal_epoch}")
+            #### Define SKF model swith parameters #########
             abnorm_model = Model(
                 LocalAcceleration(),
-                LstmNetwork(model_noise=True),
+                LstmNetwork(),
+                WhiteNoise()
             )
             skf = SKF(
                 norm_model=model,
                 abnorm_model=abnorm_model,
-                std_transition_error=param["std_transition_error"],
-                norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
-                # std_transition_error=1e-4,
-                # norm_to_abnorm_prob=1e-5,
+                std_transition_error=1e-4,
+                norm_to_abnorm_prob=1e-5,
             )
 
             skf.save_initial_states()
@@ -138,82 +180,23 @@ def main(
 
             skf.load_initial_states()
             return skf
+        
+        param = {}
+        skf_optim = model_with_parameters(param)
 
-        ######### Parameter optimization #########
-        if param_optimization:
-            param_space = {
-                "look_back_len": config["look_back_len"],
-                # "sigma_v": config["sigma_v"],
-                "std_transition_error": config["std_transition_error"],
-                "norm_to_abnorm_prob": config["norm_to_abnorm_prob"],
-            }
-            # Define optimizer
-            model_optimizer = Optimizer(
-                model=model_with_parameters,
-                param=param_space,
-                num_optimization_trial=num_trial_optim_model,
-                num_startup_trials=30,
-            )
-            model_optimizer.optimize()
-            # Get best model
-            param = model_optimizer.get_best_param()
-            skf_optim = model_with_parameters(param)
-
-            skf_optim_dict = skf_optim.get_dict()
-            skf_optim_dict["model_param"] = param
-            skf_optim_dict["cov_names"] = train_data["cov_names"]
-            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "wb") as f:
-                pickle.dump(skf_optim_dict, f)
-        else:
-            # # Load saved skf model
-            # model = Model(
-            #     LocalTrend(),
-            #     LstmNetwork(
-            #         look_back_len=52,
-            #         num_features=2,
-            #         num_layer=3,
-            #         infer_len=156,
-            #         num_hidden_unit=40,
-            #         manual_seed=1,
-            #         smoother=True,
-            #         model_noise=True,
-            #     ),
-            # )
-
-
-            # with open("saved_params/lstm_global_dict.pkl", "rb") as f:
-            #     lstm_global_dict = pickle.load(f)
-            # model.lstm_net.load_state_dict(lstm_global_dict)
-            # model_dict = model.lstm_net.state_dict()
-            # model_dict["SLinear.3"] = model_dict.pop("Linear.3")
-            # model_dict["SLSTM.2"] = model_dict.pop("LSTM.2")
-            # model_dict["SLSTM.1"] = model_dict.pop("LSTM.1")
-            # model_dict["SLSTM.0"] = model_dict.pop("LSTM.0")
-            # with open(f"saved_params/lstm_global_dict.pkl", "wb") as f:
-            #     pickle.dump(model_dict, f)
-            
-            # abnorm_model = Model(
-            #     LocalAcceleration(),
-            #     LstmNetwork(model_noise=True),
-            # )
-            # skf_optim = SKF(
-            #     norm_model=model,
-            #     abnorm_model=abnorm_model,
-            #     # std_transition_error=param["std_transition_error"],
-            #     # norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
-            #     std_transition_error=1e-4,
-            #     norm_to_abnorm_prob=1e-5,
-            # )
-
-                        
-            with open(f"{config['saved_model_path']}_LL_obj_agvi_1.pkl", "rb") as f:
-                skf_optim_dict = pickle.load(f)
-            skf_optim = SKF.load_dict(skf_optim_dict)
+        skf_optim_dict = skf_optim.get_dict()
+        skf_optim_dict["model_param"] = param
+        skf_optim_dict["cov_names"] = train_data["cov_names"]
+        with open(f"{config['saved_model_path']}_global_seq_{look_back_len}.pkl", "wb") as f:
+            pickle.dump(skf_optim_dict, f)
 
         ######### Detect anomaly #########
-        print("Model parameters used:", skf_optim_dict["model_param"])
-
         filter_marginal_abnorm_prob, states = skf_optim.filter(data=all_data)
+
+        mean_std = states.get_std(states_name="lstm")
+        mean_std = np.nanmean(mean_std)
+        print(f"average std lstm: {mean_std:0.4f} ")
+        print(f"ratio std lstm/residual: {mean_std/std_residual:0.4f}")
 
         fig, ax = plot_skf_states(
             data_processor=data_processor,

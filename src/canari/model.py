@@ -1086,6 +1086,25 @@ class Model:
             var_states[lstm_index, lstm_index],
         )
 
+        ## 2
+        # lstm_index = self.get_states_index("lstm")
+        # white_noise_index = self.get_states_index("white noise")
+        # hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+        # indices = [
+        #     idx for idx in (lstm_index, white_noise_index, hete_noise_index)
+        #     if idx is not None
+        # ]
+        # _observation_matrix = np.zeros_like(self.observation_matrix)
+        # _observation_matrix[0, indices] = 1
+        # mu_lstm = _observation_matrix @ mu_states
+        # var_lstm = _observation_matrix @ var_states @_observation_matrix.T
+        # # var_lstm = np.zeros_like(var_lstm)
+        # self.lstm_output_history.update(
+        #     mu_lstm.flatten(),
+        #     var_lstm.flatten(),
+        # )
+
     def get_dict(self, time_step: Optional[int] = None) -> dict:
         """
         Export model attributes into a serializable dictionary.
@@ -1644,6 +1663,7 @@ class Model:
 
         mu_obs_preds = []
         std_obs_preds = []
+        self.initialize_states_history()
 
         # set lstm to eval mode
         if self.lstm_net:

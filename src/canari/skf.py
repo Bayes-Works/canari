@@ -298,6 +298,10 @@ class SKF:
             target_model.process_noise_matrix[index_noise, index_noise] = (
                 soure_model.process_noise_matrix[index_noise, index_noise]
             )
+
+        index_states_diff = soure_model.get_states_index(states_diff[-1])
+        soure_model.index_states_diff = index_states_diff
+        target_model.index_states_diff = index_states_diff
         return soure_model, target_model, states_diff
 
     def _create_transition_model(
@@ -332,10 +336,10 @@ class SKF:
         norm_abnorm = copy.deepcopy(abnorm_abnorm)
 
         # Add transition noise to norm_abnorm.process_noise_matrix
-        index_states_diff = norm_norm.get_states_index(states_diff[-1])
-        norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
-            self.std_transition_error**2
-        )
+        # index_states_diff = norm_norm.get_states_index(states_diff[-1])
+        # norm_abnorm.process_noise_matrix[index_states_diff, index_states_diff] = (
+        #     self.std_transition_error**2
+        # )
 
         # Store transitional models in a dictionary
         self.model["norm_norm"] = norm_norm
@@ -622,7 +626,7 @@ class SKF:
             obs, mu_pred_transit, var_pred_transit
         )
 
-        #
+        # #
         trans_prob = self._transition()
         sum_trans_prob = 0
         for origin_state in self.marginal_list:
@@ -654,6 +658,21 @@ class SKF:
                     self.marginal_prob[arrival_state], epsilon
                 )
 
+        # max_ll = -1e10
+        # for origin_state in self.marginal_list:
+        #     for arrival_state in self.marginal_list:
+        #         transit = f"{origin_state}_{arrival_state}"
+        #         if transition_likelihood[transit]>max_ll:
+        #             max_ll = transition_likelihood[transit]
+
+        # for origin_state in self.marginal_list:
+        #     for arrival_state in self.marginal_list:
+        #         transit = f"{origin_state}_{arrival_state}"
+        #         if transition_likelihood[transit]<max_ll:
+        #             transition_coef[transit] = 0
+        #         else:
+        #             transition_coef[transit] = 1
+
         return transition_coef
     
     def _states_intervention(self, delta_mu, delta_var):
@@ -664,17 +683,6 @@ class SKF:
         :param delta_var: intervention for states variances
         """
 
-        # if len(delta_mu)==self.num_states and len(delta_var) == self.num_states:
-        #     delta_mu = np.atleast_2d(delta_mu).T
-        #     delta_var = np.diag(delta_var)
-        #     for transition_model in self.model.values():
-        #         transition_model.mu_states = transition_model.mu_states + delta_mu
-        #         transition_model.var_states = transition_model.var_states + delta_var
-                
-        # else:
-        #     raise ValueError(
-        #         "Incorrect mu and/or var dimension for inverventions."
-        #     )
         for transition_model in self.model.values():
             transition_model._states_intervention(delta_mu, delta_var)
         
@@ -1010,6 +1018,9 @@ class SKF:
             var_lstm_pred = None
 
         for transit, transition_model in self.model.items():
+            if transit == "norm_abnorm":
+                index_states_diff = transition_model.index_states_diff
+                transition_model.var_states[index_states_diff,index_states_diff] = self.std_transition_error**2
             (
                 mu_pred_transit[transit],
                 var_pred_transit[transit],
