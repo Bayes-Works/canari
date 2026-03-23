@@ -853,6 +853,22 @@ class Model:
         delta_var_v2bar = jcb * delta_var_v2bar_tilde * jcb / self._var_v2bar_prior**2
 
         return delta_mu_v2bar, delta_var_v2bar
+    
+    def _KR_forward_mod(self, time):
+        """
+        _
+        """
+        time = time.hour
+
+        kr_index = self.get_states_index("kernel regression")
+        time_cp = self.components[self._states_comp[kr_index]].time_control_point
+        period = self.components[self._states_comp[kr_index]].period
+        kernel_len = self.components[self._states_comp[kr_index]].kernel_length
+        k     = np.exp((-2 / kernel_len**2) * np.sin(np.pi * (time - time_cp) / period)**2)
+        k_sum = np.sum(k)
+        k     = k / k_sum
+
+        self.transition_matrix [kr_index, kr_index + 1: kr_index + 1 + len(time_cp)] = k.flatten()
 
     def update_lstm_states_history(self, index: int, last_step: int):
         """
@@ -1377,6 +1393,7 @@ class Model:
         var_input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
+        time: Optional[str] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
@@ -1429,6 +1446,10 @@ class Model:
                 mu_lstm_pred = mu_lstm_pred[0::2]
                 var_lstm_pred = var_lstm_pred[0::2]
                 self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
+
+        # Kernel regression
+        if "kernel regression" in self.states_name:
+            self._KR_forward_mod(time)
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1738,7 +1759,7 @@ class Model:
                 self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
-            mu_obs_pred, var_obs_pred, *_ = self.forward(x)
+            mu_obs_pred, var_obs_pred, *_ = self.forward(input_covariates=x, time=time)
             (
                 delta_mu_states,
                 delta_var_states,
