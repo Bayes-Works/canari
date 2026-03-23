@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v1_realjoint3_estellafterdet import hsl_classification
+from src.hsl_classification_2classes_rsic_v2 import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -359,4 +359,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_lttoll.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v2_quantile001_lttoll.csv", index=False)

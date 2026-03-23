@@ -27,14 +27,14 @@ test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_l
 test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 # Input
-first_anm_type = 'lt'
-second_anm_type = 'll'
+first_anm_type = 'll'
+second_anm_type = 'lt'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     test_ts_len=test_ts_len,
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_lltoll.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_"+first_anm_type+"to"+second_anm_type+".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_wait7_"+first_anm_type+"to"+second_anm_type+".csv",
     evaluate_itv_type = True,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
@@ -117,7 +117,7 @@ plt.subplots_adjust(hspace=0.3)
 ################################### Plot the comparison of the detection maps ###################################
 red_points_rsic, gray_points_rsic, blue_points_rsic, orange_points_rsic = _get_color_points(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_" + first_anm_type + "to" + second_anm_type + ".csv")
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_wait7_" + first_anm_type + "to" + second_anm_type + ".csv")
 
 red_points_rsi, gray_points_rsi, blue_points_rsi, orange_points_rsi = _get_color_points(
     test_ts_len=test_ts_len,

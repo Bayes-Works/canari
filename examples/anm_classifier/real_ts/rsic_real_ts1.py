@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v1_realjoint3 import hsl_classification
+from src.hsl_classification_2classes_rsic_v2_w5 import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -109,8 +109,8 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd =  8.841863466034498e-06
-hsl_tsad_agent.LTd_std = 8.361741253698168e-05
+hsl_tsad_agent.mu_LTd =  3.0138962167403075e-05
+hsl_tsad_agent.LTd_std = 7.837749675427729e-05
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 # hsl_tsad_agent.tune_panm_threshold(data=train_val_data)
 hsl_tsad_agent.detection_threshold = 0.1
