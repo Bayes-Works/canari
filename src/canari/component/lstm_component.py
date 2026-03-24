@@ -107,6 +107,8 @@ class LstmNetwork(BaseComponent):
         finetune: Optional[bool] = False,
         stateless: Optional[bool] = False,
         zeroshot: Optional[bool] = False,
+        embed_len: Optional[int] = 0,
+        embedding: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     ):
         self.std_error = std_error
         self.num_layer = num_layer
@@ -128,6 +130,10 @@ class LstmNetwork(BaseComponent):
         self.finetune = finetune
         self.stateless = stateless
         self.zeroshot = zeroshot
+        self.embed_len = (
+            embed_len if embedding is None else embedding[0].flatten().shape[0]
+        )
+        self.embedding = embedding
         super().__init__()
 
     def initialize_component_name(self):
@@ -212,12 +218,13 @@ class LstmNetwork(BaseComponent):
 
     def _build_lstm_network(self, smoother: bool) -> Sequential:
         self._normalize_hidden_units()
+        num_input_features = self.num_features + self.look_back_len - 1 + self.embed_len
 
         layers = []
         if smoother:
             layers.append(
                 SLSTM(
-                    self.num_features + self.look_back_len - 1,
+                    num_input_features,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
@@ -240,7 +247,7 @@ class LstmNetwork(BaseComponent):
         else:
             layers.append(
                 LSTM(
-                    self.num_features + self.look_back_len - 1,
+                    num_input_features,
                     self.num_hidden_unit[0],
                     1,
                     gain_weight=self.gain_weight,
@@ -266,6 +273,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         lstm_network.stateless = self.stateless
         lstm_network.zeroshot = self.zeroshot
+        lstm_network.embed_len = self.embed_len
 
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)
@@ -280,6 +288,8 @@ class LstmNetwork(BaseComponent):
                 lstm_network.to_device("cuda")
 
         lstm_network.smooth = smoother
+        if self.embed_len > 0:
+            lstm_network.input_state_update = True
 
         return lstm_network
 
@@ -313,7 +323,8 @@ class LstmNetwork(BaseComponent):
         - One or multiple LSTM layers, each with specified hidden units.
         - A final Linear layer mapping the LSTM's output to the desired output size.
 
-        The first LSTM layer input size is determined by `num_features + look_back_len - 1`.
+        The first LSTM layer input size is determined by
+        `num_features + look_back_len - 1 + embed_len`.
 
         Returns:
             Sequential: a :class:`pytagi.Sequential` instance representing the LSTM network.

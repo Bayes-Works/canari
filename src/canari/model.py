@@ -25,11 +25,18 @@ import copy
 from typing import Optional, List, Tuple, Dict
 import numpy as np
 import pandas as pd
+import scipy.special
 from pytagi import Normalizer as normalizer
 from pytagi.nn import OutputUpdater
 from canari.component.base_component import BaseComponent
 from canari import common
-from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
+from canari.data_struct import (
+    LstmOutputHistory,
+    StatesHistory,
+    OutputHistory,
+    LstmEmbedding,
+)
+from scipy.optimize import minimize
 from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
@@ -191,6 +198,7 @@ class Model:
         self.lstm_net = None
         self.lstm_output_history = LstmOutputHistory()
         self.lstm_states_history = []
+        self.lstm_embedding = LstmEmbedding()
 
         # Autoregression-related attributes
         self.mu_W2bar = None
@@ -300,7 +308,23 @@ class Model:
         Initialize and configure an LSTM network if there is a LstmNetwork component is used.
         """
 
-        lstm_component = next(
+        lstm_component = self._get_lstm_component()
+        if lstm_component:
+            self.lstm_net = lstm_component.initialize_lstm_network()
+            self.lstm_net.embed_len = lstm_component.embed_len
+            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+            embed_len = lstm_component.embed_len
+            if embed_len > 0:
+                if lstm_component.embedding is None:
+                    self.lstm_embedding.initialize(embed_len)
+                else:
+                    self.lstm_embedding.set_values(
+                        *lstm_component.embedding,
+                    )
+                self._sync_lstm_embedding()
+
+    def _get_lstm_component(self) -> Optional[BaseComponent]:
+        return next(
             (
                 component
                 for component in self.components.values()
@@ -308,9 +332,19 @@ class Model:
             ),
             None,
         )
-        if lstm_component:
-            self.lstm_net = lstm_component.initialize_lstm_network()
-            self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+
+    def _sync_lstm_embedding(self):
+        if not self.lstm_net or getattr(self.lstm_embedding, "length", 0) == 0:
+            return
+
+        embedding = self.lstm_embedding.as_tuple()
+        self.lstm_net.embed_len = self.lstm_embedding.length
+        self.lstm_net.embedding = embedding
+
+        lstm_component = self._get_lstm_component()
+        if lstm_component is not None:
+            lstm_component.embed_len = self.lstm_embedding.length
+            lstm_component.embedding = embedding
 
     def _initialize_autoregression(self):
         """
@@ -986,7 +1020,9 @@ class Model:
         for i in range(self.lstm_net.lstm_infer_len):
             dummy_covariates = lookback_covariates[i]
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.lstm_output_history, dummy_covariates
+                self.lstm_output_history,
+                dummy_covariates,
+                lstm_embedding=self.lstm_embedding,
             )
 
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
@@ -1101,11 +1137,31 @@ class Model:
             var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
+        # Z^{O}
         lstm_index = self.get_states_index("lstm")
         self.lstm_output_history.update(
             mu_states[lstm_index],
             var_states[lstm_index, lstm_index],
         )
+        # # Z^{O} + V
+        # lstm_index = self.get_states_index("lstm")
+        # white_noise_index = self.get_states_index("white noise")
+        # hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+        # indices = [
+        #     idx
+        #     for idx in (lstm_index, white_noise_index, hete_noise_index)
+        #     if idx is not None
+        # ]
+        # _observation_matrix = np.zeros_like(self.observation_matrix)
+        # _observation_matrix[0, indices] = 1
+        # mu_lstm = _observation_matrix @ mu_states
+        # var_lstm = _observation_matrix @ var_states @ _observation_matrix.T
+
+        # self.lstm_output_history.update(
+        #     mu_lstm.flatten(),
+        #     var_lstm.flatten(),
+        # )
 
     def get_dict(self, time_step: Optional[int] = None) -> dict:
         """
@@ -1123,6 +1179,7 @@ class Model:
         """
 
         save_dict = {}
+        self._sync_lstm_embedding()
         save_dict["components"] = self.components
         save_dict["states_name"] = self.states_name
         memory = self.get_memory(time_step=time_step)
@@ -1276,6 +1333,8 @@ class Model:
         lstm_states = None
         lstm_output_history_mu = None
         lstm_output_history_var = None
+        lstm_embedding_mu = None
+        lstm_embedding_var = None
 
         if time_step is None:  # save the current memory of model
             mu_states = self.mu_states.copy()
@@ -1339,11 +1398,16 @@ class Model:
                     ** 2
                 )
 
+        if self.lstm_net and getattr(self.lstm_embedding, "length", 0) > 0:
+            lstm_embedding_mu, lstm_embedding_var = self.lstm_embedding.as_tuple()
+
         memory["mu_states"] = mu_states
         memory["var_states"] = var_states
         memory["lstm_states"] = lstm_states
         memory["lstm_output_history_mu"] = lstm_output_history_mu
         memory["lstm_output_history_var"] = lstm_output_history_var
+        memory["lstm_embedding_mu"] = lstm_embedding_mu
+        memory["lstm_embedding_var"] = lstm_embedding_var
 
         return memory
 
@@ -1380,6 +1444,14 @@ class Model:
                 memory["lstm_output_history_mu"], memory["lstm_output_history_var"]
             )
             self.lstm_net.set_lstm_states(memory["lstm_states"])
+            if (
+                memory.get("lstm_embedding_mu") is not None
+                and memory.get("lstm_embedding_var") is not None
+            ):
+                self.lstm_embedding.set_values(
+                    memory["lstm_embedding_mu"], memory["lstm_embedding_var"]
+                )
+                self._sync_lstm_embedding()
 
     def forward(
         self,
@@ -1422,11 +1494,16 @@ class Model:
         if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
             if var_input_covariates is not None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, input_covariates, var_input_covariates
+                    self.lstm_output_history,
+                    input_covariates,
+                    var_input_covariates,
+                    lstm_embedding=self.lstm_embedding,
                 )
             else:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                    self.lstm_output_history, input_covariates
+                    self.lstm_output_history,
+                    input_covariates,
+                    lstm_embedding=self.lstm_embedding,
                 )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1708,6 +1785,8 @@ class Model:
         data: Dict[str, np.ndarray],
         train_lstm: Optional[bool] = True,
         intervention: Optional[dict] = None,
+        update_embedding: Optional[bool] = False,
+        update_mask: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and
@@ -1721,6 +1800,9 @@ class Model:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
             train_lstm (bool, optional): Whether to update LSTM's parameter weights and biases.
                 Defaults to True.
+            update_embedding (bool): Whether to update the input embedding in LSTM. Defaults to False.
+            update_mask (Optional[List[int]]): Optional 1D mask (length = embed_len) to
+                selectively update embedding dimensions. 1 keeps updates, 0 freezes updates.
             intervention (dict, optional): intervention dictionary. Defaults to None.
 
         Returns:
@@ -1767,8 +1849,29 @@ class Model:
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
                 self.update_lstm_output_history(
-                    mu_states_posterior, var_states_posterior
+                    mu_states_posterior,
+                    var_states_posterior,
                 )
+
+                if update_embedding and getattr(self.lstm_net, "embed_len", 0) > 0:
+                    embed_len = self.lstm_net.embed_len
+                    if getattr(self.lstm_embedding, "length", 0) == 0:
+                        self.lstm_embedding.initialize(embed_len)
+                    delta_input_mu, delta_input_var = self.lstm_net.get_input_states()
+                    embed_mu = np.asarray(delta_input_mu)[..., -embed_len:].copy()
+                    embed_var = np.asarray(delta_input_var)[..., -embed_len:].copy()
+                    if update_mask is not None:
+                        update_mask_array = np.asarray(update_mask, dtype=np.float32)
+                        if update_mask_array.ndim != 1 or update_mask_array.size != embed_len:
+                            raise ValueError(
+                                "update_mask must be a 1D list/array with length equal "
+                                f"to embed_len={embed_len}."
+                            )
+                        embed_mu = embed_mu * update_mask_array
+                        embed_var = embed_var * update_mask_array
+
+                    self.lstm_embedding.update(embed_mu, embed_var)
+                    self._sync_lstm_embedding()
 
             # Store variables
             self.save_states_history()
