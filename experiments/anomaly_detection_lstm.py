@@ -301,7 +301,7 @@ def _save_transition_diagnostics_csv(
 
 
 def main(
-    experiment_config_path: str = "./experiments/config/LGA008ESAP-E000.yaml",
+    experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
 ):
 
     # Read config file
@@ -344,16 +344,25 @@ def main(
     smoother = experiment_config["smoother"]
     sigma_v = experiment_config["sigma_v"]
     stateless = experiment_config["lstm_stateless"]
-    zero_shot =experiment_config["lstm_zeroshot"]
+    zero_shot = experiment_config["lstm_zeroshot"]
     finetune = experiment_config["lstm_finetune"]
     global_params = experiment_config["lstm_global_params"]
     use_tagiv = experiment_config["use_tagiv"]
     max_num_epoch = int(experiment_config.get("lstm_num_epoch", 50))
+    likelihood_covariance_floor = float(
+        experiment_config.get("likelihood_covariance_floor", 0.1)
+    )
+    default_skf_param = {
+        "sigma_v": sigma_v,
+        "std_transition_error": float(experiment_config["std_transition_error"]),
+        "norm_to_abnorm_prob": float(experiment_config["norm_to_abnorm_prob"]),
+    }
     optimal_validation_metrics = {}
     training_metrics_history = []
     lstm_std_per_epoch = []
 
     def model_with_parameters(param, capture_training_metrics: bool = False):
+        resolved_param = {**default_skf_param, **param}
         lstm_kwargs = dict(
             look_back_len=look_back_len,
             num_features=num_features,
@@ -391,9 +400,9 @@ def main(
             else:
                 raise
 
-        model.auto_initialize_baseline_states(
-            train_data["y"][0 : experiment_config["baseline_init_len"]]
-        )
+        # model.auto_initialize_baseline_states(
+        #     train_data["y"][0 : experiment_config["baseline_init_len"]]
+        # )
         num_epoch = max_num_epoch
         local_training_metrics = []
         local_lstm_std_per_epoch = [np.array([np.nan]) for _ in range(num_epoch)]
@@ -442,7 +451,7 @@ def main(
                 evaluate_metric=-validation_log_lik,
                 current_epoch=epoch,
                 max_epoch=num_epoch,
-                skip_epoch=3,
+                skip_epoch=0,
             )
             model.metric_optim = model.early_stop_metric
 
@@ -468,10 +477,14 @@ def main(
         skf = SKF(
             norm_model=model,
             abnorm_model=abnorm_model,
-            std_transition_error=param["std_transition_error"],
-            norm_to_abnorm_prob=param["norm_to_abnorm_prob"],
+            std_transition_error=resolved_param["std_transition_error"],
+            norm_to_abnorm_prob=resolved_param["norm_to_abnorm_prob"],
+            likelihood_covariance_floor=likelihood_covariance_floor,
         )
-        skf.model["norm_norm"].lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+        # if skf.model["norm_norm"].lstm_net.smooth is False:
+        skf.model["norm_norm"].lstm_output_history.set(
+            warmup_lookback_mu, warmup_lookback_var
+        )
         skf.save_initial_states()
 
         skf.filter(data=all_data)
@@ -484,12 +497,12 @@ def main(
 
     ######### Parameter optimization #########
     if bool(experiment_config.get("optimize_skf_parameters", False)):
-        num_optimization_trial = int(experiment_config.get("num_optimization_trial", 70))
+        num_optimization_trial = int(experiment_config.get("num_optimization_trial", 50))
         num_startup_trials = int(experiment_config["num_startup_trials"])
         param_space = {
             # "sigma_v": [1e-3, 2e-1],
-            "std_transition_error": [1e-6, 1e-4],
-            "norm_to_abnorm_prob": [1e-6, 1e-4],
+            "std_transition_error": [1e-7, 1e-5],
+            # "norm_to_abnorm_prob": [1e-6, 1e-4],
         }
         # Define optimizer
         model_optimizer = Optimizer(
@@ -501,14 +514,11 @@ def main(
         )
         model_optimizer.optimize()
         # Get best model
-        param = model_optimizer.get_best_param()
+        param = {**default_skf_param, **model_optimizer.get_best_param()}
 
     else:
-        param = {
-            "sigma_v": sigma_v,
-            "std_transition_error": experiment_config["std_transition_error"],
-            "norm_to_abnorm_prob": experiment_config["norm_to_abnorm_prob"],
-        }
+        param = default_skf_param.copy()
+    param["likelihood_covariance_floor"] = likelihood_covariance_floor
     skf_optim = model_with_parameters(param, capture_training_metrics=True)
 
     skf_optim_dict = skf_optim.get_dict()
@@ -546,7 +556,7 @@ def main(
         states=states,
         model_prob=filter_marginal_abnorm_prob,
         standardization=True,
-        states_type="prior",
+        states_type="posterior",
     )
     anomaly_time = dataset["anomaly_time"]
     if show_anomaly_marker:

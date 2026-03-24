@@ -20,6 +20,7 @@ skf_lstm = SKF(
     norm_to_abnorm_prob=1e-4,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
+    likelihood_covariance_floor=1e-6,
 )
 skf_slstm = SKF(
     norm_model=Model(
@@ -36,6 +37,7 @@ skf_slstm = SKF(
     norm_to_abnorm_prob=1e-4,
     abnorm_to_norm_prob=1e-1,
     norm_model_prior_prob=0.99,
+    likelihood_covariance_floor=1e-6,
 )
 
 
@@ -53,3 +55,7 @@ def test_skf_save_load(skf_version):
     assert skf_dict["norm_to_abnorm_prob"] == skf_loaded_dict["norm_to_abnorm_prob"]
     assert skf_dict["abnorm_to_norm_prob"] == skf_loaded_dict["abnorm_to_norm_prob"]
     assert skf_dict["norm_model_prior_prob"] == skf_loaded_dict["norm_model_prior_prob"]
+    assert (
+        skf_dict["likelihood_covariance_floor"]
+        == skf_loaded_dict["likelihood_covariance_floor"]
+    )

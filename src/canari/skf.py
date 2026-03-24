@@ -34,6 +34,8 @@ class SKF:
         abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+        likelihood_covariance_floor (float): Minimum observation covariance used for
+            transition likelihood calculation. Defaults to 0.0 (disabled).
 
     Examples:
         >>> from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
@@ -96,6 +98,8 @@ class SKF:
         abnorm_to_norm_prob (float): Transition probability from abnormal to normal.
         norm_model_prior_prob (float): Prior probability of the normal model.
         conditional_likelihood (bool): Whether to use conditional log-likelihood. Defaults to False.
+        likelihood_covariance_floor (float): Minimum observation covariance used for
+            transition likelihood calculation.
         ll_history (list): Log-likelihood history.
 
         # LSTM-related attributes: only being used when a :class:`~canari.component.lstm_component.LstmNetwork` component is found.
@@ -133,6 +137,7 @@ class SKF:
         abnorm_to_norm_prob: Optional[float] = 0.1,
         norm_model_prior_prob: Optional[float] = 0.99,
         conditional_likelihood: Optional[bool] = False,
+        likelihood_covariance_floor: Optional[float] = 0.0,
     ):
         """
         Initialization
@@ -143,6 +148,9 @@ class SKF:
         self.abnorm_to_norm_prob = abnorm_to_norm_prob
         self.norm_model_prior_prob = norm_model_prior_prob
         self.conditional_likelihood = conditional_likelihood
+        self.likelihood_covariance_floor = np.maximum(
+            float(likelihood_covariance_floor), 0.0
+        )
         self.model = self._transition()
         self.states = StatesHistory()
         self._initialize_attributes()
@@ -270,6 +278,9 @@ class SKF:
         """Store one-step transition diagnostics for later inspection/plotting."""
 
         epsilon = 1e-30
+        likelihood_variance_floor = np.maximum(
+            self.likelihood_covariance_floor, epsilon
+        )
         obs_scalar = self._to_scalar(obs)
         obs_is_nan = np.isnan(obs_scalar)
 
@@ -277,7 +288,7 @@ class SKF:
             mu_scalar = self._to_scalar(mu_pred_transit[transit])
             var_scalar = self._to_scalar(var_pred_transit[transit])
             var_scalar = np.maximum(var_scalar, 0.0)
-            std_scalar = np.sqrt(np.maximum(var_scalar, epsilon))
+            std_scalar = np.sqrt(np.maximum(var_scalar, likelihood_variance_floor))
             likelihood_scalar = self._to_scalar(transition_likelihood[transit])
             posterior_prob_scalar = self._to_scalar(trans_prob[transit])
 
@@ -515,6 +526,9 @@ class SKF:
         """
 
         epsilon = 1e-30
+        likelihood_variance_floor = np.maximum(
+            self.likelihood_covariance_floor, epsilon
+        )
         transition_likelihood = self._transition()
         if np.isnan(obs):
             for transit in transition_likelihood:
@@ -531,23 +545,33 @@ class SKF:
                 )
 
                 for transit in transition_likelihood:
+                    likelihood_variance = np.maximum(
+                        var_pred_transit[transit] - var_obs_error,
+                        likelihood_variance_floor,
+                    )
                     transition_likelihood[transit] = np.mean(
                         np.exp(
                             metric.log_likelihood(
                                 mu_pred_transit[transit] + noise,
                                 obs,
-                                (var_pred_transit[transit] - var_obs_error) ** 0.5,
+                                likelihood_variance**0.5,
                             )
                         )
                     )
+                    transition_likelihood[transit] = np.maximum(
+                        transition_likelihood[transit], epsilon
+                    )
             else:
                 for transit in transition_likelihood:
+                    likelihood_variance = np.maximum(
+                        var_pred_transit[transit], likelihood_variance_floor
+                    )
                     transition_likelihood[transit] = np.maximum(
                         np.exp(
                             metric.log_likelihood(
                                 mu_pred_transit[transit],
                                 obs,
-                                var_pred_transit[transit] ** 0.5,
+                                likelihood_variance**0.5,
                             )
                         ),
                         epsilon,
@@ -862,6 +886,7 @@ class SKF:
         save_dict["norm_to_abnorm_prob"] = self.norm_to_abnorm_prob
         save_dict["abnorm_to_norm_prob"] = self.abnorm_to_norm_prob
         save_dict["norm_model_prior_prob"] = self.norm_model_prior_prob
+        save_dict["likelihood_covariance_floor"] = self.likelihood_covariance_floor
 
         return save_dict
 
@@ -913,6 +938,7 @@ class SKF:
             norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
             abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
             norm_model_prior_prob=save_dict["norm_model_prior_prob"],
+            likelihood_covariance_floor=save_dict.get("likelihood_covariance_floor", 0.0),
         )
         skf.model["norm_norm"].set_states(
             save_dict["norm_model"]["memory"]["mu_states"],

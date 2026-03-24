@@ -210,3 +210,32 @@ def test_detect_synthetic_anomaly(skf_version):
         mu_1,
         mu_2,
     )
+
+
+def test_transition_likelihood_uses_covariance_floor():
+    """Test that transition likelihood uses covariance floor to avoid overconfident pdf."""
+
+    floor = 1e-6
+    skf = SKF(
+        norm_model=Model(LocalTrend(), WhiteNoise(std_error=sigma_v)),
+        abnorm_model=Model(LocalAcceleration(), WhiteNoise(std_error=sigma_v)),
+        likelihood_covariance_floor=floor,
+    )
+
+    mu_pred_transit = skf._transition()
+    var_pred_transit = skf._transition()
+    for transit in mu_pred_transit:
+        mu_pred_transit[transit] = np.array([0.0])
+        var_pred_transit[transit] = np.array([1e-16])
+
+    transition_likelihood = skf._compute_transition_likelihood(
+        obs=0.0,
+        mu_pred_transit=mu_pred_transit,
+        var_pred_transit=var_pred_transit,
+    )
+
+    expected_density_at_floor = 1.0 / np.sqrt(2 * np.pi * floor)
+    for value in transition_likelihood.values():
+        scalar_value = float(np.asarray(value).reshape(-1)[0])
+        assert np.isfinite(scalar_value)
+        npt.assert_allclose(scalar_value, expected_density_at_floor, rtol=1e-6)
