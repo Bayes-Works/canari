@@ -65,6 +65,7 @@ def _plot_transition_diagnostics(
     all_data: dict,
     anomaly_idx: int,
     output_dir: Path,
+    show_anomaly_marker: bool = True,
 ) -> Path:
     obs = np.asarray(all_data["y"]).reshape(-1)
     num_steps = obs.size
@@ -194,10 +195,11 @@ def _plot_transition_diagnostics(
     ax_diag[3].grid(alpha=0.2)
     ax_diag[3].legend(loc="upper right", ncol=2, frameon=True)
 
-    anomaly_time = time_axis[anomaly_idx]
-    for axis in ax_diag:
-        axis.axvline(anomaly_time, color="k", linestyle="--", linewidth=1.1)
-    ax_z.axvline(anomaly_time, color="k", linestyle="--", linewidth=1.1)
+    if show_anomaly_marker:
+        anomaly_time = time_axis[anomaly_idx]
+        for axis in ax_diag:
+            axis.axvline(anomaly_time, color="k", linestyle="--", linewidth=1.1)
+        ax_z.axvline(anomaly_time, color="k", linestyle="--", linewidth=1.1)
 
     plt.tight_layout()
     diag_plot_path = output_dir / "skf_transition_likelihoods.pdf"
@@ -320,6 +322,10 @@ def main(
         anomaly_slope=float(experiment_config["anomaly_slope"]),
         experiment_config=experiment_config,
     )
+    show_anomaly_marker = not np.isclose(
+        float(experiment_config.get("anomaly_slope", 0.0)),
+        0.0,
+    )
     train_data = dataset["train_data"]
     validation_data = dataset["validation_data"]
     data_processor = dataset["data_processor"]
@@ -367,7 +373,7 @@ def main(
             model = Model(
                 LocalTrend(),
                 LstmNetwork(**lstm_kwargs),
-                WhiteNoise(std_error=sigma_v),
+                # WhiteNoise(std_error=sigma_v),
             )
         except RuntimeError as exc:
             if global_params and "Failed to load LSTM network from" in str(exc):
@@ -380,7 +386,7 @@ def main(
                 model = Model(
                     LocalTrend(),
                     LstmNetwork(**lstm_kwargs),
-                    WhiteNoise(std_error=sigma_v),
+                    # WhiteNoise(std_error=sigma_v),
                 )
             else:
                 raise
@@ -436,6 +442,7 @@ def main(
                 evaluate_metric=-validation_log_lik,
                 current_epoch=epoch,
                 max_epoch=num_epoch,
+                skip_epoch=3,
             )
             model.metric_optim = model.early_stop_metric
 
@@ -456,7 +463,7 @@ def main(
         abnorm_model = Model(
             LocalAcceleration(),
             LstmNetwork(model_noise=use_tagiv),
-            WhiteNoise(),
+            # WhiteNoise(),
         )
         skf = SKF(
             norm_model=model,
@@ -476,9 +483,11 @@ def main(
         return skf
 
     ######### Parameter optimization #########
-    if experiment_config["optimize_skf_parameters"]:
+    if bool(experiment_config.get("optimize_skf_parameters", False)):
+        num_optimization_trial = int(experiment_config.get("num_optimization_trial", 70))
+        num_startup_trials = int(experiment_config["num_startup_trials"])
         param_space = {
-            "sigma_v": [1e-3, 2e-1],
+            # "sigma_v": [1e-3, 2e-1],
             "std_transition_error": [1e-6, 1e-4],
             "norm_to_abnorm_prob": [1e-6, 1e-4],
         }
@@ -486,9 +495,9 @@ def main(
         model_optimizer = Optimizer(
             model=model_with_parameters,
             param=param_space,
-            num_optimization_trial=experiment_config["num_optimization_trial"],
+            num_optimization_trial=num_optimization_trial,
             mode="min",
-            num_startup_trials=experiment_config["num_startup_trial"],
+            num_startup_trials=num_startup_trials,
         )
         model_optimizer.optimize()
         # Get best model
@@ -524,6 +533,7 @@ def main(
         all_data=all_data,
         anomaly_idx=anomaly_idx,
         output_dir=output_dir,
+        show_anomaly_marker=show_anomaly_marker,
     )
     skf_transition_csv_path = _save_transition_diagnostics_csv(
         skf=skf_optim,
@@ -539,14 +549,15 @@ def main(
         states_type="prior",
     )
     anomaly_time = dataset["anomaly_time"]
-    ax[-1].axvline(
-        x=anomaly_time,
-        color="k",
-        linestyle="--",
-        linewidth=1.2,
-        label="Anomaly",
-    )
-    ax[-1].legend(loc="upper right")
+    if show_anomaly_marker:
+        ax[-1].axvline(
+            x=anomaly_time,
+            color="k",
+            linestyle="--",
+            linewidth=1.2,
+            label="Anomaly",
+        )
+        ax[-1].legend(loc="upper right")
     plt.tight_layout()
     skf_pdf_path = output_dir / "skf_states.pdf"
     fig.savefig(skf_pdf_path, format="pdf")
