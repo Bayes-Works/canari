@@ -11,7 +11,7 @@ On time series data, this model can:
 
 """
 
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 import copy
 import numpy as np
 from pytagi import metric
@@ -940,10 +940,7 @@ class SKF:
             norm_model_prior_prob=save_dict["norm_model_prior_prob"],
             likelihood_covariance_floor=save_dict.get("likelihood_covariance_floor", 0.0),
         )
-        skf.model["norm_norm"].set_states(
-            save_dict["norm_model"]["memory"]["mu_states"],
-            save_dict["norm_model"]["memory"]["var_states"],
-        )
+        skf.model["norm_norm"].set_memory(memory=save_dict["norm_model"]["memory"])
 
         return skf
 
@@ -955,6 +952,8 @@ class SKF:
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
+        update_embedding: Optional[bool] = False,
+        update_mask: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component
@@ -976,6 +975,10 @@ class SKF:
             white_noise_decay_factor (float, optional):
                 Multiplicative decay factor applied to the white‐noise standard
                 deviation each epoch. Defaults to 0.9.
+            update_embedding (bool): Whether to update the input embedding in LSTM.
+                Defaults to False.
+            update_mask (Optional[List[int]]): Optional 1D mask (length = embed_len) to
+                selectively update embedding dimensions. 1 keeps updates, 0 freezes updates.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -999,6 +1002,8 @@ class SKF:
             white_noise_max_std,
             white_noise_decay_factor,
             intervention,
+            update_embedding,
+            update_mask,
         )
 
     def early_stopping(
@@ -1094,7 +1099,9 @@ class SKF:
 
         if self.lstm_net:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
-                self.model["norm_norm"].lstm_output_history, input_covariates
+                self.model["norm_norm"].lstm_output_history,
+                input_covariates,
+                lstm_embedding=self.model["norm_norm"].lstm_embedding,
             )
             mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
@@ -1309,6 +1316,8 @@ class SKF:
         self,
         data: Dict[str, np.ndarray],
         intervention: Optional[dict] = None,
+        update_embedding: Optional[bool] = False,
+        update_mask: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset.
@@ -1320,6 +1329,10 @@ class SKF:
         Args:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
             intervention (dict, optional): intervention dictionary. Defaults to None.
+            update_embedding (bool): Whether to update the input embedding in LSTM.
+                Defaults to False.
+            update_mask (Optional[List[int]]): Optional 1D mask (length = embed_len) to
+                selectively update embedding dimensions. 1 keeps updates, 0 freezes updates.
 
         Returns:
             Tuple[np.ndarray, StatesHistory]:
@@ -1366,6 +1379,25 @@ class SKF:
                 self.model["norm_norm"].update_lstm_states_history(
                     index, last_step=len(data["y"]) - 1
                 )
+                if update_embedding and getattr(self.lstm_net, "embed_len", 0) > 0:
+                    embed_len = self.lstm_net.embed_len
+                    norm_model = self.model["norm_norm"]
+                    if getattr(norm_model.lstm_embedding, "length", 0) == 0:
+                        norm_model.lstm_embedding.initialize(embed_len)
+                    delta_input_mu, delta_input_var = self.lstm_net.get_input_states()
+                    embed_mu = np.asarray(delta_input_mu)[..., -embed_len:].copy()
+                    embed_var = np.asarray(delta_input_var)[..., -embed_len:].copy()
+                    if update_mask is not None:
+                        update_mask_array = np.asarray(update_mask, dtype=np.float32)
+                        if update_mask_array.ndim != 1 or update_mask_array.size != embed_len:
+                            raise ValueError(
+                                "update_mask must be a 1D list/array with length equal "
+                                f"to embed_len={embed_len}."
+                            )
+                        embed_mu = embed_mu * update_mask_array
+                        embed_var = embed_var * update_mask_array
+                    norm_model.lstm_embedding.update(embed_mu, embed_var)
+                    norm_model._sync_lstm_embedding()
 
             self._save_states_history()
             self.set_states()

@@ -300,6 +300,45 @@ def _save_transition_diagnostics_csv(
     return diag_csv_path
 
 
+def _plot_lstm_embedding(
+    mu_embedding: np.ndarray,
+    var_embedding: np.ndarray,
+    output_dir: Path,
+) -> Path:
+    mu_embedding = np.asarray(mu_embedding, dtype=float).reshape(-1)
+    var_embedding = np.asarray(var_embedding, dtype=float).reshape(-1)
+    if mu_embedding.size == 0:
+        raise ValueError("LSTM embedding is empty.")
+    if mu_embedding.size != var_embedding.size:
+        raise ValueError("LSTM embedding mean/variance must have the same length.")
+
+    var_embedding = np.maximum(var_embedding, 0.0)
+    std_embedding = np.sqrt(var_embedding)
+    embed_idx = np.arange(mu_embedding.size)
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.plot(embed_idx, mu_embedding, color="#1d4ed8", linewidth=2, label=r"$\mu$")
+    ax.fill_between(
+        embed_idx,
+        mu_embedding - std_embedding,
+        mu_embedding + std_embedding,
+        color="#93c5fd",
+        alpha=0.35,
+        label=r"$\mu \pm \sqrt{var}$",
+    )
+    ax.set_xlabel("Embedding index")
+    ax.set_ylabel("Value")
+    ax.set_title("Learned LSTM Embedding")
+    ax.grid(alpha=0.25)
+    ax.legend(loc="best")
+    plt.tight_layout()
+
+    embedding_plot_path = output_dir / "lstm_embedding.pdf"
+    fig.savefig(embedding_plot_path, format="pdf")
+    plt.close(fig)
+    return embedding_plot_path
+
+
 def main(
     experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
 ):
@@ -343,12 +382,21 @@ def main(
     seed = experiment_config["lstm_manual_seed"]
     smoother = experiment_config["smoother"]
     sigma_v = experiment_config["sigma_v"]
+    embed_len = int(
+        experiment_config.get(
+            "embed_len",
+            experiment_config.get("lstm_embed_len", 0),
+        )
+    )
     stateless = experiment_config["lstm_stateless"]
     zero_shot = experiment_config["lstm_zeroshot"]
     finetune = experiment_config["lstm_finetune"]
     global_params = experiment_config["lstm_global_params"]
     use_tagiv = experiment_config["use_tagiv"]
     max_num_epoch = int(experiment_config.get("lstm_num_epoch", 50))
+    update_embedding = bool(
+        experiment_config.get("lstm_update_embedding", embed_len > 0)
+    )
     likelihood_covariance_floor = float(
         experiment_config.get("likelihood_covariance_floor", 0.1)
     )
@@ -373,6 +421,7 @@ def main(
             manual_seed=seed,
             smoother=smoother,
             stateless=stateless,
+            embed_len=embed_len,
             finetune=finetune,
             load_lstm_net=global_params,
             model_noise=use_tagiv,
@@ -413,6 +462,7 @@ def main(
                 train_data=train_data,
                 validation_data=validation_data,
                 white_noise_max_std=1.0,
+                update_embedding=update_embedding,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -634,6 +684,15 @@ def main(
         fig_std.savefig(lstm_std_plot_path, format="pdf")
         plt.close(fig_std)
 
+    lstm_embedding_plot_path = None
+    norm_model_embedding = skf_optim.model["norm_norm"].lstm_embedding
+    if getattr(norm_model_embedding, "length", 0) > 0:
+        lstm_embedding_plot_path = _plot_lstm_embedding(
+            norm_model_embedding.mu,
+            norm_model_embedding.var,
+            output_dir=output_dir,
+        )
+
     threshold = float(experiment_config.get("anomaly_detection_threshold", 0.5))
     pre_anomaly_probs = filter_marginal_abnorm_prob[:anomaly_idx]
     false_alarm_count = int(np.sum(pre_anomaly_probs > threshold))
@@ -697,6 +756,9 @@ def main(
         "skf_transition_diagnostics_csv": str(skf_transition_csv_path),
         "training_metrics_plot": str(training_metrics_plot_path),
         "lstm_std_distribution_plot": str(lstm_std_plot_path),
+        "lstm_embedding_plot": (
+            str(lstm_embedding_plot_path) if lstm_embedding_plot_path else None
+        ),
     }
     summary_path = output_dir / "summary.json"
     with summary_path.open("w") as f:
@@ -709,6 +771,7 @@ def main(
     print(f"SKF transition diagnostics CSV: {skf_transition_csv_path}")
     print(f"Training metrics plot: {training_metrics_plot_path}")
     print(f"LSTM std distribution plot: {lstm_std_plot_path}")
+    print(f"LSTM embedding plot: {lstm_embedding_plot_path}")
     print(f"Summary JSON: {summary_path}")
 
 

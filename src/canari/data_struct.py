@@ -262,8 +262,8 @@ class LstmEmbedding:
         """
         Initialize the mean and variance of the embedding vector.
 
-        The mean is initialized to zeros and the variance to ones. Both arrays
-        have shape (embedding_len,).
+        The mean is initialized from a standard normal distribution and the
+        variance to ones. Both arrays have shape (embedding_len,).
 
         Args:
             embedding_len (int): Length of the LSTM embedding.
@@ -271,7 +271,9 @@ class LstmEmbedding:
         if embedding_len <= 0:
             raise ValueError("Embedding length must be a positive integer.")
 
-        self.mu = np.zeros(embedding_len, dtype=np.float32)
+        self.mu = np.random.normal(loc=0.0, scale=1.0, size=embedding_len).astype(
+            np.float32
+        )
         self.var = np.ones(embedding_len, dtype=np.float32)
         self.length = embedding_len
 

@@ -1944,6 +1944,8 @@ class Model:
         white_noise_max_std: Optional[float] = 5,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
+        update_embedding: Optional[bool] = False,
+        update_mask: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
         """
         Train the :class:`~canari.component.lstm_component.LstmNetwork` component on the provided
@@ -1968,6 +1970,10 @@ class Model:
                 Multiplicative decay factor applied to the white‐noise standard
                 deviation each epoch. Defaults to 0.9.
             intervention (dict, optional): intervention dictionary. Defaults to None.
+            update_embedding (bool): Whether to update the input embedding in LSTM.
+                Defaults to False.
+            update_mask (Optional[List[int]]): Optional 1D mask (length = embed_len) to
+                selectively update embedding dimensions. 1 keeps updates, 0 freezes updates.
 
         Returns:
             Tuple[np.ndarray, np.ndarray, StatesHistory]:
@@ -2002,7 +2008,13 @@ class Model:
         if self.lstm_net.zeroshot:
             update_params =False
             print("LSTM parameters are not being updated!")
-        self.filter(data=train_data, intervention=intervention, train_lstm=update_params)
+        self.filter(
+            data=train_data,
+            intervention=intervention,
+            train_lstm=update_params,
+            update_embedding=update_embedding,
+            update_mask=update_mask,
+        )
         mu_validation_preds, std_validation_preds, _ = self.forecast(
             data=validation_data, intervention=intervention
         )
