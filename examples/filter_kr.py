@@ -14,7 +14,7 @@ from canari.component import LocalTrend, KernalRegression, WhiteNoise
 # Read data
 data_file = "./data/toy_time_series/sine.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-linear_space = np.linspace(0, 2, num=len(df_raw))
+linear_space = np.linspace(0, 1, num=len(df_raw))
 df_raw = df_raw.add(linear_space, axis=0)
 
 data_file_time = "./data/toy_time_series/sine_datetime.csv"
@@ -39,16 +39,14 @@ train_data, validation_data, _, all_data = data_processor.get_splits()
 model = Model(
     LocalTrend(),
     KernalRegression(period=24, 
-                    kernel_length=0.9, 
-                    std_error=0, 
-                    std_error_cp=0,
+                    kernel_length=0.8, 
                     num_control_point=10,
-                    mu_states=[0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                    var_states=[0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                    mu_control_point = 0.1,
+                    var_control_point = 0.1, 
                     ),
     WhiteNoise(std_error=1e-3)
 )
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_baseline_states(train_data["y"])
 
 mu_obs_preds,std_obs_preds,_ = model.filter(data=train_data)
 # model.smoother()
@@ -57,11 +55,12 @@ mu_obs_preds,std_obs_preds,_ = model.filter(data=train_data)
 fig, axes=plot_states(
     data_processor=data_processor,
     states=model.states,
-    states_to_plot=["level", "trend", "kernel regression", "white noise"]
+    states_to_plot=["level", "trend", "kernel regression", "white noise"],
+    standardization=False,
 )
 plot_data(
     data_processor=data_processor,
-    standardization=True,
+    standardization=False,
     plot_column=output_col,
     sub_plot=axes[0],
 )

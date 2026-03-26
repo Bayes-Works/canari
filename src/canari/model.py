@@ -33,6 +33,7 @@ from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
+from datetime import datetime
 
 class Model:
     """
@@ -856,9 +857,8 @@ class Model:
     
     def _KR_forward_mod(self, time):
         """
-        _
+        Kernel regression forward modification.
         """
-        time = time.hour
 
         kr_index = self.get_states_index("kernel regression")
         time_cp = self.components[self._states_comp[kr_index]].time_control_point
@@ -1393,6 +1393,7 @@ class Model:
         var_input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
         var_lstm_pred: Optional[np.ndarray] = None,
+        sample_index: Optional[int] = None,
         time: Optional[str] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -1449,7 +1450,7 @@ class Model:
 
         # Kernel regression
         if "kernel regression" in self.states_name:
-            self._KR_forward_mod(time)
+            self._KR_forward_mod(sample_index)
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1686,8 +1687,10 @@ class Model:
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
-                x
-            )
+                input_covariates=x,
+                sample_index=index,
+                time=time,
+                )
 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
@@ -1759,7 +1762,12 @@ class Model:
                 self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
-            mu_obs_pred, var_obs_pred, *_ = self.forward(input_covariates=x, time=time)
+            mu_obs_pred, var_obs_pred, *_ = self.forward(
+                input_covariates=x, 
+                sample_index=index, 
+                time=time,
+                )
+            
             (
                 delta_mu_states,
                 delta_var_states,

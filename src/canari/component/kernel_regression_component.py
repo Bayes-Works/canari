@@ -44,6 +44,8 @@ class KernalRegression(BaseComponent):
         std_error_cp: Optional[float] = 0.0,
         mu_states: Optional[list[float]] = None,
         var_states: Optional[list[float]] = None,
+        mu_control_point: Optional[list[float]] = None,
+        var_control_point: Optional[list[float]] = None,
     ):
         self.std_error = std_error
         self.std_error_cp = std_error_cp
@@ -53,6 +55,8 @@ class KernalRegression(BaseComponent):
         self.num_control_point = num_control_point
         self.kernel_length = kernel_length
         self.time_control_point = np.linspace(0, period, num_control_point)
+        self.mu_control_point = mu_control_point
+        self.var_control_point = var_control_point
         super().__init__()
 
     def initialize_component_name(self):
@@ -87,21 +91,39 @@ class KernalRegression(BaseComponent):
             )
 
     def initialize_mu_states(self):
-        if self._mu_states is None:
-            self._mu_states = np.zeros((self._num_states, 1))
-        elif len(self._mu_states) == self._num_states:
+        if self.mu_control_point is not None:
+            if isinstance(self.mu_control_point, (float, int)):
+                cp = self.mu_control_point * np.ones(self.num_control_point)
+            elif len(self.mu_control_point) == self.num_control_point:
+                cp = self.mu_control_point
+            self._mu_states = np.concatenate(([0.0], cp))
             self._mu_states = np.atleast_2d(self._mu_states).T
+            
         else:
-            raise ValueError(
-                "Incorrect mu_states dimension for the kernel regression component."
-            )
+            if self._mu_states is None:
+                self._mu_states = 0.5*np.ones((self._num_states, 1))
+            elif len(self._mu_states) == self._num_states:
+                self._mu_states = np.atleast_2d(self._mu_states).T
+            else:
+                raise ValueError(
+                    "Incorrect mu_states dimension for the kernel regression component."
+                )
 
     def initialize_var_states(self):
-        if self._var_states is None:
-            self._var_states = np.zeros((self._num_states, 1))
-        elif len(self._var_states) == self._num_states:
+        if self.var_control_point is not None:
+            if isinstance(self.var_control_point, (float, int)):
+                cp = self.var_control_point * np.ones(self.num_control_point)
+            elif len(self.var_control_point) == self.num_control_point:
+                cp = self.var_control_point
+            self._var_states = np.concatenate(([0.0], cp))
             self._var_states = np.atleast_2d(self._var_states).T
+
         else:
-            raise ValueError(
-                "Incorrect var_states dimension for the kernel regression component."
-            )
+            if self._var_states is None:
+                self._var_states = 0.5*np.ones((self._num_states, 1))
+            elif len(self._var_states) == self._num_states:
+                self._var_states = np.atleast_2d(self._var_states).T
+            else:
+                raise ValueError(
+                    "Incorrect var_states dimension for the kernel regression component."
+                )
