@@ -1322,18 +1322,18 @@ class hsl_classification:
                 anm_type_log.append(2)
                 anm_mag_list.append(anm_mag)
                 anm_begin_list.append(anm_begin)
-        # Plot generated time series
-        fig = plt.figure(figsize=(10, 6))
-        gs = gridspec.GridSpec(1, 1)
-        ax0 = plt.subplot(gs[0])
-        norm_data = self.data_processor.standardize_data()
-        for j in range(len(generated_ts)):
-            ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
-                                        norm_data[val_index, self.data_processor.output_col].reshape(-1), 
-                                        generated_ts[j])))
-        ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
-        ax0.set_title("Data generation")
-        plt.show()
+        # # Plot generated time series
+        # fig = plt.figure(figsize=(10, 6))
+        # gs = gridspec.GridSpec(1, 1)
+        # ax0 = plt.subplot(gs[0])
+        # norm_data = self.data_processor.standardize_data()
+        # for j in range(len(generated_ts)):
+        #     ax0.plot(np.concatenate((norm_data[train_index, self.data_processor.output_col].reshape(-1), 
+        #                                 norm_data[val_index, self.data_processor.output_col].reshape(-1), 
+        #                                 generated_ts[j])))
+        # ax0.axvline(x=len(self.data_processor.data.values[train_index, self.data_processor.output_col].reshape(-1))+len(self.data_processor.data.values[val_index, self.data_processor.output_col].reshape(-1)), color='r', linestyle='--')
+        # ax0.set_title("Data generation")
+        # plt.show()
 
         # # Run the current model on the synthetic time series
         if "lstm" in self.base_model.states_name:

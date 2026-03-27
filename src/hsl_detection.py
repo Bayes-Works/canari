@@ -1149,6 +1149,8 @@ class hsl_detection:
                     y_pred = self.model(val_X.float())
                     loss_val = loss_fn(y_pred, val_y.float())
 
+                loss_val = round(loss_val, 3)
+
                 print(f'Epoch {epoch}: {loss_val}')
                 # Early stopping with patience 10
                 if loss_val < best_loss:
@@ -1178,6 +1180,7 @@ class hsl_detection:
                 # difference = y_pred - test_y.float()
                 # # Convert to numpy
                 # difference = difference.detach().numpy()
+            loss_test_lt = round(loss_test_lt, 3)
 
             print(f'Test loss {loss_test}')
 

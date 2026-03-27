@@ -23,18 +23,23 @@ plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
 # Get the total length of the test time series
-test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
-test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
+# test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+# test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
+
+test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lttoll.csv")
+raw = test_ts_df.iloc[0]["values"].replace("nan", "None")
+arr = np.array(ast.literal_eval(raw), dtype=float)
+test_ts_len = len(arr.flatten())
 
 # Input
 first_anm_type = 'll'
-second_anm_type = 'lt'
+second_anm_type = 'll'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     test_ts_len=test_ts_len,
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_lltoll.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_wait7_"+first_anm_type+"to"+second_anm_type+".csv",
+    csv_path="saved_results/prob_eva/detrend_ts1_results_rsic_"+first_anm_type+"to"+second_anm_type+".csv",
     evaluate_itv_type = True,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
@@ -87,7 +92,7 @@ ax[0].fill_between(
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
-ax[0].set_xscale('log')
+# ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 
@@ -98,7 +103,7 @@ ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
-ax[1].set_xscale('log')
+# ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 ax[1].legend(loc='lower right', fontsize=6)
 
@@ -117,7 +122,7 @@ plt.subplots_adjust(hspace=0.3)
 ################################### Plot the comparison of the detection maps ###################################
 red_points_rsic, gray_points_rsic, blue_points_rsic, orange_points_rsic = _get_color_points(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_wait7_" + first_anm_type + "to" + second_anm_type + ".csv")
+    csv_path="saved_results/prob_eva/detrend_ts1_results_rsic_" + first_anm_type + "to" + second_anm_type + ".csv")
 
 red_points_rsi, gray_points_rsi, blue_points_rsi, orange_points_rsi = _get_color_points(
     test_ts_len=test_ts_len,
