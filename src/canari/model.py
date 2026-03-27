@@ -855,10 +855,13 @@ class Model:
 
         return delta_mu_v2bar, delta_var_v2bar
     
-    def _KR_forward_mod(self, time):
+    def _kr_forward_mod(self, time):
         """
         Kernel regression forward modification.
         """
+        
+        # if isinstance(time, pd.Timestamp):
+        #     time = 366 + time.toordinal() + (time.hour * 3600 + time.minute * 60 + time.second) / 86400
 
         kr_index = self.get_states_index("kernel regression")
         time_cp = self.components[self._states_comp[kr_index]].time_control_point
@@ -1450,7 +1453,7 @@ class Model:
 
         # Kernel regression
         if "kernel regression" in self.states_name:
-            self._KR_forward_mod(sample_index)
+            self._kr_forward_mod(sample_index)
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1641,7 +1644,7 @@ class Model:
             )
 
     def forecast(
-        self, 
+        self,
         data: Dict[str, np.ndarray],
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:

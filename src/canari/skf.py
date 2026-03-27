@@ -809,7 +809,7 @@ class SKF:
         # TODO: trick: run skf.filter to initialize skf.model["norm_norm"] states
         if "cov_names" in save_dict:
             dummy_input = np.full((len(save_dict["cov_names"]),), np.nan)
-            norm_model.forward(input_covariates=dummy_input)
+            norm_model.forward(input_covariates=dummy_input, time=[], sample_index=0)
 
         if norm_model.lstm_net:
             norm_model.lstm_net.load_state_dict(
@@ -959,6 +959,8 @@ class SKF:
         self,
         obs: float,
         input_covariates: Optional[np.ndarray] = None,
+        sample_index: Optional[int] = None,
+        time: Optional[str] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Prediction step in the Switching Kalman filter. This makes a one-step-ahead prediction.
@@ -1015,7 +1017,10 @@ class SKF:
                 mu_states_transit[transit],
                 var_states_transit[transit],
             ) = transition_model.forward(
-                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
+                mu_lstm_pred=mu_lstm_pred, 
+                var_lstm_pred=var_lstm_pred,
+                sample_index=sample_index, 
+                time=time,
             )
 
         self.transition_coef = self._estimate_transition_coef(
@@ -1243,7 +1248,11 @@ class SKF:
                 self._states_intervention(interv["mu"], interv["var"])
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
-            mu_obs_pred, var_obs_pred = self.forward(input_covariates=x, obs=y)
+            mu_obs_pred, var_obs_pred = self.forward(input_covariates=x,
+                                                     obs=y,
+                                                     sample_index=index,
+                                                     time=time
+                                                     )
             mu_states_posterior, var_states_posterior = self.backward(y)
 
             if self.lstm_net:
