@@ -4,7 +4,7 @@ from canari.component.base_component import BaseComponent
 import canari.common as common
 
 
-class KernalRegression(BaseComponent):
+class KernelRegression(BaseComponent):
     """
     `KernalRegression` class, inheriting from Canari's `BaseComponent`.
     It models a recurrent behavior with a fixed period using Kernel Regression.

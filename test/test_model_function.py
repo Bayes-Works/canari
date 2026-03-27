@@ -12,6 +12,7 @@ from canari.component import (
     WhiteNoise,
     Periodic,
     BaseComponent,
+    KernelRegression,
 )
 
 
@@ -399,4 +400,76 @@ def test_BAR():
     )
     npt.assert_allclose(
         var_states_posterior, var_states_posterior_true, rtol=1e-6, atol=1e-6
+    )
+
+def test_kernel_regression():
+    """
+    Test Kernel regression component.
+    """
+
+    period = 52
+    std_observation_noise = 0.1
+    num_control_point = 5
+    kernel_len = 0.5
+    time = 5
+    mu_cp = 0.1
+    var_cp = 0.2
+    time_cp = np.linspace(0, period, num_control_point)
+    k     = np.exp((-2 / kernel_len**2) * np.sin(np.pi * (time - time_cp) / period)**2)
+    k_sum = np.sum(k)
+    k     = k / k_sum
+
+    transition_matrix_true = np.eye(num_control_point + 4)
+    transition_matrix_true[0,1] = 1 # off-diag: trend
+    transition_matrix_true[2,2] = 0 # diag: kernel regression
+    transition_matrix_true[-1,-1] = 0 # diag: white noise
+    transition_matrix_true[2,3:-1] = k.flatten() # off-diag: kernel coeff
+
+    process_noise_matrix_true = np.zeros(transition_matrix_true.shape)
+    process_noise_matrix_true[-1, -1] = std_observation_noise**2
+    observation_matrix_true = np.array([[1, 0, 1, 0, 0, 0, 0, 0, 1]])
+    mu_states_true = np.array([[0.15, 0.5, 0, mu_cp, mu_cp, mu_cp, mu_cp, mu_cp, 0]]).T
+    var_states_true = np.diagflat([[0.3, 0.25, 0, var_cp, var_cp, var_cp, var_cp, var_cp, 0]])
+
+    mu_obs_true, var_obs_true, delta_mu_states_true, delta_var_states_true = (
+        compute_observation_and_state_updates(
+            transition_matrix_true,
+            process_noise_matrix_true,
+            observation_matrix_true,
+            mu_states_true,
+            var_states_true,
+        )
+    )
+
+    model = Model(
+        LocalTrend(mu_states=[0.15, 0.5], var_states=[0.3, 0.25]),
+        KernelRegression(period=period,
+                kernel_length=kernel_len,
+                num_control_point=num_control_point,
+                mu_control_point = mu_cp,
+                var_control_point = var_cp
+                ),
+        WhiteNoise(std_error=std_observation_noise),
+    )
+    mu_obs_pred, var_obs_pred, _, _ = model.forward(
+        input_covariates = [],
+        sample_index = time,
+    )
+    obs = 0.5
+    delta_mu_states_pred, delta_var_states_pred, _, _ = model.backward(
+        obs,
+    )
+
+    npt.assert_allclose(mu_obs_pred, mu_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(var_obs_pred, var_obs_true, rtol=1e-6, atol=1e-8)
+    npt.assert_allclose(model.transition_matrix, transition_matrix_true)
+    npt.assert_allclose(model.process_noise_matrix, process_noise_matrix_true)
+    npt.assert_allclose(model.observation_matrix, observation_matrix_true)
+    npt.assert_allclose(model.mu_states, mu_states_true)
+    npt.assert_allclose(model.var_states, var_states_true)
+    npt.assert_allclose(
+        delta_mu_states_true, delta_mu_states_pred, rtol=1e-6, atol=1e-8
+    )
+    npt.assert_allclose(
+        delta_var_states_true, delta_var_states_pred, rtol=1e-6, atol=1e-8
     )

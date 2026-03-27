@@ -9,7 +9,7 @@ from canari import (
     plot_data, 
     plot_prediction,
 )
-from canari.component import LocalTrend, KernalRegression, WhiteNoise
+from canari.component import LocalTrend, KernelRegression, WhiteNoise
 import json
 
 # Read data
@@ -43,7 +43,7 @@ for benchmark in benchmark_no:
 # Components
 model = Model(
     LocalTrend(),
-    KernalRegression(period=52, 
+    KernelRegression(period=52, 
                     kernel_length=0.8, 
                     num_control_point=10,
                     mu_control_point=0.1,

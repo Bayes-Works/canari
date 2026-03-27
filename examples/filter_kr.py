@@ -9,7 +9,7 @@ from canari import (
     plot_data, 
     plot_prediction,
 )
-from canari.component import LocalTrend, KernalRegression, WhiteNoise
+from canari.component import LocalTrend, KernelRegression, WhiteNoise
 
 # Read data
 data_file = "./data/toy_time_series/sine.csv"
@@ -38,11 +38,11 @@ train_data, validation_data, _, all_data = data_processor.get_splits()
 # Components
 model = Model(
     LocalTrend(),
-    KernalRegression(period=24, 
-                    kernel_length=0.8, 
+    KernelRegression(period=24,
+                    kernel_length=0.8,
                     num_control_point=10,
                     mu_control_point = 0.1,
-                    var_control_point = 0.1, 
+                    var_control_point = 0.1
                     ),
     WhiteNoise(std_error=1e-3)
 )
