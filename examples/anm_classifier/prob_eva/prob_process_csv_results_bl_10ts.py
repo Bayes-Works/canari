@@ -5,9 +5,9 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 
 
-def _process_detection_df_bl(
+def _process_detection_df_bl_10ts(
     test_ts_len: int,
-    csv_path: str,
+    csv_path_all: str,
     *,
     evaluate_itv_type: Optional[bool] = False,
     plot_detection_map: Optional[bool] = False,
@@ -23,6 +23,7 @@ def _process_detection_df_bl(
     default_years: int = 3,
     freq_per_year: int = 52,
     first_anm_type = None,
+    collapse_consecutive_detections=False,
 ) -> pd.DataFrame:
     """
     Load a CSV and reproduce your processing:
@@ -35,7 +36,12 @@ def _process_detection_df_bl(
 
     Returns a NEW DataFrame (doesn't modify on disk).
     """
-    df = pd.read_csv(csv_path)
+    # Read the 10 csv paths given by the user into one df
+    df_list = []
+    for csv_path in csv_path_all:
+        df = pd.read_csv(csv_path)
+        df_list.append(df)
+    df = pd.concat(df_list, ignore_index=True)
 
     # Keep anomaly magnitude as abs for LL anomaly
     if magnitude_col in df.columns:
@@ -93,6 +99,18 @@ def _process_detection_df_bl(
         ),
         axis=1
     )
+
+    # Collapse the consecutive detected indices to the first index
+    if collapse_consecutive_detections:
+        for idx, row in df.iterrows():
+            detected_indices = np.array(row[detection_col])
+            if len(detected_indices) != 0:
+                detected_indices = detected_indices[np.insert(np.diff(detected_indices) != 1, 0, True)]
+            detected_indices = detected_indices.tolist()
+            # Replace the original list with the aggregated list
+            df.at[idx, detection_col] = detected_indices
+
+
     # Plot the detection map
     if plot_detection_map:
         plt.figure(figsize=(10, 6))

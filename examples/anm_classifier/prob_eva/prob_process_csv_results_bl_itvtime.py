@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 
 
-def _process_detection_df_bl(
+def _process_detection_df_bl_itvtime(
     test_ts_len: int,
     csv_path: str,
     *,
@@ -69,6 +69,7 @@ def _process_detection_df_bl(
     df["detection_index_after_anm1"] = pd.Series([None] * len(df), dtype=object)
     df["first_anm_detect_index"] = pd.Series([None] * len(df), dtype=object)
     df["detection_time"] = pd.Series([None] * len(df), dtype=object)
+    df["intervention_time"] = pd.Series([None] * len(df), dtype=object)
 
     default_detection_time = freq_per_year * default_years + 1
 
@@ -142,6 +143,7 @@ def _process_detection_df_bl(
             df.at[idx, "first_anm_detect_index"] = None
             df.at[idx, "detection_index_after_anm1"] = None
             df.at[idx, "detection_time"] = None
+            df.at[idx, "intervention_time"] = None
             continue
 
         first_anm_detect_index = min(between)
@@ -185,6 +187,15 @@ def _process_detection_df_bl(
                 break
         df.at[idx, "detection_time"] = detection_time
 
+        # Find first intervention >= anomaly2 start
+        intervention_time = 52 * 5 + 1
+        for itv_time in row["intervention_applied_times"]:
+            if itv_time >= anm2_start:
+                intervention_time = itv_time - anm2_start
+                break
+        df.at[idx, "intervention_time"] = intervention_time
+
+        
     if evaluate_itv_type:
         print('------------- Classification analysis --------------------')
         print('------------- First detection --------------------')
@@ -220,6 +231,9 @@ def _process_detection_df_bl(
 
     df = df[df["detection_time"].notnull()]
     df["detection_time"] = df["detection_time"].astype(int)
+    df["intervention_time"] = pd.to_numeric(df["intervention_time"])
+    # print("Total time to intervention: ", round(df["intervention_time"].sum()/52, 2), " years")
+    print("Time to intervention: ", round(df["intervention_time"].mean()/52, 2), " ± ", round(df["intervention_time"].std()/52, 2), " years")
 
     df["detection_rate"] = df["detection_time"].apply(
                                     lambda x: 0 if x >= 52 * 3 else 1
@@ -238,6 +252,7 @@ def _process_detection_df_bl(
     {
         "detection_time": ["mean", "std"],
         "detection_rate": ["mean", "std"],
+        "intervention_time": ["mean", "std"],
     }
     )
 

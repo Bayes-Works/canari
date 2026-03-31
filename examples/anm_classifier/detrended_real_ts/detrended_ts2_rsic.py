@@ -74,7 +74,6 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 
-
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 train_val_data = copy.deepcopy(normalized_data)
 train_val_data["x"] = train_val_data["x"][0:data_processor.validation_end, :]

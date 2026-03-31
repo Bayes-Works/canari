@@ -18,7 +18,7 @@ import copy
 
 
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_1_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_2_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -58,11 +58,11 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts1_tsmodel_detrended.pkl", "rb") as f:
+with open("saved_params/real_ts2_tsmodel_detrended.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=18,
+        look_back_len=54,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -115,17 +115,17 @@ mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(v
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))
 # hsl_tsad_agent.estimate_LTd_dist()
-hsl_tsad_agent.mu_LTd = -4.8071920411099456e-05
-hsl_tsad_agent.LTd_std = 9.413552295049155e-05 * 2.8
+hsl_tsad_agent.mu_LTd = 2.489595695602042e-06
+hsl_tsad_agent.LTd_std = 7.357137631104162e-05 * 1.6
 hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 # hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
-hsl_tsad_agent.detection_threshold = 0.11862107826871751
+hsl_tsad_agent.detection_threshold = 0.1
 
-hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts1.csv')
+# hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts2.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
-# hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -7.5676326e-05, 0.0013216767, np.array([6.78748358e-04, -2.12135017e-02, 1.06789505e+02]), np.array([1.1356778e-02, 1.4386847e+00, 6.6675095e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts1.csv', 
-                                  save_model_path='saved_params/NN_intervention_model_detrended_ts1_rsi.pkl', max_training_epoch=50)
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -3.028428e-05, 0.0011909414, np.array([-6.3717592e-04, -6.1646033e-02, 1.1345747e+02]), np.array([1.1249270e-02, 1.5046642e+00, 6.9218842e+01])
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts2.csv', 
+                                  load_model_path='saved_params/NN_intervention_model_detrended_ts2_rsi.pkl', max_training_epoch=50)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.detect(test_data, apply_intervention=True)
 mu_ar_preds_all = np.hstack((mu_ar_preds_all, mu_ar_preds.flatten()))
 std_ar_preds_all = np.hstack((std_ar_preds_all, std_ar_preds.flatten()))

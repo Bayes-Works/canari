@@ -1180,7 +1180,7 @@ class hsl_detection:
                 # difference = y_pred - test_y.float()
                 # # Convert to numpy
                 # difference = difference.detach().numpy()
-            loss_test_lt = round(loss_test_lt, 3)
+            loss_test = round(loss_test, 3)
 
             print(f'Test loss {loss_test}')
 

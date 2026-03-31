@@ -45,7 +45,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lltoll.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lttolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -190,9 +190,13 @@ for m in range(10):
         # True baselines
         true_LL_baseline = np.zeros(len(df_k))
         true_LT_baseline = np.zeros(len(df_k))
-        # LL to LL anomaly
-        true_LL_baseline[anm_start_index1:] = anm_mag1
-        true_LL_baseline[anm_start_index2:] += np.ones(len(true_LL_baseline)-anm_start_index2) * anm_mag2
+        # LT to LT anomaly
+        anm_mag1_perweek = anm_mag1 / 52
+        anm_mag2_perweek = anm_mag2 / 52
+        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
+        true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -292,4 +296,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/detrend_ts1_results_rsi_lltoll.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrend_ts1_results_rsi_lttolt.csv", index=False)

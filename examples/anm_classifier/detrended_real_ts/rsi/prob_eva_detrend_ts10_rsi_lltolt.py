@@ -21,7 +21,7 @@ from canari.data_visualization import _add_dynamic_grids
 
 
 # # # Read data
-data_file = "./data/benchmark_data/detrended_data/test_1_data_detrended.csv"
+data_file = "./data/benchmark_data/detrended_data/test_10_data_detrended.csv"
 df_raw = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 time_series = pd.to_datetime(df_raw.iloc[:, 0])
 df_raw = df_raw.iloc[:, 1:]
@@ -45,7 +45,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lltoll.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts10_gen_lltolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -63,11 +63,11 @@ for _, row in df.iterrows():
 ######################### Pretrained model #########################
 ####################################################################
 # Load model_dict from local
-with open("saved_params/real_ts1_tsmodel_detrended.pkl", "rb") as f:
+with open("saved_params/real_ts10_tsmodel_detrended.pkl", "rb") as f:
     model_dict = pickle.load(f)
 
 LSTM = LstmNetwork(
-        look_back_len=18,
+        look_back_len=30,
         num_features=2,
         num_layer=1,
         num_hidden_unit=50,
@@ -114,16 +114,16 @@ hsl_tsad_agent.init_drift_model.var_states = hsl_tsad_agent_pre.drift_model.var_
 
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(train_data, buffer_LTd=True)
 mu_obs_preds, std_obs_preds, mu_ar_preds, std_ar_preds = hsl_tsad_agent.filter(validation_data, buffer_LTd=True)
-hsl_tsad_agent.mu_LTd = -4.8071920411099456e-05
-hsl_tsad_agent.LTd_std = 9.413552295049155e-05 * 2.8
-hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std * 1)
+hsl_tsad_agent.mu_LTd = -7.767727105593005e-06
+hsl_tsad_agent.LTd_std = 8.863997750909173e-05
+hsl_tsad_agent.LTd_pdf = common.gaussian_pdf(mu = hsl_tsad_agent.mu_LTd, std = hsl_tsad_agent.LTd_std)
 # hsl_tsad_agent.tune_panm_threshold(data=normalized_data)
-hsl_tsad_agent.detection_threshold = 0.11862107826871751
+hsl_tsad_agent.detection_threshold = 0.1
 
 hsl_tsad_agent.nn_train_with = 'tagiv'
-hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -7.5676326e-05, 0.0013216767, np.array([6.78748358e-04, -2.12135017e-02, 1.06789505e+02]), np.array([1.1356778e-02, 1.4386847e+00, 6.6675095e+01])
-hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts1.csv', 
-                                  load_model_path='saved_params/NN_intervention_model_detrended_ts1_rsi.pkl', max_training_epoch=50)
+hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = 4.1474468e-05, 0.0008151493, np.array([-3.7272537e-05, -4.2235316e-03, 1.1301565e+02]), np.array([1.1075342e-02, 1.4634832e+00, 6.8836800e+01])
+hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/rsi_learn_samples_detrended_ts10.csv', 
+                                  load_model_path='saved_params/NN_intervention_model_detrended_ts10_rsi.pkl', max_training_epoch=50)
 
 # Store the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
 states_temp = copy.deepcopy(hsl_tsad_agent.base_model.states)
@@ -190,9 +190,11 @@ for m in range(10):
         # True baselines
         true_LL_baseline = np.zeros(len(df_k))
         true_LT_baseline = np.zeros(len(df_k))
-        # LL to LL anomaly
+        anm_mag2_perweek = anm_mag2 / 52
+        # LL to LT anomaly
         true_LL_baseline[anm_start_index1:] = anm_mag1
-        true_LL_baseline[anm_start_index2:] += np.ones(len(true_LL_baseline)-anm_start_index2) * anm_mag2
+        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -292,4 +294,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/detrend_ts1_results_rsi_lltoll.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/detrend_ts10_results_rsi_lltolt.csv", index=False)
