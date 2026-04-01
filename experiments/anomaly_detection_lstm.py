@@ -487,12 +487,16 @@ def main(
     likelihood_covariance_floor = float(
         experiment_config.get("likelihood_covariance_floor", 0.0)
     )
+    skf_objective_function = experiment_config.get("skf_objective_function", "ll")
     default_skf_param = {
         "sigma_v": sigma_v,
         "std_transition_error": float(experiment_config["std_transition_error"]),
         "norm_to_abnorm_prob": float(experiment_config["norm_to_abnorm_prob"]),
         "likelihood_covariance_floor": likelihood_covariance_floor,
     }
+    if skf_objective_function == "cdf":
+        default_skf_param["slope"] = float(experiment_config["slope"])
+        cdf_num_anomaly = int(experiment_config.get("cdf_num_anomaly", 50))
     optimal_validation_metrics = {}
     training_metrics_history = []
     lstm_std_per_epoch = []
@@ -642,11 +646,29 @@ def main(
         skf.model["norm_norm"].lstm_net.teacher_forcing = False
         skf.save_initial_states()
 
-        skf.filter(data=all_data)
-        log_lik_all = np.nanmean(skf.ll_history)
-        skf.metric_optim = -log_lik_all
-
-        skf.load_initial_states()
+        if skf_objective_function == "cdf":
+            detection_rate, false_rate, false_alarm_train = (
+                skf.detect_synthetic_anomaly(
+                    data=train_data,
+                    num_anomaly=cdf_num_anomaly,
+                    slope_anomaly=resolved_param["slope"] / 52,
+                )
+            )
+            data_len_year = (
+                data_processor.data.index[data_processor.train_end]
+                - data_processor.data.index[data_processor.train_start]
+            ).days / 365.25
+            false_rate_yearly = false_rate / data_len_year
+            metric_optim = skf.objective(
+                detection_rate, false_rate_yearly, resolved_param["slope"]
+            )
+            skf.load_initial_states()
+            skf.metric_optim = metric_optim.copy()
+        else:
+            skf.filter(data=all_data)
+            log_lik_all = np.nanmean(skf.ll_history)
+            skf.metric_optim = -log_lik_all
+            skf.load_initial_states()
 
         return skf
 
@@ -662,13 +684,17 @@ def main(
             "norm_to_abnorm_prob": tune.qloguniform(1e-05, 1e-04, 1e-05),
             # "likelihood_covariance_floor": tune.qloguniform(1e-06, 1e-02, 1e-06),
         }
+        if skf_objective_function == "cdf":
+            slope_range = experiment_config["slope_search_space"]
+            param_space["slope"] = tune.quniform(slope_range[0], slope_range[1], 0.001)
 
         # Define optimizer
+        optimizer_mode = "max" if skf_objective_function == "cdf" else "min"
         model_optimizer = Optimizer(
             model=model_with_parameters,
             param=param_space,
             num_optimization_trial=num_optimization_trial,
-            mode="min",
+            mode=optimizer_mode,
             num_startup_trials=num_startup_trials,
         )
         model_optimizer.optimize()
