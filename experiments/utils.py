@@ -50,6 +50,9 @@ def _load_base_dataframe(experiment_config: dict) -> pd.DataFrame:
         df = df[[value_column]].copy()
 
     df.index.name = "date_time"
+
+    df.index = df.index - pd.Timedelta(weeks=1)
+
     return df
 
 
@@ -113,7 +116,7 @@ def prepare_dataset(
         data_pro_scale.scale_const_mean[data_pro_scale.output_col],
         data_pro_scale.scale_const_std[data_pro_scale.output_col],
     )
-    warmup_lookback_var = np.zeros_like(warmup_lookback_mu)
+    warmup_lookback_var = np.ones_like(warmup_lookback_mu)*0.1
 
     # Anomaly injection
     trend = np.linspace(0, 0, num=len(df_raw))
@@ -160,6 +163,8 @@ def prepare_dataset(
         "validation_data": validation_data,
         "test_data": test_data,
         "all_data": all_data,
+        "warmup_time": df_warmup.index.to_numpy(),
+        "warmup_values": df_warmup.iloc[:, 0].to_numpy(dtype=float),
         "warmup_lookback_mu": warmup_lookback_mu,
         "warmup_lookback_var": warmup_lookback_var,
         "anomaly_idx": time_anomaly,

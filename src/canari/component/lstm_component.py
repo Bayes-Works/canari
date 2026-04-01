@@ -48,6 +48,11 @@ class LstmNetwork(BaseComponent):
                                     when SLSTM is used. Defaults to 1.
         model_noise (Optional[bool]): if True, using the AGVI method to model heteroscedastic noise
                                     (See references). Defaults to False.
+        finetune (Optional[bool]): if True, keep pretrained recurrent layers but replace the
+                                    output head with a freshly initialized one. Defaults to False.
+        increase_output_variance (Optional[bool]): if True, keep the pretrained output head but
+                                    increase its variance by 50%. Mutually exclusive with
+                                    `finetune`. Defaults to False.
 
     References:
         Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and
@@ -105,6 +110,7 @@ class LstmNetwork(BaseComponent):
         smoother: Optional[bool] = True,
         model_noise: Optional[bool] = False,
         finetune: Optional[bool] = False,
+        increase_output_variance: Optional[bool] = False,
         stateless: Optional[bool] = False,
         zeroshot: Optional[bool] = False,
     ):
@@ -126,6 +132,7 @@ class LstmNetwork(BaseComponent):
         self.model_noise = model_noise
         self.num_output = 2 * num_output if self.model_noise else num_output
         self.finetune = finetune
+        self.increase_output_variance = increase_output_variance
         self.stateless = stateless
         self.zeroshot = zeroshot
         super().__init__()
@@ -304,6 +311,55 @@ class LstmNetwork(BaseComponent):
             lstm_network.load_state_dict(remapped_params)
             return lstm_network.state_dict()
 
+    @staticmethod
+    def _transfer_loaded_params(
+        original_params: dict,
+        loaded_params: dict,
+        *,
+        finetune: bool,
+        increase_output_variance: bool,
+    ) -> dict:
+        if finetune and increase_output_variance:
+            raise ValueError(
+                "`finetune` and `increase_output_variance` are mutually exclusive."
+            )
+
+        if not finetune and not increase_output_variance:
+            return loaded_params
+
+        output_layer_name = next(reversed(original_params))
+        new_params = {}
+        for layer_name in original_params.keys():
+            if layer_name != output_layer_name:
+                new_params[layer_name] = loaded_params[layer_name]
+                continue
+
+            if finetune:
+                new_params[layer_name] = original_params[layer_name]
+                continue
+
+            mu_w, var_w, mu_b, var_b = loaded_params[layer_name]
+            new_params[layer_name] = (
+                mu_w,
+                LstmNetwork._scale_variance_param(var_w, factor=2),
+                mu_b,
+                LstmNetwork._scale_variance_param(var_b, factor=2),
+            )
+
+        return new_params
+
+    @staticmethod
+    def _scale_variance_param(value, factor: float):
+        if isinstance(value, np.ndarray):
+            return value * factor
+        if isinstance(value, list):
+            return [LstmNetwork._scale_variance_param(item, factor) for item in value]
+        if isinstance(value, tuple):
+            return tuple(
+                LstmNetwork._scale_variance_param(item, factor) for item in value
+            )
+        return value * factor
+
     def initialize_lstm_network(self) -> Sequential:
         """
         Builds and returns the LSTM network as a :class:`pytagi.Sequential` instance.
@@ -327,23 +383,12 @@ class LstmNetwork(BaseComponent):
         if self.load_lstm_net:
             original_params = lstm_network.state_dict()
             loaded_params = self._load_lstm_network_params(lstm_network)
-
-            if self.finetune:
-                # Build a new state dict: pretrained means + fresh variances
-                new_params = {}
-                for layer_name in original_params.keys():
-                    if layer_name in loaded_params:
-                        mu_w, _, mu_b, _ = loaded_params[layer_name]
-                        _, original_var_w, _, original_var_b = original_params[
-                            layer_name
-                        ]
-                        # Keep pretrained means, restore fresh variances
-                        new_params[layer_name] = (
-                            mu_w,
-                            original_var_w,
-                            mu_b,
-                            original_var_b,
-                        )
-                lstm_network.load_state_dict(new_params)
+            transfer_params = self._transfer_loaded_params(
+                original_params,
+                loaded_params,
+                finetune=self.finetune,
+                increase_output_variance=self.increase_output_variance,
+            )
+            lstm_network.load_state_dict(transfer_params)
 
         return lstm_network

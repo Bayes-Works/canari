@@ -391,7 +391,7 @@ def plot_states(
                 )
 
         # Plot horizontal line at y=0.0 for specific states
-        if plot_state in ["trend", "acceleration"]:
+        if plot_state in ["trend", "acceleration", "white noise", "heteroscedastic noise"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
         # Set ylabel to the name of the current state
@@ -509,7 +509,7 @@ def plot_skf_states(
         )
 
         # Plot horizontal line at y=0.0 for specific states
-        if plot_state in ["trend", "acceleration"]:
+        if plot_state in ["trend", "acceleration", "white noise", "heteroscedastic noise"]:
             ax.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
 
         # Set ylabel to the name of the current state
@@ -573,8 +573,8 @@ def plot_with_uncertainty(
         num_std (int, optional): Number of standard deviations for confidence regions.
         ax (plt.Axes, optional): Axis to use for plotting.
     """
-
     if index is not None:
+
         mu_states = mu[:, index]
         std_states = std[:, index, index].flatten()
     else:
@@ -593,3 +593,4 @@ def plot_with_uncertainty(
         alpha=0.2,
         label=label[1],
     )
+    # ax.set_ylim([-0.15, 0.15])

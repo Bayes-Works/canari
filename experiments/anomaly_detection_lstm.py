@@ -2,6 +2,7 @@ import fire
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+from ray import tune
 from pytagi import metric
 from pytagi import Normalizer as normalizer
 from canari import (
@@ -10,6 +11,7 @@ from canari import (
     SKF,
     plot_skf_states,
 )
+from canari.data_visualization import _add_dynamic_grids
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
 
 try:
@@ -86,7 +88,9 @@ def _plot_transition_diagnostics(
     delta_log_lik = log_lik_norm_abnorm - log_lik_norm_norm
 
     # Panel 2: calibration view for normal branch.
-    mu_norm_norm = _history_array(skf.transition_mu_pred_history, "norm_norm", num_steps)
+    mu_norm_norm = _history_array(
+        skf.transition_mu_pred_history, "norm_norm", num_steps
+    )
     var_norm_norm = np.maximum(
         _history_array(skf.transition_var_pred_history, "norm_norm", num_steps), 0.0
     )
@@ -257,7 +261,9 @@ def _save_transition_diagnostics_csv(
             ]
         )
         diagnostics_by_transit[transit] = {
-            "mu_pred": _history_array(skf.transition_mu_pred_history, transit, num_steps),
+            "mu_pred": _history_array(
+                skf.transition_mu_pred_history, transit, num_steps
+            ),
             "var_pred": _history_array(
                 skf.transition_var_pred_history, transit, num_steps
             ),
@@ -300,8 +306,134 @@ def _save_transition_diagnostics_csv(
     return diag_csv_path
 
 
+def _plot_raw_data_with_synthetic_anomaly(
+    dataset: dict,
+    output_dir: Path,
+    show_anomaly_marker: bool = True,
+    detected_indices: np.ndarray | None = None,
+    output_filename: str = "raw_data_with_synthetic_anomaly.pdf",
+) -> Path:
+    plot_data_processor = dataset["plot_data_processor"]
+    data_df = plot_data_processor.data
+    target_col = int(plot_data_processor.output_col[0])
+    target_name = data_df.columns[target_col]
+    time_axis = data_df.index
+    values = data_df.iloc[:, target_col].to_numpy(dtype=float)
+
+    train_idx, validation_idx, test_idx = plot_data_processor.get_split_indices()
+    unused_train_rows = int(
+        np.clip(dataset.get("unused_train_rows", 0), 0, len(train_idx))
+    )
+    train_rows_full = int(max(len(train_idx), 1))
+    train_rows_used = int(max(len(train_idx) - unused_train_rows, 0))
+    train_use_ratio = train_rows_used / train_rows_full
+    truncated_alpha = float(np.clip(0.10 + 0.35 * train_use_ratio, 0.10, 0.45))
+    line_color = "r"
+
+    fig_raw, ax_raw = plt.subplots(figsize=(6.4, 2.6))
+
+    def _valid_segment(indices: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if len(indices) == 0:
+            return np.array([], dtype=object), np.array([], dtype=float)
+        segment_time = np.asarray(time_axis[indices])
+        segment_values = values[indices]
+        valid_mask = ~np.isnat(segment_time)
+        return segment_time[valid_mask], segment_values[valid_mask]
+
+    def _span_valid_range(indices: np.ndarray, color: str, alpha: float) -> None:
+        segment_time, _ = _valid_segment(indices)
+        if len(segment_time) == 0:
+            return
+        ax_raw.axvspan(
+            segment_time[0],
+            segment_time[-1],
+            color=color,
+            alpha=alpha,
+            linewidth=0,
+        )
+
+    used_train_idx = train_idx[unused_train_rows:]
+    if unused_train_rows > 0:
+        truncated_time, truncated_values = _valid_segment(train_idx[:unused_train_rows])
+        ax_raw.plot(
+            truncated_time,
+            truncated_values,
+            color=line_color,
+            alpha=truncated_alpha,
+        )
+    if len(used_train_idx) > 0:
+        used_train_time, used_train_values = _valid_segment(used_train_idx)
+        ax_raw.plot(
+            used_train_time,
+            used_train_values,
+            color=line_color,
+            alpha=0.95,
+        )
+    if len(validation_idx) > 0:
+        validation_time, validation_values = _valid_segment(validation_idx)
+        ax_raw.plot(
+            validation_time,
+            validation_values,
+            color=line_color,
+            alpha=0.95,
+        )
+    if len(test_idx) > 0:
+        test_time, test_values = _valid_segment(test_idx)
+        ax_raw.plot(
+            test_time,
+            test_values,
+            color=line_color,
+            alpha=0.95,
+        )
+
+    _span_valid_range(validation_idx, color="green", alpha=0.1)
+
+    if show_anomaly_marker:
+        anomaly_time = dataset["plot_anomaly_time"]
+        ax_raw.axvline(
+            x=anomaly_time,
+            color="k",
+            linestyle="--",
+            linewidth=1.2,
+        )
+
+    if detected_indices is not None:
+        detected_indices = np.asarray(detected_indices, dtype=int).reshape(-1)
+        detected_plot_idx = detected_indices + unused_train_rows
+        detected_plot_idx = detected_plot_idx[
+            (detected_plot_idx >= 0) & (detected_plot_idx < len(values))
+        ]
+        detected_plot_idx = np.unique(np.sort(detected_plot_idx))
+        if len(detected_plot_idx) > 0:
+            block_start_idx = detected_plot_idx[
+                np.r_[True, np.diff(detected_plot_idx) > 1]
+            ]
+            detected_time, _ = _valid_segment(block_start_idx)
+            for detected_t in detected_time:
+                ax_raw.axvline(
+                    x=detected_t,
+                    color="blue",
+                    linestyle="--",
+                    linewidth=1.5,
+                )
+
+    ax_raw.set_xlabel("Time")
+    ax_raw.set_ylabel("Value")
+    _add_dynamic_grids(ax_raw, time_axis)
+    plt.tight_layout()
+
+    raw_plot_path = output_dir / output_filename
+    fig_raw.savefig(raw_plot_path, format="pdf")
+    plt.close(fig_raw)
+    return raw_plot_path
+
+
 def main(
-    experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
+    experiment_config_path="experiments/config/benchmark_data/test_10.yaml",
+    # experiment_config_path: str = "./experiments/config/GOU001ESAP-F020.yaml",
+    # experiment_config_path: str = "./experiments/config/LGA008ESAP-E000.yaml",
+    # experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
+    # experiment_config_path: str = "./experiments/config/LTU012ESAP-E020.yaml",
 ):
 
     # Read config file
@@ -346,16 +478,20 @@ def main(
     stateless = experiment_config["lstm_stateless"]
     zero_shot = experiment_config["lstm_zeroshot"]
     finetune = experiment_config["lstm_finetune"]
-    global_params = experiment_config["lstm_global_params"]
+    increase_output_variance = bool(
+        experiment_config.get("lstm_increase_output_variance", False)
+    )
+    global_params = experiment_config.get("lstm_global_params")
     use_tagiv = experiment_config["use_tagiv"]
     max_num_epoch = int(experiment_config.get("lstm_num_epoch", 50))
     likelihood_covariance_floor = float(
-        experiment_config.get("likelihood_covariance_floor", 0.1)
+        experiment_config.get("likelihood_covariance_floor", 0.0)
     )
     default_skf_param = {
         "sigma_v": sigma_v,
         "std_transition_error": float(experiment_config["std_transition_error"]),
         "norm_to_abnorm_prob": float(experiment_config["norm_to_abnorm_prob"]),
+        "likelihood_covariance_floor": likelihood_covariance_floor,
     }
     optimal_validation_metrics = {}
     training_metrics_history = []
@@ -374,16 +510,20 @@ def main(
             smoother=smoother,
             stateless=stateless,
             finetune=finetune,
+            increase_output_variance=increase_output_variance,
             load_lstm_net=global_params,
             model_noise=use_tagiv,
             zeroshot=zero_shot,
         )
+
+        def _build_components() -> list:
+            parts = [LocalTrend(), LstmNetwork(**lstm_kwargs)]
+            if not use_tagiv:
+                parts.append(WhiteNoise(std_error=sigma_v))
+            return parts
+
         try:
-            model = Model(
-                LocalTrend(),
-                LstmNetwork(**lstm_kwargs),
-                # WhiteNoise(std_error=sigma_v),
-            )
+            model = Model(*_build_components())
         except RuntimeError as exc:
             if global_params and "Failed to load LSTM network from" in str(exc):
                 print(
@@ -392,27 +532,28 @@ def main(
                 )
                 lstm_kwargs["load_lstm_net"] = None
                 lstm_kwargs["finetune"] = False
-                model = Model(
-                    LocalTrend(),
-                    LstmNetwork(**lstm_kwargs),
-                    # WhiteNoise(std_error=sigma_v),
-                )
+                lstm_kwargs["increase_output_variance"] = False
+                model = Model(*_build_components())
             else:
                 raise
 
-        # model.auto_initialize_baseline_states(
-        #     train_data["y"][0 : experiment_config["baseline_init_len"]]
-        # )
+        model.auto_initialize_baseline_states(
+            train_data["y"][0 : experiment_config["baseline_init_len"]]
+        )
+
+        model.lstm_net.teacher_forcing = False
+
         num_epoch = max_num_epoch
         local_training_metrics = []
         local_lstm_std_per_epoch = [np.array([np.nan]) for _ in range(num_epoch)]
         for epoch in range(num_epoch):
             model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
-            
+
             mu_validation_preds, std_validation_preds, train_states = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
                 white_noise_max_std=1.0,
+                # white_noise_decay=False,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -458,6 +599,20 @@ def main(
             if model.stop_training:
                 break
 
+        # retrieve smoothed look back
+        smoothed_loockback_mu = model.early_stop_lstm_output_mu
+        smoothed_loockback_var = model.early_stop_lstm_output_var
+
+        # plt.plot(smoothed_loockback_mu)
+        # plt.fill_between(
+        #     range(len(smoothed_loockback_mu)),
+        #     smoothed_loockback_mu + np.std(smoothed_loockback_var),
+        #     smoothed_loockback_mu - np.std(smoothed_loockback_var),
+        #     alpha=0.3,
+        # )
+        # plt.title("smoothed look back")
+        # plt.show()
+
         if capture_training_metrics:
             best_epoch = int(model.optimal_epoch)
             best_epoch = max(0, min(best_epoch, len(local_training_metrics) - 1))
@@ -469,22 +624,22 @@ def main(
             lstm_std_per_epoch.extend(local_lstm_std_per_epoch)
 
         #### Define SKF model with parameters #########
-        abnorm_model = Model(
-            LocalAcceleration(),
-            LstmNetwork(model_noise=use_tagiv),
-            # WhiteNoise(),
-        )
+        abnorm_components = [LocalAcceleration(), LstmNetwork(model_noise=use_tagiv)]
+        if not use_tagiv:
+            abnorm_components.append(WhiteNoise(std_error=sigma_v))
+        abnorm_model = Model(*abnorm_components)
         skf = SKF(
             norm_model=model,
             abnorm_model=abnorm_model,
             std_transition_error=resolved_param["std_transition_error"],
             norm_to_abnorm_prob=resolved_param["norm_to_abnorm_prob"],
-            likelihood_covariance_floor=likelihood_covariance_floor,
+            likelihood_covariance_floor=resolved_param["likelihood_covariance_floor"],
         )
-        # if skf.model["norm_norm"].lstm_net.smooth is False:
-        skf.model["norm_norm"].lstm_output_history.set(
-            warmup_lookback_mu, warmup_lookback_var
-        )
+        if skf.model["norm_norm"].lstm_net.smooth is False:
+            skf.model["norm_norm"].lstm_output_history.set(
+                warmup_lookback_mu, warmup_lookback_var
+            )
+        skf.model["norm_norm"].lstm_net.teacher_forcing = False
         skf.save_initial_states()
 
         skf.filter(data=all_data)
@@ -497,13 +652,17 @@ def main(
 
     ######### Parameter optimization #########
     if bool(experiment_config.get("optimize_skf_parameters", False)):
-        num_optimization_trial = int(experiment_config.get("num_optimization_trial", 50))
+        num_optimization_trial = int(
+            experiment_config.get("num_optimization_trial", 50)
+        )
         num_startup_trials = int(experiment_config["num_startup_trials"])
         param_space = {
-            # "sigma_v": [1e-3, 2e-1],
-            "std_transition_error": [1e-7, 1e-5],
-            # "norm_to_abnorm_prob": [1e-6, 1e-4],
+            # "sigma_v": tune.qloguniform(1e-2, 2e-1, 1e-2),
+            "std_transition_error": tune.qloguniform(5e-06, 1.2e-04, 5e-06),
+            "norm_to_abnorm_prob": tune.qloguniform(1e-05, 1e-04, 1e-05),
+            # "likelihood_covariance_floor": tune.qloguniform(1e-06, 1e-02, 1e-06),
         }
+
         # Define optimizer
         model_optimizer = Optimizer(
             model=model_with_parameters,
@@ -518,7 +677,6 @@ def main(
 
     else:
         param = default_skf_param.copy()
-    param["likelihood_covariance_floor"] = likelihood_covariance_floor
     skf_optim = model_with_parameters(param, capture_training_metrics=True)
 
     skf_optim_dict = skf_optim.get_dict()
@@ -550,6 +708,11 @@ def main(
         all_data=all_data,
         output_dir=output_dir,
     )
+    raw_data_plot_path = _plot_raw_data_with_synthetic_anomaly(
+        dataset=dataset,
+        output_dir=output_dir,
+        show_anomaly_marker=show_anomaly_marker,
+    )
 
     fig, ax = plot_skf_states(
         data_processor=dataset["data_processor"],
@@ -557,6 +720,7 @@ def main(
         model_prob=filter_marginal_abnorm_prob,
         standardization=True,
         states_type="posterior",
+        # states_type="prior",
     )
     anomaly_time = dataset["anomaly_time"]
     if show_anomaly_marker:
@@ -580,9 +744,7 @@ def main(
         val_rmse = [m["validation_rmse"] for m in training_metrics_history]
         best_epoch = int(optimal_validation_metrics["epoch"])
 
-        fig_metrics, axes_metrics = plt.subplots(
-            2, 1, figsize=(10, 6), sharex=True
-        )
+        fig_metrics, axes_metrics = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
         axes_metrics[0].plot(epochs, val_ll, color="#b91c1c", linewidth=2)
         axes_metrics[0].axvline(
             best_epoch, color="k", linestyle="--", linewidth=1, label="optimal epoch"
@@ -646,6 +808,14 @@ def main(
         f"False alarm rate before anomaly: {false_alarm_rate:.6f} "
         f"({false_alarm_count}/{len(pre_anomaly_probs)}) at threshold={threshold}"
     )
+    detected_idx_all = np.where(filter_marginal_abnorm_prob > threshold)[0]
+    raw_data_detected_plot_path = _plot_raw_data_with_synthetic_anomaly(
+        dataset=dataset,
+        output_dir=output_dir,
+        show_anomaly_marker=show_anomaly_marker,
+        detected_indices=detected_idx_all,
+        output_filename="raw_data_with_detected_anomalies.pdf",
+    )
 
     detection_summary = {
         "threshold": threshold,
@@ -653,6 +823,7 @@ def main(
         "false_alarm_rate_before_anomaly": false_alarm_rate,
         "false_alarm_count_before_anomaly": false_alarm_count,
         "num_points_before_anomaly": int(len(pre_anomaly_probs)),
+        "num_detected_points": int(len(detected_idx_all)),
     }
     detected_rel = np.where(filter_marginal_abnorm_prob[anomaly_idx:] > threshold)[0]
     if detected_rel.size > 0:
@@ -692,6 +863,8 @@ def main(
         "model_parameters_used": skf_optim_dict["model_param"],
         "optimal_validation_metrics": optimal_validation_metrics,
         "final_skf_detection": detection_summary,
+        "raw_data_with_synthetic_anomaly_plot": str(raw_data_plot_path),
+        "raw_data_with_detected_anomalies_plot": str(raw_data_detected_plot_path),
         "skf_figure_pdf": str(skf_pdf_path),
         "skf_transition_likelihood_plot": str(skf_transition_plot_path),
         "skf_transition_diagnostics_csv": str(skf_transition_csv_path),
@@ -704,6 +877,8 @@ def main(
 
     print(f"Saved outputs to: {output_dir}")
     print(f"Config YAML: {used_config_path}")
+    print(f"Raw data with synthetic anomaly plot: {raw_data_plot_path}")
+    print(f"Raw data with detected anomalies plot: {raw_data_detected_plot_path}")
     print(f"SKF figure: {skf_pdf_path}")
     print(f"SKF transition likelihood plot: {skf_transition_plot_path}")
     print(f"SKF transition diagnostics CSV: {skf_transition_csv_path}")

@@ -34,6 +34,8 @@ from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
 
+import matplotlib.pyplot as plt
+
 
 class Model:
     """
@@ -1102,10 +1104,53 @@ class Model:
         """
 
         lstm_index = self.get_states_index("lstm")
-        self.lstm_output_history.update(
-            mu_states[lstm_index],
-            var_states[lstm_index, lstm_index],
-        )
+
+        # Z^{O}
+        if self.lstm_net.teacher_forcing is False:
+            self.lstm_output_history.update(
+                mu_states[lstm_index],
+                var_states[lstm_index, lstm_index],
+            )
+        # Z^{O} + V
+        elif self.lstm_net.teacher_forcing is True:
+
+            white_noise_index = self.get_states_index("white noise")
+            hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+            indices = [
+                idx
+                for idx in (lstm_index, white_noise_index, hete_noise_index)
+                if idx is not None
+            ]
+            _observation_matrix = np.zeros_like(self.observation_matrix)
+            _observation_matrix[0, indices] = 1
+            mu_lstm = _observation_matrix @ mu_states
+            var_lstm = _observation_matrix @ var_states @ _observation_matrix.T
+
+            self.lstm_output_history.update(
+                mu_lstm.flatten(),
+                var_lstm.flatten(),
+            )
+
+        else:
+            print("shou?")
+
+        # Mean overfitted
+        # white_noise_index = self.get_states_index("white noise")
+        # hete_noise_index = self.get_states_index("heteroscedastic noise")
+
+        # indices = [
+        #     idx
+        #     for idx in (lstm_index, white_noise_index, hete_noise_index)
+        #     if idx is not None
+        # ]
+        # _observation_matrix = np.zeros_like(self.observation_matrix)
+        # _observation_matrix[0, indices] = 1
+        # mu_lstm = _observation_matrix @ mu_states
+        # self.lstm_output_history.update(
+        #     mu_lstm.flatten(),
+        #     var_states[lstm_index, lstm_index],
+        # )
 
     def get_dict(self, time_step: Optional[int] = None) -> dict:
         """
@@ -1207,15 +1252,15 @@ class Model:
             if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-3
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-8
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-8
 
         self._mu_local_level = trend[0]
 
@@ -1821,10 +1866,31 @@ class Model:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
             var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
+
+            # TODO: remove this only for debugging
+            # plt.plot(mu_sequence)
+            # plt.fill_between(
+            #     range(len(mu_sequence)),
+            #     mu_sequence + np.std(var_sequence),
+            #     mu_sequence - np.std(var_sequence),
+            #     alpha = 0.3,
+            # )
+            # plt.show()
+
             mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
             var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
             self.lstm_output_history.mu = mu_sequence
             self.lstm_output_history.var = var_sequence
+
+            # TODO: remove this only for debugging
+            # plt.plot(mu_sequence)
+            # plt.fill_between(
+            #     range(len(mu_sequence)),
+            #     mu_sequence + np.std(var_sequence),
+            #     mu_sequence - np.std(var_sequence),
+            #     alpha = 0.3,
+            # )
+            # plt.show()
 
             # set the smoothed lstm_states at the first time step
             self.lstm_states_history[0] = self.lstm_net.get_lstm_states(
@@ -1895,11 +1961,13 @@ class Model:
         if self.lstm_net.smooth:
             self.pretraining_filter(train_data)
 
-        update_params= True
+        update_params = True
         if self.lstm_net.zeroshot:
-            update_params =False
+            update_params = False
             print("LSTM parameters are not being updated!")
-        self.filter(data=train_data, intervention=intervention, train_lstm=update_params)
+        self.filter(
+            data=train_data, intervention=intervention, train_lstm=update_params
+        )
         mu_validation_preds, std_validation_preds, _ = self.forecast(
             data=validation_data, intervention=intervention
         )
