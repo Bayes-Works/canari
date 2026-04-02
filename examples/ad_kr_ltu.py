@@ -19,7 +19,7 @@ from canari import (
 from canari.component import LocalTrend, LocalAcceleration, KernelRegression, WhiteNoise
 
 def main(
-    param_optim: bool = False,
+    param_optim: bool = True,
 ):
     ######### Data processing #########
     # Read data
@@ -47,17 +47,18 @@ def main(
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-    num_kernel = 20
-    mu_cp = 1
-    var_cp = 1
+    period = 365
+    num_kernel = 10
+    np.random.seed(42)
+    mu_cp = np.random.uniform(low=-3, high=3, size=num_kernel)
+    # mu_cp = 1
+    var_cp = 2
     ######### Define model with parameters #########
     def model_with_parameters(param):
         model = Model(
             LocalTrend(),
-            KernelRegression(period=365,
+            KernelRegression(period=period,
                             kernel_length=param["kernel_length"],
-                            std_error=param["std_error"],
-                            std_error_cp=param["std_error_cp"],
                             num_control_point=num_kernel,
                             mu_control_point = mu_cp,
                             var_control_point = var_cp,
@@ -66,28 +67,38 @@ def main(
         )
 
         model.auto_initialize_baseline_states(train_data["y"])
-        _, _,_ = model.filter(data=train_data)
-        mu_preds, std_preds,_ = model.forecast(data=validation_data)
+        mu_preds, std_preds,_ = model.filter(data=train_data)
 
-        mu_preds = normalizer.unstandardize(
-            mu_preds,
-            data_processor.scale_const_mean[data_processor.output_col],
-            data_processor.scale_const_std[data_processor.output_col],
-        )
-
-        std_preds = normalizer.unstandardize_std(
-            std_preds,
-            data_processor.scale_const_std[data_processor.output_col],
-        )
-        
-        obs = data_processor.get_data("validation").flatten()
+        obs = data_processor.get_data("train").flatten()
         log_lik = metric.log_likelihood(
             prediction=mu_preds,
             observation=obs,
             std=std_preds,
         )
         mse = metric.mse(mu_preds, obs)
-        model.metric_optim = mse
+        model.metric_optim = -log_lik
+
+        # mu_preds, std_preds,_ = model.forecast(data=validation_data)
+
+        # mu_preds = normalizer.unstandardize(
+        #     mu_preds,
+        #     data_processor.scale_const_mean[data_processor.output_col],
+        #     data_processor.scale_const_std[data_processor.output_col],
+        # )
+
+        # std_preds = normalizer.unstandardize_std(
+        #     std_preds,
+        #     data_processor.scale_const_std[data_processor.output_col],
+        # )
+        
+        # obs = data_processor.get_data("validation").flatten()
+        # log_lik = metric.log_likelihood(
+        #     prediction=mu_preds,
+        #     observation=obs,
+        #     std=std_preds,
+        # )
+        # mse = metric.mse(mu_preds, obs)
+        # model.metric_optim = mse
 
         return model
 
@@ -95,10 +106,8 @@ def main(
     def skf_with_parameters(skf_param_space, param):
         norm_model = Model(
             LocalTrend(),
-            KernelRegression(period=365,
+            KernelRegression(period=period,
                             kernel_length=param["kernel_length"],
-                            std_error=param["std_error"],
-                            std_error_cp=param["std_error_cp"],
                             num_control_point=num_kernel,
                             mu_control_point = mu_cp,
                             var_control_point = var_cp,
@@ -109,10 +118,8 @@ def main(
 
         abnorm_model = Model(
             LocalAcceleration(),
-            KernelRegression(period=365,
+            KernelRegression(period=period,
                             kernel_length=param["kernel_length"],
-                            std_error=param["std_error"],
-                            std_error_cp=param["std_error_cp"],
                             num_control_point=num_kernel,
                             mu_control_point = mu_cp,
                             var_control_point = var_cp,
@@ -138,44 +145,45 @@ def main(
 
     ######### Parameter optimization #########
     if param_optim:
-        # # Define parameter search space
-        param_space = {
-            "kernel_length": [0.5, 0.9],
-            "sigma_v": [1e-1, 5e-1],
-            "std_error": [1e-1, 5e-1],
-            "std_error_cp": [1e-5, 1e-3],
-        }
-        # Define optimizer
-        model_optimizer = Optimizer(
-            model=model_with_parameters,
-            param=param_space,
-            num_optimization_trial=30,
-            mode="min",
-            num_startup_trials=10,
-        )
-        model_optimizer.optimize()
-        # Get best model
-        param = model_optimizer.get_best_param()
-
-        # param = {
-        #     "kernel_length": 0.95,
-        #     "sigma_v": 3e-1,
-        #     "std_error": .3,
-        #     "std_error_cp": 1e-3
+        # Define parameter search space
+        # param_space = {
+        #     "kernel_length": [0.1, 0.99],
+        #     "sigma_v": [1e-1, 5e-1],
+        #     # "std_error": [1e-1, 5e-1],
+        #     # "std_error_cp": [1e-5, 1e-3],
         # }
-        # Train best model
+        # # Define optimizer
+        # model_optimizer = Optimizer(
+        #     model=model_with_parameters,
+        #     param=param_space,
+        #     num_optimization_trial=50,
+        #     mode="min",
+        #     num_startup_trials=20,
+        # )
+        # model_optimizer.optimize()
+        # # Get best model
+        # param = model_optimizer.get_best_param()
         # model_with_parameters(param)
+
+        param = {
+            "kernel_length": 0.95,
+            "sigma_v": 3e-1,
+            # "std_error": 0.3,
+            # "std_error_cp": 1e-3
+        }
+        # Train best model
+        model_with_parameters(param)
 
         # # Optimize for skf
         # skf_param_space = {
-        #     "std_transition_error": [1e-4, 1.1e-4],
-        #     "norm_to_abnorm_prob": [1e-5, 1.1e-5],
+        #     "std_transition_error": [1e-6, 1e-4],
+        #     "norm_to_abnorm_prob": [1e-6, 1e-4],
         # }
         # skf_optimizer = Optimizer(
         #     model=skf_with_parameters,
         #     param=skf_param_space,
         #     model_input=param,
-        #     num_optimization_trial=1,
+        #     num_optimization_trial=30,
         #     num_startup_trials=10,
         #     mode="min",
         # )
@@ -192,11 +200,11 @@ def main(
         skf_optim_dict["model_param"] = param
         skf_optim_dict["skf_param"] = skf_param
         skf_optim_dict["cov_names"] = train_data["cov_names"]
-        with open("saved_params/ltu14.pkl", "wb") as f:
+        with open("saved_params/ltu14_1.pkl", "wb") as f:
             pickle.dump(skf_optim_dict, f)
     else:
         # # Load saved skf model
-        with open("saved_params/ltu14.pkl", "rb") as f:
+        with open("saved_params/ltu14_1.pkl", "rb") as f:
             skf_optim_dict = pickle.load(f)
         skf_optim = SKF.load_dict(skf_optim_dict)
 

@@ -198,6 +198,9 @@ class Model:
         self.mu_W2_prior = None
         self.var_W2_prior = None
 
+        # Kernel regression attributes
+        self._kr_index = 0
+
         # Noise related attribute
         self.sched_sigma_v = None
         self._var_v2bar_prior = None
@@ -855,23 +858,21 @@ class Model:
 
         return delta_mu_v2bar, delta_var_v2bar
     
-    def _kr_forward_mod(self, time):
+    def _kr_forward_mod(self):
         """
         Kernel regression forward modification.
         """
         
-        # if isinstance(time, pd.Timestamp):
-        #     time = 366 + time.toordinal() + (time.hour * 3600 + time.minute * 60 + time.second) / 86400
-
         kr_index = self.get_states_index("kernel regression")
         time_cp = self.components[self._states_comp[kr_index]].time_control_point
         period = self.components[self._states_comp[kr_index]].period
         kernel_len = self.components[self._states_comp[kr_index]].kernel_length
-        k     = np.exp((-2 / kernel_len**2) * np.sin(np.pi * (time - time_cp) / period)**2)
+        k     = np.exp((-2 / kernel_len**2) * np.sin(np.pi * (self._kr_index  - time_cp) / period)**2)
         k_sum = np.sum(k)
         k     = k / k_sum
 
         self.transition_matrix [kr_index, kr_index + 1: kr_index + 1 + len(time_cp)] = k.flatten()
+        self._kr_index += 1
 
     def update_lstm_states_history(self, index: int, last_step: int):
         """
@@ -1395,9 +1396,7 @@ class Model:
         input_covariates: Optional[np.ndarray] = None,
         var_input_covariates: Optional[np.ndarray] = None,
         mu_lstm_pred: Optional[np.ndarray] = None,
-        var_lstm_pred: Optional[np.ndarray] = None,
-        sample_index: Optional[int] = None,
-        time: Optional[str] = None,
+        var_lstm_pred: Optional[np.ndarray] = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
@@ -1453,7 +1452,7 @@ class Model:
 
         # Kernel regression
         if "kernel regression" in self.states_name:
-            self._kr_forward_mod(sample_index)
+            self._kr_forward_mod()
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1690,10 +1689,7 @@ class Model:
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = self.forward(
-                input_covariates=x,
-                sample_index=index,
-                time=time,
-                )
+                input_covariates=x)
 
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
@@ -1766,10 +1762,7 @@ class Model:
                 self._transition_matrix_interv(interv["mu"], interv["var"], 1)
 
             mu_obs_pred, var_obs_pred, *_ = self.forward(
-                input_covariates=x, 
-                sample_index=index, 
-                time=time,
-                )
+                input_covariates=x)
             
             (
                 delta_mu_states,
