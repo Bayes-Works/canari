@@ -1114,6 +1114,7 @@ class Model:
         # Z^{O} + V
         elif self.lstm_net.teacher_forcing is True:
 
+            print("The teacher is being forced :)")
             white_noise_index = self.get_states_index("white noise")
             hete_noise_index = self.get_states_index("heteroscedastic noise")
 
@@ -1867,7 +1868,7 @@ class Model:
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
             var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
 
-            # TODO: remove this only for debugging
+            # # TODO: remove this only for debugging
             # plt.plot(mu_sequence)
             # plt.fill_between(
             #     range(len(mu_sequence)),
@@ -1875,7 +1876,10 @@ class Model:
             #     mu_sequence - np.std(var_sequence),
             #     alpha = 0.3,
             # )
-            # plt.show()
+            # plt.savefig(
+            #     f"./experiments/out/inferred_len/plot_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S_%f')}"
+            # )
+            # plt.close()
 
             mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
             var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]

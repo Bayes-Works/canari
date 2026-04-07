@@ -31,3 +31,13 @@ docs/_build/
 # Experiments
 experiments/config/*
 experiments/out/*
+
+# claude
+CLAUDE.md
+ai_context
+.claude
+
+# codex
+.codex
+
+*.out

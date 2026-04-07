@@ -10,6 +10,7 @@ from canari import (
     Optimizer,
     SKF,
     plot_skf_states,
+    plot_states,
 )
 from canari.data_visualization import _add_dynamic_grids
 from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise
@@ -429,11 +430,7 @@ def _plot_raw_data_with_synthetic_anomaly(
 
 
 def main(
-    experiment_config_path="experiments/config/benchmark_data/test_10.yaml",
-    # experiment_config_path: str = "./experiments/config/GOU001ESAP-F020.yaml",
-    # experiment_config_path: str = "./experiments/config/LGA008ESAP-E000.yaml",
-    # experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
-    # experiment_config_path: str = "./experiments/config/LTU012ESAP-E020.yaml",
+    experiment_config_path: str = "./experiments/config/LGA008EFAPRG910.yaml",
 ):
 
     # Read config file
@@ -551,13 +548,13 @@ def main(
         local_training_metrics = []
         local_lstm_std_per_epoch = [np.array([np.nan]) for _ in range(num_epoch)]
         for epoch in range(num_epoch):
-            model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+            if model.lstm_net.smooth is False:
+                model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
 
             mu_validation_preds, std_validation_preds, train_states = model.lstm_train(
                 train_data=train_data,
                 validation_data=validation_data,
-                white_noise_max_std=1.0,
-                # white_noise_decay=False,
+                white_noise_decay=False,
             )
 
             mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -596,26 +593,13 @@ def main(
                 evaluate_metric=-validation_log_lik,
                 current_epoch=epoch,
                 max_epoch=num_epoch,
-                skip_epoch=0,
             )
             model.metric_optim = model.early_stop_metric
 
             if model.stop_training:
+                model.early_stop_lstm_output_mu = model.lstm_output_history.mu.copy()
+                model.early_stop_lstm_output_var = model.lstm_output_history.var.copy()
                 break
-
-        # retrieve smoothed look back
-        smoothed_loockback_mu = model.early_stop_lstm_output_mu
-        smoothed_loockback_var = model.early_stop_lstm_output_var
-
-        # plt.plot(smoothed_loockback_mu)
-        # plt.fill_between(
-        #     range(len(smoothed_loockback_mu)),
-        #     smoothed_loockback_mu + np.std(smoothed_loockback_var),
-        #     smoothed_loockback_mu - np.std(smoothed_loockback_var),
-        #     alpha=0.3,
-        # )
-        # plt.title("smoothed look back")
-        # plt.show()
 
         if capture_training_metrics:
             best_epoch = int(model.optimal_epoch)
@@ -679,14 +663,13 @@ def main(
         )
         num_startup_trials = int(experiment_config["num_startup_trials"])
         param_space = {
-            # "sigma_v": tune.qloguniform(1e-2, 2e-1, 1e-2),
-            "std_transition_error": tune.qloguniform(5e-06, 1.2e-04, 5e-06),
-            "norm_to_abnorm_prob": tune.qloguniform(1e-05, 1e-04, 1e-05),
-            # "likelihood_covariance_floor": tune.qloguniform(1e-06, 1e-02, 1e-06),
+            "sigma_v": tune.quniform(1e-2, 1e-1, 1e-2), 
+            "std_transition_error": tune.loguniform(5e-6, 1e-4),
+            "norm_to_abnorm_prob": tune.loguniform(1e-5, 1e-4),
         }
         if skf_objective_function == "cdf":
             slope_range = experiment_config["slope_search_space"]
-            param_space["slope"] = tune.quniform(slope_range[0], slope_range[1], 0.001)
+            param_space["slope"] = tune.quniform(slope_range[0], slope_range[1], 1e-2)
 
         # Define optimizer
         optimizer_mode = "max" if skf_objective_function == "cdf" else "min"
@@ -758,6 +741,15 @@ def main(
             label="Anomaly",
         )
         ax[-1].legend(loc="upper right")
+    plot_states(
+        data_processor=dataset["data_processor"],
+        states=states,
+        states_to_plot=["lstm"],
+        states_type="prior",
+        standardization=True,
+        sub_plot=ax[-3],
+        color="g",
+    )
     plt.tight_layout()
     skf_pdf_path = output_dir / "skf_states.pdf"
     fig.savefig(skf_pdf_path, format="pdf")

@@ -59,8 +59,17 @@ def _load_base_dataframe(experiment_config: dict) -> pd.DataFrame:
 def _resolve_time_index(index: pd.DatetimeIndex, time_start_time: str) -> int:
     target_time = pd.Timestamp(time_start_time)
     time_idx = int(index.searchsorted(target_time, side="left"))
+
+    if time_idx <= 0:
+        return 0
     if time_idx >= len(index):
-        time_idx = len(index) - 1
+        return len(index) - 1
+
+    prev_idx = time_idx - 1
+    prev_delta = abs(index[prev_idx] - target_time)
+    next_delta = abs(index[time_idx] - target_time)
+    if prev_delta <= next_delta:
+        return prev_idx
     return time_idx
 
 

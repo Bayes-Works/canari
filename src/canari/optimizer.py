@@ -212,7 +212,7 @@ class Optimizer:
 
         print("-----")
         print(
-            f"Optimal parameters at trial #{best_sample_number}. Best metric: {best_model.metric_optim:.4f}. Best print metric: {best_model.print_metric}. Best param: {self.param_optim}."
+            f"Optimal parameters at trial #{best_sample_number}. Best metric: {best_model.metric_optim:.5f}. Best print metric: {best_model.print_metric}. Best param: {self.param_optim}."
         )
         print("-----")
 
@@ -265,11 +265,11 @@ class Optimizer:
                 sample_str = f"{self.current_sample}/{self.total_samples}".rjust(width)
                 if print_metric is None:
                     print(
-                        f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}"
+                        f"# {sample_str} - Metric: {metric:.5f} - Parameter: {params}"
                     )
                 else:
                     print(
-                        f"# {sample_str} - Metric: {metric:.3f} - Print metric: {print_metric} - Parameter: {params}"
+                        f"# {sample_str} - Metric: {metric:.5f} - Print metric: {print_metric} - Parameter: {params}"
                     )
 
         return _Progress(total_samples)
