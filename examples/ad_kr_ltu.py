@@ -37,22 +37,35 @@ def main(
     df.index = pd.to_datetime(df_raw["Date"])
     df = df.resample("D").last()
 
+    _data_processor = DataProcess(
+        data=df,
+        train_split=0.05,
+        validation_split=0.08,
+        test_split=0.67,
+        output_col=[0],
+        standardization=True,
+    )
+    # _train_data, _, _, _ = _data_processor.get_splits()
+    # plot_data(_data_processor, plot_test_data=True)
+    # plt.show()
     data_processor = DataProcess(
         data=df,
         train_split=0.2,
         validation_split=0.08,
         test_split=0.67,
         output_col=[0],
-        standardization=False,
+        standardization=True,
+        scale_const_mean=_data_processor.scale_const_mean,
+        scale_const_std=_data_processor.scale_const_std,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
     period = 365
-    num_kernel = 10
+    num_kernel = 20
     np.random.seed(42)
-    mu_cp = np.random.uniform(low=-3, high=3, size=num_kernel)
+    mu_cp = np.random.uniform(low=-1, high=1, size=num_kernel)
     # mu_cp = 1
-    var_cp = 2
+    var_cp = 0.5
     ######### Define model with parameters #########
     def model_with_parameters(param):
         model = Model(
@@ -67,9 +80,33 @@ def main(
         )
 
         model.auto_initialize_baseline_states(train_data["y"])
-        mu_preds, std_preds,_ = model.filter(data=train_data)
 
-        obs = data_processor.get_data("train").flatten()
+        # mu_preds, std_preds,_ = model.filter(data=train_data)
+
+        # obs = data_processor.get_data("train").flatten()
+        # log_lik = metric.log_likelihood(
+        #     prediction=mu_preds,
+        #     observation=obs,
+        #     std=std_preds,
+        # )
+        # mse = metric.mse(mu_preds, obs)
+        # model.metric_optim = -log_lik
+
+        _, _,_ = model.filter(data=train_data)
+        mu_preds, std_preds,_ = model.forecast(data=validation_data)
+
+        mu_preds = normalizer.unstandardize(
+            mu_preds,
+            data_processor.scale_const_mean[data_processor.output_col],
+            data_processor.scale_const_std[data_processor.output_col],
+        )
+
+        std_preds = normalizer.unstandardize_std(
+            std_preds,
+            data_processor.scale_const_std[data_processor.output_col],
+        )
+        
+        obs = data_processor.get_data("validation").flatten()
         log_lik = metric.log_likelihood(
             prediction=mu_preds,
             observation=obs,
@@ -77,28 +114,6 @@ def main(
         )
         mse = metric.mse(mu_preds, obs)
         model.metric_optim = -log_lik
-
-        # mu_preds, std_preds,_ = model.forecast(data=validation_data)
-
-        # mu_preds = normalizer.unstandardize(
-        #     mu_preds,
-        #     data_processor.scale_const_mean[data_processor.output_col],
-        #     data_processor.scale_const_std[data_processor.output_col],
-        # )
-
-        # std_preds = normalizer.unstandardize_std(
-        #     std_preds,
-        #     data_processor.scale_const_std[data_processor.output_col],
-        # )
-        
-        # obs = data_processor.get_data("validation").flatten()
-        # log_lik = metric.log_likelihood(
-        #     prediction=mu_preds,
-        #     observation=obs,
-        #     std=std_preds,
-        # )
-        # mse = metric.mse(mu_preds, obs)
-        # model.metric_optim = mse
 
         return model
 
@@ -132,6 +147,7 @@ def main(
             abnorm_model=abnorm_model,
             std_transition_error=skf_param_space["std_transition_error"],
             norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
+            abnorm_to_norm_prob = skf_param_space["abnorm_to_norm_prob"],
         )
         skf.save_initial_states()
 
@@ -145,12 +161,12 @@ def main(
 
     ######### Parameter optimization #########
     if param_optim:
-        # Define parameter search space
+        # # Define parameter search space
         # param_space = {
-        #     "kernel_length": [0.1, 0.99],
-        #     "sigma_v": [1e-1, 5e-1],
-        #     # "std_error": [1e-1, 5e-1],
-        #     # "std_error_cp": [1e-5, 1e-3],
+        #     # "kernel_length": [0.1, 0.99],
+        #     # "sigma_v": [1e-1, 5e-1],
+        #     "kernel_length": tune.quniform(0.1, 0.99, 1e-2),
+        #     "sigma_v": tune.quniform(5e-3, 2e-1, 1e-3),
         # }
         # # Define optimizer
         # model_optimizer = Optimizer(
@@ -166,25 +182,26 @@ def main(
         # model_with_parameters(param)
 
         param = {
-            "kernel_length": 0.95,
-            "sigma_v": 3e-1,
-            # "std_error": 0.3,
-            # "std_error_cp": 1e-3
+            "kernel_length": 0.67,
+            "sigma_v": 0.196,
         }
-        # Train best model
+        # # Train best model
         model_with_parameters(param)
 
-        # # Optimize for skf
+        # Optimize for skf
         # skf_param_space = {
-        #     "std_transition_error": [1e-6, 1e-4],
-        #     "norm_to_abnorm_prob": [1e-6, 1e-4],
+        #     # "std_transition_error": [1e-5, 1e-1],
+        #     # "norm_to_abnorm_prob": [1e-5, 1e-1],
+        #     "std_transition_error": tune.quniform(1e-6, 1e-4, 1e-7),
+        #     "norm_to_abnorm_prob": tune.quniform(1e-6, 1e-4, 1e-7),
+        #     "abnorm_to_norm_prob": tune.quniform(1e-1, 2e-1, 1e-2),
         # }
         # skf_optimizer = Optimizer(
         #     model=skf_with_parameters,
         #     param=skf_param_space,
         #     model_input=param,
-        #     num_optimization_trial=30,
-        #     num_startup_trials=10,
+        #     num_optimization_trial=50,
+        #     num_startup_trials=20,
         #     mode="min",
         # )
         # skf_optimizer.optimize()
@@ -194,6 +211,7 @@ def main(
         skf_param={
             "std_transition_error": 1e-4,
             "norm_to_abnorm_prob": 1e-5,
+            "abnorm_to_norm_prob": 1.8e-1,
         }
         skf_optim = skf_with_parameters(skf_param, param)
         skf_optim_dict = skf_optim.get_dict()

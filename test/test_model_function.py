@@ -411,7 +411,7 @@ def test_kernel_regression():
     std_observation_noise = 0.1
     num_control_point = 5
     kernel_len = 0.5
-    time = 5
+    time = 0
     mu_cp = 0.1
     var_cp = 0.2
     time_cp = np.linspace(0, period, num_control_point)
@@ -453,7 +453,6 @@ def test_kernel_regression():
     )
     mu_obs_pred, var_obs_pred, _, _ = model.forward(
         input_covariates = [],
-        sample_index = time,
     )
     obs = 0.5
     delta_mu_states_pred, delta_var_states_pred, _, _ = model.backward(
