@@ -809,7 +809,7 @@ class SKF:
         # TODO: trick: run skf.filter to initialize skf.model["norm_norm"] states
         if "cov_names" in save_dict:
             dummy_input = np.full((len(save_dict["cov_names"]),), np.nan)
-            norm_model.forward(input_covariates=dummy_input, time=[], sample_index=0)
+            norm_model.forward(input_covariates=dummy_input)
 
         if norm_model.lstm_net:
             norm_model.lstm_net.load_state_dict(
