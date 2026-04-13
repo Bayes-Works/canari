@@ -25,8 +25,8 @@ with open("examples/benchmark/BM_metadata_global.json", "r") as f:
 
 def main(
     num_trial_optim_model: int = 50,
-    param_optimization: bool = True,
-    benchmark_no: str = ["9"],
+    param_optimization: bool = False,
+    benchmark_no: str = ["4"],
 ):
     for benchmark in benchmark_no:
 
@@ -65,14 +65,15 @@ def main(
             LstmNetwork(
                     look_back_len=look_back_len,
                     num_features=config["num_feature"],
-                    num_layer=5,
+                    num_layer=3,
                     infer_len=config["infer_len"],
                     num_hidden_unit=40,
                     smoother=False,
-                    load_lstm_net="saved_params/hq_g_seq_52_5layer.bin",
+                    load_lstm_net="saved_params/hq_g_seq_52.bin",
                 )
         )
         lstm_dict = lstm.lstm_net.state_dict()
+        std_residual = 1e-1
 
         def model_with_parameters(param):
             model = Model(
@@ -80,22 +81,15 @@ def main(
                 LstmNetwork(
                     look_back_len=look_back_len,
                     num_features=config["num_feature"],
-                    num_layer=5,
-                    infer_len=52*1,
+                    num_layer=3,
+                    infer_len=52*3,
                     num_hidden_unit=40,
                     smoother=False,
                     manual_seed=1,
                 ),
-                WhiteNoise(std_error=param["sigma_v"]),
+                WhiteNoise(std_error=std_residual),
             )
             
-            init_lstm_dict = model.lstm_net.state_dict()
-            for key, value in init_lstm_dict.items():
-                tmp = list(lstm_dict[key])
-                factor = 1
-                tmp[1] = np.array(value[1])*factor
-                tmp[3] = np.array(value[3])*factor
-                lstm_dict[key] = tuple(tmp)
             model.lstm_net.load_state_dict(lstm_dict)
 
             model.auto_initialize_baseline_states(
@@ -103,6 +97,9 @@ def main(
                     config["init_period_states"][0] : config["init_period_states"][1]
                 ]
             )
+
+            model.var_states[0,0] = 1e-3
+            model.var_states[1,1] = 1e-7
 
             num_epoch = 50
             for epoch in range(num_epoch):
@@ -133,6 +130,7 @@ def main(
                     evaluate_metric=-validation_log_lik,
                     current_epoch=epoch,
                     max_epoch=num_epoch,
+                    skip_epoch=0,
                 )
                 model.metric_optim = model.early_stop_metric
 
@@ -157,6 +155,7 @@ def main(
                 abnorm_model=abnorm_model,
                 std_transition_error=skf_param_space["std_transition_error"],
                 norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
+                abnorm_to_norm_prob = skf_param_space["abnorm_to_norm_prob"],
             )
 
             # CDF
@@ -198,22 +197,7 @@ def main(
 
         if param_optimization:
             # Define parameter search space
-            param_space = {
-                "sigma_v": config["sigma_v"],
-            }
-            # Define optimizer
-            model_optimizer = Optimizer(
-                model=model_with_parameters,
-                param=param_space,
-                num_optimization_trial=10,
-                num_startup_trials=5,
-                mode="min",
-            )
-            model_optimizer.optimize()
-            # Get best model
-            param = model_optimizer.get_best_param()
-
-            # Train best model
+            param = {}
             model_optim = (
                 model_with_parameters(param)
             )
@@ -225,16 +209,18 @@ def main(
             skf_param_space = {
                 "std_transition_error": config["std_transition_error"],
                 "norm_to_abnorm_prob": config["norm_to_abnorm_prob"],
-                "slope": config["slope"],
+                # "slope": config["slope"],
+                "abnorm_to_norm_prob": [0.1, 0.2],
             }
+
             skf_input = {}
             skf_input["model_optim_dict"] = model_optim_dict
             skf_optimizer = Optimizer(
                 model=skf_with_parameters,
                 param=skf_param_space,
                 model_input=skf_input,
-                num_optimization_trial=20,
-                num_startup_trials=10,
+                num_optimization_trial=60,
+                num_startup_trials=30,
                 mode="min",
             )
             skf_optimizer.optimize()
@@ -246,11 +232,11 @@ def main(
             skf_optim_dict["model_param"] = param
             skf_optim_dict["skf_param"] = skf_param
             skf_optim_dict["cov_names"] = train_data["cov_names"]
-            with open(f"{config['saved_model_path']}_2step_optim.pkl", "wb") as f:
+            with open(f"{config['saved_model_path']}_global.pkl", "wb") as f:
                 pickle.dump(skf_optim_dict, f)
         else:
             # # Load saved skf model
-            with open(f"{config['saved_model_path']}_2step_optim.pkl", "rb") as f:
+            with open(f"{config['saved_model_path']}_global.pkl", "rb") as f:
                 skf_optim_dict = pickle.load(f)
             skf_optim = SKF.load_dict(skf_optim_dict)
         
@@ -268,10 +254,9 @@ def main(
             states=states,
             model_prob=filter_marginal_abnorm_prob,
             standardization=True,
-            states_to_plot=["level","trend","acceleration","lstm", "autorgression"],
         )
         fig.suptitle("SKF hidden states", fontsize=10, y=1)
-        plt.savefig(f"{config['saved_result_path']}_LL_obj_agvi_1.png")
+        plt.savefig(f"{config['saved_result_path']}_global.png")
         plt.show()
 
 

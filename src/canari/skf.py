@@ -1404,7 +1404,7 @@ class SKF:
         false_rate,
         anm_magnitude,
         detection_rate_cdf_mean: Optional[float] = 0.5,
-        detection_rate_cdf_std: Optional[float] = 0.5,
+        detection_rate_cdf_std: Optional[float] = 0.2,
         false_rate_cdf_median: Optional[float] = 0.1,  # [false alarms/year]
         false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
         anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
@@ -1445,4 +1445,4 @@ class SKF:
         )
         skf_metric = j1 * j2 * j3
 
-        return skf_metric
+        return skf_metric, j1, j2, j3
