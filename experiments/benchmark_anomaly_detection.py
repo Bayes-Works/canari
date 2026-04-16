@@ -5,9 +5,12 @@ Usage:
     python -m experiments.benchmark_anomaly_detection --experiment_config_path experiments/config/LTU012ESAP-E020.yaml --seeds "[1,2,3,4,5]"
 """
 
+import contextlib
 import copy
 import json
+import multiprocessing as mp
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import fire
@@ -46,17 +49,20 @@ def _run_single(
 
     output_root = Path(config["output_root"])
     output_dir = output_root / config["experiment_name"]
+    output_dir.mkdir(parents=True, exist_ok=True)
     temp_config_dir = benchmark_root / "temp_configs"
     temp_config_dir.mkdir(parents=True, exist_ok=True)
     temp_config_path = temp_config_dir / f"{config['experiment_name']}.yaml"
     with temp_config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
-    print(f"\n{'=' * 60}")
-    print(f"Running: condition={condition}, seed={seed}")
-    print(f"{'=' * 60}")
-
-    run_anomaly_detection(experiment_config_path=str(temp_config_path))
+    log_path = output_dir / "run.log"
+    with log_path.open("w") as log_file:
+        with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+            print(f"{'=' * 60}")
+            print(f"Running: condition={condition}, seed={seed}")
+            print(f"{'=' * 60}", flush=True)
+            run_anomaly_detection(experiment_config_path=str(temp_config_path))
 
     return _read_summary(output_dir)
 
@@ -242,12 +248,17 @@ def _print_condition_summary(aggregates: list[dict], condition_names: list[str])
 def benchmark(
     experiment_config_path: str,
     seeds: list[int] = (1, 2, 3),
+    max_concurrent: int | None = None,
 ):
     """Run anomaly detection for multiple seeds with and without global weights.
 
     Args:
         experiment_config_path: Path to the base YAML config file.
         seeds: List of random seeds to evaluate.
+        max_concurrent: Maximum number of (seed, condition) runs to execute in
+            parallel. Defaults to all runs at once. Note that each run itself
+            parallelizes internally (sigma_v grid search, synthetic anomaly
+            detection), so set this to avoid oversubscribing CPUs.
     """
     config_path = Path(experiment_config_path)
     with config_path.open("r") as f:
@@ -271,20 +282,43 @@ def benchmark(
             "only running the local (no global weights) condition."
         )
 
-    # Run all (seed, condition) combinations
-    runs = []
-    for seed in seeds:
-        for cond_name, gp in conditions:
-            summary = _run_single(
-                base_config, seed, cond_name, gp, benchmark_root
-            )
-            runs.append(
-                {
-                    "condition": cond_name,
-                    "seed": seed,
-                    "summary": summary,
-                }
-            )
+    # Build all (seed, condition) tasks
+    tasks = [
+        (seed, cond_name, gp)
+        for seed in seeds
+        for cond_name, gp in conditions
+    ]
+
+    n_workers = max_concurrent if max_concurrent is not None else len(tasks)
+    n_workers = max(1, min(n_workers, len(tasks)))
+    runs_root = benchmark_root / "runs"
+    print(
+        f"\nLaunching {len(tasks)} runs with up to {n_workers} in parallel."
+    )
+    print(
+        f"Per-run logs: {runs_root}/<experiment_name>/run.log\n"
+    )
+
+    # Run all (seed, condition) combinations in parallel
+    runs = [None] * len(tasks)
+    ctx = mp.get_context("spawn")
+    with ProcessPoolExecutor(max_workers=n_workers, mp_context=ctx) as executor:
+        future_to_idx = {
+            executor.submit(
+                _run_single, base_config, seed, cond_name, gp, benchmark_root
+            ): i
+            for i, (seed, cond_name, gp) in enumerate(tasks)
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            seed, cond_name, _ = tasks[idx]
+            summary = future.result()
+            runs[idx] = {
+                "condition": cond_name,
+                "seed": seed,
+                "summary": summary,
+            }
+            print(f"Completed: condition={cond_name}, seed={seed}")
 
     # Collect per-magnitude data and aggregate by (condition, magnitude)
     magnitude_results = _collect_magnitude_results(runs)

@@ -32,7 +32,7 @@ _sigma_v_train_fn = None
 
 def _sigma_v_worker(sv_candidate):
     """Worker for parallel sigma_v grid search."""
-    model, metrics, _ = _sigma_v_train_fn(sv_candidate)
+    model, metrics, std_per_epoch = _sigma_v_train_fn(sv_candidate)
     best_epoch = max(0, min(int(model.optimal_epoch), len(metrics) - 1))
     return {
         "sigma_v": sv_candidate,
@@ -41,6 +41,9 @@ def _sigma_v_worker(sv_candidate):
             metrics[best_epoch]["validation_log_likelihood"]
         ),
         "optimal_epoch": int(model.optimal_epoch),
+        "model_dict": model.get_dict(time_step=0),
+        "metrics": metrics,
+        "std_per_epoch": std_per_epoch,
     }
 
 # Plotting defaults
@@ -228,12 +231,24 @@ def main(
     sigma_v_range = experiment_config.get("sigma_v_search_space", [0.02, 0.04, 0.06, 0.08, 0.1, 0.125, 0.15, 0.175, 0.2])
 
 
+    cdf_synthetic_cache = {}
     if skf_objective_function == "cdf":
         default_skf_param["slope"] = float(experiment_config["slope"])
         cdf_num_anomaly = int(experiment_config.get("cdf_num_anomaly", 50))
         cdf_anomaly_start = float(experiment_config.get("cdf_anomaly_start", 0.25))
         cdf_anomaly_end = float(experiment_config.get("cdf_anomaly_end", 0.75))
 
+        cdf_cache_slopes = set(float(m) for m in anomaly_magnitudes)
+        cdf_cache_slopes.add(float(default_skf_param["slope"]))
+        for slope_value in cdf_cache_slopes:
+            slope_anomaly = slope_value / 52
+            cdf_synthetic_cache[slope_value] = DataProcess.add_synthetic_anomaly(
+                train_val,
+                num_samples=cdf_num_anomaly,
+                slope=[slope_anomaly, -slope_anomaly],
+                anomaly_start=cdf_anomaly_start,
+                anomaly_end=cdf_anomaly_end,
+            )
 
     optimal_validation_metrics = {}
     training_metrics_history = []
@@ -378,21 +393,25 @@ def main(
         skf.save_initial_states()
 
         if skf_objective_function == "cdf":
-            slope_anomaly = resolved_param["slope"] / 52
-
-            synthetic_data = DataProcess.add_synthetic_anomaly(
-                train_val,
-                num_samples=cdf_num_anomaly,
-                slope=[slope_anomaly, -slope_anomaly],
-                anomaly_start=cdf_anomaly_start,
-                anomaly_end=cdf_anomaly_end,
-            )
+            slope_value = float(resolved_param["slope"])
+            synthetic_data = cdf_synthetic_cache.get(slope_value)
+            if synthetic_data is None:
+                slope_anomaly = slope_value / 52
+                synthetic_data = DataProcess.add_synthetic_anomaly(
+                    train_val,
+                    num_samples=cdf_num_anomaly,
+                    slope=[slope_anomaly, -slope_anomaly],
+                    anomaly_start=cdf_anomaly_start,
+                    anomaly_end=cdf_anomaly_end,
+                )
+                cdf_synthetic_cache[slope_value] = synthetic_data
 
             detection_rate, num_false_alarms, _ = skf.detect_synthetic_anomaly(
                 data=train_val,
                 threshold=threshold,
                 max_timestep_to_detect=max_timestep_to_detect,
                 synthetic_data=synthetic_data,
+                n_jobs = 8,
             )
             data_len_year = (
                 _timestamp_at_exclusive_end(data_processor.validation_end)
@@ -417,21 +436,9 @@ def main(
 
         return skf
 
-    def model_with_parameters(param, capture_training_metrics=False):
-        resolved_param = {**default_skf_param, **param}
-        model, local_metrics, local_std = _train_lstm(resolved_param["sigma_v"])
-
-        if capture_training_metrics:
-            best_epoch = int(model.optimal_epoch)
-            best_epoch = max(0, min(best_epoch, len(local_metrics) - 1))
-            optimal_validation_metrics.clear()
-            optimal_validation_metrics.update(local_metrics[best_epoch])
-            training_metrics_history.clear()
-            training_metrics_history.extend(local_metrics)
-            lstm_std_per_epoch.clear()
-            lstm_std_per_epoch.extend(local_std)
-
-        return _build_skf(model, param)
+    def model_with_parameters(param, skf_input):
+        trained_model = Model.load_dict(skf_input["model_optim_dict"])
+        return _build_skf(trained_model, param)
 
     ######### sigma_v grid search (CRPS) #########
     sigma_v_grid_search_result = None
@@ -453,7 +460,7 @@ def main(
         else:
             grid_results = []
             for sv_candidate in sigma_v_range:
-                sv_model, sv_metrics, _ = _train_lstm(sv_candidate)
+                sv_model, sv_metrics, sv_std = _train_lstm(sv_candidate)
                 best_epoch = max(0, min(int(sv_model.optimal_epoch), len(sv_metrics) - 1))
                 grid_results.append(
                     {
@@ -461,6 +468,9 @@ def main(
                         "validation_crps": float(sv_metrics[best_epoch]["validation_crps"]),
                         "validation_log_likelihood": float(sv_metrics[best_epoch]["validation_log_likelihood"]),
                         "optimal_epoch": int(sv_model.optimal_epoch),
+                        "model_dict": sv_model.get_dict(time_step=0),
+                        "metrics": sv_metrics,
+                        "std_per_epoch": sv_std,
                     }
                 )
 
@@ -479,9 +489,29 @@ def main(
         sigma_v_grid_search_result = {
             "optimal_sigma_v": float(best_sigma_v),
             "best_validation_crps": float(best_val_crps),
-            "grid_results": grid_results,
+            "grid_results": [
+                {k: v for k, v in r.items() if k not in ("model_dict", "metrics", "std_per_epoch")}
+                for r in grid_results
+            ],
         }
         print(f"---- Optimal sigma_v: {sigma_v:.4f} (val_crps={best_val_crps:.6f}) ----")
+
+        model_optim_dict = best_entry["model_dict"]
+        lstm_training_metrics = best_entry["metrics"]
+        lstm_training_std = best_entry["std_per_epoch"]
+        optimal_epoch_idx = int(best_entry["optimal_epoch"])
+    else:
+        ######### Train LSTM once with config sigma_v #########
+        print(f"---- Training LSTM once with sigma_v={sigma_v:.4f} ----")
+        trained_lstm_model, lstm_training_metrics, lstm_training_std = _train_lstm(sigma_v)
+        model_optim_dict = trained_lstm_model.get_dict(time_step=0)
+        optimal_epoch_idx = int(trained_lstm_model.optimal_epoch)
+
+    best_epoch = max(0, min(optimal_epoch_idx, len(lstm_training_metrics) - 1))
+    optimal_validation_metrics.update(lstm_training_metrics[best_epoch])
+    training_metrics_history.extend(lstm_training_metrics)
+    lstm_std_per_epoch.extend(lstm_training_std)
+    skf_input = {"model_optim_dict": model_optim_dict}
 
     ######### Parameter optimization #########
     if bool(experiment_config.get("optimize_skf_parameters", False)):
@@ -522,6 +552,7 @@ def main(
         model_optimizer = Optimizer(
             model=model_with_parameters,
             param=param_space,
+            model_input=skf_input,
             num_optimization_trial=num_optimization_trial,
             mode=optimizer_mode,
             num_startup_trials=num_startup_trials,
@@ -532,7 +563,7 @@ def main(
 
     else:
         param = default_skf_param.copy()
-    skf_optim = model_with_parameters(param, capture_training_metrics=True)
+    skf_optim = model_with_parameters(param, skf_input)
 
     skf_optim_dict = skf_optim.get_dict()
     skf_optim_dict["model_param"] = param
@@ -619,7 +650,7 @@ def main(
 
         mag_anomaly = mag / 52
         eval_synthetic_data = DataProcess.add_synthetic_anomaly(
-                train_val,
+                all_data,
                 num_samples=num_realizations,
                 slope=[mag_anomaly, -mag_anomaly],
                 anomaly_start=test_start_ratio,
@@ -633,6 +664,7 @@ def main(
                 max_timestep_to_detect=max_timestep_to_detect,
                 plot_dir=mag_plot_dir,
                 synthetic_data=eval_synthetic_data,
+                n_jobs = 8,
             )
         )
 
