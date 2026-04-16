@@ -1,4 +1,6 @@
 import fire
+import multiprocessing as mp
+import os
 import numpy as np
 from scipy.stats import norm as _norm_dist
 import matplotlib.pyplot as plt
@@ -22,6 +24,24 @@ from canari.data_process import DataProcess
 from pathlib import Path
 import yaml
 import json
+
+
+# Module-level state for multiprocessing workers (fork context)
+_sigma_v_train_fn = None
+
+
+def _sigma_v_worker(sv_candidate):
+    """Worker for parallel sigma_v grid search."""
+    model, metrics, _ = _sigma_v_train_fn(sv_candidate)
+    best_epoch = max(0, min(int(model.optimal_epoch), len(metrics) - 1))
+    return {
+        "sigma_v": sv_candidate,
+        "validation_crps": float(metrics[best_epoch]["validation_crps"]),
+        "validation_log_likelihood": float(
+            metrics[best_epoch]["validation_log_likelihood"]
+        ),
+        "optimal_epoch": int(model.optimal_epoch),
+    }
 
 # Plotting defaults
 import matplotlib as mpl
@@ -204,7 +224,7 @@ def main(
     max_timestep_to_detect = float(experiment_config.get("max_timestep_to_detect ", 156))
 
     num_realizations = int(experiment_config.get("num_anomaly_realizations", 25))
-    anomaly_magnitudes = experiment_config.get(["slope_search_space"],[0.025, 0.05, 0.075, 0.225, 0.5, 0.75, 1.0])
+    anomaly_magnitudes = experiment_config.get("slope_search_space",[0.025, 0.05, 0.075, 0.225, 0.5, 0.75, 1.0])
     sigma_v_range = experiment_config.get("sigma_v_search_space", [0.02, 0.04, 0.06, 0.08, 0.1, 0.125, 0.15, 0.175, 0.2])
 
 
@@ -416,30 +436,43 @@ def main(
     ######### sigma_v grid search (CRPS) #########
     sigma_v_grid_search_result = None
     if experiment_config.get("optimize_sigma_v", False):
-        print(f"---- sigma_v grid search over {sigma_v_range} (metric: CRPS) ----")
-        best_sigma_v = sigma_v
-        best_val_crps = np.inf
-        grid_results = []
+        n_jobs_grid = len(sigma_v_range)
+        available_cpus = os.cpu_count()
 
-        for sv_candidate in sigma_v_range:
-            sv_model, sv_metrics, _ = _train_lstm(sv_candidate)
-            best_epoch = max(0, min(int(sv_model.optimal_epoch), len(sv_metrics) - 1))
-            candidate_crps = sv_metrics[best_epoch]["validation_crps"]
-            grid_results.append(
-                {
-                    "sigma_v": sv_candidate,
-                    "validation_crps": float(candidate_crps),
-                    "validation_log_likelihood": float(sv_metrics[best_epoch]["validation_log_likelihood"]),
-                    "optimal_epoch": int(sv_model.optimal_epoch),
-                }
-            )
+        if n_jobs_grid > available_cpus:
+            n_jobs_grid
+            
+        print(f"---- sigma_v grid search over {sigma_v_range} (metric: CRPS) ----")
+
+        if n_jobs_grid > 1:
+            global _sigma_v_train_fn
+            _sigma_v_train_fn = _train_lstm
+            ctx = mp.get_context("fork")
+            with ctx.Pool(n_jobs_grid) as pool:
+                grid_results = pool.map(_sigma_v_worker, sigma_v_range)
+        else:
+            grid_results = []
+            for sv_candidate in sigma_v_range:
+                sv_model, sv_metrics, _ = _train_lstm(sv_candidate)
+                best_epoch = max(0, min(int(sv_model.optimal_epoch), len(sv_metrics) - 1))
+                grid_results.append(
+                    {
+                        "sigma_v": sv_candidate,
+                        "validation_crps": float(sv_metrics[best_epoch]["validation_crps"]),
+                        "validation_log_likelihood": float(sv_metrics[best_epoch]["validation_log_likelihood"]),
+                        "optimal_epoch": int(sv_model.optimal_epoch),
+                    }
+                )
+
+        for r in grid_results:
             print(
-                f"  sigma_v={sv_candidate:.4f} -> best val_crps={candidate_crps:.6f} "
-                f"(epoch {sv_model.optimal_epoch})"
+                f"  sigma_v={r['sigma_v']:.4f} -> best val_crps={r['validation_crps']:.6f} "
+                f"(epoch {r['optimal_epoch']})"
             )
-            if candidate_crps < best_val_crps:
-                best_val_crps = candidate_crps
-                best_sigma_v = sv_candidate
+
+        best_entry = min(grid_results, key=lambda r: r["validation_crps"])
+        best_sigma_v = best_entry["sigma_v"]
+        best_val_crps = best_entry["validation_crps"]
 
         sigma_v = best_sigma_v
         default_skf_param["sigma_v"] = sigma_v

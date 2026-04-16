@@ -30,9 +30,14 @@ _worker_skf = None
 
 
 def _init_detection_worker(skf):
-    """Initializer for each worker process: deep-copy the SKF object."""
+    """Initializer for each worker process (fork context).
+
+    With fork, each process already has its own copy of the address space,
+    so no deepcopy is needed.  The OS applies copy-on-write when the worker
+    mutates the object.
+    """
     global _worker_skf
-    _worker_skf = copy.deepcopy(skf)
+    _worker_skf = skf
 
 
 def _detect_single_anomaly(args):
