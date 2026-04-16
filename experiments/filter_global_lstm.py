@@ -285,9 +285,7 @@ def _plot_training_metrics(
 
 
 def main(
-    # experiment_config_path: str = "./experiments/config/LGA008ESAP-E000.yaml",
-    # experiment_config_path: str = "./experiments/config/LGA010ESAPRG988.yaml",
-    experiment_config_path: str = "./experiments/config/LTU012ESAP-E020.yaml",
+    experiment_config_path: str = "/home/dw/canari/experiments/config/ID_timeseries/LTU009EFAPRG024.yaml",
 ):
     experiment_config_path = Path(experiment_config_path)
     with experiment_config_path.open("r") as f:
@@ -393,29 +391,32 @@ def main(
             raise
 
     model.auto_initialize_baseline_states(
-        train_data["y"][0 : experiment_config["baseline_init_len"]]
+        # train_data["y"][0 : experiment_config["baseline_init_len"]]
+        train_data["y"]
     )
-    baseline_state_names = {"level", "trend", "acceleration"}
-    print("Initialized baseline states:")
-    for i, state_name in enumerate(model.states_name):
-        if state_name not in baseline_state_names:
-            continue
-        print(
-            f"  {state_name}: mu={float(model.mu_states[i]):.6f}, "
-            f"var={float(model.var_states[i, i]):.6f}"
-        )
+    # baseline_state_names = {"level", "trend", "acceleration"}
+    # print("Initialized baseline states:")
+    # for i, state_name in enumerate(model.states_name):
+    #     if state_name not in baseline_state_names:
+    #         continue
+    #     print(
+    #         f"  {state_name}: mu={float(model.mu_states[i]):.6f}, "
+    #         f"var={float(model.var_states[i, i]):.6f}"
+    #     )
 
     training_metrics_history = []
     optimal_validation_metrics = None
 
+    model.lstm_net.teacher_forcing = False
+
     for epoch in range(max_num_epoch):
-        model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+        if model.lstm_net.smooth is False:
+            model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
 
         mu_validation_preds, std_validation_preds, _ = model.lstm_train(
             train_data=train_data,
             validation_data=validation_data,
-            white_noise_max_std=1.0,
-            # white_noise_decay=False,
+            white_noise_decay=False,
         )
 
         mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -449,7 +450,6 @@ def main(
             evaluate_metric=-validation_log_lik,
             current_epoch=epoch,
             max_epoch=max_num_epoch,
-            skip_epoch=2,
         )
 
         if optimal_validation_metrics is None or (
@@ -460,8 +460,11 @@ def main(
         if model.stop_training:
             break
 
+    model.lstm_net.teacher_forcing = False
+
     model.set_memory(time_step=0)
-    # model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+    if model.lstm_net.smooth is False:
+        model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
     mu_filter_preds, std_filter_preds, states = model.filter(
         data=all_data,
         train_lstm=False,

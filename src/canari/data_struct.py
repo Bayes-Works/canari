@@ -42,7 +42,7 @@ class LstmOutputHistory:
         Args:
             look_back_len (int): Number of time steps to keep in history.
         """
-        self.mu = np.zeros(look_back_len)
+        self.mu = np.ones(look_back_len)
         self.var = np.ones(look_back_len)
 
     def update(self, mu_lstm, var_lstm):

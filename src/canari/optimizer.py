@@ -65,6 +65,7 @@ class Optimizer:
         algorithm: Optional[str] = "TPE",  # "TPE" or "random"
         back_end: Optional[str] = "ray",
         num_startup_trials: Optional[int] = 20,
+        max_concurrent: Optional[int] = 8,
     ):
         """
         Initialize the Optimizer.
@@ -82,6 +83,7 @@ class Optimizer:
         self._algorithm = algorithm
         self._backend = back_end
         self._num_startup_trials = num_startup_trials
+        self._max_concurrent = max_concurrent
 
     def objective(self, config: Dict) -> Dict:
         """
@@ -99,12 +101,13 @@ class Optimizer:
             result = (result,)
         trained_model, *_ = result
 
-        _metric = trained_model.metric_optim
-        _print_metric = trained_model.print_metric
-
-        metric = {}
-        metric["metric"] = _metric
-        metric["print_metric"] = _print_metric
+        metric = {
+            "metric": trained_model.metric_optim,
+            "print_metric": trained_model.print_metric,
+            "j1": getattr(trained_model, "j1", None),
+            "j2": getattr(trained_model, "j2", None),
+            "j3": getattr(trained_model, "j3", None),
+        }
         return metric
 
     def optimize(self):
@@ -151,6 +154,7 @@ class Optimizer:
                 self.objective,
                 config=search_config,
                 num_samples=1,
+                max_concurrent_trials=self._max_concurrent,
                 verbose=0,
                 raise_on_failed_trial=False,
                 callbacks=[custom_logger],
@@ -172,6 +176,7 @@ class Optimizer:
                         metric="metric", mode=self._mode, sampler=sampler
                     ),
                     num_samples=self._num_optimization_trial,
+                    max_concurrent_trials=self._max_concurrent,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
@@ -182,6 +187,7 @@ class Optimizer:
                     self.objective,
                     config=search_config,
                     num_samples=self._num_optimization_trial,
+                    max_concurrent_trials=self._max_concurrent,
                     scheduler=scheduler,
                     verbose=0,
                     raise_on_failed_trial=False,

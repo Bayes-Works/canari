@@ -56,6 +56,21 @@ def _load_base_dataframe(experiment_config: dict) -> pd.DataFrame:
     return df
 
 
+def _trim_trailing_target_nans(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove trailing rows where the target series is NaN."""
+
+    if df.empty:
+        return df
+
+    target_series = df.iloc[:, 0]
+    valid_positions = np.flatnonzero(~pd.isna(target_series.to_numpy()))
+    if valid_positions.size == 0:
+        raise ValueError("Input time series contains only NaN values.")
+
+    last_valid_pos = int(valid_positions[-1])
+    return df.iloc[: last_valid_pos + 1].copy()
+
+
 def _resolve_time_index(index: pd.DatetimeIndex, time_start_time: str) -> int:
     target_time = pd.Timestamp(time_start_time)
     time_idx = int(index.searchsorted(target_time, side="left"))
@@ -73,6 +88,44 @@ def _resolve_time_index(index: pd.DatetimeIndex, time_start_time: str) -> int:
     return time_idx
 
 
+def _inject_synthetic_anomaly(
+    df: pd.DataFrame,
+    anomaly_end_offset: float,
+    anomaly_idx: int,
+) -> tuple[pd.DataFrame, int]:
+    """Inject one anomaly through DataProcess.add_synthetic_anomaly at a fixed timestep.
+
+    `DataProcess.add_synthetic_anomaly` expects a per-step slope. The experiment configs
+    currently express `anomaly_slope` as the final offset reached at the end of the
+    series, so convert that offset into the equivalent per-step slope before injecting.
+    """
+
+    num_steps = len(df)
+    if num_steps == 0:
+        raise ValueError("Cannot inject an anomaly into an empty dataframe.")
+
+    anomaly_idx = int(np.clip(anomaly_idx, 0, num_steps - 1))
+    remaining_steps = max(num_steps - anomaly_idx - 1, 0)
+    if remaining_steps > 0:
+        slope_per_step = anomaly_end_offset / remaining_steps
+    else:
+        slope_per_step = 0.0
+
+    anomaly_start = anomaly_idx / num_steps
+    anomaly_end = min((anomaly_idx + 1) / num_steps, 1.0)
+    injected = DataProcess.add_synthetic_anomaly(
+        data={"y": df.iloc[:, 0].to_numpy(dtype=float).reshape(-1, 1)},
+        num_samples=1,
+        slope=[slope_per_step],
+        anomaly_start=anomaly_start,
+        anomaly_end=anomaly_end,
+    )[0]
+
+    df_with_anomaly = df.copy()
+    df_with_anomaly.iloc[:, 0] = injected["y"].reshape(-1)
+    return df_with_anomaly, int(injected["anomaly_timestep"])
+
+
 def prepare_dataset(
     train_split: float,
     anomaly_slope: float,
@@ -81,6 +134,7 @@ def prepare_dataset(
 
     warmup_len = int(experiment_config["global_warmup_lookback_len"])
     df_original = _load_base_dataframe(experiment_config)
+    df_original = _trim_trailing_target_nans(df_original)
 
     # resolve dates if needed
     validation_idx = _resolve_time_index(
@@ -118,31 +172,33 @@ def prepare_dataset(
         )
     df_warmup = df_raw.iloc[:warmup_len].copy()
     df_raw = df_raw.iloc[warmup_len:].copy()
-    time_anomaly = _resolve_time_index(df_raw.index, experiment_config["anomaly_start_time"])
+    time_anomaly = _resolve_time_index(
+        df_raw.index, experiment_config["anomaly_start_time"]
+    )
     warmup_lookback_mu = df_warmup.iloc[:, 0].values.flatten()
     warmup_lookback_mu = normalizer.standardize(
         warmup_lookback_mu,
         data_pro_scale.scale_const_mean[data_pro_scale.output_col],
         data_pro_scale.scale_const_std[data_pro_scale.output_col],
     )
-    warmup_lookback_var = np.ones_like(warmup_lookback_mu)*0.1
+    warmup_lookback_var = np.ones_like(warmup_lookback_mu) * 0.1
 
-    # Anomaly injection
-    trend = np.linspace(0, 0, num=len(df_raw))
-    new_trend = np.linspace(0, anomaly_slope, num=len(df_raw) - time_anomaly)
-    trend[time_anomaly:] = trend[time_anomaly:] + new_trend
-    df = df_raw.add(trend, axis=0)
+    # Inject the evaluation anomaly through the shared synthetic-anomaly helper.
+    df, time_anomaly = _inject_synthetic_anomaly(
+        df=df_raw,
+        anomaly_end_offset=anomaly_slope,
+        anomaly_idx=time_anomaly,
+    )
 
     df_plot_full = df_original.iloc[warmup_len:].copy()
     plot_time_anomaly = _resolve_time_index(
         df_plot_full.index, experiment_config["anomaly_start_time"]
     )
-    plot_trend = np.linspace(0, 0, num=len(df_plot_full))
-    plot_new_trend = np.linspace(
-        0, anomaly_slope, num=len(df_plot_full) - plot_time_anomaly
+    df_plot_full, plot_time_anomaly = _inject_synthetic_anomaly(
+        df=df_plot_full,
+        anomaly_end_offset=anomaly_slope,
+        anomaly_idx=plot_time_anomaly,
     )
-    plot_trend[plot_time_anomaly:] = plot_trend[plot_time_anomaly:] + plot_new_trend
-    df_plot_full = df_plot_full.add(plot_trend, axis=0)
 
     # Data processor preparation
     data_processor = DataProcess(
@@ -165,6 +221,8 @@ def prepare_dataset(
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
+    train_val = data_processor.get_splits(split="train_val")
+
     return {
         "data_processor": data_processor,
         "plot_data_processor": plot_data_processor,
@@ -186,4 +244,5 @@ def prepare_dataset(
             "time_anomaly": time_anomaly,
             "plot_time_anomaly": plot_time_anomaly,
         },
+        "train_val": train_val,
     }

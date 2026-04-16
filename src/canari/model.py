@@ -1114,7 +1114,6 @@ class Model:
         # Z^{O} + V
         elif self.lstm_net.teacher_forcing is True:
 
-            print("The teacher is being forced :)")
             white_noise_index = self.get_states_index("white noise")
             hete_noise_index = self.get_states_index("heteroscedastic noise")
 
@@ -1257,7 +1256,7 @@ class Model:
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-8
+                    self.var_states[i, i] = 1e-6
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:

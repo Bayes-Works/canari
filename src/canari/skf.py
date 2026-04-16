@@ -12,7 +12,10 @@ On time series data, this model can:
 """
 
 from typing import Tuple, Dict, Optional
+from pathlib import Path
 import copy
+import multiprocessing as mp
+import os
 import numpy as np
 from pytagi import metric
 from scipy.stats import norm, lognorm
@@ -20,6 +23,40 @@ from canari.model import Model
 from canari import common
 from canari.data_struct import StatesHistory
 from canari.data_process import DataProcess
+
+
+# Module-level worker state for multiprocessing
+_worker_skf = None
+
+
+def _init_detection_worker(skf):
+    """Initializer for each worker process: deep-copy the SKF object."""
+    global _worker_skf
+    _worker_skf = copy.deepcopy(skf)
+
+
+def _detect_single_anomaly(args):
+    """Run filter on one synthetic anomaly and return detection results."""
+    synthetic_datum, num_timesteps, max_timestep_to_detect, threshold = args
+    filter_marginal_abnorm_prob, _ = _worker_skf.filter(data=synthetic_datum)
+    window_start = int(synthetic_datum["anomaly_timestep"])
+
+    if max_timestep_to_detect is None:
+        window_end = num_timesteps
+    else:
+        window_end = window_start + int(max_timestep_to_detect)
+
+    detection_indices = np.flatnonzero(
+        filter_marginal_abnorm_prob[window_start:window_end] > threshold
+    )
+
+    detected = detection_indices.size > 0
+    time_to_detect = int(detection_indices[0]) if detected else None
+    detected_idx = (window_start + int(detection_indices[0])) if detected else None
+
+    _worker_skf.load_initial_states()
+
+    return detected, time_to_detect, detected_idx, window_start, filter_marginal_abnorm_prob
 
 
 class SKF:
@@ -256,6 +293,9 @@ class SKF:
         # Optimization
         self.metric_optim = None
         self.print_metric = None
+        self.j1 = None
+        self.j2 = None
+        self.j3 = None
 
     def _reset_filter_diagnostics(self):
         """Reset per-filter transition diagnostics histories."""
@@ -938,7 +978,9 @@ class SKF:
             norm_to_abnorm_prob=save_dict["norm_to_abnorm_prob"],
             abnorm_to_norm_prob=save_dict["abnorm_to_norm_prob"],
             norm_model_prior_prob=save_dict["norm_model_prior_prob"],
-            likelihood_covariance_floor=save_dict.get("likelihood_covariance_floor", 0.0),
+            likelihood_covariance_floor=save_dict.get(
+                "likelihood_covariance_floor", 0.0
+            ),
         )
         skf.model["norm_norm"].set_states(
             save_dict["norm_model"]["memory"]["mu_states"],
@@ -1424,6 +1466,55 @@ class SKF:
             self.states,
         )
 
+    @staticmethod
+    def _plot_realization(
+        plot_dir: Path,
+        index: int,
+        clean_y: np.ndarray,
+        anomaly_y: np.ndarray,
+        anomaly_start: int,
+        filter_probs: np.ndarray,
+        threshold: float,
+        detected_idx: Optional[int],
+    ) -> None:
+        """Save a 2-panel plot for one synthetic-anomaly realization."""
+        import matplotlib.pyplot as plt
+
+        clean = clean_y.reshape(-1)
+        anomaly = anomaly_y.reshape(-1)
+        probs = np.asarray(filter_probs).reshape(-1)
+        steps = np.arange(len(anomaly))
+
+        fig, axes = plt.subplots(2, 1, figsize=(6.5, 3.5), sharex=True)
+
+        axes[0].plot(steps, clean, color="tab:blue", linewidth=1, label="clean")
+        axes[0].plot(steps, anomaly, color="tab:red", linewidth=1, label="with anomaly")
+        axes[0].axvline(anomaly_start, color="k", linestyle="--", linewidth=0.8)
+        if detected_idx is not None:
+            axes[0].axvline(detected_idx, color="tab:blue", linestyle=":", linewidth=1)
+        axes[0].set_ylabel("Value")
+        axes[0].legend(loc="upper left", frameon=False)
+        axes[0].grid(alpha=0.25)
+
+        axes[1].plot(steps, probs, color="tab:red", linewidth=1, label=r"$P(\mathrm{abnormal})$")
+        axes[1].axhline(threshold, color="k", linestyle="--", linewidth=0.8, label="threshold")
+        axes[1].axvline(anomaly_start, color="k", linestyle="--", linewidth=0.8)
+        if detected_idx is not None:
+            axes[1].axvline(detected_idx, color="tab:blue", linestyle=":", linewidth=1,
+                            label="first detection")
+        axes[1].set_xlabel("Step")
+        axes[1].set_ylabel("Probability")
+        axes[1].set_ylim(-0.02, 1.02)
+        axes[1].legend(loc="upper left", frameon=False)
+        axes[1].grid(alpha=0.25)
+
+        plt.tight_layout()
+        # for ext in ("pdf", "pgf"):
+        # for ext in ("pdf"):
+        ext = "pdf"
+        fig.savefig(plot_dir / f"realization_{index:03d}.{ext}", format=ext)
+        plt.close(fig)
+
     def detect_synthetic_anomaly(
         self,
         data: Dict[str, np.ndarray],
@@ -1433,7 +1524,10 @@ class SKF:
         slope_anomaly: Optional[float] = None,
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
-    ) -> Tuple[float, float]:
+        plot_dir: Optional[Path] = None,
+        synthetic_data: Optional[dict] = None,
+        n_jobs: Optional[int] = -1,
+    ) -> Tuple[float, float, str]:
         """
         Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
         synthetic anomalies, and compute the detection/false-alarm rates.
@@ -1450,54 +1544,119 @@ class SKF:
             slope_anomaly (Optional[float]): Magnitude of the anomaly slope.
             anomaly_start (Optional[float]): Fractional start position of anomaly. Defaults to 0.33.
             anomaly_end (Optional[float]): Fractional end position of anomaly. Defaults to 0.66.
+            plot_dir (Optional[Path]): Directory to save per-realization plots. When None
+                (default), no plots are produced.
+            n_jobs (Optional[int]): Number of parallel worker processes. Defaults to 1
+                (sequential). Set to -1 to use all available CPU cores.
 
         Returns:
             Tuple(detection_rate, false_rate, false_alarm_train):
-                detection_rate (float): # time series where anomalies detected / # total synthetic time series with anomalies added.
-                false_rate (float): # time series where anomalies NOT detected / # total synthetic time series with anomalies added.
+                detection_rate (float): Fraction of synthetic time series where the
+                    first post-anomaly detection occurs within the allowed detection
+                    window.
+                false_rate (float): Average number of false-alarm detections per
+                    synthetic time series. This includes detections on the clean
+                    pre-anomaly data segment and any additional post-anomaly
+                    detections after the first valid detection.
                 false_alarm_train (str): 'Yes' if any alarm during training data.
         """
 
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
         num_false_alarm = 0
-        false_alarm_train = "No"
+        time_to_detection = []
 
-        synthetic_data = DataProcess.add_synthetic_anomaly(
-            data,
-            num_samples=num_anomaly,
-            slope=[slope_anomaly],
-            anomaly_start=anomaly_start,
-            anomaly_end=anomaly_end,
-        )
+        if synthetic_data is None:
+            synthetic_data = DataProcess.add_synthetic_anomaly(
+                data,
+                num_samples=num_anomaly,
+                slope=[slope_anomaly, -slope_anomaly],
+                anomaly_start=anomaly_start,
+                anomaly_end=anomaly_end,
+            )
+        total_anomalies = len(synthetic_data)
 
-        filter_marginal_abnorm_prob, _ = self.filter(data=data)
+        clean_marginal_abnorm_prob, _ = self.filter(data=data)
         self.load_initial_states()
 
-        # Check false alarm in the training set
-        if any(filter_marginal_abnorm_prob > threshold):
-            false_alarm_train = "Yes"
+        # Quantify pre-anomaly false alarms on the original clean data
+        num_false_alarm = int(np.sum(clean_marginal_abnorm_prob > threshold))
 
         # Iterate over data with synthetic anomalies
-        for i in range(0, num_anomaly):
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
-            window_start = synthetic_data[i]["anomaly_timestep"]
+        if n_jobs == -1:
+            n_jobs = os.cpu_count()
+        use_parallel = n_jobs is not None and n_jobs > 1
 
-            if max_timestep_to_detect is None:
-                window_end = num_timesteps
-            else:
-                window_end = window_start + max_timestep_to_detect
-            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
-                num_anomaly_detected += 1
-            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
-                num_false_alarm += 1
+        if use_parallel:
+            worker_args = [
+                (synthetic_data[i], num_timesteps, max_timestep_to_detect, threshold)
+                for i in range(total_anomalies)
+            ]
+            ctx = mp.get_context("fork")
+            with ctx.Pool(n_jobs, initializer=_init_detection_worker, initargs=(self,)) as pool:
+                results = pool.map(_detect_single_anomaly, worker_args)
 
-            self.load_initial_states()
+            for i, (detected, ttd, detected_idx, window_start, filter_probs) in enumerate(results):
+                if detected:
+                    num_anomaly_detected += 1
+                    time_to_detection.append(ttd)
+                if plot_dir is not None and (i + 1) % 10 == 0:
+                    self._plot_realization(
+                        plot_dir=plot_dir,
+                        index=i,
+                        clean_y=data["y"],
+                        anomaly_y=synthetic_data[i]["y"],
+                        anomaly_start=window_start,
+                        filter_probs=filter_probs,
+                        threshold=threshold,
+                        detected_idx=detected_idx,
+                    )
+        else:
+            for i in range(total_anomalies):
+                filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
+                window_start = int(synthetic_data[i]["anomaly_timestep"])
 
-        detection_rate = num_anomaly_detected / num_anomaly
-        false_rate = num_false_alarm / num_anomaly
+                if max_timestep_to_detect is None:
+                    window_end = num_timesteps
+                else:
+                    window_end = window_start + int(max_timestep_to_detect)
+                detection_indices = np.flatnonzero(
+                    filter_marginal_abnorm_prob[window_start:window_end] > threshold
+                )
+                detected_idx = None
+                if detection_indices.size > 0:
+                    num_anomaly_detected += 1
+                    time_to_detection.append(int(detection_indices[0]))
+                    detected_idx = window_start + int(detection_indices[0])
 
-        return detection_rate, false_rate, false_alarm_train
+                if plot_dir is not None and (i + 1) % 10 == 0:
+                    self._plot_realization(
+                        plot_dir=plot_dir,
+                        index=i,
+                        clean_y=data["y"],
+                        anomaly_y=synthetic_data[i]["y"],
+                        anomaly_start=window_start,
+                        filter_probs=filter_marginal_abnorm_prob,
+                        threshold=threshold,
+                        detected_idx=detected_idx,
+                    )
+
+                self.load_initial_states()
+
+        detection_rate = num_anomaly_detected / total_anomalies
+        if time_to_detection:
+            time_to_detection_arr = np.asarray(time_to_detection, dtype=float)
+            time_to_detection_mean = np.nanmean(time_to_detection_arr)
+            time_to_detection_std = np.nanstd(time_to_detection_arr)
+        else:
+            time_to_detection_mean = np.nan
+            time_to_detection_std = np.nan
+
+        return (
+            detection_rate,
+            num_false_alarm,
+            (time_to_detection_mean, time_to_detection_std),
+        )
 
     def objective(
         self,
@@ -1505,11 +1664,11 @@ class SKF:
         false_rate,
         anm_magnitude,
         detection_rate_cdf_mean: Optional[float] = 0.5,
-        detection_rate_cdf_std: Optional[float] = 0.5,
+        detection_rate_cdf_std: Optional[float] = 0.2,
         false_rate_cdf_median: Optional[float] = 0.1,  # [false alarms/year]
         false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
-        anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
-        anm_mag_cdf_shape: Optional[float] = 0.4,  # [unit/year]
+        anm_mag_cdf_median: Optional[float] = 0.2,  # [unit/year]
+        anm_mag_cdf_shape: Optional[float] = 0.6,  # [unit/year]
     ) -> int:
         """
         Calculate the metric that is used when optimizing for SKF's parameters.
@@ -1544,6 +1703,9 @@ class SKF:
         j3 = 1 - lognorm.cdf(
             anm_magnitude, s=anm_mag_cdf_shape, scale=anm_mag_cdf_median
         )
+        self.j1 = j1
+        self.j2 = j2
+        self.j3 = j3
         skf_metric = j1 * j2 * j3
 
         return skf_metric

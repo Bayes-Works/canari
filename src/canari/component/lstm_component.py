@@ -50,9 +50,9 @@ class LstmNetwork(BaseComponent):
                                     (See references). Defaults to False.
         finetune (Optional[bool]): if True, keep pretrained recurrent layers but replace the
                                     output head with a freshly initialized one. Defaults to False.
-        increase_output_variance (Optional[bool]): if True, keep the pretrained output head but
-                                    increase its variance by 50%. Mutually exclusive with
-                                    `finetune`. Defaults to False.
+        increase_output_variance (Optional[bool]): if True, keep the pretrained output-head
+                                    means but preserve the initialized output-head variances.
+                                    Mutually exclusive with `finetune`. Defaults to False.
 
     References:
         Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and
@@ -338,27 +338,16 @@ class LstmNetwork(BaseComponent):
                 new_params[layer_name] = original_params[layer_name]
                 continue
 
-            mu_w, var_w, mu_b, var_b = loaded_params[layer_name]
+            mu_w, _, mu_b, _ = loaded_params[layer_name]
+            _, var_w, _, var_b = original_params[layer_name]
             new_params[layer_name] = (
                 mu_w,
-                LstmNetwork._scale_variance_param(var_w, factor=2),
+                var_w,
                 mu_b,
-                LstmNetwork._scale_variance_param(var_b, factor=2),
+                var_b,
             )
 
         return new_params
-
-    @staticmethod
-    def _scale_variance_param(value, factor: float):
-        if isinstance(value, np.ndarray):
-            return value * factor
-        if isinstance(value, list):
-            return [LstmNetwork._scale_variance_param(item, factor) for item in value]
-        if isinstance(value, tuple):
-            return tuple(
-                LstmNetwork._scale_variance_param(item, factor) for item in value
-            )
-        return value * factor
 
     def initialize_lstm_network(self) -> Sequential:
         """

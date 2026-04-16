@@ -7,7 +7,7 @@ Usage:
 
 import copy
 import json
-import sys
+from collections import defaultdict
 from pathlib import Path
 
 import fire
@@ -26,21 +26,29 @@ def _read_summary(output_dir: Path) -> dict:
         return json.load(f)
 
 
-def _run_single(base_config: dict, seed: int, condition: str, global_params):
-    """Create a modified config and run anomaly detection."""
+def _run_single(
+    base_config: dict,
+    seed: int,
+    condition: str,
+    global_params,
+    benchmark_root: Path,
+) -> dict:
+    """Create a modified config, run anomaly detection, and return the summary."""
     config = copy.deepcopy(base_config)
     config["lstm_manual_seed"] = seed
     config["lstm_global_params"] = global_params
+    if condition == "local":
+        config["lstm_num_layer"] = 1
     config["experiment_name"] = (
         f"{base_config['experiment_name']}_benchmark_{condition}_seed{seed}"
     )
+    config["output_root"] = str(benchmark_root / "runs")
 
-    output_root = Path(config.get("output_root", "experiments/out"))
+    output_root = Path(config["output_root"])
     output_dir = output_root / config["experiment_name"]
-
-    # Write temporary config for this run
-    temp_config_path = output_dir / "experiment_config.yaml"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    temp_config_dir = benchmark_root / "temp_configs"
+    temp_config_dir.mkdir(parents=True, exist_ok=True)
+    temp_config_path = temp_config_dir / f"{config['experiment_name']}.yaml"
     with temp_config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
@@ -50,24 +58,95 @@ def _run_single(base_config: dict, seed: int, condition: str, global_params):
 
     run_anomaly_detection(experiment_config_path=str(temp_config_path))
 
-    summary = _read_summary(output_dir)
-    detection = summary["final_skf_detection"]
+    return _read_summary(output_dir)
 
-    return {
-        "condition": condition,
-        "seed": seed,
-        "false_alarm_rate": detection["false_alarm_rate_before_anomaly"],
-        "false_alarm_count": detection["false_alarm_count_before_anomaly"],
-        "num_pre_anomaly": detection["num_points_before_anomaly"],
-        "detected": detection["detected"],
-        "delay_steps": detection.get("delay_steps"),
-        "delay": detection.get("delay"),
-        "threshold": detection["threshold"],
-        "val_ll": summary["optimal_validation_metrics"].get(
-            "validation_log_likelihood"
-        ),
-        "val_rmse": summary["optimal_validation_metrics"].get("validation_rmse"),
-    }
+
+def _collect_magnitude_results(runs: list[dict]) -> list[dict]:
+    """Extract per-magnitude results from all runs."""
+    rows = []
+    for run in runs:
+        condition = run["condition"]
+        seed = run["seed"]
+        multi_eval = run["summary"].get("multi_realization_evaluation", {})
+        for mag_key, mag_data in multi_eval.items():
+            magnitude = float(mag_key.replace("mag_", ""))
+            rows.append(
+                {
+                    "condition": condition,
+                    "seed": seed,
+                    "anomaly_magnitude": magnitude,
+                    "probability_of_detection": mag_data.get(
+                        "probability_of_detection"
+                    ),
+                    "false_alarm_rate_per_y": mag_data.get(
+                        "false_alarm_rate_per_y"
+                    ),
+                    "time_to_detection_years_mean": mag_data.get(
+                        "time_to_detection_years_mean"
+                    ),
+                    "time_to_detection_years_std": mag_data.get(
+                        "time_to_detection_years_std"
+                    ),
+                    "num_realizations": mag_data.get("num_realizations"),
+                }
+            )
+    return rows
+
+
+def _aggregate_by_condition_magnitude(magnitude_results: list[dict]) -> list[dict]:
+    """Aggregate per-magnitude results by (condition, anomaly_magnitude) across seeds."""
+    groups = defaultdict(list)
+    for r in magnitude_results:
+        groups[(r["condition"], r["anomaly_magnitude"])].append(r)
+
+    aggregates = []
+    for (condition, magnitude), items in sorted(groups.items()):
+        p_dets = [
+            r["probability_of_detection"]
+            for r in items
+            if r["probability_of_detection"] is not None
+        ]
+        fa_rates = [
+            r["false_alarm_rate_per_y"]
+            for r in items
+            if r["false_alarm_rate_per_y"] is not None
+        ]
+        ttd_means = [
+            r["time_to_detection_years_mean"]
+            for r in items
+            if r["time_to_detection_years_mean"] is not None
+        ]
+        aggregates.append(
+            {
+                "condition": condition,
+                "anomaly_magnitude": magnitude,
+                "probability_of_detection": (
+                    float(np.mean(p_dets)) if p_dets else None
+                ),
+                "probability_of_detection_std": (
+                    float(np.std(p_dets)) if p_dets else None
+                ),
+                "false_alarm_rate_per_y_mean": (
+                    float(np.mean(fa_rates)) if fa_rates else None
+                ),
+                "false_alarm_rate_per_y_std": (
+                    float(np.std(fa_rates)) if fa_rates else None
+                ),
+                "time_to_detection_years_mean": (
+                    float(np.mean(ttd_means)) if ttd_means else None
+                ),
+                "time_to_detection_years_std": (
+                    float(np.std(ttd_means)) if ttd_means else None
+                ),
+                "total_realizations": sum(
+                    r["num_realizations"]
+                    for r in items
+                    if r["num_realizations"] is not None
+                ),
+                "num_seeds": len({r["seed"] for r in items}),
+            }
+        )
+    return aggregates
 
 
 def _format_value(value, fmt=".4f"):
@@ -80,33 +159,33 @@ def _format_value(value, fmt=".4f"):
     return str(value)
 
 
-def _print_results_table(results: list[dict]):
-    """Print a formatted table of individual run results."""
+def _print_aggregate_table(aggregates: list[dict], condition_names: list[str]):
+    """Print a formatted table of per-magnitude aggregate results."""
     columns = [
         ("Condition", "condition", None),
-        ("Seed", "seed", None),
-        ("FAR", "false_alarm_rate", ".6f"),
-        ("FA Count", "false_alarm_count", None),
-        ("Detected", "detected", None),
-        ("Delay Steps", "delay_steps", None),
-        ("Delay", "delay", None),
-        ("Val LL", "val_ll", ".4f"),
-        ("Val RMSE", "val_rmse", ".6f"),
+        ("Magnitude", "anomaly_magnitude", ".3f"),
+        ("P(detect)", "probability_of_detection", ".2f"),
+        ("P(det) std", "probability_of_detection_std", ".3f"),
+        ("FA/yr mean", "false_alarm_rate_per_y_mean", ".3f"),
+        ("FA/yr std", "false_alarm_rate_per_y_std", ".3f"),
+        ("TTD(yr) mean", "time_to_detection_years_mean", ".3f"),
+        ("TTD(yr) std", "time_to_detection_years_std", ".3f"),
+        ("N(real)", "total_realizations", None),
+        ("N(seeds)", "num_seeds", None),
     ]
 
-    # Compute column widths
     widths = []
     for header, key, fmt in columns:
-        col_values = [_format_value(r[key], fmt) if fmt else str(r[key]) for r in results]
+        col_values = [
+            _format_value(r[key], fmt) if fmt else str(r[key]) for r in aggregates
+        ]
         widths.append(max(len(header), max(len(v) for v in col_values)))
 
-    # Print header
     header_line = "  ".join(h.ljust(w) for (h, _, _), w in zip(columns, widths))
     print(header_line)
     print("-" * len(header_line))
 
-    # Print rows
-    for r in results:
+    for r in aggregates:
         row_values = []
         for _, key, fmt in columns:
             val = r[key]
@@ -114,57 +193,55 @@ def _print_results_table(results: list[dict]):
         print("  ".join(v.ljust(w) for v, w in zip(row_values, widths)))
 
 
-def _print_aggregate(results: list[dict], condition_names: list[str]):
-    """Print aggregate statistics grouped by condition."""
+def _print_condition_summary(aggregates: list[dict], condition_names: list[str]):
+    """Print overall summary statistics per condition."""
     print(f"\n{'=' * 80}")
-    print("AGGREGATE STATISTICS")
+    print("CONDITION SUMMARY")
     print(f"{'=' * 80}")
 
     for cond in condition_names:
-        cond_results = [r for r in results if r["condition"] == cond]
-        n_runs = len(cond_results)
-
-        fars = [r["false_alarm_rate"] for r in cond_results]
-        detected_flags = [r["detected"] for r in cond_results]
-        delay_steps = [
-            r["delay_steps"] for r in cond_results if r["delay_steps"] is not None
+        cond_aggs = [a for a in aggregates if a["condition"] == cond]
+        n_magnitudes = len(cond_aggs)
+        total_realizations = sum(a["total_realizations"] for a in cond_aggs)
+        p_dets = [
+            a["probability_of_detection"]
+            for a in cond_aggs
+            if a["probability_of_detection"] is not None
         ]
-        val_lls = [r["val_ll"] for r in cond_results if r["val_ll"] is not None]
-        val_rmses = [r["val_rmse"] for r in cond_results if r["val_rmse"] is not None]
 
-        print(f"\n--- {cond.upper()} ({n_runs} runs) ---")
-        print(
-            f"  False alarm rate:   mean={np.mean(fars):.6f}  "
-            f"std={np.std(fars):.6f}  "
-            f"min={np.min(fars):.6f}  max={np.max(fars):.6f}"
-        )
-        print(
-            f"  Detection rate:     {sum(detected_flags)}/{n_runs} "
-            f"({sum(detected_flags)/n_runs*100:.0f}%)"
-        )
-        if delay_steps:
+        print(f"\n--- {cond.upper()} ({n_magnitudes} magnitudes, {total_realizations} total realizations) ---")
+        if p_dets:
             print(
-                f"  Delay (steps):      mean={np.mean(delay_steps):.1f}  "
-                f"std={np.std(delay_steps):.1f}  "
-                f"min={np.min(delay_steps)}  max={np.max(delay_steps)}"
+                f"  P(detect) range:   [{min(p_dets):.2f}, {max(p_dets):.2f}]  "
+                f"mean={np.mean(p_dets):.2f}"
             )
-        else:
-            print("  Delay (steps):      no detections")
-        if val_lls:
+
+        ttd_means = [
+            a["time_to_detection_years_mean"]
+            for a in cond_aggs
+            if a["time_to_detection_years_mean"] is not None
+        ]
+        if ttd_means:
             print(
-                f"  Validation LL:      mean={np.mean(val_lls):.4f}  "
-                f"std={np.std(val_lls):.4f}"
+                f"  TTD(yr) range:     [{min(ttd_means):.3f}, {max(ttd_means):.3f}]  "
+                f"mean={np.mean(ttd_means):.3f}"
             )
-        if val_rmses:
+
+        fa_means = [
+            a["false_alarm_rate_per_y_mean"]
+            for a in cond_aggs
+            if a["false_alarm_rate_per_y_mean"] is not None
+        ]
+        if fa_means:
             print(
-                f"  Validation RMSE:    mean={np.mean(val_rmses):.6f}  "
-                f"std={np.std(val_rmses):.6f}"
+                f"  FA/yr range:       [{min(fa_means):.3f}, {max(fa_means):.3f}]  "
+                f"mean={np.mean(fa_means):.3f}"
             )
 
 
 def benchmark(
     experiment_config_path: str,
-    seeds: list[int] = (1, 2, 3,4,5),
+    seeds: list[int] = (1, 2, 3),
 ):
     """Run anomaly detection for multiple seeds with and without global weights.
 
@@ -178,6 +255,9 @@ def benchmark(
 
     original_name = base_config["experiment_name"]
     global_params_path = base_config.get("lstm_global_params")
+    output_root = Path(base_config.get("output_root", "experiments/out"))
+    benchmark_root = output_root / f"{original_name}_benchmark"
+    benchmark_root.mkdir(parents=True, exist_ok=True)
 
     # Define conditions: always run local; run global only if a path is configured
     conditions = []
@@ -191,34 +271,61 @@ def benchmark(
             "only running the local (no global weights) condition."
         )
 
-    results = []
+    # Run all (seed, condition) combinations
+    runs = []
     for seed in seeds:
         for cond_name, gp in conditions:
-            result = _run_single(base_config, seed, cond_name, gp)
-            results.append(result)
+            summary = _run_single(
+                base_config, seed, cond_name, gp, benchmark_root
+            )
+            runs.append(
+                {
+                    "condition": cond_name,
+                    "seed": seed,
+                    "summary": summary,
+                }
+            )
 
-    # Print individual results
+    # Collect per-magnitude data and aggregate by (condition, magnitude)
+    magnitude_results = _collect_magnitude_results(runs)
+    aggregates = _aggregate_by_condition_magnitude(magnitude_results)
     condition_names = [c[0] for c in conditions]
+
+    # Print results
     print(f"\n{'=' * 80}")
     print(f"BENCHMARK RESULTS: {original_name}")
     print(f"Seeds: {list(seeds)}  |  Conditions: {condition_names}")
     print(f"{'=' * 80}\n")
-    _print_results_table(results)
+    _print_aggregate_table(aggregates, condition_names)
+    _print_condition_summary(aggregates, condition_names)
 
-    # Print aggregates
-    _print_aggregate(results, condition_names)
+    # Per-seed validation metrics
+    validation_metrics_per_seed = [
+        {
+            "condition": run["condition"],
+            "seed": run["seed"],
+            "validation_log_likelihood": run["summary"]
+            .get("optimal_validation_metrics", {})
+            .get("validation_log_likelihood"),
+            "validation_rmse": run["summary"]
+            .get("optimal_validation_metrics", {})
+            .get("validation_rmse"),
+        }
+        for run in runs
+    ]
 
-    # Save full results to JSON
-    output_root = Path(base_config.get("output_root", "experiments/out"))
+    # Save benchmark summary
     benchmark_output = {
         "experiment_name": original_name,
         "config_path": str(config_path),
         "seeds": list(seeds),
         "conditions": condition_names,
-        "runs": results,
+        "magnitude_results": magnitude_results,
+        "aggregate_by_magnitude": aggregates,
+        "validation_metrics_per_seed": validation_metrics_per_seed,
+        "benchmark_root": str(benchmark_root),
     }
-    benchmark_path = output_root / f"{original_name}_benchmark_summary.json"
-    benchmark_path.parent.mkdir(parents=True, exist_ok=True)
+    benchmark_path = benchmark_root / "summary.json"
     with benchmark_path.open("w") as f:
         json.dump(benchmark_output, f, indent=2, default=str)
     print(f"\nBenchmark summary saved to: {benchmark_path}")

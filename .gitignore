@@ -41,3 +41,5 @@ ai_context
 .codex
 
 *.out
+
+experiments/notebooks/*.ipynb
