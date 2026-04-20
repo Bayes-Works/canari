@@ -655,7 +655,7 @@ class SKF:
                 )
 
         return transition_coef
-    
+
     def _states_intervention(self, delta_mu, delta_var):
         """
         States intervention.
@@ -670,15 +670,15 @@ class SKF:
         #     for transition_model in self.model.values():
         #         transition_model.mu_states = transition_model.mu_states + delta_mu
         #         transition_model.var_states = transition_model.var_states + delta_var
-                
+
         # else:
         #     raise ValueError(
         #         "Incorrect mu and/or var dimension for inverventions."
         #     )
         for transition_model in self.model.values():
             transition_model._states_intervention(delta_mu, delta_var)
-        
-    def _transition_matrix_interv(self, delta_mu: list, delta_var:list, value:float):
+
+    def _transition_matrix_interv(self, delta_mu: list, delta_var: list, value: float):
         """
         Transition matrix intervention.
         """
@@ -1320,6 +1320,7 @@ class SKF:
         slope_anomaly: Optional[float] = None,
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
+        synthetic_data: Optional[dict] = None,
     ) -> Tuple[float, float]:
         """
         Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
@@ -1337,54 +1338,59 @@ class SKF:
             slope_anomaly (Optional[float]): Magnitude of the anomaly slope.
             anomaly_start (Optional[float]): Fractional start position of anomaly. Defaults to 0.33.
             anomaly_end (Optional[float]): Fractional end position of anomaly. Defaults to 0.66.
+            synthetic_data (Optional[dict]): Pre-generated synthetic anomaly data. If None,
+                                        it is generated from `data` using `num_anomaly`,
+                                        `slope_anomaly`, `anomaly_start`, and `anomaly_end`.
 
         Returns:
-            Tuple(detection_rate, false_rate, false_alarm_train):
+            Tuple(detection_rate, num_false_alarm):
                 detection_rate (float): # time series where anomalies detected / # total synthetic time series with anomalies added.
-                false_rate (float): # time series where anomalies NOT detected / # total synthetic time series with anomalies added.
-                false_alarm_train (str): 'Yes' if any alarm during training data.
+                num_false_alarm (int): # timesteps on the original clean data where the filter marginal abnormal probability exceeds `threshold`.
         """
 
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
         num_false_alarm = 0
-        false_alarm_train = "No"
 
-        synthetic_data = DataProcess.add_synthetic_anomaly(
-            data,
-            num_samples=num_anomaly,
-            slope=[slope_anomaly],
-            anomaly_start=anomaly_start,
-            anomaly_end=anomaly_end,
-        )
+        if synthetic_data is None:
+            synthetic_data = DataProcess.add_synthetic_anomaly(
+                data,
+                num_samples=num_anomaly,
+                slope=[-slope_anomaly, slope_anomaly],
+                anomaly_start=anomaly_start,
+                anomaly_end=anomaly_end,
+            )
+        total_anomalies = len(synthetic_data)
 
-        filter_marginal_abnorm_prob, _ = self.filter(data=data)
+        clean_filter_marginal_abnorm_prob, _ = self.filter(data=data)
         self.load_initial_states()
 
-        # Check false alarm in the training set
-        if any(filter_marginal_abnorm_prob > threshold):
-            false_alarm_train = "Yes"
+        # Quantify pre-anomaly false alarms on the original clean data
+        num_false_alarm = int(np.sum(clean_filter_marginal_abnorm_prob > threshold))
 
         # Iterate over data with synthetic anomalies
-        for i in range(0, num_anomaly):
+        for i in range(total_anomalies):
             filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
-            window_start = synthetic_data[i]["anomaly_timestep"]
+            window_start = int(synthetic_data[i]["anomaly_timestep"])
 
             if max_timestep_to_detect is None:
                 window_end = num_timesteps
             else:
-                window_end = window_start + max_timestep_to_detect
-            if any(filter_marginal_abnorm_prob[window_start:window_end] > threshold):
+                window_end = window_start + int(max_timestep_to_detect)
+            detection_indices = np.flatnonzero(
+                filter_marginal_abnorm_prob[window_start:window_end] > threshold
+            )
+            if detection_indices.size > 0:
                 num_anomaly_detected += 1
-            if any(filter_marginal_abnorm_prob[:window_start] > threshold):
-                num_false_alarm += 1
 
             self.load_initial_states()
 
-        detection_rate = num_anomaly_detected / num_anomaly
-        false_rate = num_false_alarm / num_anomaly
+        detection_rate = num_anomaly_detected / total_anomalies
 
-        return detection_rate, false_rate, false_alarm_train
+        return (
+            detection_rate,
+            num_false_alarm,
+        )
 
     def objective(
         self,
