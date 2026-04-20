@@ -26,7 +26,7 @@ with open("examples/benchmark/BM_metadata_global.json", "r") as f:
 def main(
     num_trial_optim_model: int = 1,
     param_optimization: bool = False,
-    benchmark_no: str = ["6"],
+    benchmark_no: str = ["2"],
 ):
     for benchmark in benchmark_no:
 
@@ -59,7 +59,7 @@ def main(
         train_data, validation_data, _, all_data = data_processor.get_splits()
 
         ######### Define model with parameters #########
-        look_back_len = 36
+        look_back_len = 52
         lstm = Model(
             LstmNetwork(
                     look_back_len=look_back_len,
@@ -68,7 +68,7 @@ def main(
                     infer_len=config["infer_len"],
                     num_hidden_unit=40,
                     smoother=False,
-                    load_lstm_net="saved_params/hq_global_seq_36.bin",
+                    load_lstm_net="saved_params/hq_100ts_g_seq_52_3layer_1step.bin",
                 )
         )
         lstm_dict = lstm.lstm_net.state_dict()
@@ -78,7 +78,7 @@ def main(
         # lstm_dict["SLSTM.2"] = lstm_dict.pop("LSTM.2")
         # lstm_dict["SLinear.3"] = lstm_dict.pop("Linear.3")
         
-        std_residual = 1e-1
+        std_residual = 1e-2
 
         def model_with_parameters(param):
             model = Model(
@@ -90,9 +90,19 @@ def main(
                     infer_len=52*3,
                     num_hidden_unit=40,
                     smoother=False,
+                    manual_seed=1,
                 ),
                 WhiteNoise(std_error=std_residual),
             )
+
+            # Reinit variance weights 
+            # init_lstm_dict = model.lstm_net.state_dict()
+            # for key, value in init_lstm_dict.items():
+            #     tmp = list(lstm_dict[key])
+            #     factor = 1
+            #     tmp[1] = np.array(value[1])*factor
+            #     tmp[3] = np.array(value[3])*factor
+            #     lstm_dict[key] = tuple(tmp)
 
             model.lstm_net.load_state_dict(lstm_dict)
 
@@ -101,14 +111,15 @@ def main(
                     config["init_period_states"][0] : config["init_period_states"][1]
                 ]
             )
-            # model.var_states[0,0] = 1e-3
-            model.var_states[1,1] = 1e-5
+            model.var_states[0,0] = 1e-3
+            model.var_states[1,1] = 1e-7
 
             num_epoch = 50
             for epoch in range(num_epoch):
                 mu_validation_preds, std_validation_preds, states = model.lstm_train(
                     train_data=train_data,
                     validation_data=validation_data,
+                    white_noise_decay=False,
                 )
 
                 mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -140,6 +151,10 @@ def main(
                 if model.stop_training:
                     break
 
+            print(f"Optimal epoch: #{model.optimal_epoch}")
+
+            # model_optim_dict = model.get_dict(time_step=0)
+            # norm_model = Model.load_dict(model_optim_dict)
             #### Define SKF model with parameters #########
             abnorm_model = Model(
                 LocalAcceleration(),
@@ -151,7 +166,7 @@ def main(
                 abnorm_model=abnorm_model,
                 std_transition_error=1e-4,
                 norm_to_abnorm_prob=1e-5,
-                abnorm_to_norm_prob = 0.14,
+                abnorm_to_norm_prob = 0.1,
             )
 
             skf.save_initial_states()

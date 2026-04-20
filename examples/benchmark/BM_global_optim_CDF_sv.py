@@ -24,7 +24,6 @@ with open("examples/benchmark/BM_metadata_global.json", "r") as f:
     metadata = json.load(f)
 
 def main(
-    num_trial_optim_model: int = 50,
     param_optimization: bool = True,
     benchmark_no: str = ["2"],
 ):
@@ -111,7 +110,6 @@ def main(
                 )
         )
         lstm_dict = lstm.lstm_net.state_dict()
-        std_residual = 1e-1
 
         def model_with_parameters(param):
             model = Model(
@@ -125,7 +123,7 @@ def main(
                     smoother=False,
                     manual_seed=1,
                 ),
-                WhiteNoise(std_error=std_residual),
+                WhiteNoise(std_error=param["sigma_v"]),
             )
             
             model.lstm_net.load_state_dict(lstm_dict)
@@ -225,19 +223,28 @@ def main(
             print_metric["j3"] = round(j3,3)
             skf.print_metric = print_metric
 
-            # # Log-likelihood
-            # skf.save_initial_states()
-            # skf.filter(data=all_data)
-            # log_lik_all = np.nanmean(skf.ll_history)
-            # skf.metric_optim = -log_lik_all
-            # skf.load_initial_states()
-
             return skf
 
 
         if param_optimization:
             # Define parameter search space
             param = {}
+            param_space = {
+                "sigma_v": [1e-2, 2e-1],
+            }
+            # Define optimizer
+            model_optimizer = Optimizer(
+                model=model_with_parameters,
+                param=param_space,
+                num_optimization_trial=20,
+                num_startup_trials=10,
+                mode="min",
+            )
+            model_optimizer.optimize()
+            # Get best model
+            param = model_optimizer.get_best_param()
+
+            # Train best model
             model_optim = (
                 model_with_parameters(param)
             )
