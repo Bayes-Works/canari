@@ -11,7 +11,7 @@ On time series data, this model can:
 
 """
 
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, List, Optional
 import copy
 import numpy as np
 from pytagi import metric
@@ -1320,7 +1320,7 @@ class SKF:
         slope_anomaly: Optional[float] = None,
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
-        synthetic_data: Optional[dict] = None,
+        synthetic_data: Optional[List[dict]] = None,
     ) -> Tuple[float, float]:
         """
         Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
@@ -1338,9 +1338,11 @@ class SKF:
             slope_anomaly (Optional[float]): Magnitude of the anomaly slope.
             anomaly_start (Optional[float]): Fractional start position of anomaly. Defaults to 0.33.
             anomaly_end (Optional[float]): Fractional end position of anomaly. Defaults to 0.66.
-            synthetic_data (Optional[dict]): Pre-generated synthetic anomaly data. If None,
-                                        it is generated from `data` using `num_anomaly`,
-                                        `slope_anomaly`, `anomaly_start`, and `anomaly_end`.
+            synthetic_data (Optional[List[dict]]): Pre-generated list of synthetic anomaly
+                                        series (each a dict with an "anomaly_timestep" key).
+                                        If None, it is generated from `data` using
+                                        `num_anomaly`, `slope_anomaly`, `anomaly_start`,
+                                        and `anomaly_end`.
 
         Returns:
             Tuple(detection_rate, num_false_alarm):
@@ -1350,7 +1352,6 @@ class SKF:
 
         num_timesteps = len(data["y"])
         num_anomaly_detected = 0
-        num_false_alarm = 0
 
         if synthetic_data is None:
             synthetic_data = DataProcess.add_synthetic_anomaly(
