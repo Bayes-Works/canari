@@ -1392,11 +1392,11 @@ class SKF:
         false_rate,
         anm_magnitude,
         detection_rate_cdf_mean: Optional[float] = 0.5,
-        detection_rate_cdf_std: Optional[float] = 0.5,
+        detection_rate_cdf_std: Optional[float] = 0.2,
         false_rate_cdf_median: Optional[float] = 0.1,  # [false alarms/year]
         false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
-        anm_mag_cdf_median: Optional[float] = 0.3,  # [unit/year]
-        anm_mag_cdf_shape: Optional[float] = 0.4,  # [unit/year]
+        anm_mag_cdf_median: Optional[float] = 0.2,  # [unit/year]
+        anm_mag_cdf_shape: Optional[float] = 0.6,  # [unit/year]
     ) -> int:
         """
         Calculate the metric that is used when optimizing for SKF's parameters.
