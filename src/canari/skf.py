@@ -20,6 +20,8 @@ from canari.model import Model
 from canari import common
 from canari.data_struct import StatesHistory
 from canari.data_process import DataProcess
+import pandas as pd
+from prophet import Prophet
 
 
 class SKF:
@@ -1003,7 +1005,41 @@ class SKF:
                 self.model["norm_norm"]._estim_hete_noise(
                     mu_v2bar_prior, var_v2bar_prior
                 )
+        if "chronos" in self.states_name:
+            mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                self.model["norm_norm"].lstm_output_history, input_covariates
+            )
+            # --- Detrend mu_lstm_input using Prophet ---
+            prophet_df = pd.DataFrame({
+                "ds": self.model["norm_norm"].lstm_output_history.time,
+                "y":  mu_lstm_input
+            })
 
+            nan_idx= np.where(prophet_df["y"].isna())[0]
+            prophet_df["y"] = prophet_df["y"].interpolate()
+
+            prophet_model = Prophet()
+            prophet_model.fit(prophet_df)
+
+            trend = prophet_model.predict(prophet_df[["ds"]])["trend"].values
+            mu_lstm_input = mu_lstm_input - trend
+            # mu_lstm_input[nan_idx] = np.nan
+
+            context_df = pd.DataFrame({
+                "id":        ["series_0"] * len(mu_lstm_input),
+                "timestamp": self.model["norm_norm"].lstm_output_history.time,
+                "target":    mu_lstm_input,
+            })
+            pred = self.model["norm_norm"].pipeline.predict_df(
+                    context_df,
+                    prediction_length=1,
+                    quantile_levels=[0.25, 0.5, 0.75],
+                    id_column="id",
+                    timestamp_column="timestamp",
+                    target="target",
+            )
+            mu_lstm_pred = pred["0.5"].values
+            var_lstm_pred = ((pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745))**2
         else:
             mu_lstm_pred = None
             var_lstm_pred = None
@@ -1253,6 +1289,27 @@ class SKF:
                 self.model["norm_norm"].update_lstm_states_history(
                     index, last_step=len(data["y"]) - 1
                 )
+
+            if "chronos" in self.states_name:
+                chronos_index = self.model["norm_norm"].get_states_index("chronos")
+                # self.model["norm_norm"].lstm_output_history.update(
+                #     mu_states_posterior[chronos_index],
+                #     var_states_posterior[chronos_index, chronos_index],
+                # )
+                self.model["norm_norm"].lstm_output_history.update(
+                    y,
+                    var_states_posterior[chronos_index, chronos_index],
+                )
+                self.model["norm_norm"].lstm_output_history.time = np.roll(self.model["norm_norm"].lstm_output_history.time, -1)
+                self.model["norm_norm"].lstm_output_history.time[-1] = time
+
+                # self.model["norm_norm"].lstm_output_history.mu = np.concatenate([self.model["norm_norm"].lstm_output_history.mu, mu_states_posterior[chronos_index]])
+                # self.model["norm_norm"].lstm_output_history.var = np.concatenate([self.model["norm_norm"].lstm_output_history.var, np.array([var_states_posterior[chronos_index, chronos_index]])])
+                # self.model["norm_norm"].lstm_output_history.time = np.concatenate([self.model["norm_norm"].lstm_output_history.time, np.array([time])])
+
+                # self.model["norm_norm"].lstm_output_history.mu = np.concatenate([self.model["norm_norm"].lstm_output_history.mu, y])
+                # self.model["norm_norm"].lstm_output_history.var = np.concatenate([self.model["norm_norm"].lstm_output_history.var, np.array([var_states_posterior[chronos_index, chronos_index]])])
+                # self.model["norm_norm"].lstm_output_history.time = np.concatenate([self.model["norm_norm"].lstm_output_history.time, np.array([time])])
 
             self._save_states_history()
             self.set_states()

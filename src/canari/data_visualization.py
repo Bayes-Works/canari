@@ -513,6 +513,9 @@ def plot_skf_states(
             standardization=standardization,
             sub_plot=axes[0],
             plot_nan=plot_nan,
+            plot_train_data=False,
+            plot_test_data=True,
+            plot_validation_data=True,
         )
     _add_dynamic_grids(axes[0], time)
 

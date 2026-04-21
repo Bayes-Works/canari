@@ -33,6 +33,7 @@ from canari.data_struct import LstmOutputHistory, StatesHistory, OutputHistory
 from canari.common import GMA
 from canari.data_process import DataProcess
 from canari.component import Intervention
+from chronos import Chronos2Pipeline
 
 class Model:
     """
@@ -230,6 +231,7 @@ class Model:
         self._assemble_states()
         self._initialize_lstm_network()
         self._initialize_autoregression()
+        self._initialize_chronos()
 
     def _assemble_matrices(self):
         """
@@ -310,6 +312,28 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+
+    def _initialize_chronos(self):
+        """
+        Initialize chronos.
+        """
+
+        chronos_component = next(
+            (
+                component
+                for component in self.components.values()
+                if "chronos" in component.component_name
+            ),
+            None,
+        )
+        if chronos_component:
+            self.lstm_output_history.initialize(chronos_component.look_back_len)
+
+        device = "cpu"
+        self.pipeline = Chronos2Pipeline.from_pretrained(
+            "amazon/chronos-2",
+            device_map=device,
+        )
 
     def _initialize_autoregression(self):
         """
@@ -1430,6 +1454,34 @@ class Model:
                 var_lstm_pred = var_lstm_pred[0::2]
                 self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
 
+        # Chronos prediction
+        lstm_states_index = self.get_states_index("chronos")
+        if mu_lstm_pred is None and var_lstm_pred is None:
+            if var_input_covariates is not None:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates, var_input_covariates
+                )
+            else:
+                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                    self.lstm_output_history, input_covariates
+                )
+
+            context_df = pd.DataFrame({
+                "id":        ["series_0"] * len(mu_lstm_input),
+                "timestamp": self.lstm_output_history.time,
+                "target":    mu_lstm_input,
+            })
+            pred = self.pipeline.predict_df(
+                    context_df,
+                    prediction_length=1,
+                    quantile_levels=[0.25, 0.5, 0.75],
+                    id_column="id",
+                    timestamp_column="timestamp",
+                    target="target",
+            )
+            mu_lstm_pred = pred["0.5"].values
+            var_lstm_pred = ((pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745))**2
+
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
             self.mu_states,
@@ -1672,6 +1724,15 @@ class Model:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)
 
+            if "chronos" in self.states_name:
+                chronos_index = self.get_states_index("chronos")
+                self.lstm_output_history.update(
+                    mu_states_prior[chronos_index],
+                    var_states_prior[chronos_index, chronos_index],
+                )
+                self.lstm_output_history.time = np.roll(self.lstm_output_history.time, -1)
+                self.lstm_output_history.time[-1] = time
+
             # Store variables
             self._set_posterior_states(mu_states_prior, var_states_prior)
             self.save_states_history()
@@ -1755,6 +1816,16 @@ class Model:
                 self.update_lstm_output_history(
                     mu_states_posterior, var_states_posterior
                 )
+
+            if "chronos" in self.states_name:
+                chronos_index = self.get_states_index("chronos")
+                self.lstm_output_history.update(
+                    mu_states_posterior[chronos_index],
+                    var_states_posterior[chronos_index, chronos_index],
+                )
+                self.lstm_output_history.time = np.roll(self.lstm_output_history.time, -1)
+                self.lstm_output_history.time[-1] = time
+
 
             # Store variables
             self.save_states_history()
