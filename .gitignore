@@ -22,3 +22,4 @@ docs/_build/*
 !docs/_static/**
 /saved_params
 /data/anm_type_class_train_samples
+data/toy_time_series/paper_data_decompose_delay_example_long.csv

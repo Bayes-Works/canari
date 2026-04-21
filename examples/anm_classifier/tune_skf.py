@@ -31,7 +31,8 @@ threshold_anm_prob_fix = 0.4256530410044609
 
 
 def main(
-    num_trial_optimization: int = 20,
+    # num_trial_optimization: int = 20,
+    num_trial_optimization: int = 50,
     param_optimization: bool = True,
 ):
     # # # Read data

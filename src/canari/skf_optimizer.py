@@ -155,7 +155,7 @@ if platform.system() == "Windows":
                     np.prod([len(v) for v in self._param_space.values()])
                 )
             else:
-                sampler = optuna.samplers.TPESampler()
+                sampler = optuna.samplers.TPESampler(n_startup_trials=20)
                 self._num_optimization_trial = self._num_optimization_trial
 
             print("-----")
