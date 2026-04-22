@@ -46,6 +46,7 @@ class Optimizer:
         back_end (str, optional): "ray". Using the external library Ray for optimization.
         num_startup_trials (int, optional): Number of start up trial when using TPE sampling.
             Defaults to 20.
+        max_concurrent (int, optional): Maximum number of trials to run in parallel. Defaults to 1.
 
     Attributes:
         model_optim :
@@ -65,6 +66,7 @@ class Optimizer:
         algorithm: Optional[str] = "TPE",  # "TPE" or "random"
         back_end: Optional[str] = "ray",
         num_startup_trials: Optional[int] = 20,
+        max_concurrent: Optional[int] = 1,
     ):
         """
         Initialize the Optimizer.
@@ -82,6 +84,7 @@ class Optimizer:
         self._algorithm = algorithm
         self._backend = back_end
         self._num_startup_trials = num_startup_trials
+        self._max_concurrent = max_concurrent
 
     def objective(self, config: Dict) -> Dict:
         """
@@ -151,6 +154,7 @@ class Optimizer:
                 self.objective,
                 config=search_config,
                 num_samples=1,
+                max_concurrent_trials=self._max_concurrent,
                 verbose=0,
                 raise_on_failed_trial=False,
                 callbacks=[custom_logger],
@@ -172,6 +176,7 @@ class Optimizer:
                         metric="metric", mode=self._mode, sampler=sampler
                     ),
                     num_samples=self._num_optimization_trial,
+                    max_concurrent_trials=self._max_concurrent,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],
@@ -183,6 +188,7 @@ class Optimizer:
                     config=search_config,
                     num_samples=self._num_optimization_trial,
                     scheduler=scheduler,
+                    max_concurrent_trials=self._max_concurrent,
                     verbose=0,
                     raise_on_failed_trial=False,
                     callbacks=[custom_logger],

@@ -127,12 +127,10 @@ def main(
             skf.save_initial_states()
 
             num_anomaly = 50
-            detection_rate, false_rate, false_alarm_train = (
-                skf.detect_synthetic_anomaly(
-                    data=train_data,
-                    num_anomaly=num_anomaly,
-                    slope_anomaly=param["slope"] / 52,
-                )
+            detection_rate, num_false_alarm = skf.detect_synthetic_anomaly(
+                data=train_data,
+                num_anomaly=num_anomaly,
+                slope_anomaly=param["slope"] / 52,
             )
 
             data_len_year = (
@@ -140,7 +138,7 @@ def main(
                 - data_processor.data.index[data_processor.train_start]
             ).days / 365.25
 
-            false_rate_yearly = false_rate / data_len_year
+            false_rate_yearly = num_false_alarm / data_len_year
             metric_optim = skf.objective(
                 detection_rate, false_rate_yearly, param["slope"]
             )
