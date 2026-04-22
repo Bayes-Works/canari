@@ -1805,8 +1805,10 @@ class Model:
 
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
-            mu_sequence = mu_zo_smooth[0,: self.lstm_net.lstm_infer_len].flatten()
-            var_sequence = var_zo_smooth[0,: self.lstm_net.lstm_infer_len].flatten()
+            mu_zo_smooth = mu_zo_smooth.flatten()
+            var_zo_smooth = var_zo_smooth.flatten()
+            mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
+            var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
             mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
             var_sequence = var_sequence[-self.lstm_net.lstm_look_back_len :]
             self.lstm_output_history.mu = mu_sequence
