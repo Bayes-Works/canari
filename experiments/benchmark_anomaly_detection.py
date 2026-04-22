@@ -1,14 +1,15 @@
 """Benchmark anomaly_detection_lstm across multiple seeds and global/local weights.
 
 Usage:
-    python -m experiments.benchmark_anomaly_detection --experiment_config_path experiments/config/LTU012ESAP-E020.yaml
-    python -m experiments.benchmark_anomaly_detection --experiment_config_path experiments/config/LTU012ESAP-E020.yaml --seeds "[1,2,3,4,5]"
+    python -m experiments.benchmark_anomaly_detection --experiment_config_path experiments/config/OOD_timeseries/LGA002EFAPRG910.yaml --seeds "[1,2,3]"
 """
 
 import contextlib
 import copy
 import json
 import multiprocessing as mp
+import os
+import time
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
@@ -35,11 +36,15 @@ def _run_single(
     condition: str,
     global_params,
     benchmark_root: Path,
+    cpu_budget_per_run: int,
 ) -> dict:
     """Create a modified config, run anomaly detection, and return the summary."""
     config = copy.deepcopy(base_config)
     config["lstm_manual_seed"] = seed
     config["lstm_global_params"] = global_params
+    config["cpu_budget_per_run"] = min(
+        int(config.get("cpu_budget_per_run", cpu_budget_per_run)), cpu_budget_per_run
+    )
     if condition == "local":
         config["lstm_num_layer"] = 1
     config["experiment_name"] = (
@@ -57,14 +62,19 @@ def _run_single(
         yaml.safe_dump(config, f, sort_keys=False)
 
     log_path = output_dir / "run.log"
+    start = time.perf_counter()
     with log_path.open("w") as log_file:
         with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
             print(f"{'=' * 60}")
             print(f"Running: condition={condition}, seed={seed}")
             print(f"{'=' * 60}", flush=True)
             run_anomaly_detection(experiment_config_path=str(temp_config_path))
+            elapsed = time.perf_counter() - start
+            print(f"\nRun elapsed: {elapsed:.1f}s", flush=True)
 
-    return _read_summary(output_dir)
+    summary = _read_summary(output_dir)
+    summary["_elapsed_seconds"] = elapsed
+    return summary
 
 
 def _collect_magnitude_results(runs: list[dict]) -> list[dict]:
@@ -248,7 +258,7 @@ def _print_condition_summary(aggregates: list[dict], condition_names: list[str])
 def benchmark(
     experiment_config_path: str,
     seeds: list[int] = (1, 2, 3),
-    max_concurrent: int | None = None,
+    max_concurrent: int = 6,
 ):
     """Run anomaly detection for multiple seeds with and without global weights.
 
@@ -256,9 +266,9 @@ def benchmark(
         experiment_config_path: Path to the base YAML config file.
         seeds: List of random seeds to evaluate.
         max_concurrent: Maximum number of (seed, condition) runs to execute in
-            parallel. Defaults to all runs at once. Note that each run itself
-            parallelizes internally (sigma_v grid search, synthetic anomaly
-            detection), so set this to avoid oversubscribing CPUs.
+            parallel. Each run receives a per-run CPU budget so the nested
+            sigma_v/SKF pools stay bounded instead of oversubscribing the
+            machine.
     """
     config_path = Path(experiment_config_path)
     with config_path.open("r") as f:
@@ -289,39 +299,76 @@ def benchmark(
         for cond_name, gp in conditions
     ]
 
-    n_workers = max_concurrent if max_concurrent is not None else len(tasks)
-    n_workers = max(1, min(n_workers, len(tasks)))
+    available_cpus = max(1, os.cpu_count() or 1)
+    n_workers = max(1, min(max_concurrent, len(tasks), available_cpus))
+    cpu_budget_per_run = max(1, available_cpus // n_workers)
     runs_root = benchmark_root / "runs"
     print(
         f"\nLaunching {len(tasks)} runs with up to {n_workers} in parallel."
     )
     print(
-        f"Per-run logs: {runs_root}/<experiment_name>/run.log\n"
+        f"Host CPUs: {available_cpus}  |  Per-run CPU budget: {cpu_budget_per_run}"
+    )
+    print(
+        f"Per-run logs: {runs_root}/<experiment_name>/run.log"
+    )
+    print(
+        f"Tail live progress with, e.g.:\n"
+        f"  tail -f {runs_root}/{original_name}_benchmark_{conditions[0][0]}_seed{list(seeds)[0]}/run.log\n"
     )
 
     # Run all (seed, condition) combinations in parallel
     runs = [None] * len(tasks)
     ctx = mp.get_context("spawn")
+    total_start = time.perf_counter()
     with ProcessPoolExecutor(max_workers=n_workers, mp_context=ctx) as executor:
         future_to_idx = {
             executor.submit(
-                _run_single, base_config, seed, cond_name, gp, benchmark_root
+                _run_single,
+                base_config,
+                seed,
+                cond_name,
+                gp,
+                benchmark_root,
+                cpu_budget_per_run,
             ): i
             for i, (seed, cond_name, gp) in enumerate(tasks)
         }
         for future in as_completed(future_to_idx):
             idx = future_to_idx[future]
             seed, cond_name, _ = tasks[idx]
-            summary = future.result()
-            runs[idx] = {
-                "condition": cond_name,
-                "seed": seed,
-                "summary": summary,
-            }
-            print(f"Completed: condition={cond_name}, seed={seed}")
+            try:
+                summary = future.result()
+                run_elapsed = summary.get("_elapsed_seconds")
+                runs[idx] = {
+                    "condition": cond_name,
+                    "seed": seed,
+                    "summary": summary,
+                    "elapsed_seconds": run_elapsed,
+                    "status": "completed",
+                }
+                elapsed_str = (
+                    f" ({run_elapsed:.1f}s)" if run_elapsed is not None else ""
+                )
+                print(f"Completed: condition={cond_name}, seed={seed}{elapsed_str}")
+            except Exception as exc:
+                runs[idx] = {
+                    "condition": cond_name,
+                    "seed": seed,
+                    "summary": {},
+                    "elapsed_seconds": None,
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                print(
+                    f"Failed: condition={cond_name}, seed={seed} - "
+                    f"{type(exc).__name__}: {exc}"
+                )
+    total_elapsed = time.perf_counter() - total_start
 
     # Collect per-magnitude data and aggregate by (condition, magnitude)
-    magnitude_results = _collect_magnitude_results(runs)
+    successful_runs = [run for run in runs if run["status"] == "completed"]
+    magnitude_results = _collect_magnitude_results(successful_runs)
     aggregates = _aggregate_by_condition_magnitude(magnitude_results)
     condition_names = [c[0] for c in conditions]
 
@@ -329,6 +376,10 @@ def benchmark(
     print(f"\n{'=' * 80}")
     print(f"BENCHMARK RESULTS: {original_name}")
     print(f"Seeds: {list(seeds)}  |  Conditions: {condition_names}")
+    print(
+        f"Total elapsed: {total_elapsed:.1f}s "
+        f"({total_elapsed / 60:.1f} min) across {len(tasks)} runs"
+    )
     print(f"{'=' * 80}\n")
     _print_aggregate_table(aggregates, condition_names)
     _print_condition_summary(aggregates, condition_names)
@@ -338,6 +389,7 @@ def benchmark(
         {
             "condition": run["condition"],
             "seed": run["seed"],
+            "status": run["status"],
             "validation_log_likelihood": run["summary"]
             .get("optimal_validation_metrics", {})
             .get("validation_log_likelihood"),
@@ -349,6 +401,15 @@ def benchmark(
     ]
 
     # Save benchmark summary
+    elapsed_per_run = [
+        {
+            "condition": run["condition"],
+            "seed": run["seed"],
+            "status": run["status"],
+            "elapsed_seconds": run["elapsed_seconds"],
+        }
+        for run in runs
+    ]
     benchmark_output = {
         "experiment_name": original_name,
         "config_path": str(config_path),
@@ -357,6 +418,18 @@ def benchmark(
         "magnitude_results": magnitude_results,
         "aggregate_by_magnitude": aggregates,
         "validation_metrics_per_seed": validation_metrics_per_seed,
+        "run_status": [
+            {
+                "condition": run["condition"],
+                "seed": run["seed"],
+                "status": run["status"],
+                "error": run.get("error"),
+            }
+            for run in runs
+        ],
+        "elapsed_per_run": elapsed_per_run,
+        "total_elapsed_seconds": total_elapsed,
+        "max_concurrent": n_workers,
         "benchmark_root": str(benchmark_root),
     }
     benchmark_path = benchmark_root / "summary.json"

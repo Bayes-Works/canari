@@ -273,6 +273,7 @@ class LstmNetwork(BaseComponent):
         lstm_network.num_samples = 1  # dummy intialization until otherwise specified
         lstm_network.stateless = self.stateless
         lstm_network.zeroshot = self.zeroshot
+        lstm_network.teacher_forcing = False
 
         if self.device == "cpu":
             lstm_network.set_threads(self.num_thread)

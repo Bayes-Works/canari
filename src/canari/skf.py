@@ -1590,6 +1590,8 @@ class SKF:
         # Iterate over data with synthetic anomalies
         if n_jobs == -1:
             n_jobs = os.cpu_count()
+        n_jobs = max(1, int(n_jobs))
+        n_jobs = min(n_jobs, max(1, total_anomalies), max(1, os.cpu_count() or 1))
         use_parallel = n_jobs is not None and n_jobs > 1
 
         if use_parallel:

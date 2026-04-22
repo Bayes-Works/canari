@@ -5,6 +5,7 @@ external libraries Ray Tune and Optuna.
 """
 
 from typing import Callable, Dict, Optional
+import math
 import signal
 from ray import tune
 from ray.tune import Callback
@@ -65,7 +66,7 @@ class Optimizer:
         algorithm: Optional[str] = "TPE",  # "TPE" or "random"
         back_end: Optional[str] = "ray",
         num_startup_trials: Optional[int] = 20,
-        max_concurrent: Optional[int] = 8,
+        max_concurrent: Optional[int] = 1,
     ):
         """
         Initialize the Optimizer.
@@ -92,10 +93,20 @@ class Optimizer:
         Returns:
             dict: Metric used for optimization.
         """
-        if self._model_input is None:
-            result = self.model(config)
-        else:
-            result = self.model(config, self._model_input)
+        try:
+            if self._model_input is None:
+                result = self.model(config)
+            else:
+                result = self.model(config, self._model_input)
+        except Exception as exc:
+            fallback_metric = -1e18 if self._mode == "max" else 1e18
+            return {
+                "metric": fallback_metric,
+                "print_metric": {"error": f"{type(exc).__name__}: {exc}"},
+                "j1": math.nan,
+                "j2": math.nan,
+                "j3": math.nan,
+            }
 
         if not isinstance(result, tuple):
             result = (result,)

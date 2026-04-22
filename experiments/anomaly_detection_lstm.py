@@ -46,6 +46,9 @@ def _sigma_v_worker(sv_candidate):
         "std_per_epoch": std_per_epoch,
     }
 
+
+
+
 # Plotting defaults
 import matplotlib as mpl
 
@@ -171,6 +174,7 @@ def main(
     experiment_config_path = Path(experiment_config_path)
     with experiment_config_path.open("r") as f:
         experiment_config = yaml.safe_load(f)
+    experiment_config.setdefault("lstm_early_stopping_metric", "crps")
     experiment_name = experiment_config["experiment_name"]
     output_root = Path(experiment_config.get("output_root", "experiments/out"))
     output_dir = output_root / experiment_name
@@ -211,6 +215,21 @@ def main(
     global_params = experiment_config.get("lstm_global_params")
     use_tagiv = experiment_config["use_tagiv"]
     max_num_epoch = int(experiment_config.get("lstm_num_epoch", 100))
+    lstm_early_stopping_metric = str(
+        experiment_config.get("lstm_early_stopping_metric", "crps")
+    ).strip().lower()
+    if lstm_early_stopping_metric == "ll":
+        lstm_early_stopping_metric_key = "validation_log_likelihood"
+        lstm_early_stopping_mode = "max"
+        lstm_early_stopping_metric_label = "LL"
+    elif lstm_early_stopping_metric == "crps":
+        lstm_early_stopping_metric_key = "validation_crps"
+        lstm_early_stopping_mode = "min"
+        lstm_early_stopping_metric_label = "CRPS"
+    else:
+        raise ValueError(
+            "lstm_early_stopping_metric must be either 'll' or 'crps'."
+        )
     likelihood_covariance_floor = float(
         experiment_config.get("likelihood_covariance_floor", 0.0)
     )
@@ -222,13 +241,20 @@ def main(
         "norm_to_abnorm_prob": float(experiment_config["norm_to_abnorm_prob"]),
         "abnorm_to_norm_prob": abnorm_to_norm_prob,
         "likelihood_covariance_floor": likelihood_covariance_floor,
+        "threshold": float(experiment_config.get("anomaly_detection_threshold", 0.4)),
     }
-    threshold = float(experiment_config.get("anomaly_detection_threshold", 0.4))
+    threshold = default_skf_param["threshold"]
     max_timestep_to_detect = float(experiment_config.get("max_timestep_to_detect ", 156))
 
     num_realizations = int(experiment_config.get("num_anomaly_realizations", 25))
     anomaly_magnitudes = experiment_config.get("slope_search_space",[0.025, 0.05, 0.075, 0.225, 0.5, 0.75, 1.0])
     sigma_v_range = experiment_config.get("sigma_v_search_space", [0.02, 0.04, 0.06, 0.08, 0.1, 0.125, 0.15, 0.175, 0.2])
+    available_cpus = max(1, os.cpu_count() or 1)
+
+    lstm_num_thread = 1
+    sigma_v_max_concurrent = 6
+    skf_tuning_n_jobs = 6
+    skf_eval_n_jobs = 6
 
 
     cdf_synthetic_cache = {}
@@ -250,6 +276,15 @@ def main(
                 anomaly_end=cdf_anomaly_end,
             )
 
+
+    print(
+        "Parallelism: "
+        f"lstm_threads={lstm_num_thread}, "
+        f"sigma_v_workers={sigma_v_max_concurrent}, "
+        f"skf_tuning_workers={skf_tuning_n_jobs}, "
+        f"skf_eval_workers={skf_eval_n_jobs}"
+    )
+
     optimal_validation_metrics = {}
     training_metrics_history = []
     lstm_std_per_epoch = []
@@ -261,6 +296,10 @@ def main(
         last_idx = min(max(end_idx - 1, 0), len(data_processor.data.index) - 1)
         return data_processor.data.index[last_idx]
 
+    def _selected_validation_metric(metrics, optimal_epoch: int) -> float:
+        best_epoch = max(0, min(int(optimal_epoch), len(metrics) - 1))
+        return float(metrics[best_epoch][lstm_early_stopping_metric_key])
+
     def _train_lstm(sv_value):
         lstm_kwargs = dict(
             look_back_len=look_back_len,
@@ -269,6 +308,7 @@ def main(
             infer_len=infer_len,
             num_hidden_unit=num_hidden_unit,
             device="cpu",
+            num_thread=lstm_num_thread,
             manual_seed=seed,
             smoother=smoother,
             stateless=stateless,
@@ -357,9 +397,10 @@ def main(
             local_lstm_std_per_epoch[epoch] = std_lstm_prior
 
             model.early_stopping(
-                evaluate_metric=validation_crps,
+                evaluate_metric=epoch_metrics[lstm_early_stopping_metric_key],
                 current_epoch=epoch,
                 max_epoch=num_epoch,
+                mode=lstm_early_stopping_mode,
                 skip_epoch=0,
             )
             model.metric_optim = model.early_stop_metric
@@ -408,10 +449,10 @@ def main(
 
             detection_rate, num_false_alarms, _ = skf.detect_synthetic_anomaly(
                 data=train_val,
-                threshold=threshold,
+                threshold=resolved_param["threshold"],
                 max_timestep_to_detect=max_timestep_to_detect,
                 synthetic_data=synthetic_data,
-                n_jobs = 8,
+                n_jobs=skf_tuning_n_jobs,
             )
             data_len_year = (
                 _timestamp_at_exclusive_end(data_processor.validation_end)
@@ -440,16 +481,14 @@ def main(
         trained_model = Model.load_dict(skf_input["model_optim_dict"])
         return _build_skf(trained_model, param)
 
-    ######### sigma_v grid search (CRPS) #########
+    ######### sigma_v grid search #########
     sigma_v_grid_search_result = None
     if experiment_config.get("optimize_sigma_v", False):
-        n_jobs_grid = len(sigma_v_range)
-        available_cpus = os.cpu_count()
-
-        if n_jobs_grid > available_cpus:
-            n_jobs_grid
-            
-        print(f"---- sigma_v grid search over {sigma_v_range} (metric: CRPS) ----")
+        n_jobs_grid = sigma_v_max_concurrent
+        print(
+            "---- sigma_v grid search over "
+            f"{sigma_v_range} (metric: {lstm_early_stopping_metric_label}) ----"
+        )
 
         if n_jobs_grid > 1:
             global _sigma_v_train_fn
@@ -475,26 +514,57 @@ def main(
                 )
 
         for r in grid_results:
+            selected_metric = _selected_validation_metric(r["metrics"], r["optimal_epoch"])
             print(
-                f"  sigma_v={r['sigma_v']:.4f} -> best val_crps={r['validation_crps']:.6f} "
+                f"  sigma_v={r['sigma_v']:.4f} -> "
+                f"best {lstm_early_stopping_metric_key}={selected_metric:.6f} "
                 f"(epoch {r['optimal_epoch']})"
             )
 
-        best_entry = min(grid_results, key=lambda r: r["validation_crps"])
+        selection_delta = float(experiment_config.get("sigma_v_selection_delta", 0.0))
+        scored = [
+            (r, _selected_validation_metric(r["metrics"], r["optimal_epoch"]))
+            for r in grid_results
+        ]
+        global_best_metric = (
+            max(s for _, s in scored)
+            if lstm_early_stopping_mode == "max"
+            else min(s for _, s in scored)
+        )
+        if lstm_early_stopping_mode == "max":
+            tolerated = [(r, s) for r, s in scored if s >= global_best_metric - selection_delta]
+        else:
+            tolerated = [(r, s) for r, s in scored if s <= global_best_metric + selection_delta]
+        best_entry, best_validation_metric = min(tolerated, key=lambda rs: rs[0]["sigma_v"])
         best_sigma_v = best_entry["sigma_v"]
-        best_val_crps = best_entry["validation_crps"]
 
         sigma_v = best_sigma_v
         default_skf_param["sigma_v"] = sigma_v
         sigma_v_grid_search_result = {
+            "selection_metric": lstm_early_stopping_metric,
+            "selection_delta": selection_delta,
             "optimal_sigma_v": float(best_sigma_v),
-            "best_validation_crps": float(best_val_crps),
+            "best_validation_metric": float(best_validation_metric),
+            "global_best_metric": float(global_best_metric),
             "grid_results": [
-                {k: v for k, v in r.items() if k not in ("model_dict", "metrics", "std_per_epoch")}
+                {
+                    **{
+                        k: v
+                        for k, v in r.items()
+                        if k not in ("model_dict", "metrics", "std_per_epoch")
+                    },
+                    "selection_metric_value": _selected_validation_metric(
+                        r["metrics"], r["optimal_epoch"]
+                    ),
+                }
                 for r in grid_results
             ],
         }
-        print(f"---- Optimal sigma_v: {sigma_v:.4f} (val_crps={best_val_crps:.6f}) ----")
+        print(
+            "---- Optimal sigma_v: "
+            f"{sigma_v:.4f} "
+            f"({lstm_early_stopping_metric_key}={best_validation_metric:.6f}) ----"
+        )
 
         model_optim_dict = best_entry["model_dict"]
         lstm_training_metrics = best_entry["metrics"]
@@ -528,6 +598,7 @@ def main(
         abnorm_to_norm_prob_range = experiment_config.get(
             "abnorm_to_norm_prob_search_space", [0.1, 0.2]
         )
+        threshold_range = experiment_config.get("threshold_search_space", [0.05, 0.5])
         param_space = {
 
             "std_transition_error": tune.loguniform(
@@ -543,6 +614,11 @@ def main(
                 float(abnorm_to_norm_prob_range[1]),
                 1e-2,
             ),
+            "threshold":  tune.quniform(
+                float(threshold_range[0]),
+                float(threshold_range[1]),
+                1e-2,
+            )
         }
         if skf_objective_function == "cdf":
             param_space["slope"] = tune.choice(anomaly_magnitudes)
@@ -556,6 +632,7 @@ def main(
             num_optimization_trial=num_optimization_trial,
             mode=optimizer_mode,
             num_startup_trials=num_startup_trials,
+            max_concurrent=1, # hard set
         )
         model_optimizer.optimize()
         # Get best model
@@ -563,6 +640,7 @@ def main(
 
     else:
         param = default_skf_param.copy()
+    threshold = float(param["threshold"])
     skf_optim = model_with_parameters(param, skf_input)
 
     skf_optim_dict = skf_optim.get_dict()
@@ -574,6 +652,7 @@ def main(
         "Validation metrics at optimal epoch: "
         f"epoch={optimal_validation_metrics['epoch']} "
         f"val_ll={optimal_validation_metrics['validation_log_likelihood']:.6f} "
+        f"val_crps={optimal_validation_metrics['validation_crps']:.6f} "
         f"val_rmse={optimal_validation_metrics['validation_rmse']:.6f}"
     )
 
@@ -660,11 +739,11 @@ def main(
         detection_rate, num_false_alarms, time_to_detection = (
             skf_optim.detect_synthetic_anomaly(
                 data=all_data,
-                threshold = threshold,
+                threshold=threshold,
                 max_timestep_to_detect=max_timestep_to_detect,
                 plot_dir=mag_plot_dir,
                 synthetic_data=eval_synthetic_data,
-                n_jobs = 8,
+                n_jobs=skf_eval_n_jobs,
             )
         )
 
