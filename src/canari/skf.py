@@ -219,6 +219,7 @@ class SKF:
 
         # LSTM-related attributes
         self.lstm_net = None
+        self.aux_predict_fn = None
 
         # Early stopping attributes
         self.stop_training = False
@@ -357,6 +358,8 @@ class SKF:
         self.states_name = self.model["norm_norm"].states_name
         if self.model["norm_norm"].lstm_net is not None:
             self.lstm_net = self.model["norm_norm"].lstm_net
+        if self.model["norm_norm"].aux_predict_fn is not None:
+            self.aux_predict_fn = self.model["norm_norm"].aux_predict_fn
 
     def _set_same_states_transition_models(self):
         """
@@ -987,22 +990,29 @@ class SKF:
         mu_states_transit = self._transition()
         var_states_transit = self._transition()
 
-        if self.lstm_net:
+        if self.lstm_net or self.aux_predict_fn:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.model["norm_norm"].lstm_output_history, input_covariates
             )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-            )
-            # Heteroscedastic noise
-            if self.lstm_net.model_noise:
-                mu_v2bar_prior = mu_lstm_pred[1::2]
-                var_v2bar_prior = var_lstm_pred[1::2]
-                mu_lstm_pred = mu_lstm_pred[0::2]
-                var_lstm_pred = var_lstm_pred[0::2]
-                self.model["norm_norm"]._estim_hete_noise(
-                    mu_v2bar_prior, var_v2bar_prior
+            if self.lstm_net:
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
                 )
+                # Heteroscedastic noise
+                if self.lstm_net.model_noise:
+                    mu_v2bar_prior = mu_lstm_pred[1::2]
+                    var_v2bar_prior = var_lstm_pred[1::2]
+                    mu_lstm_pred = mu_lstm_pred[0::2]
+                    var_lstm_pred = var_lstm_pred[0::2]
+                    self.model["norm_norm"]._estim_hete_noise(
+                        mu_v2bar_prior, var_v2bar_prior
+                    )
+            else:
+                mu_lstm_pred, var_lstm_pred = self.aux_predict_fn(
+                    mu_lstm_input, var_lstm_input
+                )
+                mu_lstm_pred = np.atleast_1d(np.asarray(mu_lstm_pred, dtype=float))
+                var_lstm_pred = np.atleast_1d(np.asarray(var_lstm_pred, dtype=float))
 
         else:
             mu_lstm_pred = None
@@ -1252,6 +1262,10 @@ class SKF:
                 )
                 self.model["norm_norm"].update_lstm_states_history(
                     index, last_step=len(data["y"]) - 1
+                )
+            elif self.aux_predict_fn:
+                self.model["norm_norm"].update_lstm_output_history(
+                    mu_states_posterior, var_states_posterior
                 )
 
             self._save_states_history()

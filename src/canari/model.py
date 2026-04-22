@@ -191,6 +191,10 @@ class Model:
         self.lstm_output_history = LstmOutputHistory()
         self.lstm_states_history = []
 
+        # Auxiliary (external one-step predictor) attributes
+        self.aux_predict_fn = None
+        self.aux_look_back_len = None
+
         # Autoregression-related attributes
         self.mu_W2bar = None
         self.var_W2bar = None
@@ -310,6 +314,32 @@ class Model:
         if lstm_component:
             self.lstm_net = lstm_component.initialize_lstm_network()
             self.lstm_output_history.initialize(self.lstm_net.lstm_look_back_len)
+
+        aux_component = next(
+            (
+                component
+                for component in self.components.values()
+                if component.component_name == "auxiliary"
+            ),
+            None,
+        )
+        if aux_component:
+            if lstm_component:
+                raise ValueError(
+                    "LstmNetwork and Auxiliary components cannot be used together."
+                )
+            self.aux_predict_fn = aux_component.predict_fn
+            self.aux_look_back_len = aux_component.look_back_len
+            self.lstm_output_history.initialize(self.aux_look_back_len)
+
+    def _predictor_states_index(self) -> Optional[int]:
+        """Return the state index of the external-predictor slot
+        (LstmNetwork's "lstm" or Auxiliary's "auxiliary"), or None."""
+        if "lstm" in self.states_name:
+            return self.get_states_index("lstm")
+        if "auxiliary" in self.states_name:
+            return self.get_states_index("auxiliary")
+        return None
 
     def _initialize_autoregression(self):
         """
@@ -1089,7 +1119,7 @@ class Model:
             var_states (np.ndarray): variance value to be updated to LSTM output history.
         """
 
-        lstm_index = self.get_states_index("lstm")
+        lstm_index = self._predictor_states_index()
         self.lstm_output_history.update(
             mu_states[lstm_index],
             var_states[lstm_index, lstm_index],
@@ -1201,11 +1231,11 @@ class Model:
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 1e-6
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-5
+                    self.var_states[i, i] = 1e-6
 
         self._mu_local_level = trend[0]
 
@@ -1407,9 +1437,9 @@ class Model:
 
         """
 
-        # LSTM prediction:
-        lstm_states_index = self.get_states_index("lstm")
-        if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
+        # External predictor prediction (LSTM or Auxiliary):
+        lstm_states_index = self._predictor_states_index()
+        if (self.lstm_net or self.aux_predict_fn) and mu_lstm_pred is None and var_lstm_pred is None:
             if var_input_covariates is not None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates, var_input_covariates
@@ -1418,17 +1448,25 @@ class Model:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates
                 )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
-                mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
-            )
 
-            # Heteroscedastic noise
-            if self.lstm_net.model_noise:
-                mu_v2bar_prior = mu_lstm_pred[1::2]
-                var_v2bar_prior = var_lstm_pred[1::2]
-                mu_lstm_pred = mu_lstm_pred[0::2]
-                var_lstm_pred = var_lstm_pred[0::2]
-                self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
+            if self.lstm_net:
+                mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+                    mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
+                )
+
+                # Heteroscedastic noise
+                if self.lstm_net.model_noise:
+                    mu_v2bar_prior = mu_lstm_pred[1::2]
+                    var_v2bar_prior = var_lstm_pred[1::2]
+                    mu_lstm_pred = mu_lstm_pred[0::2]
+                    var_lstm_pred = var_lstm_pred[0::2]
+                    self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
+            else:
+                mu_lstm_pred, var_lstm_pred = self.aux_predict_fn(
+                    mu_lstm_input, var_lstm_input
+                )
+                mu_lstm_pred = np.atleast_1d(np.asarray(mu_lstm_pred, dtype=float))
+                var_lstm_pred = np.atleast_1d(np.asarray(var_lstm_pred, dtype=float))
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1671,6 +1709,8 @@ class Model:
             if self.lstm_net:
                 self.update_lstm_states_history(index, last_step=len(data["y"]) - 1)
                 self.update_lstm_output_history(mu_states_prior, var_states_prior)
+            elif self.aux_predict_fn:
+                self.update_lstm_output_history(mu_states_prior, var_states_prior)
 
             # Store variables
             self._set_posterior_states(mu_states_prior, var_states_prior)
@@ -1752,6 +1792,10 @@ class Model:
 
                 if train_lstm:
                     self.update_lstm_param(delta_mu_states, delta_var_states)
+                self.update_lstm_output_history(
+                    mu_states_posterior, var_states_posterior
+                )
+            elif self.aux_predict_fn:
                 self.update_lstm_output_history(
                     mu_states_posterior, var_states_posterior
                 )

@@ -174,7 +174,7 @@ class ModelAssemble:
             ) = self.forward(x, posterior_covariate, update_param_covar_model)
 
             for model in [self.target_model] + self.covariate_model:
-                if model.lstm_net:
+                if model.lstm_net or model.aux_predict_fn:
                     model.update_lstm_output_history(
                         model.mu_states_prior, model.var_states_prior
                     )
@@ -234,6 +234,10 @@ class ModelAssemble:
                     model.update_lstm_states_history(
                         index, last_step=len(data["y"]) - 1
                     )
+                    model.update_lstm_output_history(
+                        model.mu_states_posterior, model.var_states_posterior
+                    )
+                elif model.aux_predict_fn:
                     model.update_lstm_output_history(
                         model.mu_states_posterior, model.var_states_posterior
                     )
