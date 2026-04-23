@@ -1009,21 +1009,17 @@ class SKF:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.model["norm_norm"].lstm_output_history, input_covariates
             )
-            # --- Detrend mu_lstm_input using Prophet ---
-            prophet_df = pd.DataFrame({
-                "ds": self.model["norm_norm"].lstm_output_history.time,
-                "y":  mu_lstm_input
-            })
 
-            nan_idx= np.where(prophet_df["y"].isna())[0]
-            prophet_df["y"] = prophet_df["y"].interpolate()
-
-            prophet_model = Prophet()
-            prophet_model.fit(prophet_df)
-
-            trend = prophet_model.predict(prophet_df[["ds"]])["trend"].values
-            mu_lstm_input = mu_lstm_input - trend
-            # mu_lstm_input[nan_idx] = np.nan
+            # # --- Detrend mu_lstm_input using Prophet ---
+            # prophet_df = pd.DataFrame({
+            #     "ds": self.model["norm_norm"].lstm_output_history.time,
+            #     "y":  mu_lstm_input
+            # })
+            # prophet_df["y"] = prophet_df["y"].interpolate()
+            # prophet_model = Prophet()
+            # prophet_model.fit(prophet_df)
+            # trend = prophet_model.predict(prophet_df[["ds"]])["trend"].values
+            # mu_lstm_input = mu_lstm_input - trend
 
             context_df = pd.DataFrame({
                 "id":        ["series_0"] * len(mu_lstm_input),
@@ -1292,16 +1288,17 @@ class SKF:
 
             if "chronos" in self.states_name:
                 chronos_index = self.model["norm_norm"].get_states_index("chronos")
-                # self.model["norm_norm"].lstm_output_history.update(
-                #     mu_states_posterior[chronos_index],
-                #     var_states_posterior[chronos_index, chronos_index],
-                # )
                 self.model["norm_norm"].lstm_output_history.update(
-                    y,
+                    mu_states_posterior[chronos_index],
                     var_states_posterior[chronos_index, chronos_index],
                 )
-                self.model["norm_norm"].lstm_output_history.time = np.roll(self.model["norm_norm"].lstm_output_history.time, -1)
-                self.model["norm_norm"].lstm_output_history.time[-1] = time
+
+                # self.model["norm_norm"].lstm_output_history.update(
+                #     y,
+                #     var_states_posterior[chronos_index, chronos_index],
+                # )
+                # self.model["norm_norm"].lstm_output_history.time = np.roll(self.model["norm_norm"].lstm_output_history.time, -1)
+                # self.model["norm_norm"].lstm_output_history.time[-1] = time
 
                 # self.model["norm_norm"].lstm_output_history.mu = np.concatenate([self.model["norm_norm"].lstm_output_history.mu, mu_states_posterior[chronos_index]])
                 # self.model["norm_norm"].lstm_output_history.var = np.concatenate([self.model["norm_norm"].lstm_output_history.var, np.array([var_states_posterior[chronos_index, chronos_index]])])

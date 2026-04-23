@@ -41,8 +41,8 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.01
-context_len = 36
+sigma_v = 0.1
+context_len = 40
 model = Model(
     LocalTrend(),
     Chronos(

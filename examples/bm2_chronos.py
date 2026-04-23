@@ -1,8 +1,4 @@
-import copy
 import pandas as pd
-from pytagi import Normalizer as normalizer
-import numpy as np
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 from canari import (
     DataProcess,
@@ -14,6 +10,8 @@ from canari import (
 )
 from canari.component import LocalTrend, LocalAcceleration, Chronos, WhiteNoise
 import json
+from prophet import Prophet
+import numpy as np
 
 # # Read data
 with open("examples/benchmark/BM_metadata.json", "r") as f:
@@ -38,16 +36,17 @@ df.index.name = "date_time"
 output_col = config["output_col"]
 data_processor = DataProcess(
     data=df,
-    train_split=0.15,
-    validation_split=0.85,
+    train_split=0.3,
+    validation_split=0.7,
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
 # Components
 sigma_v = 0.12
-context_len = 80
-local_trend = LocalTrend(var_states=[1e-3,1e-7])
+context_len = 200
+# local_trend = LocalTrend(var_states=[1e-3, 1e-7])
+local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 chronos = Chronos(
         look_back_len=context_len,
@@ -68,16 +67,27 @@ ab_model = Model(
     noise,
 )
 
-model.lstm_output_history.mu = train_data["y"][-context_len:].flatten()
+# --- Detrend mu_lstm_input using Prophet ---
+prophet_df = pd.DataFrame({
+    "ds": np.array(train_data["time"]).flatten(),
+    "y":  np.array(train_data["y"]).flatten()
+})
+prophet_df["y"] = prophet_df["y"].interpolate()
+prophet_model = Prophet()
+prophet_model.fit(prophet_df)
+trend = prophet_model.predict(prophet_df[["ds"]])["trend"].values
+context = prophet_df["y"] - trend
+
+model.lstm_output_history.mu = np.array(context)[-context_len:].flatten()
 model.lstm_output_history.time = train_data["time"][-context_len:]
 
 # Switching Kalman filter
 skf = SKF(
     norm_model=model,
     abnorm_model=ab_model,
-    std_transition_error=1e-5,
+    std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-5,
-    abnorm_to_norm_prob=0.1,
+    abnorm_to_norm_prob=0.2,
 )
 skf.auto_initialize_baseline_states(validation_data["y"][0:52])
 
@@ -92,7 +102,7 @@ marginal_abnorm_prob_plot = filter_marginal_abnorm_prob
 fig, ax = plot_skf_states(
     data_processor=data_processor,
     states=states,
-    # states_type="prior",
+    states_type="prior",
     model_prob=marginal_abnorm_prob_plot,
     standardization=True,
     color="b",

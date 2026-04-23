@@ -62,15 +62,15 @@ context_df = pd.DataFrame({
 pred_df = pipeline.predict_df(
     context_df,
     prediction_length=prediction_length,
-    quantile_levels=[0.1, 0.5, 0.9],
+    quantile_levels=[0.25, 0.5, 0.75],
     id_column="id",
     timestamp_column="timestamp",
     target="target",
 )
 
 forecast_median = pred_df["0.5"].values
-forecast_lower  = pred_df["0.1"].values
-forecast_upper  = pred_df["0.9"].values
+forecast_lower  = pred_df["0.25"].values
+forecast_upper  = pred_df["0.75"].values
 
 # --- Plot ---
 plt.figure(figsize=(12, 5))
@@ -83,7 +83,7 @@ plt.fill_between(
     forecast_upper,
     alpha=0.3,
     color="tomato",
-    label="Chronos-2 10–90% interval",
+    label="Chronos-2 25–75% interval",
 )
 plt.xlabel("Time")
 plt.ylabel("Values")
