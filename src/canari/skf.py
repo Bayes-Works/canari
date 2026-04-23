@@ -14,6 +14,7 @@ On time series data, this model can:
 from typing import Tuple, Dict, List, Optional
 import copy
 import numpy as np
+import pandas as pd
 from pytagi import metric
 from scipy.stats import norm, lognorm
 from canari.model import Model
@@ -700,6 +701,10 @@ class SKF:
         """
 
         self.model["norm_norm"].auto_initialize_baseline_states(y)
+
+    def auto_initialize_comp(self,data_training: pd.DataFrame, ratio_training:float):
+
+        self.model["norm_norm"].auto_initialize_comp(data_training, ratio_training)
 
     def save_initial_states(self):
         """

@@ -90,6 +90,27 @@ class Autoregression(BaseComponent):
             self._states_name.append("W2")  # Square of the process error
             self._states_name.append("W2bar")  # Expected value of W2
 
+
+    def initialize_mu_states(self):
+        if self._mu_states is None:
+            self._mu_states = np.zeros((self._num_states, 1))
+        elif len(self._mu_states) == self._num_states:
+            self._mu_states = np.atleast_2d(self._mu_states).T
+        else:
+            raise ValueError(
+                "Incorrect mu_states dimension for the autoregression component."
+            )
+
+    def initialize_var_states(self):
+        if self._var_states is None:
+            self._var_states = np.zeros((self._num_states, 1))
+        elif len(self._var_states) == self._num_states:
+            self._var_states = np.atleast_2d(self._var_states).T
+        else:
+            raise ValueError(
+                "Incorrect var_states dimension for the autoregression component."
+            )
+
     def initialize_transition_matrix(self):
         if self.phi is None:
             self._transition_matrix = np.array([[0, 0, 1], [0, 1, 0], [0, 0, 0]])
@@ -118,7 +139,7 @@ class Autoregression(BaseComponent):
         if self.std_error is not None:
             self._process_noise_matrix = np.array([[self.std_error**2]])
         else:
-            self._process_noise_matrix = np.array([[self._mu_states[-1]]])
+            self._process_noise_matrix = np.array([[self._mu_states[-1, -1]]])
         if self.phi is None:
             self._process_noise_matrix = np.block(
                 [[self._process_noise_matrix, np.zeros((1, 2))], [np.zeros((2, 3))]]
@@ -129,24 +150,4 @@ class Autoregression(BaseComponent):
                     [self._process_noise_matrix, np.zeros((self._num_states - 3, 3))],
                     [np.zeros((3, self._num_states))],
                 ]
-            )
-
-    def initialize_mu_states(self):
-        if self._mu_states is None:
-            self._mu_states = np.zeros((self._num_states, 1))
-        elif len(self._mu_states) == self._num_states:
-            self._mu_states = np.atleast_2d(self._mu_states).T
-        else:
-            raise ValueError(
-                "Incorrect mu_states dimension for the autoregression component."
-            )
-
-    def initialize_var_states(self):
-        if self._var_states is None:
-            self._var_states = np.zeros((self._num_states, 1))
-        elif len(self._var_states) == self._num_states:
-            self._var_states = np.atleast_2d(self._var_states).T
-        else:
-            raise ValueError(
-                "Incorrect var_states dimension for the autoregression component."
             )

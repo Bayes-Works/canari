@@ -303,7 +303,7 @@ class DataProcess:
                 {
                     "x": data[self.train_start : self.test_end, self.covariates_col],
                     "y": data[self.train_start : self.test_end, self.output_col],
-                    "time": time,
+                    "time": time[self.train_start : self.test_end],
                     "start_date": self.data.index[self.train_start],
                     "covariates_col": self.covariates_col,
                     "data_col_names": self.data.columns.tolist(),
