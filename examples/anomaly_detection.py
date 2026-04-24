@@ -162,9 +162,7 @@ fig, ax = plot_skf_states(
     states=states,
     states_type="smooth",
     model_prob=marginal_abnorm_prob_plot,
-    # standardization=True,
-    color="b",
-    legend_location="upper left",
+    standardization=True,
 )
 fig.suptitle("SKF hidden states", fontsize=10, y=1)
 plt.show()

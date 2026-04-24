@@ -46,7 +46,6 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 # Components
 sigma_v = 0.08
 context_len = 200
-local_trend = LocalTrend(var_states=[1e-3, 1e-7])
 local_trend = LocalTrend()
 local_acceleration = LocalAcceleration()
 chronos = Chronos(
@@ -88,7 +87,7 @@ skf = SKF(
     abnorm_model=ab_model,
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-5,
-    abnorm_to_norm_prob=0.2,
+    abnorm_to_norm_prob=0.3,
 )
 skf.auto_initialize_baseline_states(validation_data["y"][0:52])
 

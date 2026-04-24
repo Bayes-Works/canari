@@ -1001,15 +1001,15 @@ class Model:
                 self.lstm_output_history, dummy_covariates
             )
 
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+            mu_recur, var_recur = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input),
                 var_x=np.float32(var_lstm_input),
             )
 
             # Heteroscedastic noise
             if self.lstm_net.model_noise:
-                mu_lstm_pred = mu_lstm_pred[0::2]
-                var_lstm_pred = var_lstm_pred[0::2]
+                mu_recur = mu_recur[0::2]
+                var_recur = var_recur[0::2]
                 dummy_mu_obs = np.array([np.nan, np.nan], dtype=np.float32)
                 dummy_var_obs = np.array([0, 0], dtype=np.float32)
 
@@ -1023,7 +1023,7 @@ class Model:
             self.lstm_net.backward()
             self.lstm_net.step()
 
-            self.lstm_output_history.update(mu_lstm_pred, var_lstm_pred)
+            self.lstm_output_history.update(mu_recur, var_recur)
 
     def _generate_look_back_covariates(self, train_data):
         """
@@ -1399,8 +1399,9 @@ class Model:
         self,
         input_covariates: Optional[np.ndarray] = None,
         var_input_covariates: Optional[np.ndarray] = None,
-        mu_lstm_pred: Optional[np.ndarray] = None,
-        var_lstm_pred: Optional[np.ndarray] = None,
+        mu_recur: Optional[np.ndarray] = None,
+        var_recur: Optional[np.ndarray] = None,
+        recurrent_states_index: Optional[int] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Make a one-step-ahead prediction using the prediction step of the Kalman filter.
@@ -1411,9 +1412,9 @@ class Model:
 
         Args:
             input_covariates (Optional[np.ndarray]): Input covariates for LSTM at time `t`.
-            mu_lstm_pred (Optional[np.ndarray]): Predicted mean from LSTM at time `t+1`, used when
+            mu_recur (Optional[np.ndarray]): Predicted mean from LSTM at time `t+1`, used when
                 we dont want LSTM to make predictions, but use LSTM predictions already have.
-            var_lstm_pred (Optional[np.ndarray]): Predicted variance from LSTM at time `t+1`, used
+            var_recur (Optional[np.ndarray]): Predicted variance from LSTM at time `t+1`, used
                 when we dont want LSTM to make predictions, but use LSTM predictions already have.
 
         Returns:
@@ -1432,8 +1433,9 @@ class Model:
         """
 
         # LSTM prediction:
-        lstm_states_index = self.get_states_index("lstm")
-        if self.lstm_net and mu_lstm_pred is None and var_lstm_pred is None:
+
+        if self.lstm_net and mu_recur is None and var_recur is None:
+            lstm_states_index = self.get_states_index("lstm")
             if var_input_covariates is not None:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates, var_input_covariates
@@ -1442,34 +1444,38 @@ class Model:
                 mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates
                 )
-            mu_lstm_pred, var_lstm_pred = self.lstm_net.forward(
+            mu_recur, var_recur = self.lstm_net.forward(
                 mu_x=np.float32(mu_lstm_input), var_x=np.float32(var_lstm_input)
             )
 
             # Heteroscedastic noise
             if self.lstm_net.model_noise:
-                mu_v2bar_prior = mu_lstm_pred[1::2]
-                var_v2bar_prior = var_lstm_pred[1::2]
-                mu_lstm_pred = mu_lstm_pred[0::2]
-                var_lstm_pred = var_lstm_pred[0::2]
+                mu_v2bar_prior = mu_recur[1::2]
+                var_v2bar_prior = var_recur[1::2]
+                mu_recur = mu_recur[0::2]
+                var_recur = var_recur[0::2]
                 self._estim_hete_noise(mu_v2bar_prior, var_v2bar_prior)
+            
+            mu_recur = mu_recur
+            var_recur = var_recur
+            recurrent_states_index = lstm_states_index
 
         # Chronos prediction
-        lstm_states_index = self.get_states_index("chronos")
-        if mu_lstm_pred is None and var_lstm_pred is None:
+        if mu_recur is None and var_recur is None:
+            chronos_states_index = self.get_states_index("chronos")
             if var_input_covariates is not None:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                mu_recur_input, var_recur_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates, var_input_covariates
                 )
             else:
-                mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
+                mu_recur_input, var_recur_input = common.prepare_lstm_input(
                     self.lstm_output_history, input_covariates
                 )
 
             context_df = pd.DataFrame({
-                "id":        ["series_0"] * len(mu_lstm_input),
+                "id":        ["series_0"] * len(mu_recur_input),
                 "timestamp": self.lstm_output_history.time,
-                "target":    mu_lstm_input,
+                "target":    mu_recur_input,
             })
             pred = self.pipeline.predict_df(
                     context_df,
@@ -1479,8 +1485,9 @@ class Model:
                     timestamp_column="timestamp",
                     target="target",
             )
-            mu_lstm_pred = pred["0.5"].values
-            var_lstm_pred = ((pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745))**2
+            mu_recur = pred["0.5"].values
+            var_recur = ((pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745))**2
+            recurrent_states_index = chronos_states_index
 
         # State-space model prediction:
         mu_obs_pred, var_obs_pred, mu_states_prior, var_states_prior = common.forward(
@@ -1489,9 +1496,9 @@ class Model:
             self.transition_matrix,
             self.process_noise_matrix,
             self.observation_matrix,
-            mu_lstm_pred,
-            var_lstm_pred,
-            lstm_states_index,
+            mu_recur,
+            var_recur,
+            recurrent_states_index,
         )
 
         if "exp" in self.states_name:
@@ -1876,6 +1883,8 @@ class Model:
 
         if self.lstm_net and self.lstm_net.smooth and self.lstm_net.num_samples > 1:
             mu_zo_smooth, var_zo_smooth = self.lstm_net.smoother()
+            mu_zo_smooth = mu_zo_smooth.flatten()
+            var_zo_smooth = var_zo_smooth.flatten()
             mu_sequence = mu_zo_smooth[: self.lstm_net.lstm_infer_len]
             var_sequence = var_zo_smooth[: self.lstm_net.lstm_infer_len]
             mu_sequence = mu_sequence[-self.lstm_net.lstm_look_back_len :]
@@ -1895,7 +1904,7 @@ class Model:
         train_data: Dict[str, np.ndarray],
         validation_data: Dict[str, np.ndarray],
         white_noise_decay: Optional[bool] = True,
-        white_noise_max_std: Optional[float] = 5,
+        white_noise_max_std: Optional[float] = 2,
         white_noise_decay_factor: Optional[float] = 0.9,
         intervention: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:

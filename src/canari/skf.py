@@ -988,6 +988,9 @@ class SKF:
         var_pred_transit = self._transition()
         mu_states_transit = self._transition()
         var_states_transit = self._transition()
+        mu_recur = None
+        var_recur = None
+        recurrent_states_index = None
 
         if self.lstm_net:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
@@ -1005,6 +1008,11 @@ class SKF:
                 self.model["norm_norm"]._estim_hete_noise(
                     mu_v2bar_prior, var_v2bar_prior
                 )
+
+            mu_recur = mu_lstm_pred
+            var_recur = var_lstm_pred
+            recurrent_states_index = self.model["norm_norm"].get_states_index("lstm")
+
         if "chronos" in self.states_name:
             mu_lstm_input, var_lstm_input = common.prepare_lstm_input(
                 self.model["norm_norm"].lstm_output_history, input_covariates
@@ -1034,11 +1042,12 @@ class SKF:
                     timestamp_column="timestamp",
                     target="target",
             )
-            mu_lstm_pred = pred["0.5"].values
-            var_lstm_pred = ((pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745))**2
-        else:
-            mu_lstm_pred = None
-            var_lstm_pred = None
+            mu_recur = pred["0.5"].values
+            std_recur = (pred["0.75"].values - pred["0.25"].values) / (2 * 0.6745)
+            var_recur = (std_recur)**2
+            # var_recur = (std_recur/10)**2
+            # var_recur = np.array(1e-10)
+            recurrent_states_index = self.model["norm_norm"].get_states_index("chronos")
 
         for transit, transition_model in self.model.items():
             (
@@ -1047,7 +1056,8 @@ class SKF:
                 mu_states_transit[transit],
                 var_states_transit[transit],
             ) = transition_model.forward(
-                mu_lstm_pred=mu_lstm_pred, var_lstm_pred=var_lstm_pred
+                mu_recur=mu_recur, var_recur=var_recur,
+                recurrent_states_index = recurrent_states_index
             )
 
         self.transition_coef = self._estimate_transition_coef(
