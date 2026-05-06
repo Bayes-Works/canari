@@ -286,10 +286,10 @@ model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 model_dict['gen_phi_ar'] = ar_model.states.get_mean(states_type="prior", states_name="phi")[-1]
 model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
-# Save model_dict to local
-import pickle
-with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "wb") as f:
-    pickle.dump(model_dict, f)
+# # Save model_dict to local
+# import pickle
+# with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "wb") as f:
+#     pickle.dump(model_dict, f)
 
 ####################################################################
 ######################### Pretrained model #########################

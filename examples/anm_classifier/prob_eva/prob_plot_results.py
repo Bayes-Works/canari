@@ -33,7 +33,7 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 # Input
 first_anm_type = 'lt'
-second_anm_type = 'll'
+second_anm_type = 'lt'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
@@ -102,7 +102,7 @@ ax[0].fill_between(
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
-# ax[0].set_xscale('log')
+ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 
@@ -113,7 +113,7 @@ ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
-# ax[1].set_xscale('log')
+ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 ax[1].legend(loc='lower right', fontsize=6)
 
