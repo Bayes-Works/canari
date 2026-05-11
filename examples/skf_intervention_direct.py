@@ -50,6 +50,7 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
+df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
 
 # Components
 sigma_v = 5e-2
@@ -87,7 +88,8 @@ skf = SKF(
     std_transition_error=0.001600240379892559,
     norm_to_abnorm_prob=1.4628808810167713e-06,
 )
-skf.auto_initialize_baseline_states(train_data["y"][0:24])
+# skf.auto_initialize_baseline_states(train_data["y"][0:24])
+skf.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
 
 intervention = {
     all_data["time"][index_intervention]: {

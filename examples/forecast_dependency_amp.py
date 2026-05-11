@@ -34,6 +34,7 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
+df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
 
 # Plot data
 fig, axs = plt.subplots(2, 1, figsize=(10, 6))
@@ -68,7 +69,8 @@ model_target = Model(
     ),
     WhiteNoise(std_error=1e-1),
 )
-model_target.auto_initialize_baseline_states(train_data["y"][0:24])
+# model_target.auto_initialize_baseline_states(train_data["y"][0:24])
+model_target.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
 
 # Dependent model
 model_covar = Model(

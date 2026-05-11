@@ -61,6 +61,7 @@ data_processor_detrend = DataProcess(
     output_col=output_col,
 )
 train_data, validation_data, _, _ = data_processor_detrend.get_splits()
+df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
 
 data_processor = DataProcess(
     data=df_raw,
@@ -71,7 +72,8 @@ data_processor = DataProcess(
     scale_const_mean=data_processor_detrend.scale_const_mean,
     scale_const_std=data_processor_detrend.scale_const_std,
 )
-_, _, _, all_data = data_processor.get_splits()
+train_data2, _, _, all_data = data_processor.get_splits()
+df_train2=pd.DataFrame(index=train_data2["time"], data={'y':train_data2["y"].flatten()})
 
 # Components
 sigma_v = 3e-2
@@ -94,7 +96,8 @@ model = Model(
     lstm_network,
     noise,
 )
-model.auto_initialize_baseline_states(train_data["y"][0:23])
+# model.auto_initialize_baseline_states(train_data["y"][0:23])
+model.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
 
 
 #  Training
@@ -156,7 +159,8 @@ skf = SKF(
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
 )
-skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
+# skf.auto_initialize_baseline_states(all_data["y"][0 : 24 * 2])
+skf.auto_initialize_comp(data_training=df_train2,ratio_training=0.8)
 
 # # Anomaly Detection
 filter_marginal_abnorm_prob, states = skf.filter(data=all_data)

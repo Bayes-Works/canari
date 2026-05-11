@@ -51,7 +51,7 @@ def main(
         output_col=output_col,
     )
     train_data, validation_data, test_data, all_data = data_processor.get_splits()
-
+    df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
     ######### Define model with parameters #########
     def model_with_parameters(param):
         model = Model(
@@ -69,7 +69,8 @@ def main(
             WhiteNoise(std_error=param["sigma_v"]),
         )
 
-        model.auto_initialize_baseline_states(train_data["y"][0:24])
+        # model.auto_initialize_baseline_states(train_data["y"][0:24])
+        model.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
         num_epoch = 50
         for epoch in range(num_epoch):
             mu_validation_preds, std_validation_preds, states = model.lstm_train(

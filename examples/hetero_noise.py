@@ -28,6 +28,7 @@ data_processor = DataProcess(
 )
 
 train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
+df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
 
 # Model
 model = Model(
@@ -44,7 +45,8 @@ model = Model(
         smoother=False,
     ),
 )
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+# model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
 
 
 # Training

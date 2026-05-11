@@ -38,6 +38,7 @@ data_processor = DataProcess(
 
 # split data
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
+df_train=pd.DataFrame(index=train_data["time"], data={'y':train_data["y"].flatten()})
 
 # Model
 sigma_v = 0.003
@@ -55,7 +56,8 @@ model = Model(
     WhiteNoise(std_error=sigma_v),
 )
 
-model.auto_initialize_baseline_states(train_data["y"][0:24])
+# model.auto_initialize_baseline_states(train_data["y"][0:24])
+model.auto_initialize_comp(data_training=df_train,ratio_training=0.8)
 
 # Training
 for epoch in range(num_epoch):

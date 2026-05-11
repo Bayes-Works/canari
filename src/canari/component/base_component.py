@@ -34,11 +34,12 @@ class BaseComponent(ABC):
         self.initialize_component_name()
         self.initialize_num_states()
         self.initialize_states_name()
+        self.initialize_mu_states()
+        self.initialize_var_states()
         self.initialize_transition_matrix()
         self.initialize_observation_matrix()
         self.initialize_process_noise_matrix()
-        self.initialize_mu_states()
-        self.initialize_var_states()
+
 
     @property
     def component_name(self):
