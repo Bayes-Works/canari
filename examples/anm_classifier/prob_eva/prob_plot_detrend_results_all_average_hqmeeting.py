@@ -166,12 +166,13 @@ print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
 fig, ax = plt.subplots(2, 1, figsize=(3, 2.5), constrained_layout=True)
 
 # Plot for detection_time
-ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSI}")
+ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSI}", color="tab:red")
 ax[0].fill_between(
     df_rsic_group.index,
     df_rsic_group["detection_time"]["mean"] - df_rsic_group["detection_time"]["std"],
     df_rsic_group["detection_time"]["mean"] + df_rsic_group["detection_time"]["std"],
     alpha=0.2,
+    color="tab:red",
 )
 # ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label=r"\textbf{RSI}")
 # ax[0].fill_between(
@@ -180,12 +181,13 @@ ax[0].fill_between(
 #     df_rsi_group["detection_time"]["mean"] + df_rsi_group["detection_time"]["std"],
 #     alpha=0.2,
 # )
-ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"\textbf{SKF}")
+ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"\textbf{SKF}", color="tab:green")
 ax[0].fill_between(
     df_skf_group.index,
     df_skf_group["detection_time"]["mean"] - df_skf_group["detection_time"]["std"],
     df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
     alpha=0.2,
+    color="tab:green",
 )
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
@@ -195,9 +197,9 @@ ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 
 # Plot for detection_rate
-ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
+ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSI}", color="tab:red")
 # ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
-ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}")
+ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}", color="tab:green")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])

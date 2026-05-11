@@ -33,7 +33,7 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
 # Input
 first_anm_type = 'lt'
-second_anm_type = 'lt'
+second_anm_type = 'll'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
@@ -73,6 +73,36 @@ false_alarm_rate_skf, df_skf_group = _process_detection_df_skf(
 )
 print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
 
+print('######################### Prophet #########################')
+false_alarm_rate_prophet, df_prophet_group = _process_detection_df_skf(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + ".csv",
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for Prophet: ", false_alarm_rate_prophet, "per 10 years")
+
+print('######################### LSTMED #########################')
+false_alarm_rate_lstmed, df_lstmed_group = _process_detection_df_skf(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_lstmed_" + first_anm_type + "to" + second_anm_type + ".csv",
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for LSTMED: ", false_alarm_rate_lstmed, "per 10 years")
+
+print('######################### TranAD #########################')
+false_alarm_rate_tranad, df_tranad_group = _process_detection_df_skf(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_tranad_" + first_anm_type + "to" + second_anm_type + ".csv",
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for TranAD: ", false_alarm_rate_tranad, "per 10 years")
+
 # Plot the mean and std of df_rsic["mse_LL"], df_rsic["mse_LT"], and df_rsic["detection_time"] for each anomaly magnitude
 # fig, ax = plt.subplots(2, 1, figsize=(6, 2.5), constrained_layout=True)
 fig, ax = plt.subplots(2, 1, figsize=(3, 2.5), constrained_layout=True)
@@ -99,6 +129,27 @@ ax[0].fill_between(
     df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
     alpha=0.2,
 )
+ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"\textbf{Prophet}")
+ax[0].fill_between(
+    df_prophet_group.index,
+    df_prophet_group["detection_time"]["mean"] - df_prophet_group["detection_time"]["std"],
+    df_prophet_group["detection_time"]["mean"] + df_prophet_group["detection_time"]["std"],
+    alpha=0.2,
+)
+ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"\textbf{LSTMED}")
+ax[0].fill_between(
+    df_lstmed_group.index,
+    df_lstmed_group["detection_time"]["mean"] - df_lstmed_group["detection_time"]["std"],
+    df_lstmed_group["detection_time"]["mean"] + df_lstmed_group["detection_time"]["std"],
+    alpha=0.2,
+)
+ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"\textbf{TranAD}")
+ax[0].fill_between(
+    df_tranad_group.index,
+    df_tranad_group["detection_time"]["mean"] - df_tranad_group["detection_time"]["std"],
+    df_tranad_group["detection_time"]["mean"] + df_tranad_group["detection_time"]["std"],
+    alpha=0.2,
+)
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
@@ -110,12 +161,15 @@ ax[0].set_xticklabels([])
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}")
 ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
 ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}")
+ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], label=r"\textbf{Prophet}")
+ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}")
+ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
 ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-ax[1].legend(loc='lower right', fontsize=6)
+# ax[1].legend(loc='lower left', fontsize=6, ncol=1)
 
 ax[1].set_xlabel("Anomaly Magnitude (unit/$y$)")
 
@@ -142,6 +196,15 @@ red_points_skf, gray_points_skf, blue_points_skf, orange_points_skf = _get_color
     test_ts_len=test_ts_len,
     csv_path="saved_results/prob_eva/syn_simple_ts_results_skf_" + first_anm_type + "to" + second_anm_type + ".csv",
     SKF=True)
+red_points_prophet, gray_points_prophet, blue_points_prophet, orange_points_prophet = _get_color_points(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + ".csv")
+red_points_lstmed, gray_points_lstmed, blue_points_lstmed, orange_points_lstmed = _get_color_points(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_lstmed_" + first_anm_type + "to" + second_anm_type + ".csv")
+red_points_tranad, gray_points_tranad, blue_points_tranad, orange_points_tranad = _get_color_points(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_tranad_" + first_anm_type + "to" + second_anm_type + ".csv")
 
 # --- Build the figure with 2 horizontal bar subplots ---
 solo_categories = [
@@ -171,12 +234,26 @@ combined_categories_skf = [
     ("LL Intervention", blue_points_skf,   "tab:blue"),
     ("LT Intervention", orange_points_skf, "tab:orange"),
 ]
-
+combined_categories_prophet = [
+    ("Detected",        gray_points_prophet,   "gray"),
+    ("LL Intervention", blue_points_prophet,   "tab:blue"),
+    ("LT Intervention", orange_points_prophet, "tab:orange"),
+]
+combined_categories_lstmed = [
+    ("Detected",        gray_points_lstmed,   "gray"),
+    ("LL Intervention", blue_points_lstmed,   "tab:blue"),
+    ("LT Intervention", orange_points_lstmed, "tab:orange"),
+]
+combined_categories_tranad = [
+    ("Detected",        gray_points_tranad,   "gray"),
+    ("LL Intervention", blue_points_tranad,   "tab:blue"),
+    ("LT Intervention", orange_points_tranad, "tab:orange"),
+]
 fig, axes = plt.subplots(
-    4, 1,
+    7, 1,
     figsize=(8, 4),
     sharex=True,
-    gridspec_kw={"hspace": 0.3, "height_ratios": [1, 1, 1, 1]}
+    gridspec_kw={"hspace": 0.3, "height_ratios": [1, 1, 1, 1, 1, 1, 1]}
 )
 
 # Determine x range
@@ -192,6 +269,9 @@ grey_count_max = 0
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_rsic_collapse], bins=x_bins)[0]))
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_rsi], bins=x_bins)[0]))
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_skf], bins=x_bins)[0]))
+grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_prophet], bins=x_bins)[0]))
+grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_lstmed], bins=x_bins)[0]))
+grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_tranad], bins=x_bins)[0]))
 
 # --- Subplot 0: Red only ---
 ax = axes[0]
@@ -264,6 +344,66 @@ for i, (label, points, color) in enumerate(combined_categories_skf):
     combined_label_parts.append(label)
 ax.set_yticks([])
 ax.set_ylabel("SKF")
+ax.set_xlim(0, test_ts_len)
+ax.spines[["top", "right", "left"]].set_visible(False)
+
+# --- Subplot 4: Gray + Blue + Orange combined ---
+ax = axes[4]
+combined_label_parts = []
+for i, (label, points, color) in enumerate(combined_categories_prophet):
+    if not points:
+        continue
+    times = np.array([p[0] for p in points])
+    counts, edges = np.histogram(times, bins=x_bins)
+    norm_counts = counts / grey_count_max
+    # norm_counts = counts / counts.max() if counts.max() > 0 else counts
+    for val, left in zip(norm_counts, edges[:-1]):
+        if val > 0:
+            ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                        color=color, alpha=float(val) * 0.5)
+    combined_label_parts.append(label)
+ax.set_yticks([])
+ax.set_ylabel("Prophet")
+ax.set_xlim(0, test_ts_len)
+ax.spines[["top", "right", "left"]].set_visible(False)
+
+# --- Subplot 5: Gray + Blue + Orange combined ---
+ax = axes[5]
+combined_label_parts = []
+for i, (label, points, color) in enumerate(combined_categories_lstmed):
+    if not points:
+        continue
+    times = np.array([p[0] for p in points])
+    counts, edges = np.histogram(times, bins=x_bins)
+    norm_counts = counts / grey_count_max
+    # norm_counts = counts / counts.max() if counts.max() > 0 else counts
+    for val, left in zip(norm_counts, edges[:-1]):
+        if val > 0:
+            ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                        color=color, alpha=float(val) * 0.5)
+    combined_label_parts.append(label)
+ax.set_yticks([])
+ax.set_ylabel("LSTMED")
+ax.set_xlim(0, test_ts_len)
+ax.spines[["top", "right", "left"]].set_visible(False)
+
+# --- Subplot 6: Gray + Blue + Orange combined ---
+ax = axes[6]
+combined_label_parts = []
+for i, (label, points, color) in enumerate(combined_categories_tranad):
+    if not points:
+        continue
+    times = np.array([p[0] for p in points])
+    counts, edges = np.histogram(times, bins=x_bins)
+    norm_counts = counts / grey_count_max
+    # norm_counts = counts / counts.max() if counts.max() > 0 else counts
+    for val, left in zip(norm_counts, edges[:-1]):
+        if val > 0:
+            ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                        color=color, alpha=float(val) * 0.5)
+    combined_label_parts.append(label)
+ax.set_yticks([])
+ax.set_ylabel("TranAD")
 ax.set_xlim(0, test_ts_len)
 ax.spines[["top", "right", "left"]].set_visible(False)
 
