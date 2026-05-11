@@ -36,6 +36,7 @@ from canari.component import Intervention
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from prophet import Prophet
+import logging
 
 class Model:
     """
@@ -1244,12 +1245,8 @@ class Model:
         mask_s= ~np.isnan(train_data["y"].flatten())
 
         if "lstm" in self.states_name or "trend" in self.states_name:
-            m = Prophet(
-                # yearly_seasonality=True,
-                # weekly_seasonality=True,
-                # daily_seasonality=True,
-                # n_changepoints=0,
-            )
+            logging.disable(logging.INFO)
+            m = Prophet()
             df=pd.DataFrame({"ds": np.asarray(all_data["time"]).reshape(-1),
                 "y":  np.asarray(all_data["y"]).reshape(-1),})
             m.fit(df)
@@ -1257,6 +1254,8 @@ class Model:
             trend=fcst["trend"]
             season_cols = [c for c in ["yearly", "weekly", "daily", "holidays"] if c in fcst.columns]
             seasonality = fcst[season_cols].sum(axis=1) if season_cols else 0.0
+
+            logging.disable(logging.NOTSET)
 
         def modular_mse(params,t,y_true,components_list,period):
             y_pred=np.zeros_like(t,dtype=float)
@@ -1513,7 +1512,7 @@ class Model:
             self.mu_states[self.get_states_index("latent trend")] = best_params[idx]
             self.mu_states[self.get_states_index("latent level")]= -best_params[idx]
             self.mu_states[self.get_states_index("exp scale factor")] = best_params[idx+1]
-            self.var_states[self.get_states_index("latent level"),self.get_states_index("latent level")]=0.00001**2
+            self.var_states[self.get_states_index("latent level"),self.get_states_index("latent level")]=0.01**2
             self.var_states[self.get_states_index("latent trend"),self.get_states_index("latent trend")]=(best_params[idx]*0.45)**2
             self.var_states[self.get_states_index("exp scale factor"),self.get_states_index("exp scale factor")]=(best_params[idx+1]*0.4)**2
             idx += 2
