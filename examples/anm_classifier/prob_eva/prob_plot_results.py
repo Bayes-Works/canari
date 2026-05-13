@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 import ast
+import copy
 
 from matplotlib import ticker
 from examples.anm_classifier.prob_eva.prob_process_csv_results import _process_detection_df
@@ -73,6 +74,16 @@ false_alarm_rate_skf, df_skf_group = _process_detection_df_skf(
 )
 print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
 
+print('######################### DAMP #########################')
+false_alarm_rate_damp, df_damp_group = _process_detection_df_skf(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_damp_" + first_anm_type + "to" + second_anm_type + ".csv",
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for DAMP: ", false_alarm_rate_damp, "per 10 years")
+
 print('######################### Prophet #########################')
 false_alarm_rate_prophet, df_prophet_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
@@ -129,6 +140,13 @@ ax[0].fill_between(
     df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
     alpha=0.2,
 )
+ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"\textbf{DAMP}")
+ax[0].fill_between(
+    df_damp_group.index,
+    df_damp_group["detection_time"]["mean"] - df_damp_group["detection_time"]["std"],
+    df_damp_group["detection_time"]["mean"] + df_damp_group["detection_time"]["std"],
+    alpha=0.2,
+)
 ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"\textbf{Prophet}")
 ax[0].fill_between(
     df_prophet_group.index,
@@ -136,6 +154,15 @@ ax[0].fill_between(
     df_prophet_group["detection_time"]["mean"] + df_prophet_group["detection_time"]["std"],
     alpha=0.2,
 )
+############### Dummy values for LSTMED on LT->LL, since LSTMED cannot detect LT anomaly, we set its detection time to be 52*3 (the maximum detection time) and detection rate to be 0, to make it show in the plot. ###############
+# # Copy df_lstmed_group from df_prophet_group and fill it with all 0
+# df_lstmed_group = copy.deepcopy(df_prophet_group)
+# # Refill df_lstmed_group with all 0
+# df_lstmed_group["detection_time"]["mean"].loc[:] = 52 * 3
+# df_lstmed_group["detection_time"]["std"].loc[:] = 0
+# df_lstmed_group["detection_rate"]["mean"].loc[:] = 0
+# print(df_lstmed_group)
+######################################################################################################################################################
 ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"\textbf{LSTMED}")
 ax[0].fill_between(
     df_lstmed_group.index,
@@ -161,6 +188,7 @@ ax[0].set_xticklabels([])
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}")
 ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
 ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}")
+ax[1].plot(df_damp_group.index, df_damp_group["detection_rate"]["mean"], label=r"\textbf{DAMP}")
 ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], label=r"\textbf{Prophet}")
 ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}")
 ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}")
@@ -205,6 +233,9 @@ red_points_lstmed, gray_points_lstmed, blue_points_lstmed, orange_points_lstmed 
 red_points_tranad, gray_points_tranad, blue_points_tranad, orange_points_tranad = _get_color_points(
     test_ts_len=test_ts_len,
     csv_path="saved_results/prob_eva/syn_simple_ts_results_tranad_" + first_anm_type + "to" + second_anm_type + ".csv")
+red_points_damp, gray_points_damp, blue_points_damp, orange_points_damp = _get_color_points(
+    test_ts_len=test_ts_len,
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_damp_" + first_anm_type + "to" + second_anm_type + ".csv")
 
 # --- Build the figure with 2 horizontal bar subplots ---
 solo_categories = [
@@ -249,11 +280,16 @@ combined_categories_tranad = [
     ("LL Intervention", blue_points_tranad,   "tab:blue"),
     ("LT Intervention", orange_points_tranad, "tab:orange"),
 ]
+combined_categories_damp = [
+    ("Detected",        gray_points_damp,   "gray"),
+    ("LL Intervention", blue_points_damp,   "tab:blue"),
+    ("LT Intervention", orange_points_damp, "tab:orange"),
+]
 fig, axes = plt.subplots(
-    7, 1,
+    8, 1,
     figsize=(8, 4),
     sharex=True,
-    gridspec_kw={"hspace": 0.3, "height_ratios": [1, 1, 1, 1, 1, 1, 1]}
+    gridspec_kw={"hspace": 0.3, "height_ratios": [1, 1, 1, 1, 1, 1, 1, 1]}
 )
 
 # Determine x range
@@ -272,7 +308,7 @@ grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_prophet], bins=x_bins)[0]))
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_lstmed], bins=x_bins)[0]))
 grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_tranad], bins=x_bins)[0]))
-
+grey_count_max = max(grey_count_max, max(np.histogram([p[0] for p in gray_points_damp], bins=x_bins)[0]))
 # --- Subplot 0: Red only ---
 ax = axes[0]
 times = np.array([p[0] for p in red_points_rsic])
@@ -404,6 +440,26 @@ for i, (label, points, color) in enumerate(combined_categories_tranad):
     combined_label_parts.append(label)
 ax.set_yticks([])
 ax.set_ylabel("TranAD")
+ax.set_xlim(0, test_ts_len)
+ax.spines[["top", "right", "left"]].set_visible(False)
+
+# --- Subplot 7: Gray + Blue + Orange combined ---
+ax = axes[7]
+combined_label_parts = []
+for i, (label, points, color) in enumerate(combined_categories_damp):
+    if not points:
+        continue
+    times = np.array([p[0] for p in points])
+    counts, edges = np.histogram(times, bins=x_bins)
+    norm_counts = counts / grey_count_max
+    # norm_counts = counts / counts.max() if counts.max() > 0 else counts
+    for val, left in zip(norm_counts, edges[:-1]):
+        if val > 0:
+            ax.axvspan(left, left + bin_width, ymin=0, ymax=1,
+                        color=color, alpha=float(val) * 0.5)
+    combined_label_parts.append(label)
+ax.set_yticks([])
+ax.set_ylabel("DAMP")
 ax.set_xlim(0, test_ts_len)
 ax.spines[["top", "right", "left"]].set_visible(False)
 
