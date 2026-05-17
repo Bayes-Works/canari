@@ -786,8 +786,8 @@ class hsl_detection:
         # Anomly feature range define
         ts_len = 52*8
         anm_mag_range = [-1/52, 1/52]       # LT anm mag
-        # anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]    # For look_back_len = 64
-        anm_begin_range = [130, 260]        # For look_back_len = 128
+        anm_begin_range = [int(ts_len/4), int(ts_len*3/8)]    # For look_back_len = 64
+        # anm_begin_range = [130, 260]        # For look_back_len = 128
 
         # # Generate synthetic time series
         covariate_col = self.data_processor.covariates_col
@@ -1003,7 +1003,7 @@ class hsl_detection:
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)
 
-    def _get_look_back_time_steps(self, current_step, step_look_back = 128):
+    def _get_look_back_time_steps(self, current_step, step_look_back = 64):
         look_back_step_list = [0]
         current = 1
         while current <=  step_look_back:

@@ -187,27 +187,27 @@ ax[0].fill_between(
     df_il_mean["detection_time"]["mean"] + df_il_mean["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_skf_mean.index, df_skf_mean["detection_time"]["mean"], label="SKF")
-ax[0].fill_between(
-    df_skf_mean.index,
-    df_skf_mean["detection_time"]["mean"] - df_skf_mean["detection_time"]["std"],
-    df_skf_mean["detection_time"]["mean"] + df_skf_mean["detection_time"]["std"],
-    alpha=0.2,
-)
-ax[0].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_time"]["mean"], label="Matrix Profile")
-ax[0].fill_between(
-    df_skf_whitenoise_mean.index,
-    df_skf_whitenoise_mean["detection_time"]["mean"] - df_skf_whitenoise_mean["detection_time"]["std"],
-    df_skf_whitenoise_mean["detection_time"]["mean"] + df_skf_whitenoise_mean["detection_time"]["std"],
-    alpha=0.2,
-)
-ax[0].plot(df_prophet_mean.index, df_prophet_mean["detection_time"]["mean"], label="Prophet")
-ax[0].fill_between(
-    df_prophet_mean.index,
-    df_prophet_mean["detection_time"]["mean"] - df_prophet_mean["detection_time"]["std"],
-    df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
-    alpha=0.2,
-)
+# ax[0].plot(df_skf_mean.index, df_skf_mean["detection_time"]["mean"], label="SKF")
+# ax[0].fill_between(
+#     df_skf_mean.index,
+#     df_skf_mean["detection_time"]["mean"] - df_skf_mean["detection_time"]["std"],
+#     df_skf_mean["detection_time"]["mean"] + df_skf_mean["detection_time"]["std"],
+#     alpha=0.2,
+# )
+# ax[0].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_time"]["mean"], label="Matrix Profile")
+# ax[0].fill_between(
+#     df_skf_whitenoise_mean.index,
+#     df_skf_whitenoise_mean["detection_time"]["mean"] - df_skf_whitenoise_mean["detection_time"]["std"],
+#     df_skf_whitenoise_mean["detection_time"]["mean"] + df_skf_whitenoise_mean["detection_time"]["std"],
+#     alpha=0.2,
+# )
+# ax[0].plot(df_prophet_mean.index, df_prophet_mean["detection_time"]["mean"], label="Prophet")
+# ax[0].fill_between(
+#     df_prophet_mean.index,
+#     df_prophet_mean["detection_time"]["mean"] - df_prophet_mean["detection_time"]["std"],
+#     df_prophet_mean["detection_time"]["mean"] + df_prophet_mean["detection_time"]["std"],
+#     alpha=0.2,
+# )
 ax[0].set_ylabel(r"$\Delta t\ (\mathrm{yr})$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
@@ -220,9 +220,9 @@ ax[0].set_xticklabels([])
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
-ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF")
-ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_rate"]["mean"], label="Matrix profile")
-ax[1].plot(df_prophet_mean.index, df_prophet_mean["detection_rate"]["mean"], label="Prophet")
+# ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF")
+# ax[1].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["detection_rate"]["mean"], label="Matrix profile")
+# ax[1].plot(df_prophet_mean.index, df_prophet_mean["detection_rate"]["mean"], label="Prophet")
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")
@@ -242,30 +242,30 @@ ax[2].fill_between(
     alpha=0.2,
     color = "tab:blue"
 )
-ax[2].plot(df_skf_mean.index, df_skf_mean["alarms_num"]["mean"], label="SKF", color = "tab:orange")
-ax[2].fill_between(
-    df_skf_mean.index,
-    df_skf_mean["alarms_num"]["mean"] - df_skf_mean["alarms_num"]["std"],
-    df_skf_mean["alarms_num"]["mean"] + df_skf_mean["alarms_num"]["std"],
-    alpha=0.2,
-    color = "tab:orange"
-)
-ax[2].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["alarms_num"]["mean"], label="Matrix profile", color = "tab:green")
-ax[2].fill_between(
-    df_skf_whitenoise_mean.index,
-    df_skf_whitenoise_mean["alarms_num"]["mean"] - df_skf_whitenoise_mean["alarms_num"]["std"],
-    df_skf_whitenoise_mean["alarms_num"]["mean"] + df_skf_whitenoise_mean["alarms_num"]["std"],
-    alpha=0.2,
-    color = "tab:green"
-)
-ax[2].plot(df_prophet_mean.index, df_prophet_mean["alarms_num"]["mean"], label="Prophet", color = "tab:red")
-ax[2].fill_between(
-    df_prophet_mean.index,
-    df_prophet_mean["alarms_num"]["mean"] - df_prophet_mean["alarms_num"]["std"],
-    df_prophet_mean["alarms_num"]["mean"] + df_prophet_mean["alarms_num"]["std"],
-    alpha=0.2,
-    color = "tab:red"
-)
+# ax[2].plot(df_skf_mean.index, df_skf_mean["alarms_num"]["mean"], label="SKF", color = "tab:orange")
+# ax[2].fill_between(
+#     df_skf_mean.index,
+#     df_skf_mean["alarms_num"]["mean"] - df_skf_mean["alarms_num"]["std"],
+#     df_skf_mean["alarms_num"]["mean"] + df_skf_mean["alarms_num"]["std"],
+#     alpha=0.2,
+#     color = "tab:orange"
+# )
+# ax[2].plot(df_skf_whitenoise_mean.index, df_skf_whitenoise_mean["alarms_num"]["mean"], label="Matrix profile", color = "tab:green")
+# ax[2].fill_between(
+#     df_skf_whitenoise_mean.index,
+#     df_skf_whitenoise_mean["alarms_num"]["mean"] - df_skf_whitenoise_mean["alarms_num"]["std"],
+#     df_skf_whitenoise_mean["alarms_num"]["mean"] + df_skf_whitenoise_mean["alarms_num"]["std"],
+#     alpha=0.2,
+#     color = "tab:green"
+# )
+# ax[2].plot(df_prophet_mean.index, df_prophet_mean["alarms_num"]["mean"], label="Prophet", color = "tab:red")
+# ax[2].fill_between(
+#     df_prophet_mean.index,
+#     df_prophet_mean["alarms_num"]["mean"] - df_prophet_mean["alarms_num"]["std"],
+#     df_prophet_mean["alarms_num"]["mean"] + df_prophet_mean["alarms_num"]["std"],
+#     alpha=0.2,
+#     color = "tab:red"
+# )
 ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
 ax[2].set_yscale('symlog')
