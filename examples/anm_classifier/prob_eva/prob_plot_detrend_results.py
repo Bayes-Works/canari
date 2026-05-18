@@ -26,19 +26,28 @@ plt.rcParams.update(params)
 # test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
 # test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
-test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lttoll.csv")
-raw = test_ts_df.iloc[0]["values"].replace("nan", "None")
-arr = np.array(ast.literal_eval(raw), dtype=float)
-test_ts_len = len(arr.flatten())
+test_ts_num = 10
+test_ts_len_all = []
+for i in range(test_ts_num):
+    if i == 2:
+        actual_ts_index = 11
+    else:
+        actual_ts_index = i + 1
+    test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts"+str(actual_ts_index)+"_gen_lttolt.csv")
+    raw = test_ts_df.iloc[0]["values"].replace("nan", "None")
+    arr = np.array(ast.literal_eval(raw), dtype=float)
+    test_ts_len = len(arr.flatten())
+    test_ts_len_all.append(test_ts_len)
+print("Test time series lengths: ", test_ts_len_all)
 
 # Input
-first_anm_type = 'lt'
-second_anm_type = 'lt'
+first_anm_type = 'll'
+second_anm_type = 'll'
 
 print('Results for first anomaly type: ', first_anm_type, ' and second anomaly type: ', second_anm_type)
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl_10ts(
-    test_ts_len=test_ts_len,
+    all_test_ts_len=test_ts_len_all,
     csv_path_all=[
         "saved_results/prob_eva/detrend_ts1_results_rsic_"+first_anm_type+"to"+second_anm_type+".csv",
         "saved_results/prob_eva/detrend_ts2_results_rsic_"+first_anm_type+"to"+second_anm_type+".csv",
@@ -59,7 +68,7 @@ print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
 print('######################### RSI #########################')
 false_alarm_rate_rsi, df_rsi_group = _process_detection_df_bl_10ts(
-    test_ts_len=test_ts_len,
+    all_test_ts_len=test_ts_len_all,
     csv_path_all=[
         "saved_results/prob_eva/detrend_ts1_results_rsi_"+first_anm_type+"to"+second_anm_type+".csv",
         "saved_results/prob_eva/detrend_ts2_results_rsi_"+first_anm_type+"to"+second_anm_type+".csv",
@@ -81,7 +90,7 @@ print("False alarm rate for RSI: ", false_alarm_rate_rsi, "per 10 years")
 
 print('######################### SKF #########################')
 false_alarm_rate_skf, df_skf_group = _process_detection_df_bl_10ts(
-    test_ts_len=test_ts_len,
+    all_test_ts_len=test_ts_len_all,
     csv_path_all=[
         "saved_results/prob_eva/detrend_ts1_results_skf_"+first_anm_type+"to"+second_anm_type+".csv",
         "saved_results/prob_eva/detrend_ts2_results_skf_"+first_anm_type+"to"+second_anm_type+".csv",

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def _process_detection_df_bl_10ts(
-    test_ts_len: int,
+    all_test_ts_len: int,
     csv_path_all: str,
     *,
     evaluate_itv_type: Optional[bool] = False,
@@ -38,8 +38,10 @@ def _process_detection_df_bl_10ts(
     """
     # Read the 10 csv paths given by the user into one df
     df_list = []
-    for csv_path in csv_path_all:
+    for i, csv_path in enumerate(csv_path_all):
         df = pd.read_csv(csv_path)
+        # Add a new column of test_ts_len to indicate the length of the test time series for each row
+        df["test_ts_len"] = all_test_ts_len[i]
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
@@ -244,7 +246,7 @@ def _process_detection_df_bl_10ts(
                                 )
     
     # Compute the false alarm rate for each method
-    all_time_after_anm1 = (test_ts_len - df["first_anm_detect_index"] - 1).sum()
+    all_time_after_anm1 = (df["test_ts_len"] - df["first_anm_detect_index"] - 1).sum()
     false_alarm = np.sum(df["detection_index_after_anm1"].apply(lambda x: len(x))) - df["detection_rate"].sum()
     false_alarm_rate = round(false_alarm * 10 / (all_time_after_anm1/52), 2)
 
