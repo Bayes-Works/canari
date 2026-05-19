@@ -1,208 +1,264 @@
-"""TranAD (minimal reimplementation) for univariate anomaly detection.
+"""TranAD anomaly detector using the official imperial-qore/TranAD model.
 
-Tuli, Casale, Jennings, 'TranAD: Deep Transformer Networks for Anomaly
-Detection in Multivariate Time Series Data', VLDB 2022.
+The TranAD model class and custom transformer layers come directly from the
+cloned repo at ``experiments/baselines/tranad_src/`` (git-ignored). Training
+and scoring follow ``main.py:backprop`` (the ``'TranAD'`` branch) from that
+repo. Threshold calibration is zhan-exact (``experiments/zhan/tranad.py``):
+flag when ``score > 1.1 * max(train_score) OR score < 0.9 * min(train_score)``.
 
-Faithful in spirit to the paper (transformer encoder + two transformer
-decoders, with a phase-2 focus signal given by the phase-1 squared error)
-but reimplemented from scratch for univariate CPU use — shapes, positional
-encoding, and the output projection are not byte-identical to the authors'
-reference code at github.com/imperial-qore/TranAD.
-
-Training loss (per mini-batch):
-    L = (1/n) * MSE(x1, src) + (1 - 1/n) * MSE(x2, src)
-where n = epoch + 1, mirroring the annealing weight used by the authors.
-Anomaly score at timestep t is the MSE of x2 vs src for the window ending
-at t, normalised by max(train_scores). Detection rule (matching zhan's
-one-sided convention):
-    score(t) > c * max(train_scores)
-with the coefficient c tuned on train+val.
+Note on input scaling: TranAD's output layer is ``Linear + Sigmoid``, so it
+expects inputs in ``[0, 1]``. We fit a min/max scaler on train and apply it
+to all future inputs (the authors do the same in ``preprocess.py``).
 """
 
-import math
+from __future__ import annotations
+
+import argparse
+import sys
+import types
+from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.nn import (
-    TransformerEncoder,
-    TransformerEncoderLayer,
-    TransformerDecoder,
-    TransformerDecoderLayer,
-)
+from torch.utils.data import DataLoader, TensorDataset
+
+from .calibrate import calibrate_threshold
+
+_THIS_DIR = Path(__file__).resolve().parent
+_TRANAD_ROOT = _THIS_DIR / "tranad_src"
 
 
-def _make_windows(y: np.ndarray, L: int) -> np.ndarray:
-    y = np.asarray(y, dtype=np.float32).flatten()
-    if len(y) < L:
-        raise ValueError(f"series length {len(y)} < window size {L}")
-    idx = np.arange(L)[None, :] + np.arange(len(y) - L + 1)[:, None]
-    return y[idx]
+def _load_tranad_class():
+    """Import ``TranAD`` from the vendored repo without triggering its CLI/dgl deps.
 
-
-class _PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1000):
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
-        pe = torch.zeros(max_len, d_model)
-        pos = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div = torch.exp(
-            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
-        )
-        pe[:, 0::2] = torch.sin(pos * div)
-        pe[:, 1::2] = torch.cos(pos * div)
-        self.register_buffer("pe", pe.unsqueeze(1))  # (max_len, 1, d_model)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (seq, batch, d_model)
-        return self.dropout(x + self.pe[: x.size(0)])
-
-
-class _TranAD(nn.Module):
-    def __init__(
-        self,
-        feats: int = 1,
-        window: int = 10,
-        d_model: int = 32,
-        nhead: int = 2,
-        dim_ff: int = 64,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-        self.feats = feats
-        self.window = window
-
-        self.embed_src = nn.Linear(feats * 2, d_model)  # (signal, focus)
-        self.embed_tgt = nn.Linear(feats, d_model)
-        self.pos = _PositionalEncoding(d_model, dropout=dropout, max_len=window + 1)
-
-        enc = TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout
-        )
-        self.encoder = TransformerEncoder(enc, num_layers=1)
-        dec1 = TransformerDecoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout
-        )
-        self.decoder1 = TransformerDecoder(dec1, num_layers=1)
-        dec2 = TransformerDecoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout
-        )
-        self.decoder2 = TransformerDecoder(dec2, num_layers=1)
-        self.fc_out = nn.Linear(d_model, feats)
-
-    def _encode(self, src: torch.Tensor, focus: torch.Tensor) -> torch.Tensor:
-        x = torch.cat((src, focus), dim=-1)
-        x = self.embed_src(x)
-        x = self.pos(x)
-        return self.encoder(x)
-
-    def _decode(
-        self,
-        decoder: nn.Module,
-        tgt: torch.Tensor,
-        memory: torch.Tensor,
-    ) -> torch.Tensor:
-        t = self.embed_tgt(tgt)
-        t = self.pos(t)
-        out = decoder(t, memory)
-        return self.fc_out(out)
-
-    def forward(self, src: torch.Tensor):
-        focus = torch.zeros_like(src)
-        memory = self._encode(src, focus)
-        x1 = self._decode(self.decoder1, src, memory)
-
-        focus = (x1 - src) ** 2
-        memory = self._encode(src, focus)
-        x2 = self._decode(self.decoder2, src, memory)
-        return x1, x2
-
-
-def build_scorer(
-    train_y,
-    window_size: int = 10,
-    num_epochs: int = 5,
-    batch_size: int = 128,
-    learning_rate: float = 1e-3,
-    seed: int = 0,
-) -> dict:
-    """Fit TranAD once and return normalised reconstruction-error scores
-    such that the detection rule is ``raw > coefficient``.
-
-    The raw score at each timestep is the x2-vs-src window MSE divided by
-    the maximum such MSE over training windows (zhan-style one-sided
-    max-ratio thresholding). Positions before the first complete window
-    are NaN.
+    The repo's ``src/models.py`` transitively imports ``src.parser`` (runs
+    argparse at import time), ``dgl`` (heavy, unused by TranAD itself), and
+    dataset-specific constants. We stub those in ``sys.modules`` before the
+    import so the real ``models.py`` runs unchanged and we get their class.
     """
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    device = "cpu"
+    if "src.models" in sys.modules and hasattr(sys.modules["src.models"], "TranAD"):
+        return sys.modules["src.models"].TranAD
 
-    train = pd.Series(np.asarray(train_y, dtype=np.float32).flatten())
-    train = (
-        train.interpolate("linear", limit_direction="both")
-        .to_numpy()
-        .astype(np.float32)
+    if not (_TRANAD_ROOT / "src" / "models.py").exists():
+        raise RuntimeError(
+            f"TranAD source not found at {_TRANAD_ROOT}. Clone it with:\n"
+            f"    git clone https://github.com/imperial-qore/TranAD.git {_TRANAD_ROOT}"
+        )
+
+    # Stub dgl + dgl.nn — models.py imports them at module top but TranAD itself
+    # never touches them (only GDN/MTAD_GAT do).
+    if "dgl" not in sys.modules:
+        dgl_stub = types.ModuleType("dgl")
+        dgl_nn = types.ModuleType("dgl.nn")
+        dgl_nn.GATConv = object
+        dgl_stub.nn = dgl_nn
+        sys.modules["dgl"] = dgl_stub
+        sys.modules["dgl.nn"] = dgl_nn
+
+    # Register 'src' as a package whose __path__ points at the vendored src/.
+    # Subsequent `import src.X` calls will resolve to files in that directory.
+    src_pkg = types.ModuleType("src")
+    src_pkg.__path__ = [str(_TRANAD_ROOT / "src")]
+    sys.modules["src"] = src_pkg
+
+    # Stub parser with default args (synthetic/TranAD) so constants.py can index
+    # its dataset-specific tables without calling argparse.parse_args().
+    parser_mod = types.ModuleType("src.parser")
+    parser_mod.args = argparse.Namespace(
+        dataset="synthetic",
+        model="TranAD",
+        test=False,
+        retrain=False,
+        less=False,
+    )
+    sys.modules["src.parser"] = parser_mod
+
+    # Real constants.py + dlutils.py + models.py load on first `import`.
+    from src import dlutils as tranad_dlutils  # noqa: E402
+    from src import models as tranad_models  # noqa: E402
+
+    # Newer torch's built-in TransformerEncoder.forward passes `is_causal` /
+    # `src_key_padding_mask` down to each layer's forward(). TranAD's custom
+    # layer predates that signature — wrap to accept and ignore extra kwargs.
+    for cls in (tranad_dlutils.TransformerEncoderLayer, tranad_dlutils.TransformerDecoderLayer):
+        orig_forward = cls.forward
+
+        def _forward_compat(self, *args, _orig=orig_forward, **kwargs):
+            kwargs.pop("is_causal", None)
+            kwargs.pop("memory_is_causal", None)
+            kwargs.pop("tgt_is_causal", None)
+            return _orig(self, *args, **kwargs)
+
+        cls.forward = _forward_compat
+
+    return tranad_models.TranAD
+
+
+def _sanitize(y: np.ndarray) -> np.ndarray:
+    y = pd.Series(np.asarray(y, dtype=float).flatten())
+    return y.interpolate("linear", limit_direction="both").to_numpy()
+
+
+def _convert_to_windows(data: torch.Tensor, w_size: int) -> torch.Tensor:
+    """Port of ``main.py:convert_to_windows`` (TranAD branch) — one window per step."""
+    windows = []
+    for i in range(data.shape[0]):
+        if i >= w_size:
+            w = data[i - w_size : i]
+        else:
+            w = torch.cat([data[0].repeat(w_size - i, 1), data[0:i]])
+        windows.append(w)
+    return torch.stack(windows)
+
+
+def _train_epoch(epoch: int, model, data: torch.Tensor, optimizer, feats: int) -> float:
+    """TranAD training branch of ``main.py:backprop``."""
+    loss_fn = nn.MSELoss(reduction="mean")
+    loader = DataLoader(TensorDataset(data, data), batch_size=model.batch, shuffle=False)
+    n = epoch + 1
+    losses = []
+    for d, _ in loader:
+        local_bs = d.shape[0]
+        window = d.permute(1, 0, 2)
+        elem = window[-1, :, :].view(1, local_bs, feats)
+        z = model(window, elem)
+        if isinstance(z, tuple):
+            l = (1.0 / n) * loss_fn(z[0], elem) + (1 - 1.0 / n) * loss_fn(z[1], elem)
+        else:
+            l = loss_fn(z, elem)
+        optimizer.zero_grad()
+        l.backward(retain_graph=True)
+        optimizer.step()
+        losses.append(l.item())
+    return float(np.mean(losses)) if losses else float("nan")
+
+
+def _score_windows(model, data: torch.Tensor, feats: int) -> np.ndarray:
+    """TranAD inference branch: per-window reconstruction MSE (shape ``(T, feats)``)."""
+    loss_fn = nn.MSELoss(reduction="none")
+    bs = data.shape[0]
+    loader = DataLoader(TensorDataset(data, data), batch_size=bs)
+    with torch.no_grad():
+        for d, _ in loader:
+            window = d.permute(1, 0, 2)
+            elem = window[-1, :, :].view(1, bs, feats)
+            z = model(window, elem)
+            if isinstance(z, tuple):
+                z = z[1]
+        loss = loss_fn(z, elem)[0]
+    return loss.detach().cpu().numpy()
+
+
+def build_detector(dataset: dict, options: dict) -> tuple[Callable, dict]:
+    seed = int(options.get("seed", 0))
+    num_epochs = int(options.get("num_epochs", 5))
+    learning_rate = float(options.get("learning_rate", 1e-3))
+    window_size = options.get("window_size")  # None → keep the model's default (10)
+    threshold_multiplier = float(options.get("threshold_multiplier", 1.1))
+    lower_threshold_multiplier = float(options.get("lower_threshold_multiplier", 0.9))
+    min_score_threshold = float(options.get("min_score_threshold", 0.0))
+
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    TranAD = _load_tranad_class()
+
+    # Fit min/max on the clean train split; TranAD's output layer is sigmoid.
+    train_y_raw = _sanitize(np.asarray(dataset["train_data"]["y"]).flatten())
+    y_min = float(np.nanmin(train_y_raw))
+    y_max = float(np.nanmax(train_y_raw))
+    span = y_max - y_min
+    if not np.isfinite(span) or span <= 0:
+        span = 1.0
+
+    def _scale(y: np.ndarray) -> np.ndarray:
+        y = _sanitize(np.asarray(y).flatten())
+        return np.clip((y - y_min) / span, 0.0, 1.0)
+
+    feats = 1
+    model = TranAD(feats).double()
+    if window_size is not None:
+        model.n_window = int(window_size)
+
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=learning_rate, weight_decay=1e-5
     )
 
-    wins = _make_windows(train, window_size)  # (N, L)
-    # Shape convention: (L, N, 1) — time x batch x feats — to match torch's
-    # default (seq, batch, feat) ordering for Transformer layers.
-    X_seq = torch.from_numpy(wins[:, :, None]).permute(1, 0, 2).to(device)
+    train_scaled = _scale(train_y_raw).reshape(-1, feats)
+    train_tensor = torch.from_numpy(train_scaled).double()
+    train_windows = _convert_to_windows(train_tensor, model.n_window)
 
-    model = _TranAD(feats=1, window=window_size).to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-
-    N = X_seq.shape[1]
     model.train()
     for epoch in range(num_epochs):
-        n_eff = epoch + 1
-        perm = torch.randperm(N)
-        for s in range(0, N, batch_size):
-            idx = perm[s : s + batch_size]
-            src = X_seq[:, idx, :]  # (L, B, 1)
-            x1, x2 = model(src)
-            loss = (1.0 / n_eff) * ((x1 - src) ** 2).mean() + (
-                1 - 1.0 / n_eff
-            ) * ((x2 - src) ** 2).mean()
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
+        _train_epoch(epoch, model, train_windows, optimizer, feats)
 
     model.eval()
-    with torch.no_grad():
-        _, x2 = model(X_seq)
-        train_err = ((x2 - X_seq) ** 2).mean(dim=(0, 2)).cpu().numpy()
-    train_max = float(max(train_err.max(), 1e-12))
+    train_loss = _score_windows(model, train_windows, feats)
+    train_scores = train_loss[:, 0]
+    finite = np.isfinite(train_scores)
+    if not finite.any():
+        raise ValueError("TranAD produced no finite scores on training data.")
+    train_score_max = float(np.max(train_scores[finite]))
+    train_score_min = float(np.min(train_scores[finite]))
+    lower_threshold = float(lower_threshold_multiplier * train_score_min)
 
-    def raw_scorer(eval_y: np.ndarray) -> np.ndarray:
-        y = pd.Series(np.asarray(eval_y, dtype=np.float32).flatten())
-        y = (
-            y.interpolate("linear", limit_direction="both")
-            .to_numpy()
-            .astype(np.float32)
+    def scorer(eval_input: dict) -> np.ndarray:
+        y = np.asarray(eval_input["y"]).flatten()
+        n = len(y)
+        if n == 0:
+            return np.zeros(0, dtype=float)
+        data = torch.from_numpy(_scale(y).reshape(-1, feats)).double()
+        windows = _convert_to_windows(data, model.n_window)
+        loss = _score_windows(model, windows, feats)
+        return loss[:, 0]
+
+    # Upper threshold is the calibrated knob; lower side stays fixed at 0.9 * min_train.
+    def flagger(scores: np.ndarray, upper: float) -> np.ndarray:
+        flags = np.zeros(len(scores), dtype=bool)
+        finite = np.isfinite(scores)
+        flags[finite] = (scores[finite] > upper) | (scores[finite] < lower_threshold)
+        return flags
+
+    calibration_cfg = dataset.get("calibration")
+    calibration_result = None
+    if calibration_cfg:
+        calibration_result = calibrate_threshold(
+            scorer=scorer, flagger=flagger, **calibration_cfg
         )
-        full = np.full(len(y), np.nan)
-        if len(y) < window_size:
-            return full
-        wins = _make_windows(y, window_size)
-        X_eval = (
-            torch.from_numpy(wins[:, :, None]).permute(1, 0, 2).to(device)
-        )  # (L, N, 1)
-        with torch.no_grad():
-            _, x2 = model(X_eval)
-            err = ((x2 - X_eval) ** 2).mean(dim=(0, 2)).cpu().numpy()
-        end_positions = np.arange(err.shape[0]) + (window_size - 1)
-        mask = end_positions < len(y)
-        full[end_positions[mask]] = (err[: int(mask.sum())]) / train_max
-        return full
+        upper_threshold = float(calibration_result["threshold"])
+    else:
+        upper_threshold = float(
+            max(threshold_multiplier * train_score_max, min_score_threshold)
+        )
 
-    return {
-        "raw_scorer": raw_scorer,
-        "train_score_max": train_max,
-        "coefficient_grid": [0.9, 1.0, 1.05, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0],
-        "coefficient_name": "max_ratio_coefficient",
-        "threshold_rule": "score > c * max(train_scores)",
-        "window_size": int(window_size),
+    def detector(eval_input: dict) -> np.ndarray:
+        return flagger(scorer(eval_input), upper_threshold)
+
+    info = {
+        "window_size": int(model.n_window),
+        "batch_size": int(model.batch),
+        "num_epochs": num_epochs,
+        "learning_rate": learning_rate,
+        "threshold_multiplier": threshold_multiplier,
+        "lower_threshold_multiplier": lower_threshold_multiplier,
+        "min_score_threshold": min_score_threshold,
+        "y_min": y_min,
+        "y_max": y_max,
+        "train_score_max": train_score_max,
+        "train_score_min": train_score_min,
+        "upper_threshold": upper_threshold,
+        "lower_threshold": lower_threshold,
+        "threshold_rule": (
+            "score > max(threshold_multiplier * max_train, min_score_threshold) "
+            "OR score < lower_threshold_multiplier * min_train"
+            if calibration_result is None
+            else "score > smallest upper with FA_rate <= target on clean train/val "
+            "OR score < 0.9 * min_train"
+        ),
     }
+    if calibration_result is not None:
+        info["calibration"] = calibration_result
+    return detector, info

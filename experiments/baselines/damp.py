@@ -1,23 +1,25 @@
-"""Discord Aware Matrix Profile (DAMP) baseline.
+"""Discord Aware Matrix Profile (DAMP) detector.
 
-Reference:
-    Lu et al., "Matrix Profile XXIV: Scaling Time Series Anomaly Detection to
-    Trillions of Datapoints and Ultra-fast Arriving Data Streams", KDD 2022.
+Reference: ``experiments/zhan/matrix_profile.py``. Same usage pattern (compute
+the left matrix profile, calibrate a fixed threshold at ``1.1 * max`` of the
+score on a clean reference region, flag where score > threshold) but using
+DAMP instead of the exact matrix profile.
 
-DAMP computes an approximate *left* matrix profile: for each subsequence
-starting at index i >= sp_index, the distance to its nearest neighbor in the
-preceding data T[0:i]. It combines a backward doubling search (with best-so-far
-early abandoning) and a forward pruning step that lets it skip subsequences
-that cannot be top discords.
-
-Here it is wrapped as a scorer: the train series fixes a threshold via its
-self matrix profile (mean + k*std), and the eval series is scored by running
-DAMP on [train || eval] with sp_index = len(train).
+DAMP produces an approximate left matrix profile: for each subsequence after
+``sp_index`` it searches backward in powers-of-two segments and stops as soon
+as it finds a neighbor closer than the best-so-far discord distance. Entries
+that cannot be top discords are pruned forward.
 """
+
+from __future__ import annotations
+
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 import stumpy
+
+from .calibrate import calibrate_threshold
 
 
 def damp(
@@ -26,32 +28,19 @@ def damp(
     sp_index: int,
     lookahead: int | None = None,
 ) -> np.ndarray:
-    """Run DAMP and return the approximate left matrix profile.
+    """Return the DAMP approximate left matrix profile of length ``len(T) - m + 1``.
 
-    Entries before sp_index are left at 0 (not computed). Entries at or after
-    sp_index hold either the approximate 1-NN distance or, if forward-pruned,
-    an upper bound on that distance that is known to be below BSF at pruning
-    time (so the subsequence cannot be a top discord).
-
-    Args:
-        T: 1-D time series.
-        m: subsequence length.
-        sp_index: index where test processing begins. T[0:sp_index] is
-            treated as the reference region searched by MASS.
-        lookahead: forward pruning window (in samples). Defaults to
-            2**ceil(log2(16*m)).
-
-    Returns:
-        Array of length len(T) - m + 1 with discord scores.
+    Entries before ``sp_index`` are left at 0 (not scored). Entries >= sp_index
+    hold either the approximate 1-NN distance or, if forward-pruned, an upper
+    bound that is already known to be below the best-so-far discord score.
     """
+
     T = np.asarray(T, dtype=float).flatten()
     n = T.shape[0]
     if m < 4 or m >= n:
         raise ValueError(f"invalid window m={m} for series length {n}")
     if sp_index < m:
-        raise ValueError(
-            f"sp_index={sp_index} must be >= m={m} so a reference region exists"
-        )
+        raise ValueError(f"sp_index={sp_index} must be >= m={m}")
 
     num_sub = n - m + 1
     left_mp = np.zeros(num_sub, dtype=float)
@@ -66,17 +55,12 @@ def damp(
 
         query = T[i : i + m]
         X = init_chunk
-        approx_dist = np.inf
-
         while True:
             if i - X < 0:
-                prefix = T[0 : i + m - 1]
-                dp = stumpy.core.mass(query, prefix)
-                approx_dist = float(np.nanmin(dp))
-                left_mp[i] = approx_dist
+                dp = stumpy.core.mass(query, T[0 : i + m - 1])
+                left_mp[i] = float(np.nanmin(dp))
                 break
-            segment = T[i - X : i + m - 1]
-            dp = stumpy.core.mass(query, segment)
+            dp = stumpy.core.mass(query, T[i - X : i + m - 1])
             approx_dist = float(np.nanmin(dp))
             if approx_dist < bsf:
                 left_mp[i] = approx_dist
@@ -103,93 +87,72 @@ def damp(
     return left_mp
 
 
-def build_scorer(
-    train_y: np.ndarray,
-    window_size: int,
-    val_y: np.ndarray | None = None,
-    lookahead: int | None = None,
-) -> dict:
-    """Fit DAMP once and return normalised per-step scores such that the
-    detection rule is ``raw > coefficient``.
+def _sanitize(y: np.ndarray) -> np.ndarray:
+    y = np.asarray(y, dtype=float).flatten()
+    if np.isnan(y).any():
+        y = pd.Series(y).interpolate("linear", limit_direction="both").to_numpy()
+    return y
 
-    Threshold rule follows the matrix-profile convention used by
-    zhan/matrix_profile.py: ``score > c * max(calibration_mp)``. The
-    calibration MP is produced by running DAMP itself on ``[train || val]``
-    with ``sp_index = len(train)`` (so val subsequences are scored against
-    train + earlier val, the same way eval subsequences will be scored at
-    test time). If ``val_y`` is not supplied, we fall back to the maximum
-    of the training self matrix profile via ``stumpy.stump``.
 
-    The raw score at each eval timestep is the DAMP left matrix profile
-    value divided by that calibration maximum; positions before the first
-    complete window are NaN.
-    """
-    train = np.asarray(train_y, dtype=float).flatten()
-    if np.isnan(train).any():
-        train = (
-            pd.Series(train)
-            .interpolate("linear", limit_direction="both")
-            .to_numpy()
+def build_detector(dataset: dict, options: dict) -> tuple[Callable, dict]:
+    window_size = int(options.get("window_size", 52))
+    lookahead = options.get("lookahead")
+    threshold_multiplier = float(options.get("threshold_multiplier", 1.1))
+
+    train_y = _sanitize(dataset["train_data"]["y"])
+    train_val_y = _sanitize(dataset["train_val"]["y"])
+    sp_index = train_y.shape[0]
+
+    calibration_scores = damp(train_val_y, m=window_size, sp_index=sp_index, lookahead=lookahead)
+    calibration_scores[:sp_index] = np.nan
+    valid = calibration_scores[np.isfinite(calibration_scores)]
+    if valid.size == 0:
+        raise ValueError("DAMP calibration produced no finite scores on train_val.")
+    calibration_score_max = float(np.max(valid))
+
+    def scorer(eval_input: dict) -> np.ndarray:
+        y = _sanitize(eval_input["y"])
+        n = y.shape[0]
+        scores = np.full(n, np.nan)
+        if n < window_size:
+            return scores
+        left_mp = damp(y, m=window_size, sp_index=sp_index, lookahead=lookahead)
+        scores[: left_mp.shape[0]] = left_mp
+        scores[:sp_index] = np.nan
+        return scores
+
+    def flagger(scores: np.ndarray, threshold: float) -> np.ndarray:
+        flags = np.zeros(len(scores), dtype=bool)
+        finite = np.isfinite(scores)
+        flags[finite] = scores[finite] > threshold
+        return flags
+
+    calibration_cfg = dataset.get("calibration")
+    calibration_result = None
+    if calibration_cfg:
+        calibration_result = calibrate_threshold(
+            scorer=scorer, flagger=flagger, **calibration_cfg
         )
-
-    if val_y is not None:
-        val = np.asarray(val_y, dtype=float).flatten()
-        if np.isnan(val).any():
-            val = (
-                pd.Series(val)
-                .interpolate("linear", limit_direction="both")
-                .to_numpy()
-            )
-        combined_calib = np.concatenate([train, val])
-        calib_mp = damp(
-            combined_calib,
-            m=window_size,
-            sp_index=train.shape[0],
-            lookahead=lookahead,
-        )
-        val_scores = calib_mp[train.shape[0] :]
-        val_scores = val_scores[np.isfinite(val_scores)]
-        if val_scores.size > 0:
-            train_max = float(np.max(val_scores))
-        else:
-            train_max = 0.0
+        score_threshold = float(calibration_result["threshold"])
     else:
-        mp_train = stumpy.stump(train, m=window_size)
-        train_dist = mp_train[:, 0].astype(float)
-        train_max = float(np.nanmax(train_dist))
-    train_max = max(train_max, 1e-12)
+        score_threshold = float(threshold_multiplier * calibration_score_max)
 
-    def raw_scorer(eval_y: np.ndarray) -> np.ndarray:
-        y = np.asarray(eval_y, dtype=float).flatten()
-        if np.isnan(y).any():
-            y = (
-                pd.Series(y)
-                .interpolate("linear", limit_direction="both")
-                .to_numpy()
-            )
-        full = np.full(y.shape[0], np.nan)
-        if y.shape[0] < window_size:
-            return full
-        combined = np.concatenate([train, y])
-        left_mp = damp(
-            combined,
-            m=window_size,
-            sp_index=train.shape[0],
-            lookahead=lookahead,
-        )
-        eval_scores = left_mp[train.shape[0] :]
-        end_positions = np.arange(eval_scores.shape[0]) + (window_size - 1)
-        mask = end_positions < y.shape[0]
-        full[end_positions[mask]] = (
-            eval_scores[: int(mask.sum())] / train_max
-        )
-        return full
+    def detector(eval_input: dict) -> np.ndarray:
+        return flagger(scorer(eval_input), score_threshold)
 
-    return {
-        "raw_scorer": raw_scorer,
-        "train_score_max": train_max,
-        "coefficient_grid": [0.9, 1.0, 1.05, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0],
-        "coefficient_name": "max_ratio_coefficient",
-        "threshold_rule": "score > c * max(calibration_mp)",
-        "window_size": int(window_size),
+    info = {
+        "window_size": window_size,
+        "lookahead": lookahead,
+        "threshold_multiplier": threshold_multiplier,
+        "sp_index": int(sp_index),
+        "calibration_score_max": calibration_score_max,
+        "score_threshold": score_threshold,
+        "threshold_rule": (
+            "damp_score > 1.1 * max(damp_score on validation region)"
+            if calibration_result is None
+            else "damp_score > smallest threshold with FA_rate <= target on clean train/val"
+        ),
     }
+    if calibration_result is not None:
+        info["calibration"] = calibration_result
+    return detector, info

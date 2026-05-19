@@ -50,9 +50,9 @@ class LstmNetwork(BaseComponent):
                                     (See references). Defaults to False.
         finetune (Optional[bool]): if True, keep pretrained recurrent layers but replace the
                                     output head with a freshly initialized one. Defaults to False.
-        increase_output_variance (Optional[bool]): if True, keep the pretrained output-head
-                                    means but preserve the initialized output-head variances.
-                                    Mutually exclusive with `finetune`. Defaults to False.
+        increase_output_variance (Optional[bool]): if True, keep pretrained means but
+                                    preserve initialized variances. Mutually exclusive
+                                    with `finetune`. Defaults to False.
 
     References:
         Vuong, V.D., Nguyen, L.H. and Goulet, J.-A. (2025). `Coupling LSTM neural networks and
@@ -313,7 +313,24 @@ class LstmNetwork(BaseComponent):
             return lstm_network.state_dict()
 
     @staticmethod
+    def _is_output_layer(layer_name: str) -> bool:
+        layer_prefix = layer_name.split(".", 1)[0]
+        return layer_prefix in {"Linear", "SLinear"}
+
+    @classmethod
+    def _get_output_layer_name(cls, params: dict) -> str:
+        output_layer_names = [
+            layer_name
+            for layer_name in params.keys()
+            if cls._is_output_layer(layer_name)
+        ]
+        if len(output_layer_names) == 0:
+            raise KeyError("Could not identify an LSTM output layer in the parameters.")
+        return output_layer_names[-1]
+
+    @classmethod
     def _transfer_loaded_params(
+        cls,
         original_params: dict,
         loaded_params: dict,
         *,
@@ -328,15 +345,14 @@ class LstmNetwork(BaseComponent):
         if not finetune and not increase_output_variance:
             return loaded_params
 
-        output_layer_name = next(reversed(original_params))
+        output_layer_name = cls._get_output_layer_name(original_params)
         new_params = {}
         for layer_name in original_params.keys():
-            if layer_name != output_layer_name:
-                new_params[layer_name] = loaded_params[layer_name]
-                continue
-
             if finetune:
-                new_params[layer_name] = original_params[layer_name]
+                if layer_name == output_layer_name:
+                    new_params[layer_name] = original_params[layer_name]
+                else:
+                    new_params[layer_name] = loaded_params[layer_name]
                 continue
 
             mu_w, _, mu_b, _ = loaded_params[layer_name]

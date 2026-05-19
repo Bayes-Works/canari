@@ -1,5 +1,6 @@
 import csv
 import json
+import multiprocessing as mp
 from pathlib import Path
 
 import fire
@@ -11,13 +12,32 @@ from pytagi import Normalizer as normalizer
 from pytagi import metric
 
 from canari import Model, plot_data, plot_prediction, plot_states
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
+from canari.common import calc_observation
+from canari.component import LocalLevel, LstmNetwork, WhiteNoise
 from canari.data_visualization import _add_dynamic_grids
 
 try:
     from experiments.utils import prepare_dataset
 except ModuleNotFoundError:
     from utils import prepare_dataset
+
+
+# Module-level state for multiprocessing workers (fork context).
+_sigma_v_train_fn = None
+
+
+def _sigma_v_worker(sv_candidate):
+    """Worker for parallel sigma_v grid search."""
+    model_dict, metrics, optimal_epoch, optimal_metrics = _sigma_v_train_fn(
+        sv_candidate
+    )
+    return {
+        "sigma_v": sv_candidate,
+        "model_dict": model_dict,
+        "metrics": metrics,
+        "optimal_epoch": int(optimal_epoch),
+        "optimal_validation_metrics": optimal_metrics,
+    }
 
 
 mpl.rcParams.update(
@@ -174,6 +194,8 @@ def _plot_filtered_predictions(
     data_processor,
     mean_all_pred: np.ndarray,
     std_all_pred: np.ndarray,
+    mean_all_posterior: np.ndarray,
+    std_all_posterior: np.ndarray,
     output_dir: Path,
 ) -> Path:
     train_idx, validation_idx, test_idx = data_processor.get_split_indices()
@@ -196,13 +218,27 @@ def _plot_filtered_predictions(
         mean_test_pred=mean_all_pred[test_idx],
         std_test_pred=std_all_pred[test_idx],
         color="#1d4ed8",
-        train_label=[r"$\mu$", r"$\pm\sigma$"],
+        train_label=[r"prior $\mu$", r"prior $\pm\sigma$"],
+        validation_label=["", ""],
+        test_label=["", ""],
+    )
+    plot_prediction(
+        data_processor=data_processor,
+        mean_train_pred=mean_all_posterior[train_idx],
+        std_train_pred=std_all_posterior[train_idx],
+        mean_validation_pred=mean_all_posterior[validation_idx],
+        std_validation_pred=std_all_posterior[validation_idx],
+        mean_test_pred=mean_all_posterior[test_idx],
+        std_test_pred=std_all_posterior[test_idx],
+        color="#15803d",
+        linestyle="--",
+        train_label=[r"posterior $\mu$", r"posterior $\pm\sigma$"],
         validation_label=["", ""],
         test_label=["", ""],
     )
 
     _add_dynamic_grids(ax_pred, data_processor.data.index)
-    ax_pred.legend(loc="upper left", ncol=3)
+    ax_pred.legend(loc="upper left", ncol=4)
     plt.tight_layout()
 
     prediction_plot_path = output_dir / "filtered_predictions.pdf"
@@ -342,7 +378,17 @@ def main(
     global_params = effective_experiment_config.get("lstm_global_params")
     use_tagiv = bool(effective_experiment_config["use_tagiv"])
     sigma_v = float(effective_experiment_config["sigma_v"])
-    max_num_epoch = int(effective_experiment_config.get("lstm_num_epoch", 50))
+    if zero_shot:
+        max_num_epoch = 1
+    else:
+        max_num_epoch = int(effective_experiment_config.get("lstm_num_epoch", 50))
+
+    sigma_v_range = effective_experiment_config.get(
+        "sigma_v_search_space", [0.02, 0.04, 0.06, 0.08, 0.1, 0.125, 0.15, 0.175, 0.2]
+    )
+    sigma_v_max_concurrent = int(
+        effective_experiment_config.get("sigma_v_max_concurrent", 6)
+    )
 
     if len(warmup_lookback_mu) != look_back_len:
         raise ValueError(
@@ -351,118 +397,204 @@ def main(
             f"lstm_look_back_len={look_back_len}."
         )
 
-    lstm_kwargs = dict(
-        look_back_len=look_back_len,
-        num_features=num_features,
-        num_layer=num_layer,
-        infer_len=infer_len,
-        num_hidden_unit=num_hidden_unit,
-        device="cpu",
-        manual_seed=seed,
-        smoother=smoother,
-        stateless=stateless,
-        finetune=finetune,
-        increase_output_variance=increase_output_variance,
-        load_lstm_net=global_params,
-        model_noise=use_tagiv,
-        zeroshot=zero_shot,
-    )
+    validation_obs = data_processor.get_data("validation").flatten()
 
-    def _build_model() -> Model:
-        components = [LocalTrend(), LstmNetwork(**lstm_kwargs)]
-        # components = [ LstmNetwork(**lstm_kwargs)]
-        if not use_tagiv:
-            components.append(WhiteNoise(std_error=sigma_v))
-        return Model(*components)
+    def _train_lstm(sv_value: float):
+        lstm_kwargs = dict(
+            look_back_len=look_back_len,
+            num_features=num_features,
+            num_layer=num_layer,
+            infer_len=infer_len,
+            num_hidden_unit=num_hidden_unit,
+            device="cpu",
+            manual_seed=seed,
+            smoother=smoother,
+            stateless=stateless,
+            finetune=finetune,
+            increase_output_variance=increase_output_variance,
+            load_lstm_net=global_params,
+            model_noise=use_tagiv,
+            zeroshot=zero_shot,
+        )
 
-    try:
-        model = _build_model()
-    except RuntimeError as exc:
-        if global_params and "Failed to load LSTM network from" in str(exc):
-            print(
-                "Warning: incompatible pretrained LSTM weights at "
-                f"'{global_params}'. Falling back to random initialization."
+        def _build_components():
+            parts = [
+                LocalLevel(mu_states=[0.0], var_states=[0.0]),
+                LstmNetwork(**lstm_kwargs),
+            ]
+            if not use_tagiv:
+                parts.append(WhiteNoise(std_error=sv_value))
+            return parts
+
+        try:
+            model = Model(*_build_components())
+        except RuntimeError as exc:
+            if global_params and "Failed to load LSTM network from" in str(exc):
+                print(
+                    "Warning: incompatible pretrained LSTM weights at "
+                    f"'{global_params}'. Falling back to random initialization."
+                )
+                lstm_kwargs["load_lstm_net"] = None
+                lstm_kwargs["finetune"] = False
+                lstm_kwargs["increase_output_variance"] = False
+                model = Model(*_build_components())
+            else:
+                raise
+
+        model.lstm_net.teacher_forcing = True
+
+        local_training_metrics = []
+        local_optimal_metrics = None
+
+        for epoch in range(max_num_epoch):
+            if model.lstm_net.smooth is False:
+                model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
+
+            mu_validation_preds, std_validation_preds, _ = model.lstm_train(
+                train_data=train_data,
+                validation_data=validation_data,
+                white_noise_decay=False,
             )
-            lstm_kwargs["load_lstm_net"] = None
-            lstm_kwargs["finetune"] = False
-            lstm_kwargs["increase_output_variance"] = False
-            model = _build_model()
+
+            mu_validation_preds_unnorm = normalizer.unstandardize(
+                mu_validation_preds,
+                data_processor.scale_const_mean[data_processor.output_col],
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+            std_validation_preds_unnorm = normalizer.unstandardize_std(
+                std_validation_preds,
+                data_processor.scale_const_std[data_processor.output_col],
+            )
+
+            validation_log_lik = metric.log_likelihood(
+                prediction=mu_validation_preds_unnorm,
+                observation=validation_obs,
+                std=std_validation_preds_unnorm,
+            )
+            validation_rmse = np.sqrt(
+                np.nanmean((mu_validation_preds_unnorm - validation_obs) ** 2)
+            )
+
+            epoch_metrics = {
+                "epoch": epoch,
+                "validation_log_likelihood": float(validation_log_lik),
+                "validation_rmse": float(validation_rmse),
+            }
+            local_training_metrics.append(epoch_metrics)
+
+            model.early_stopping(
+                evaluate_metric=-validation_log_lik,
+                current_epoch=epoch,
+                max_epoch=max_num_epoch,
+                skip_epoch=0,
+            )
+
+            if local_optimal_metrics is None or (
+                validation_log_lik > local_optimal_metrics["validation_log_likelihood"]
+            ):
+                local_optimal_metrics = epoch_metrics
+
+            if model.stop_training:
+                break
+
+        model.lstm_net.teacher_forcing = False
+        return (
+            model.get_dict(time_step=0),
+            local_training_metrics,
+            int(model.optimal_epoch),
+            local_optimal_metrics,
+        )
+
+    ######### sigma_v grid search #########
+    sigma_v_grid_search_result = None
+    if bool(effective_experiment_config.get("optimize_sigma_v", False)):
+        print(
+            "---- sigma_v grid search over "
+            f"{sigma_v_range} (metric: validation_log_likelihood) ----"
+        )
+
+        if sigma_v_max_concurrent > 1:
+            global _sigma_v_train_fn
+            _sigma_v_train_fn = _train_lstm
+            ctx = mp.get_context("fork")
+            with ctx.Pool(sigma_v_max_concurrent) as pool:
+                grid_results = pool.map(_sigma_v_worker, sigma_v_range)
         else:
-            raise
+            grid_results = []
+            for sv_candidate in sigma_v_range:
+                sv_dict, sv_metrics, sv_opt_epoch, sv_opt_metrics = _train_lstm(
+                    sv_candidate
+                )
+                grid_results.append(
+                    {
+                        "sigma_v": sv_candidate,
+                        "model_dict": sv_dict,
+                        "metrics": sv_metrics,
+                        "optimal_epoch": sv_opt_epoch,
+                        "optimal_validation_metrics": sv_opt_metrics,
+                    }
+                )
 
-    model.auto_initialize_baseline_states(
-        # train_data["y"][0 : experiment_config["baseline_init_len"]]
-        train_data["y"]
-    )
-    # baseline_state_names = {"level", "trend", "acceleration"}
-    # print("Initialized baseline states:")
-    # for i, state_name in enumerate(model.states_name):
-    #     if state_name not in baseline_state_names:
-    #         continue
-    #     print(
-    #         f"  {state_name}: mu={float(model.mu_states[i]):.6f}, "
-    #         f"var={float(model.var_states[i, i]):.6f}"
-    #     )
+        for r in grid_results:
+            print(
+                f"  sigma_v={r['sigma_v']:.4f} -> "
+                f"best validation_log_likelihood="
+                f"{r['optimal_validation_metrics']['validation_log_likelihood']:.6f} "
+                f"(epoch {r['optimal_epoch']})"
+            )
 
-    training_metrics_history = []
-    optimal_validation_metrics = None
-
-    model.lstm_net.teacher_forcing = False
-
-    for epoch in range(max_num_epoch):
-        if model.lstm_net.smooth is False:
-            model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
-
-        mu_validation_preds, std_validation_preds, _ = model.lstm_train(
-            train_data=train_data,
-            validation_data=validation_data,
-            white_noise_decay=False,
+        selection_delta = float(
+            effective_experiment_config.get("sigma_v_selection_delta", 0.0)
         )
+        scored = [
+            (r, r["optimal_validation_metrics"]["validation_log_likelihood"])
+            for r in grid_results
+        ]
+        global_best_metric = max(s for _, s in scored)
+        tolerated = [
+            (r, s) for r, s in scored if s >= global_best_metric - selection_delta
+        ]
+        best_entry, best_validation_metric = min(
+            tolerated, key=lambda rs: rs[0]["sigma_v"]
+        )
+        best_sigma_v = float(best_entry["sigma_v"])
 
-        mu_validation_preds_unnorm = normalizer.unstandardize(
-            mu_validation_preds,
-            data_processor.scale_const_mean[data_processor.output_col],
-            data_processor.scale_const_std[data_processor.output_col],
-        )
-        std_validation_preds_unnorm = normalizer.unstandardize_std(
-            std_validation_preds,
-            data_processor.scale_const_std[data_processor.output_col],
-        )
-
-        validation_obs = data_processor.get_data("validation").flatten()
-        validation_log_lik = metric.log_likelihood(
-            prediction=mu_validation_preds_unnorm,
-            observation=validation_obs,
-            std=std_validation_preds_unnorm,
-        )
-        validation_rmse = np.sqrt(
-            np.nanmean((mu_validation_preds_unnorm - validation_obs) ** 2)
-        )
-
-        epoch_metrics = {
-            "epoch": epoch,
-            "validation_log_likelihood": float(validation_log_lik),
-            "validation_rmse": float(validation_rmse),
+        sigma_v = best_sigma_v
+        sigma_v_grid_search_result = {
+            "selection_metric": "validation_log_likelihood",
+            "selection_delta": selection_delta,
+            "optimal_sigma_v": best_sigma_v,
+            "best_validation_metric": float(best_validation_metric),
+            "global_best_metric": float(global_best_metric),
+            "grid_results": [
+                {
+                    "sigma_v": float(r["sigma_v"]),
+                    "optimal_epoch": int(r["optimal_epoch"]),
+                    "validation_log_likelihood": float(
+                        r["optimal_validation_metrics"]["validation_log_likelihood"]
+                    ),
+                    "validation_rmse": float(
+                        r["optimal_validation_metrics"]["validation_rmse"]
+                    ),
+                }
+                for r in grid_results
+            ],
         }
-        training_metrics_history.append(epoch_metrics)
-
-        model.early_stopping(
-            evaluate_metric=-validation_log_lik,
-            current_epoch=epoch,
-            max_epoch=max_num_epoch,
+        print(
+            f"---- Optimal sigma_v: {sigma_v:.4f} "
+            f"(validation_log_likelihood={best_validation_metric:.6f}) ----"
         )
 
-        if optimal_validation_metrics is None or (
-            validation_log_lik > optimal_validation_metrics["validation_log_likelihood"]
-        ):
-            optimal_validation_metrics = epoch_metrics
+        training_metrics_history = best_entry["metrics"]
+        optimal_validation_metrics = best_entry["optimal_validation_metrics"]
+        model = Model.load_dict(best_entry["model_dict"])
+    else:
+        print(f"---- Training LSTM once with sigma_v={sigma_v:.4f} ----")
+        model_dict, training_metrics_history, _, optimal_validation_metrics = (
+            _train_lstm(sigma_v)
+        )
+        model = Model.load_dict(model_dict)
 
-        if model.stop_training:
-            break
-
-    model.lstm_net.teacher_forcing = False
-
-    model.set_memory(time_step=0)
     if model.lstm_net.smooth is False:
         model.lstm_output_history.set(warmup_lookback_mu, warmup_lookback_var)
     mu_filter_preds, std_filter_preds, states = model.filter(
@@ -480,17 +612,67 @@ def main(
         data_processor.scale_const_std[data_processor.output_col],
     )
 
+    mu_posterior_obs = np.empty(len(states.mu_posterior))
+    std_posterior_obs = np.empty(len(states.mu_posterior))
+    for t, (mu_p, var_p) in enumerate(zip(states.mu_posterior, states.var_posterior)):
+        mu_obs_p, var_obs_p = calc_observation(mu_p, var_p, model.observation_matrix)
+        mu_posterior_obs[t] = float(np.asarray(mu_obs_p).flatten()[0])
+        std_posterior_obs[t] = float(np.sqrt(np.asarray(var_obs_p).flatten()[0]))
+
+    mu_posterior_obs_unnorm = normalizer.unstandardize(
+        mu_posterior_obs,
+        data_processor.scale_const_mean[data_processor.output_col],
+        data_processor.scale_const_std[data_processor.output_col],
+    )
+    std_posterior_obs_unnorm = normalizer.unstandardize_std(
+        std_posterior_obs,
+        data_processor.scale_const_std[data_processor.output_col],
+    )
+
     _, _, test_idx = data_processor.get_split_indices()
     test_obs = data_processor.get_data("test").flatten()
     mu_test_preds_unnorm = mu_filter_preds_unnorm[test_idx]
     std_test_preds_unnorm = std_filter_preds_unnorm[test_idx]
 
-    filter_log_lik = metric.log_likelihood(
-        prediction=mu_test_preds_unnorm,
-        observation=test_obs,
-        std=std_test_preds_unnorm,
+    # LL / RMSE / MAE in standardized space
+    mean_col = float(
+        np.asarray(
+            data_processor.scale_const_mean[data_processor.output_col]
+        ).flatten()[0]
     )
-    filter_rmse = float(np.sqrt(np.nanmean((mu_test_preds_unnorm - test_obs) ** 2)))
+    std_col = float(
+        np.asarray(data_processor.scale_const_std[data_processor.output_col]).flatten()[
+            0
+        ]
+    )
+    mu_test_std = mu_filter_preds[test_idx]
+    std_test_std = std_filter_preds[test_idx]
+    test_obs_std = (test_obs - mean_col) / std_col
+
+    filter_log_lik = metric.log_likelihood(
+        prediction=mu_test_std,
+        observation=test_obs_std,
+        std=std_test_std,
+    )
+    res_std = mu_test_std - test_obs_std
+    filter_rmse = float(np.sqrt(np.nanmean(res_std**2)))
+    filter_mae = float(np.nanmean(np.abs(res_std)))
+
+    # P50 / P90 = gluonts normalized quantile loss on original-space predictions
+    Z90 = 1.2815515655446004
+    q50_pred = mu_test_preds_unnorm
+    q90_pred = mu_test_preds_unnorm + Z90 * std_test_preds_unnorm
+    denom = float(np.nansum(np.abs(test_obs))) + 1e-8
+
+    def _quantile_loss(target, forecast, q):
+        return 2.0 * float(
+            np.nansum(
+                np.abs((forecast - target) * ((target <= forecast).astype(float) - q))
+            )
+        )
+
+    filter_p50 = _quantile_loss(test_obs, q50_pred, 0.5) / denom
+    filter_p90 = _quantile_loss(test_obs, q90_pred, 0.9) / denom
 
     print(
         "Validation metrics at optimal epoch: "
@@ -498,8 +680,11 @@ def main(
         f"val_ll={optimal_validation_metrics['validation_log_likelihood']:.6f} "
         f"val_rmse={optimal_validation_metrics['validation_rmse']:.6f}"
     )
-    print(f"Test-set filter log-likelihood: {filter_log_lik:.6f}")
-    print(f"Test-set filter RMSE: {filter_rmse:.6f}")
+    print(f"Test-set filter log-likelihood (std space): {filter_log_lik:.6f}")
+    print(f"Test-set filter RMSE (std space): {filter_rmse:.6f}")
+    print(f"Test-set filter MAE (std space): {filter_mae:.6f}")
+    print(f"Test-set filter Np50: {filter_p50:.6f}")
+    print(f"Test-set filter Np90: {filter_p90:.6f}")
 
     raw_plot_path = _plot_raw_data(
         dataset=dataset,
@@ -509,6 +694,8 @@ def main(
         data_processor=data_processor,
         mean_all_pred=mu_filter_preds_unnorm,
         std_all_pred=std_filter_preds_unnorm,
+        mean_all_posterior=mu_posterior_obs_unnorm,
+        std_all_posterior=std_posterior_obs_unnorm,
         output_dir=output_dir,
     )
     predictions_csv_path = _save_filtered_predictions_csv(
@@ -535,10 +722,14 @@ def main(
 
     summary = {
         "experiment_name": experiment_name,
+        "sigma_v": float(sigma_v),
         "validation_metrics_best": optimal_validation_metrics,
         "test_metrics": {
             "log_likelihood": float(filter_log_lik),
             "rmse": filter_rmse,
+            "mae": filter_mae,
+            "p50": filter_p50,
+            "p90": filter_p90,
         },
         "artifacts": {
             "raw_plot": str(raw_plot_path),
@@ -552,6 +743,8 @@ def main(
             "states_plot": str(states_plot_path),
         },
     }
+    if sigma_v_grid_search_result is not None:
+        summary["sigma_v_grid_search"] = sigma_v_grid_search_result
     summary_path = output_dir / "summary.json"
     with summary_path.open("w") as f:
         json.dump(summary, f, indent=2)

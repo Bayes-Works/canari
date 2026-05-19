@@ -1,15 +1,20 @@
-"""Benchmark filter_global_lstm across multiple seeds and global/local weights,
-with Chronos-2 one-step-ahead filtering as an additional baseline.
+"""Benchmark filter_global_lstm across selectable model variants.
 
 Usage:
     python -m experiments.benchmark_filter_global_lstm \
-        --experiment_config_path experiments/config/OOD_timeseries/test_10.yaml
+        --experiment_config_path experiments/config/benchmark_data/test_10.yaml
     python -m experiments.benchmark_filter_global_lstm \
-        --experiment_config_path experiments/config/OOD_timeseries/test_10.yaml \
+        --experiment_config_path experiments/config/benchmark_data/test_10.yaml \
         --seeds "[1,2,3,4,5]"
     python -m experiments.benchmark_filter_global_lstm \
-        --experiment_config_path experiments/config/OOD_timeseries/test_10.yaml \
-        --skip_chronos
+        --experiment_config_path experiments/config/benchmark_data/test_10.yaml \
+        --models '["local","global_finetune"]'
+    python -m experiments.benchmark_filter_global_lstm \
+        --experiment_config_path experiments/config/benchmark_data/test_10.yaml \
+        --skip_models '["chronos2"]'
+    python -m experiments.benchmark_filter_global_lstm \
+        --experiment_config_path experiments/config/benchmark_data/test_10.yaml \
+        --train_percentages "[25,50,100]"
 """
 
 import copy
@@ -34,19 +39,185 @@ def _read_summary(output_dir: Path) -> dict:
         return json.load(f)
 
 
+MODEL_ALIASES = {
+    "local": "local",
+    "global-finetune": "global_finetune",
+    "global_finetune": "global_finetune",
+    "global-fine-tune": "global_finetune",
+    "global_fine_tune": "global_finetune",
+    "global": "global_finetune",
+    "global-zeroshot": "global_zeroshot",
+    "global_zeroshot": "global_zeroshot",
+    "global-zero-shot": "global_zeroshot",
+    "global_zero_shot": "global_zeroshot",
+    "zeroshot": "global_zeroshot",
+    "zero-shot": "global_zeroshot",
+    "zero_shot": "global_zeroshot",
+    "chronos": "chronos2",
+    "chronos2": "chronos2",
+    "chronos-2": "chronos2",
+    "chronos_2": "chronos2",
+}
+
+DEFAULT_MODELS = (
+    "local",
+    "global_finetune",
+    "global_zeroshot",
+    "chronos2",
+)
+
+
+def _coerce_model_names(value, default: tuple[str, ...] = ()) -> list[str]:
+    """Normalize Fire-friendly model selections to canonical model names."""
+    if value is None:
+        raw_names = list(default)
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if stripped.lower() in {"", "none", "null"}:
+            raw_names = []
+        elif stripped.lower() == "all":
+            raw_names = list(DEFAULT_MODELS)
+        elif stripped.startswith("["):
+            raw_names = json.loads(stripped)
+        else:
+            raw_names = [item.strip() for item in stripped.split(",")]
+    else:
+        raw_names = list(value)
+
+    normalized = []
+    for name in raw_names:
+        key = str(name).strip().lower().replace("-", "_").replace(" ", "_")
+        if not key:
+            continue
+        try:
+            canonical = MODEL_ALIASES[key]
+        except KeyError as exc:
+            valid = ", ".join(DEFAULT_MODELS)
+            raise ValueError(
+                f"Unknown model {name!r}. Valid models are: {valid}."
+            ) from exc
+        if canonical not in normalized:
+            normalized.append(canonical)
+    return normalized
+
+
+def _coerce_train_percentages(value, default: float) -> list[float]:
+    """Normalize train percentages to fractions in (0, 1]."""
+    if value is None:
+        raw_values = [default]
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if stripped.startswith("["):
+            raw_values = json.loads(stripped)
+        else:
+            raw_values = [item.strip() for item in stripped.split(",")]
+    elif isinstance(value, (int, float)):
+        raw_values = [value]
+    else:
+        raw_values = list(value)
+
+    train_splits = []
+    for raw_value in raw_values:
+        train_split = float(raw_value)
+        if train_split > 1.0:
+            train_split = train_split / 100.0
+        if not 0.0 < train_split <= 1.0:
+            raise ValueError(
+                "Training percentages must be in (0, 100] or fractions in (0, 1]. "
+                f"Got {raw_value!r}."
+            )
+        if train_split not in train_splits:
+            train_splits.append(train_split)
+    return train_splits
+
+
+def _train_split_label(train_split: float) -> str:
+    percentage = train_split * 100.0
+    if percentage.is_integer():
+        return f"train{int(percentage):03d}pct"
+    return f"train{percentage:.2f}pct".replace(".", "p")
+
+
+def _build_filter_conditions(
+    base_config: dict,
+    models: list[str],
+) -> list[dict]:
+    global_params_path = base_config.get("lstm_global_params")
+    conditions = []
+
+    for model_name in models:
+        if model_name == "chronos2":
+            continue
+
+        if model_name == "local":
+            conditions.append(
+                {
+                    "name": "local",
+                    "overrides": {
+                        "lstm_global_params": None,
+                        "lstm_finetune": False,
+                        "lstm_zeroshot": False,
+                        "lstm_increase_output_variance": False,
+                        "lstm_num_layer": 1,
+                    },
+                    "cache_across_seeds": False,
+                }
+            )
+            continue
+
+        if global_params_path is None:
+            print(
+                f"NOTE: lstm_global_params is null in config; "
+                f"skipping {model_name}."
+            )
+            continue
+
+        if model_name == "global_finetune":
+            conditions.append(
+                {
+                    "name": "global_finetune",
+                    "overrides": {
+                        "lstm_global_params": global_params_path,
+                        "lstm_finetune": False,
+                        "lstm_zeroshot": False,
+                        "lstm_increase_output_variance": True,
+                    },
+                    "cache_across_seeds": True,
+                }
+            )
+        elif model_name == "global_zeroshot":
+            conditions.append(
+                {
+                    "name": "global_zeroshot",
+                    "overrides": {
+                        "lstm_global_params": global_params_path,
+                        "lstm_finetune": False,
+                        "lstm_zeroshot": True,
+                        "lstm_increase_output_variance": False,
+                    },
+                    "cache_across_seeds": True,
+                }
+            )
+
+    return conditions
+
+
 def _run_single(
     base_config: dict,
     seed: int,
     condition: str,
-    global_params,
+    config_overrides: dict,
+    train_split: float,
     benchmark_root: Path,
 ):
     """Create a modified config and run filter_global_lstm."""
     config = copy.deepcopy(base_config)
     config["lstm_manual_seed"] = seed
-    config["lstm_global_params"] = global_params
+    config["train_split"] = train_split
+    config.update(config_overrides)
     config["experiment_name"] = (
-        f"{base_config['experiment_name']}_benchmark_{condition}_seed{seed}"
+        f"{base_config['experiment_name']}_benchmark_"
+        f"{condition}_{_train_split_label(train_split)}_seed{seed}"
     )
     config["output_root"] = str(benchmark_root / "runs")
 
@@ -58,7 +229,10 @@ def _run_single(
         yaml.safe_dump(config, f, sort_keys=False)
 
     print(f"\n{'=' * 60}")
-    print(f"Running: condition={condition}, seed={seed}")
+    print(
+        f"Running: condition={condition}, "
+        f"train_percentage={train_split * 100:.2f}, seed={seed}"
+    )
     print(f"{'=' * 60}")
 
     run_filter(experiment_config_path=str(temp_config_path))
@@ -70,9 +244,14 @@ def _run_single(
 
     return {
         "condition": condition,
+        "train_split": train_split,
+        "train_percentage": train_split * 100.0,
         "seed": seed,
         "test_ll": test_metrics["log_likelihood"],
         "test_rmse": test_metrics["rmse"],
+        "test_mae": test_metrics.get("mae"),
+        "test_p50": test_metrics.get("p50"),
+        "test_p90": test_metrics.get("p90"),
         "val_ll": summary["validation_metrics_best"].get(
             "validation_log_likelihood"
         ),
@@ -84,6 +263,7 @@ def _run_chronos(
     base_config: dict,
     chronos_model: str,
     benchmark_root: Path,
+    train_split: float,
     seed: int = 42,
     chronos_device: str = "gpu",
 ):
@@ -108,12 +288,16 @@ def _run_chronos(
     np.random.seed(seed)
 
     print(f"\n{'=' * 60}")
-    print("Running: condition=chronos")
+    print(
+        f"Running: condition=chronos2, "
+        f"train_percentage={train_split * 100:.2f}"
+    )
     print(f"{'=' * 60}")
 
     # Use prepare_dataset for consistent data splits (anomaly_slope=0 for filtering)
     config = copy.deepcopy(base_config)
     config["anomaly_slope"] = 0.0
+    config["train_split"] = train_split
     config.setdefault("anomaly_start_time", config["validation_start"])
 
     dataset = prepare_dataset(
@@ -187,26 +371,49 @@ def _run_chronos(
     test_obs = all_obs[test_idx]
     test_pred = pred_means[test_idx]
     test_std = pred_std[test_idx]
+    test_q90 = pred_q90[test_idx]
 
     # Filter out NaN predictions (should be none if min_context < test_start)
     valid = ~np.isnan(test_pred)
     test_obs_valid = test_obs[valid]
     test_pred_valid = test_pred[valid]
     test_std_valid = test_std[valid]
+    test_q90_valid = test_q90[valid]
+
+    # LL / RMSE / MAE in standardized space (scale constants from data_processor)
+    mean_col = float(np.asarray(data_processor.scale_const_mean[data_processor.output_col]).flatten()[0])
+    std_col = float(np.asarray(data_processor.scale_const_std[data_processor.output_col]).flatten()[0])
+    test_obs_std_arr = (test_obs_valid - mean_col) / std_col
+    test_pred_std_arr = (test_pred_valid - mean_col) / std_col
+    test_std_std_arr = test_std_valid / std_col
 
     test_ll = float(
         tagi_metric.log_likelihood(
-            prediction=test_pred_valid,
-            observation=test_obs_valid,
-            std=test_std_valid,
+            prediction=test_pred_std_arr,
+            observation=test_obs_std_arr,
+            std=test_std_std_arr,
         )
     )
-    test_rmse = float(
-        np.sqrt(np.nanmean((test_pred_valid - test_obs_valid) ** 2))
-    )
+    res_std = test_pred_std_arr - test_obs_std_arr
+    test_rmse = float(np.sqrt(np.nanmean(res_std ** 2)))
+    test_mae = float(np.nanmean(np.abs(res_std)))
 
-    print(f"Chronos test-set log-likelihood: {test_ll:.6f}")
-    print(f"Chronos test-set RMSE: {test_rmse:.6f}")
+    # Np50 / Np90 = gluonts normalized quantile loss on original-space predictions
+    denom = float(np.nansum(np.abs(test_obs_valid))) + 1e-8
+
+    def _quantile_loss(target, forecast, q):
+        return 2.0 * float(np.nansum(
+            np.abs((forecast - target) * ((target <= forecast).astype(float) - q))
+        ))
+
+    test_p50 = _quantile_loss(test_obs_valid, test_pred_valid, 0.5) / denom
+    test_p90 = _quantile_loss(test_obs_valid, test_q90_valid, 0.9) / denom
+
+    print(f"Chronos test-set log-likelihood (std space): {test_ll:.6f}")
+    print(f"Chronos test-set RMSE (std space): {test_rmse:.6f}")
+    print(f"Chronos test-set MAE (std space): {test_mae:.6f}")
+    print(f"Chronos test-set Np50: {test_p50:.6f}")
+    print(f"Chronos test-set Np90: {test_p90:.6f}")
 
     # Plot test-set predictions
     import matplotlib.pyplot as plt
@@ -230,19 +437,25 @@ def _run_chronos(
     ax.set_ylabel("Value")
     plt.tight_layout()
 
-    output_dir = benchmark_root / "chronos"
+    output_dir = benchmark_root / f"chronos2_{_train_split_label(train_split)}"
     output_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_dir / "chronos_test_predictions.pdf", format="pdf")
     fig.savefig(output_dir / "chronos_test_predictions.pgf", format="pgf")
     plt.close(fig)
 
     summary = {
-        "experiment_name": f"{base_config['experiment_name']}_benchmark_chronos",
+        "experiment_name": (
+            f"{base_config['experiment_name']}_benchmark_"
+            f"chronos2_{_train_split_label(train_split)}"
+        ),
         "model": chronos_model,
         "device": device,
         "test_metrics": {
             "log_likelihood": test_ll,
             "rmse": test_rmse,
+            "mae": test_mae,
+            "p50": test_p50,
+            "p90": test_p90,
         },
     }
     summary_path = output_dir / "summary.json"
@@ -250,10 +463,15 @@ def _run_chronos(
         json.dump(summary, f, indent=2)
 
     return {
-        "condition": "chronos",
+        "condition": "chronos2",
+        "train_split": train_split,
+        "train_percentage": train_split * 100.0,
         "seed": seed,
         "test_ll": test_ll,
         "test_rmse": test_rmse,
+        "test_mae": test_mae,
+        "test_p50": test_p50,
+        "test_p90": test_p90,
         "val_ll": None,
         "val_rmse": None,
     }
@@ -273,9 +491,13 @@ def _print_results_table(results: list[dict]):
     """Print a formatted table of individual run results."""
     columns = [
         ("Condition", "condition", None),
+        ("Train %", "train_percentage", ".2f"),
         ("Seed", "seed", None),
-        ("Test LL", "test_ll", ".4f"),
-        ("Test RMSE", "test_rmse", ".6f"),
+        ("LL(std)", "test_ll", ".4f"),
+        ("RMSE(std)", "test_rmse", ".6f"),
+        ("MAE(std)", "test_mae", ".6f"),
+        ("Np50", "test_p50", ".6f"),
+        ("Np90", "test_p90", ".6f"),
         ("Val LL", "val_ll", ".4f"),
         ("Val RMSE", "val_rmse", ".6f"),
     ]
@@ -299,37 +521,75 @@ def _print_results_table(results: list[dict]):
         print("  ".join(v.ljust(w) for v, w in zip(row_values, widths)))
 
 
-def _print_aggregate(results: list[dict], condition_names: list[str]):
-    """Print aggregate statistics grouped by condition."""
+def _print_aggregate(results: list[dict]):
+    """Print aggregate statistics grouped by condition and training percentage."""
     print(f"\n{'=' * 80}")
     print("AGGREGATE STATISTICS")
     print(f"{'=' * 80}")
 
-    for cond in condition_names:
-        cond_results = [r for r in results if r["condition"] == cond]
+    groups = []
+    for result in results:
+        key = (result["condition"], result["train_percentage"])
+        if key not in groups:
+            groups.append(key)
+
+    for cond, train_percentage in groups:
+        cond_results = [
+            r
+            for r in results
+            if r["condition"] == cond
+            and r["train_percentage"] == train_percentage
+        ]
         n_runs = len(cond_results)
 
         test_lls = [r["test_ll"] for r in cond_results if r["test_ll"] is not None]
         test_rmses = [
             r["test_rmse"] for r in cond_results if r["test_rmse"] is not None
         ]
+        test_maes = [
+            r.get("test_mae") for r in cond_results if r.get("test_mae") is not None
+        ]
+        test_p50s = [
+            r.get("test_p50") for r in cond_results if r.get("test_p50") is not None
+        ]
+        test_p90s = [
+            r.get("test_p90") for r in cond_results if r.get("test_p90") is not None
+        ]
         val_lls = [r["val_ll"] for r in cond_results if r["val_ll"] is not None]
         val_rmses = [
             r["val_rmse"] for r in cond_results if r["val_rmse"] is not None
         ]
 
-        print(f"\n--- {cond.upper()} ({n_runs} runs) ---")
+        print(f"\n--- {cond.upper()} @ {train_percentage:.2f}% TRAIN ({n_runs} runs) ---")
         if test_lls:
             print(
-                f"  Test LL:            mean={np.mean(test_lls):.4f}  "
+                f"  Test LL (std):      mean={np.mean(test_lls):.4f}  "
                 f"std={np.std(test_lls):.4f}  "
                 f"min={np.min(test_lls):.4f}  max={np.max(test_lls):.4f}"
             )
         if test_rmses:
             print(
-                f"  Test RMSE:          mean={np.mean(test_rmses):.6f}  "
+                f"  Test RMSE (std):    mean={np.mean(test_rmses):.6f}  "
                 f"std={np.std(test_rmses):.6f}  "
                 f"min={np.min(test_rmses):.6f}  max={np.max(test_rmses):.6f}"
+            )
+        if test_maes:
+            print(
+                f"  Test MAE (std):     mean={np.mean(test_maes):.6f}  "
+                f"std={np.std(test_maes):.6f}  "
+                f"min={np.min(test_maes):.6f}  max={np.max(test_maes):.6f}"
+            )
+        if test_p50s:
+            print(
+                f"  Test Np50:          mean={np.mean(test_p50s):.6f}  "
+                f"std={np.std(test_p50s):.6f}  "
+                f"min={np.min(test_p50s):.6f}  max={np.max(test_p50s):.6f}"
+            )
+        if test_p90s:
+            print(
+                f"  Test Np90:          mean={np.mean(test_p90s):.6f}  "
+                f"std={np.std(test_p90s):.6f}  "
+                f"min={np.min(test_p90s):.6f}  max={np.max(test_p90s):.6f}"
             )
         if val_lls:
             print(
@@ -346,96 +606,135 @@ def _print_aggregate(results: list[dict], condition_names: list[str]):
 def benchmark(
     experiment_config_path: str,
     seeds: list[int] = (1,2,3),
+    train_percentages: list[float] | str | None = None,
+    models: list[str] | str | None = None,
+    skip_models: list[str] | str | None = None,
     chronos_model: str = "amazon/chronos-2",
     chronos_device: str = "auto",
     skip_chronos: bool = False,
 ):
-    """Run filter_global_lstm for multiple seeds with global/local weights,
-    and optionally Chronos-2 as a baseline.
+    """Run selected filter_global_lstm variants and Chronos-2.
 
     Args:
         experiment_config_path: Path to the base YAML config file.
         seeds: List of random seeds to evaluate.
+        train_percentages: Training data percentages to evaluate. Values can be
+            percentages like 25, 50, 100 or fractions like 0.25, 0.5, 1.0.
+            Defaults to the config's train_split value.
+        models: Models to run. Defaults to all models. Valid names are
+            local, global_finetune, global_zeroshot, chronos2.
+        skip_models: Models to remove from the selected set.
         chronos_model: Chronos model identifier.
         chronos_device: Device for Chronos inference: 'cpu', 'cuda', or 'auto'.
-        skip_chronos: If True, skip the Chronos-2 baseline.
+        skip_chronos: Backward-compatible alias for skipping chronos2.
     """
     config_path = Path(experiment_config_path)
     with config_path.open("r") as f:
         base_config = yaml.safe_load(f)
 
+    selected_models = _coerce_model_names(models, DEFAULT_MODELS)
+    skipped_models = _coerce_model_names(skip_models)
+    if skip_chronos and "chronos2" not in skipped_models:
+        skipped_models.append("chronos2")
+    selected_models = [
+        model_name for model_name in selected_models if model_name not in skipped_models
+    ]
+    if not selected_models:
+        raise ValueError("No models selected to run.")
+    train_splits = _coerce_train_percentages(
+        train_percentages,
+        default=float(base_config.get("train_split", 1.0)),
+    )
+
     original_name = base_config["experiment_name"]
-    global_params_path = base_config.get("lstm_global_params")
     output_root = Path(base_config.get("output_root", "experiments/out"))
     benchmark_root = output_root / f"{original_name}_filter_benchmark"
     benchmark_root.mkdir(parents=True, exist_ok=True)
 
-    # Define conditions: always run local; run global only if a path is configured
-    conditions = []
-    if global_params_path is not None:
-        conditions.append(("global", global_params_path))
-    conditions.append(("local", None))
-
-    if len(conditions) == 1:
-        print(
-            "NOTE: lstm_global_params is null in config — "
-            "only running the local (no global weights) condition."
-        )
+    filter_conditions = _build_filter_conditions(base_config, selected_models)
 
     results = []
-    global_result_cache = {}
-    for seed in seeds:
-        for cond_name, gp in conditions:
-            # Global condition is deterministic (pretrained weights override the
-            # random seed), so only run it once and reuse the result.
-            if cond_name == "global" and gp is not None:
-                if "global" not in global_result_cache:
-                    result = _run_single(
-                        base_config, seed, cond_name, gp, benchmark_root
-                    )
-                    global_result_cache["global"] = result
+    result_cache = {}
+    for train_split in train_splits:
+        for seed in seeds:
+            for condition in filter_conditions:
+                cond_name = condition["name"]
+                cache_key = (cond_name, train_split)
+                if condition["cache_across_seeds"]:
+                    if cache_key not in result_cache:
+                        result = _run_single(
+                            base_config,
+                            seed,
+                            cond_name,
+                            condition["overrides"],
+                            train_split,
+                            benchmark_root,
+                        )
+                        result_cache[cache_key] = result
+                    else:
+                        print(
+                            f"\n{'=' * 60}\n"
+                            f"Skipping: condition={cond_name}, "
+                            f"train_percentage={train_split * 100:.2f}, seed={seed} "
+                            f"(deterministic — reusing seed={result_cache[cache_key]['seed']} result)"
+                            f"\n{'=' * 60}"
+                        )
+                        result = {**result_cache[cache_key], "seed": seed}
+                    results.append(result)
                 else:
-                    print(
-                        f"\n{'=' * 60}\n"
-                        f"Skipping: condition=global, seed={seed} "
-                        f"(deterministic — reusing seed={global_result_cache['global']['seed']} result)"
-                        f"\n{'=' * 60}"
+                    result = _run_single(
+                        base_config,
+                        seed,
+                        cond_name,
+                        condition["overrides"],
+                        train_split,
+                        benchmark_root,
                     )
-                    result = {**global_result_cache["global"], "seed": seed}
-                results.append(result)
-            else:
-                result = _run_single(
-                    base_config, seed, cond_name, gp, benchmark_root
-                )
-                results.append(result)
+                    results.append(result)
 
     # Run Chronos-2 baseline (deterministic, single run)
-    condition_names = [c[0] for c in conditions]
-    if not skip_chronos:
-        chronos_result = _run_chronos(
-            base_config,
-            chronos_model,
-            benchmark_root,
-            chronos_device=chronos_device,
+    condition_names = [condition["name"] for condition in filter_conditions]
+    if "chronos2" in selected_models:
+        for train_split in train_splits:
+            chronos_result = _run_chronos(
+                base_config,
+                chronos_model,
+                benchmark_root,
+                train_split,
+                chronos_device=chronos_device,
+            )
+            results.append(chronos_result)
+        condition_names.append("chronos2")
+
+    if not results:
+        raise ValueError(
+            "No benchmark runs were executed. Check selected models and "
+            "lstm_global_params for global variants."
         )
-        results.append(chronos_result)
-        condition_names.append("chronos")
 
     # Print individual results
     print(f"\n{'=' * 80}")
     print(f"BENCHMARK RESULTS: {original_name}")
-    print(f"Seeds: {list(seeds)}  |  Conditions: {condition_names}")
+    print(
+        f"Seeds: {list(seeds)}  |  "
+        f"Train percentages: {[split * 100 for split in train_splits]}  |  "
+        f"Conditions: {condition_names}"
+    )
     print(f"{'=' * 80}\n")
     _print_results_table(results)
 
     # Print aggregates
-    _print_aggregate(results, condition_names)
+    _print_aggregate(results)
 
     # Save full results to JSON
     benchmark_output = {
         "experiment_name": original_name,
         "config_path": str(config_path),
         "seeds": list(seeds),
+        "train_splits": train_splits,
+        "train_percentages": [split * 100.0 for split in train_splits],
+        "selected_models": selected_models,
+        "skipped_models": skipped_models,
         "conditions": condition_names,
         "runs": results,
         "benchmark_root": str(benchmark_root),

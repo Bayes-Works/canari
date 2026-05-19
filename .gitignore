@@ -31,6 +31,7 @@ docs/_build/
 # Experiments
 experiments/config/*
 experiments/out/*
+experiments/baselines/tranad_src/
 
 # claude
 CLAUDE.md
