@@ -16,8 +16,8 @@ from canari.component import LocalTrend, LstmNetwork, Autoregression, Periodic
 from tqdm import tqdm
 
 # Set numpy seeds
-np.random.seed(965)
-
+# np.random.seed(965)   # Original
+np.random.seed(960)
 
 ########### Get the train + validation data from the parent time series ############
 ########### (keep them the same across all synthetic time series)       ############
@@ -65,10 +65,10 @@ model = Model(
     ),
 )
 
-num_test_ts = 10
-# # LT anomaly magnitude
+num_test_ts = 100
+# # Second: LT anomaly magnitude
 # anm_mag_all = np.concatenate([np.arange(0.01, 0.11, 0.01), np.arange(0.2, 1.01, 0.1)])
-# LL anomaly magnitude
+# Second: LL anomaly magnitude
 anm_mag_all = np.concatenate([np.arange(0.1, 2.01, 0.1)])
 num_time_steps = 52 * 19
 gen_ts, _, _, _ = model.generate_time_series(num_time_series=num_test_ts*len(anm_mag_all),
@@ -135,7 +135,7 @@ for i, anm_mag in tqdm(enumerate(anm_mag_all)):
 
 
 # Save to CSV
-saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll.csv"
+saved_path = "data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll_test1.csv"
 df_time_series_all = pd.DataFrame(time_series_all, columns=["values", "anomaly1_magnitude", "anomaly_start_index1", "anomaly2_magnitude", "anomaly_start_index2"])
 
 # Add one column 'timestamp': time_stamps, only for the first row

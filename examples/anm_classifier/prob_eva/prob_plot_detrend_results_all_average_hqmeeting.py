@@ -26,10 +26,22 @@ plt.rcParams.update(params)
 # test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
 # test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 
-test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts1_gen_lttoll.csv")
-raw = test_ts_df.iloc[0]["values"].replace("nan", "None")
-arr = np.array(ast.literal_eval(raw), dtype=float)
-test_ts_len = len(arr.flatten())
+test_ts_num = 10
+test_ts_len_all = []
+for i in range(test_ts_num):
+    if i == 2:
+        actual_ts_index = 11
+    else:
+        actual_ts_index = i + 1
+    test_ts_df = pd.read_csv("data/prob_eva_syn_time_series/detrend_rsic_simple_ts"+str(actual_ts_index)+"_gen_lttolt.csv")
+    raw = test_ts_df.iloc[0]["values"].replace("nan", "None")
+    arr = np.array(ast.literal_eval(raw), dtype=float)
+    test_ts_len = len(arr.flatten())
+    test_ts_len_all.append(test_ts_len)
+print("Test time series lengths: ", test_ts_len_all)
+
+# Repeat the array test_ts_len_all for four time
+test_ts_len_all = np.concatenate([test_ts_len_all, test_ts_len_all, test_ts_len_all, test_ts_len_all])
 
 # Input
 first_anm_type = 'lt'
@@ -38,7 +50,7 @@ second_anm_type = 'lt'
 print('Results for first anomaly type: ', first_anm_type, ' and second anomaly type: ', second_anm_type)
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl_10ts(
-    test_ts_len=test_ts_len,
+    all_test_ts_len=test_ts_len_all,
     csv_path_all=[
         "saved_results/prob_eva/detrend_ts1_results_rsic_lltoll.csv",
         "saved_results/prob_eva/detrend_ts2_results_rsic_lltoll.csv",
@@ -111,7 +123,7 @@ print("False alarm rate for RSIC: ", false_alarm_rate_rsic, "per 10 years")
 
 print('######################### SKF #########################')
 false_alarm_rate_skf, df_skf_group = _process_detection_df_bl_10ts(
-    test_ts_len=test_ts_len,
+    all_test_ts_len=test_ts_len_all,
     csv_path_all=[
         "saved_results/prob_eva/detrend_ts1_results_skf_lltoll.csv",
         "saved_results/prob_eva/detrend_ts2_results_skf_lltoll.csv",
@@ -161,19 +173,219 @@ false_alarm_rate_skf, df_skf_group = _process_detection_df_bl_10ts(
 )
 print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
 
+print('######################### Prophet #########################')
+false_alarm_rate_prophet, df_prophet_group = _process_detection_df_bl_10ts(
+    all_test_ts_len=test_ts_len_all,
+    csv_path_all=[
+        "saved_results/prob_eva/detrend_ts1_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_prophet_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_prophet_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts1_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_prophet_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_prophet_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_prophet_lttolt.csv",
+    ],
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    collapse_consecutive_detections=True,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for Prophet: ", false_alarm_rate_prophet, "per 10 years")
+
+print('######################### DAMP #########################')
+false_alarm_rate_damp, df_damp_group = _process_detection_df_bl_10ts(
+    all_test_ts_len=test_ts_len_all,
+    csv_path_all=[
+        "saved_results/prob_eva/detrend_ts1_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_damp_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_damp_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts1_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_damp_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_damp_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_damp_lttolt.csv",
+    ],
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    collapse_consecutive_detections=True,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for DAMP: ", false_alarm_rate_damp, "per 10 years")
+
+print('######################### LSTMED #########################')
+false_alarm_rate_lstmed, df_lstmed_group = _process_detection_df_bl_10ts(
+    all_test_ts_len=test_ts_len_all,
+    csv_path_all=[
+        "saved_results/prob_eva/detrend_ts1_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_lstmed_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_lstmed_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts1_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_lstmed_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_lstmed_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_lstmed_lttolt.csv",
+    ],
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    collapse_consecutive_detections=True,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for LSTMED: ", false_alarm_rate_lstmed, "per 10 years")
+
+print('######################### TranAD #########################')
+false_alarm_rate_tranad, df_tranad_group = _process_detection_df_bl_10ts(
+    all_test_ts_len=test_ts_len_all,
+    csv_path_all=[
+        "saved_results/prob_eva/detrend_ts1_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_tranad_lltoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_tranad_lltolt.csv",
+        "saved_results/prob_eva/detrend_ts1_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts2_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts11_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts4_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts5_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts6_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts7_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts8_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts9_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts10_results_tranad_lttoll.csv",
+        "saved_results/prob_eva/detrend_ts1_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts2_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts11_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts4_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts5_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts6_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts7_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts8_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts9_results_tranad_lttolt.csv",
+        "saved_results/prob_eva/detrend_ts10_results_tranad_lttolt.csv",
+    ],
+    evaluate_itv_type = False,
+    plot_detection_map = False,
+    collapse_consecutive_detections=True,
+    first_anm_type = first_anm_type,
+)
+print("False alarm rate for TranAD: ", false_alarm_rate_tranad, "per 10 years")
 # Plot the mean and std of df_rsic["mse_LL"], df_rsic["mse_LT"], and df_rsic["detection_time"] for each anomaly magnitude
-# fig, ax = plt.subplots(2, 1, figsize=(6, 2.5), constrained_layout=True)
 fig, ax = plt.subplots(2, 1, figsize=(3, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(2, 1, figsize=(6, 2.5), constrained_layout=True)
+
 
 # Plot for detection_time
-ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSI}", color="tab:red")
-ax[0].fill_between(
-    df_rsic_group.index,
-    df_rsic_group["detection_time"]["mean"] - df_rsic_group["detection_time"]["std"],
-    df_rsic_group["detection_time"]["mean"] + df_rsic_group["detection_time"]["std"],
-    alpha=0.2,
-    color="tab:red",
-)
 # ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label=r"\textbf{RSI}")
 # ax[0].fill_between(
 #     df_rsi_group.index,
@@ -181,31 +393,76 @@ ax[0].fill_between(
 #     df_rsi_group["detection_time"]["mean"] + df_rsi_group["detection_time"]["std"],
 #     alpha=0.2,
 # )
-ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"\textbf{SKF}", color="tab:green")
-ax[0].fill_between(
-    df_skf_group.index,
-    df_skf_group["detection_time"]["mean"] - df_skf_group["detection_time"]["std"],
-    df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
-    alpha=0.2,
-    color="tab:green",
-)
+ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"SKF", color="tab:blue")
+# ax[0].fill_between(
+#     df_skf_group.index,
+#     df_skf_group["detection_time"]["mean"] - df_skf_group["detection_time"]["std"],
+#     df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:blue",
+# )
+# ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"Prophet", color="tab:green")
+# ax[0].fill_between(
+#     df_prophet_group.index,
+#     df_prophet_group["detection_time"]["mean"] - df_prophet_group["detection_time"]["std"],
+#     df_prophet_group["detection_time"]["mean"] + df_prophet_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:green",
+# )
+# ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"LSTMED", color="tab:purple")
+# ax[0].fill_between(
+#     df_lstmed_group.index,
+#     df_lstmed_group["detection_time"]["mean"] - df_lstmed_group["detection_time"]["std"],
+#     df_lstmed_group["detection_time"]["mean"] + df_lstmed_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:purple",
+# )
+# ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"TranAD", color="tab:brown")
+# ax[0].fill_between(
+#     df_tranad_group.index,
+#     df_tranad_group["detection_time"]["mean"] - df_tranad_group["detection_time"]["std"],
+#     df_tranad_group["detection_time"]["mean"] + df_tranad_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:brown",
+# )
+# ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"DAMP", color="tab:orange")
+# ax[0].fill_between(
+#     df_damp_group.index,
+#     df_damp_group["detection_time"]["mean"] - df_damp_group["detection_time"]["std"],
+#     df_damp_group["detection_time"]["mean"] + df_damp_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:orange",
+# )
+ax[0].plot(df_rsic_group.index, df_rsic_group["detection_time"]["mean"], label=r"\textbf{RSI}", color="tab:red", linewidth=1.5)
+# ax[0].fill_between(
+#     df_rsic_group.index,
+#     df_rsic_group["detection_time"]["mean"] - df_rsic_group["detection_time"]["std"],
+#     df_rsic_group["detection_time"]["mean"] + df_rsic_group["detection_time"]["std"],
+#     alpha=0.2,
+#     color="tab:red",
+# )
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
 # ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
+# ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0., ncol=2)
 
 # Plot for detection_rate
-ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSI}", color="tab:red")
 # ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
-ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}", color="tab:green")
+ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}", color="tab:blue")
+# ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], label=r"\textbf{Prophet}", color="tab:green")
+# ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}", color="tab:purple")
+# ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}", color="tab:brown")
+# ax[1].plot(df_damp_group.index, df_damp_group["detection_rate"]["mean"], label=r"\textbf{DAMP}", color="tab:orange")
+ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSI}", color="tab:red", linewidth=1.5)
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
 # ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-ax[1].legend(loc='lower right', fontsize=6)
+# ax[1].legend(loc='lower right', fontsize=6)
 
 ax[1].set_xlabel("Anomaly Magnitude (unit/$y$)")
 

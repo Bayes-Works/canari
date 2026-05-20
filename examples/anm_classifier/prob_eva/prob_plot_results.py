@@ -33,8 +33,8 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 # test_ts_len = len(arr.flatten())
 
 # Input
-first_anm_type = 'lt'
-second_anm_type = 'll'
+first_anm_type = 'll'
+second_anm_type = 'lt'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
@@ -77,7 +77,7 @@ print("False alarm rate for SKF: ", false_alarm_rate_skf, "per 10 years")
 print('######################### DAMP #########################')
 false_alarm_rate_damp, df_damp_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_damp_" + first_anm_type + "to" + second_anm_type + ".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_damp_" + first_anm_type + "to" + second_anm_type + "_test1.csv",
     evaluate_itv_type = False,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
@@ -87,7 +87,7 @@ print("False alarm rate for DAMP: ", false_alarm_rate_damp, "per 10 years")
 print('######################### Prophet #########################')
 false_alarm_rate_prophet, df_prophet_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + ".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + "_test1_0.csv",
     evaluate_itv_type = False,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
@@ -97,7 +97,7 @@ print("False alarm rate for Prophet: ", false_alarm_rate_prophet, "per 10 years"
 print('######################### LSTMED #########################')
 false_alarm_rate_lstmed, df_lstmed_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_lstmed_" + first_anm_type + "to" + second_anm_type + ".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_lstmed_" + first_anm_type + "to" + second_anm_type + "_test1.csv",
     evaluate_itv_type = False,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
@@ -107,7 +107,7 @@ print("False alarm rate for LSTMED: ", false_alarm_rate_lstmed, "per 10 years")
 print('######################### TranAD #########################')
 false_alarm_rate_tranad, df_tranad_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_tranad_" + first_anm_type + "to" + second_anm_type + ".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_tranad_" + first_anm_type + "to" + second_anm_type + "_test1.csv",
     evaluate_itv_type = False,
     plot_detection_map = False,
     first_anm_type = first_anm_type,

@@ -34,7 +34,7 @@ test_start = validation_start + int(
 )
 
 # # # Read test data
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt_test1.csv")
 
 # Containers for restored data
 restored_data = []
@@ -51,13 +51,17 @@ for _, row in df.iterrows():
 begin_idx = int(len(df_raw) * 0.4)
 threshold = 0.2
 results_all = []
+num_repetition = 100
+total_batch_num = 5
 
-# for ts_index in tqdm(range(len(restored_data))):
-# for ts_index in tqdm(range(2)):
-#     ts_index += 150
-for p in range(10):
-    for q in tqdm(range(len(restored_data)//10)):
-        ts_index = p + q * 10
+test_batch = 1      # TODO
+
+num_sample_each_batch = num_repetition/total_batch_num
+for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sample_each_batch, dtype="int"):
+    for q in tqdm(range(len(restored_data)//num_repetition)):
+# for p in range(1):
+# 	for q in np.array([7, 8]):
+        ts_index = p + q * num_repetition
 
         df_k = pd.DataFrame()
         print(df_k)
@@ -188,4 +192,4 @@ for p in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_prophet_lttolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_prophet_lttolt_test1_" + str(test_batch) + ".csv", index=False)
