@@ -1440,4 +1440,4 @@ class SKF:
         )
         skf_metric = j1 * j2 * j3
 
-        return skf_metric
+        return skf_metric, j1,j2, j3
