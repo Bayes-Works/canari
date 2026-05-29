@@ -813,7 +813,7 @@ class hsl_classification:
 
                 # Store the log-likelihoods
                 self.class_prob_moments.append([llitv_prob_mean, ltitv_prob_mean, llitv_prob_std, llitv_prob_std])
-                itv_decision = model_select_beta_credible(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum, level=0.998)
+                itv_decision = model_select_beta_credible(alpha=joint_data_hs_ll_post_sum, beta_=joint_data_hs_lt_post_sum, level=0.99)
                 self.itv_decisions.append(itv_decision)
             elif rerun_kf is False:
                 self.class_prob_moments.append([0.5, 0.5, 0, 0])

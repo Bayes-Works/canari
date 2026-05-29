@@ -54,7 +54,7 @@ results_all = []
 num_repetition = 100
 total_batch_num = 5
 
-test_batch = 1      # TODO
+test_batch = 4      # TODO
 
 num_sample_each_batch = num_repetition/total_batch_num
 for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sample_each_batch, dtype="int"):

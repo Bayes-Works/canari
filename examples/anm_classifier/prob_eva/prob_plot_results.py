@@ -33,14 +33,14 @@ test_ts_len = len(np.array(eval(test_ts_df.iloc[0]["values"])).flatten())
 # test_ts_len = len(arr.flatten())
 
 # Input
-first_anm_type = 'll'
-second_anm_type = 'lt'
+first_anm_type = 'lt'
+second_anm_type = 'll'
 
 print('######################### RSIC #########################')
 false_alarm_rate_rsic, df_rsic_group = _process_detection_df_bl(
     test_ts_len=test_ts_len,
     # csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v1_realjoint3_thresholdfix_lltoll.csv",
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_"+first_anm_type+"to"+second_anm_type+".csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_rsic_v2_"+first_anm_type+"to"+second_anm_type+"_test1_0.csv",
     # csv_path="saved_results/prob_eva/detrend_ts1_results_rsic_"+first_anm_type+"to"+second_anm_type+".csv",
     evaluate_itv_type = True,
     plot_detection_map = False,
@@ -87,7 +87,7 @@ print("False alarm rate for DAMP: ", false_alarm_rate_damp, "per 10 years")
 print('######################### Prophet #########################')
 false_alarm_rate_prophet, df_prophet_group = _process_detection_df_skf(
     test_ts_len=test_ts_len,
-    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + "_test1_0.csv",
+    csv_path="saved_results/prob_eva/syn_simple_ts_results_prophet_" + first_anm_type + "to" + second_anm_type + "_test1.csv",
     evaluate_itv_type = False,
     plot_detection_map = False,
     first_anm_type = first_anm_type,
