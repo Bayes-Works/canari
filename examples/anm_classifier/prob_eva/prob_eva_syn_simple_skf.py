@@ -145,7 +145,8 @@ norm_const_std = data_processor.scale_const_std[data_processor.output_col]
 
 # # # Read test data
 # df = pd.read_csv("data/prob_eva_syn_time_series/syn_simple_tsgen.csv")
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+# df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt_test1.csv")
 
 # Containers for restored data
 restored_data = []
@@ -161,9 +162,11 @@ for _, row in df.iterrows():
 
 results_all = []
 
-for m in range(10):
-    for n in tqdm(range(len(restored_data)//10)):
-        k = m + n * 10
+num_repetition = 100
+
+for p in range(num_repetition):
+    for q in tqdm(range(len(restored_data)//num_repetition)):
+        k = p + q * num_repetition
 
         df_k = pd.DataFrame()
         df_k["obs"] = restored_data[k][0]
@@ -253,10 +256,10 @@ for m in range(10):
         anm_LL_baseline = np.zeros(len(df_k))
         anm_LT_baseline = np.zeros(len(df_k))
         anm_mag2_perweek = anm_mag2 / 52
-        # LL to LT anomaly
-        true_LL_baseline[anm_start_index1:] = anm_mag1
-        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
+        # # LL to LT anomaly
+        # true_LL_baseline[anm_start_index1:] = anm_mag1
+        # true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        # true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
 
         # # # LL to LL anomaly
         # true_LL_baseline[anm_start_index1:] = anm_mag1
@@ -268,13 +271,13 @@ for m in range(10):
         # true_LL_baseline[anm_start_index2:] += anm_mag2
         # true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
 
-        # # LT to LT anomaly
-        # anm_mag1_perweek = anm_mag1 / 52
-        # anm_mag2_perweek = anm_mag2 / 52
-        # true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
-        # true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        # true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
-        # true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
+        # LT to LT anomaly
+        anm_mag1_perweek = anm_mag1 / 52
+        anm_mag2_perweek = anm_mag2 / 52
+        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
+        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
+        true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -373,4 +376,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_skf_lltolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_skf_lttolt_test1.csv", index=False)

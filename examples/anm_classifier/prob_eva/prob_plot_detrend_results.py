@@ -210,42 +210,42 @@ ax[0].fill_between(
     df_rsic_group["detection_time"]["mean"] + df_rsic_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label=r"\textbf{RSI}")
+ax[0].plot(df_rsi_group.index, df_rsi_group["detection_time"]["mean"], label=r"RSI")
 ax[0].fill_between(
     df_rsi_group.index,
     df_rsi_group["detection_time"]["mean"] - df_rsi_group["detection_time"]["std"],
     df_rsi_group["detection_time"]["mean"] + df_rsi_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"\textbf{SKF}")
+ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"SKF")
 ax[0].fill_between(
     df_skf_group.index,
     df_skf_group["detection_time"]["mean"] - df_skf_group["detection_time"]["std"],
     df_skf_group["detection_time"]["mean"] + df_skf_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"\textbf{DAMP}")
+ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"DAMP")
 ax[0].fill_between(
     df_damp_group.index,
     df_damp_group["detection_time"]["mean"] - df_damp_group["detection_time"]["std"],
     df_damp_group["detection_time"]["mean"] + df_damp_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"\textbf{Prophet}")
+ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"Prophet")
 ax[0].fill_between(
     df_prophet_group.index,
     df_prophet_group["detection_time"]["mean"] - df_prophet_group["detection_time"]["std"],
     df_prophet_group["detection_time"]["mean"] + df_prophet_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"\textbf{LSTMED}")
+ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"LSTMED")
 ax[0].fill_between(
     df_lstmed_group.index,
     df_lstmed_group["detection_time"]["mean"] - df_lstmed_group["detection_time"]["std"],
     df_lstmed_group["detection_time"]["mean"] + df_lstmed_group["detection_time"]["std"],
     alpha=0.2,
 )
-ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"\textbf{TranAD}")
+ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"TranAD")
 ax[0].fill_between(
     df_tranad_group.index,
     df_tranad_group["detection_time"]["mean"] - df_tranad_group["detection_time"]["std"],
@@ -255,9 +255,17 @@ ax[0].fill_between(
 ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
-# ax[0].set_xscale('log')
+ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
+# ax[0].legend(
+#     bbox_to_anchor=(0.5, 1.02),
+#     loc='lower center',
+#     bbox_transform=ax[0].transAxes,
+#     ncol=4,
+#     borderaxespad=0.,
+#     frameon=True
+# )
 
 # Plot for detection_rate
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}")
@@ -270,7 +278,7 @@ ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], lab
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
-# ax[1].set_xscale('log')
+ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 # ax[1].legend(loc='lower right', fontsize=6)
 
@@ -283,6 +291,6 @@ plt.suptitle(r"\textbf{P.E.} " + first_anm_type.upper() + r" $\rightarrow$ " + s
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-# plt.savefig('syn_ts_results_legend.png', dpi=300)
+plt.savefig('detrended_ts_results_legend.png', dpi=300)
 
 plt.show()

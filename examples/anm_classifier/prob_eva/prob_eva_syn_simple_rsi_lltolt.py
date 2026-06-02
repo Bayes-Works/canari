@@ -44,7 +44,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt_test1.csv")
 
 # Containers for restored data
 restored_data = []
@@ -144,9 +144,15 @@ std_itv_all_temp = copy.deepcopy(hsl_tsad_agent.std_itv_all)
 
 results_all = []
 
-for m in range(10):
-    for n in tqdm(range(len(restored_data)//10)):
-        k = m + n * 10
+num_repetition = 100
+total_batch_num = 5
+
+test_batch = 4      # TODO
+
+num_sample_each_batch = num_repetition/total_batch_num
+for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sample_each_batch, dtype="int"):
+    for q in tqdm(range(len(restored_data)//num_repetition)):
+        k = p + q * num_repetition
 
         # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
         df_k = pd.DataFrame()
@@ -292,4 +298,4 @@ for m in range(10):
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt.csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsi_lltolt_test1_" + str(test_batch) + ".csv", index=False)
