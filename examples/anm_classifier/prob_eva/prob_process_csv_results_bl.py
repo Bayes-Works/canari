@@ -242,10 +242,10 @@ def _process_detection_df_bl(
     )
 
     # Sum the column df["mse_LL"] and df["mse_LT"] for all rows
-    total_mse_LL = df["mse_LL"].sum()
-    total_mse_LT = df["mse_LT"].sum()
-    print("Total MSE for LL baseline: ", total_mse_LL)
-    print("Total MSE for LT baseline: ", total_mse_LT)
+    total_mse_LL = df["mse_LL"].mean()
+    total_mse_LT = df["mse_LT"].mean()
+    print("MSE for LL baseline: ", total_mse_LL)
+    print("MSE for LT baseline: ", total_mse_LT)
 
     return false_alarm_rate, df_group
 
