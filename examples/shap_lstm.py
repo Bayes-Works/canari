@@ -158,6 +158,7 @@ plot_prediction(
 plt.legend(loc=(0.1, 1.01), ncol=6, fontsize=12)
 plt.tight_layout()
 plt.savefig(output_dir / "forecast.png", dpi=200)
+plt.close(fig)
 
 # SHAP explainability
 model.set_memory(
@@ -205,12 +206,25 @@ explainer = shap.KernelExplainer(predict_diplacement_y, background_data)
 shap_values = explainer.shap_values(explain_data, nsamples=shap_num_samples)
 if isinstance(shap_values, list):
     shap_values = shap_values[0]
+shap_values = np.asarray(shap_values)
+
+expected_value = explainer.expected_value
+if isinstance(expected_value, (list, np.ndarray)):
+    expected_value = np.asarray(expected_value).flatten()[0]
+
+shap_explanation = shap.Explanation(
+    values=shap_values,
+    base_values=np.repeat(expected_value, len(explain_data)),
+    data=explain_data,
+    feature_names=feature_names,
+)
 
 # Save feature-level SHAP plots
 plt.figure(figsize=(10, 6))
 shap.summary_plot(shap_values, explain_data, feature_names=feature_names, show=False)
 plt.tight_layout()
 plt.savefig(output_dir / "shap_summary.png", dpi=200, bbox_inches="tight")
+plt.close()
 
 plt.figure(figsize=(10, 6))
 shap.summary_plot(
@@ -222,6 +236,60 @@ shap.summary_plot(
 )
 plt.tight_layout()
 plt.savefig(output_dir / "shap_feature_importance.png", dpi=200, bbox_inches="tight")
+plt.close()
+
+# Save additional SHAP plots
+plt.figure(figsize=(10, 6))
+shap.plots.waterfall(
+    shap_explanation[0],
+    max_display=len(feature_names),
+    show=False,
+)
+plt.tight_layout()
+plt.savefig(output_dir / "shap_waterfall_first_sample.png", dpi=200, bbox_inches="tight")
+plt.close()
+
+plt.figure(figsize=(10, 6))
+shap.plots.heatmap(
+    shap_explanation,
+    max_display=len(feature_names),
+    show=False,
+)
+plt.tight_layout()
+plt.savefig(output_dir / "shap_heatmap.png", dpi=200, bbox_inches="tight")
+plt.close()
+
+plt.figure(figsize=(10, 6))
+shap.decision_plot(
+    expected_value,
+    shap_values,
+    explain_data,
+    feature_names=feature_names,
+    show=False,
+)
+plt.tight_layout()
+plt.savefig(output_dir / "shap_decision.png", dpi=200, bbox_inches="tight")
+plt.close()
+
+dependence_dir = output_dir / "shap_dependence"
+dependence_dir.mkdir(parents=True, exist_ok=True)
+for feature_name in feature_names:
+    safe_feature_name = feature_name.replace(" ", "_").replace("/", "_").lower()
+    plt.figure(figsize=(8, 5))
+    shap.dependence_plot(
+        feature_name,
+        shap_values,
+        explain_data,
+        feature_names=feature_names,
+        show=False,
+    )
+    plt.tight_layout()
+    plt.savefig(
+        dependence_dir / f"{safe_feature_name}.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close()
 
 # Save grouped SHAP importance so time covariates are read as one explanatory block
 group_names = [
@@ -246,8 +314,13 @@ ax.invert_yaxis()
 ax.set_xlabel("mean(|SHAP value|)")
 plt.tight_layout()
 plt.savefig(output_dir / "shap_group_importance.png", dpi=200, bbox_inches="tight")
+plt.close(fig)
 
 print(f"Forecast plot        : {output_dir / 'forecast.png'}")
 print(f"SHAP summary plot    : {output_dir / 'shap_summary.png'}")
 print(f"SHAP importance plot : {output_dir / 'shap_feature_importance.png'}")
+print(f"SHAP waterfall plot  : {output_dir / 'shap_waterfall_first_sample.png'}")
+print(f"SHAP heatmap         : {output_dir / 'shap_heatmap.png'}")
+print(f"SHAP decision plot   : {output_dir / 'shap_decision.png'}")
+print(f"SHAP dependence plots: {dependence_dir}")
 print(f"SHAP group importance: {output_dir / 'shap_group_importance.csv'}")
