@@ -1,15 +1,40 @@
 import copy
+import os
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+OUT_DIR = PROJECT_ROOT / "experiments" / "out"
+MPLCONFIG_DIR = OUT_DIR / "mplconfig"
+MPLCONFIG_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIG_DIR))
+
 import pandas as pd
 import numpy as np
 import collections
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pytagi.metric as metric
 from pytagi import Normalizer as normalizer
 from canari import DataProcess, Model, plot_data, plot_prediction, plot_states
 from canari.component import LstmNetwork, WhiteNoise, LocalTrend
-from examples.view_param import ParameterViewer
-from examples.param_intervener import ParameterIntervener
 from typing import Dict, Tuple
+
+SINGLE_COL = (3.5, 2.5)
+DOUBLE_COL = (6.5, 3.5)
+
+mpl.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": True,
+        "pgf.rcfonts": False,
+        "pgf.preamble": r"\usepackage{amsfonts}\usepackage{amssymb}\usepackage{amsmath}",
+        "lines.linewidth": 1,
+        "figure.figsize": SINGLE_COL,
+        "font.size": 9,
+        "savefig.dpi": 300,
+    }
+)
 
 # # Read data
 # data_file = "./data/toy_time_series/sine.csv"
@@ -213,6 +238,131 @@ def compute_layer_wasserstein(
     return {"weights": w_w, "bias": w_b}
 
 
+def make_window(
+    data: Dict[str, np.ndarray], start: int, end_exclusive: int
+) -> Dict[str, np.ndarray]:
+    return {
+        "x": data["x"][start:end_exclusive],
+        "y": data["y"][start:end_exclusive],
+    }
+
+
+def snapshot_runtime_state(model: Model) -> Dict[str, object]:
+    model_attrs = [
+        "mu_states",
+        "var_states",
+        "mu_states_prior",
+        "var_states_prior",
+        "mu_states_posterior",
+        "var_states_posterior",
+        "mu_obs_predict",
+        "var_obs_predict",
+        "states",
+    ]
+    snapshot = {name: copy.deepcopy(getattr(model, name, None)) for name in model_attrs}
+    snapshot["lstm_history_mu"] = copy.deepcopy(
+        getattr(model.lstm_output_history, "mu", None)
+    )
+    snapshot["lstm_history_var"] = copy.deepcopy(
+        getattr(model.lstm_output_history, "var", None)
+    )
+    snapshot["lstm_states"] = copy.deepcopy(model.lstm_net.get_lstm_states())
+    return snapshot
+
+
+def restore_runtime_state(model: Model, snapshot: Dict[str, object]) -> None:
+    for name, value in snapshot.items():
+        if name in {"lstm_history_mu", "lstm_history_var", "lstm_states"}:
+            continue
+        setattr(model, name, copy.deepcopy(value))
+
+    if snapshot["lstm_history_mu"] is not None:
+        model.lstm_output_history.mu = copy.deepcopy(snapshot["lstm_history_mu"])
+    if snapshot["lstm_history_var"] is not None:
+        model.lstm_output_history.var = copy.deepcopy(snapshot["lstm_history_var"])
+    model.lstm_net.set_lstm_states(copy.deepcopy(snapshot["lstm_states"]))
+
+
+def forecast_one_step_without_committing_state(
+    model: Model, data: Dict[str, np.ndarray], index: int
+) -> Tuple[float, float]:
+    runtime_state = snapshot_runtime_state(model)
+    model.lstm_net.eval()
+    forecast_window = {"x": data["x"][index : index + 1]}
+    mu_pred, std_pred, _ = model.forecast(forecast_window)
+    restore_runtime_state(model, runtime_state)
+    return float(np.ravel(mu_pred)[0]), float(np.ravel(std_pred)[0])
+
+
+def smooth_lstm_window_and_set_end_state(
+    model: Model, states, smooth_window_len: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    if model.lstm_net.smooth:
+        mu_smooth, var_smooth = model.lstm_net.smoother()
+        mu_smooth = np.asarray(mu_smooth, dtype=np.float32).flatten()
+        var_smooth = np.asarray(var_smooth, dtype=np.float32).flatten()
+
+        if len(mu_smooth) < smooth_window_len:
+            raise ValueError(
+                "LSTM smoother returned fewer samples than the smoothing window."
+        )
+
+        smooth_state_index = smooth_window_len - 1
+        # get_lstm_states indexes the smoothed num_samples buffer after smoother().
+        model.lstm_output_history.set(
+            np.array([mu_smooth[smooth_state_index]], dtype=np.float32),
+            np.array([var_smooth[smooth_state_index]], dtype=np.float32),
+        )
+        model.lstm_net.set_lstm_states(
+            model.lstm_net.get_lstm_states(smooth_state_index)
+        )
+        return mu_smooth, var_smooth
+
+    post_mu = states.get_mean("lstm", states_type="posterior")
+    post_std = states.get_std("lstm", states_type="posterior")
+    model.lstm_output_history.set(
+        np.array([post_mu[-1]], dtype=np.float32),
+        np.array([post_std[-1] ** 2], dtype=np.float32),
+    )
+    return post_mu, post_std**2
+
+
+def store_parameter_diagnostics(
+    prior_state: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]],
+    posterior_state: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]],
+    kl_history: Dict[str, Dict[str, list]],
+    wasserstein_history: Dict[str, Dict[str, list]],
+) -> None:
+    kl_results = {
+        layer: compute_layer_kl(prior_state[layer], posterior_state[layer])
+        for layer in prior_state
+    }
+    mean_kl = {
+        layer: {part: np.mean(values[part]) for part in values}
+        for layer, values in kl_results.items()
+    }
+    for lyr in mean_kl:
+        for part in mean_kl[lyr]:
+            kl_history[lyr][part].append(mean_kl[lyr][part])
+
+    w_results = {
+        layer: compute_layer_wasserstein(prior_state[layer], posterior_state[layer])
+        for layer in prior_state
+    }
+    mean_w = {
+        layer: {part: np.mean(values[part]) for part in values}
+        for layer, values in w_results.items()
+    }
+    for lyr in mean_w:
+        for part in mean_w[lyr]:
+            wasserstein_history[lyr][part].append(mean_w[lyr][part])
+
+
+def save_figure(fig: plt.Figure, stem: str) -> None:
+    fig.savefig(OUT_DIR / f"{stem}.pgf", bbox_inches="tight")
+    fig.savefig(OUT_DIR / f"{stem}.pdf", bbox_inches="tight")
+
+
 # Generate synthetic data
 frequency = 1 / 24  # One cycle per 24 hours
 phase = 0  # Initial phase
@@ -258,7 +408,7 @@ train_data, validation_data, test_data, normalized_data = data_processor.get_spl
 sigma_v = 0.01
 model = Model(
     LstmNetwork(
-        look_back_len=24,
+        look_back_len=1,
         num_features=2,
         infer_len=24,  # corresponds to one period
         num_layer=1,
@@ -270,220 +420,89 @@ model = Model(
     WhiteNoise(std_error=sigma_v),
 )
 
-# add model intervention
-pi = ParameterIntervener(model.lstm_net)
-
-state_dict = model.lstm_net.state_dict()
-# check the max value of the variances
-mu_w, var_w, mu_b, var_b = state_dict["SLSTM.0"]
-max_mu_lstm = max(max(mu_w), max(mu_b))
-
-mu_w, mu_w, mu_b, mu_b = state_dict["SLinear.1"]
-max_mu_linear = max(max(mu_w), max(mu_b))
-
-
-# viewer = ParameterViewer(model.lstm_net)
-
 if model.lstm_net.smooth:
     model.lstm_net.num_samples = D
 
 # extract the training data
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
 
-# store all predictions
+# store online predictions and state histories
+num_train = len(train_data["y"])
+if num_train <= D:
+    raise ValueError("Training data must be longer than the smoothing window D.")
+
 mu_preds = []
 std_preds = []
+pred_indices = []
+diagnostic_indices = []
 
-post_lstm_mu = []
-post_lstm_var = []
+post_lstm_mu = np.full(num_train, np.nan, dtype=np.float32)
+post_lstm_std = np.full(num_train, np.nan, dtype=np.float32)
+smooth_lstm_mu = np.full(num_train, np.nan, dtype=np.float32)
+smooth_lstm_var = np.full(num_train, np.nan, dtype=np.float32)
 # history of mean KL divergence per layer (weights / bias)
 kl_history = collections.defaultdict(lambda: {"weights": [], "bias": []})
 wasserstein_history = collections.defaultdict(lambda: {"weights": [], "bias": []})
 
-for olstm_idx in range(0, len(train_data["y"]) - D, 1):
 
-    # ----- capture prior parameter distributions -----
+def run_online_window(window_start: int, window_end: int):
     prior_state = copy.deepcopy(model.lstm_net.state_dict())
+    training_window = make_window(train_data, window_start, window_end)
 
-    # Prepare data for online LSTM
-    x_train = train_data["x"][olstm_idx : olstm_idx + D]
-    y_train = train_data["y"][olstm_idx : olstm_idx + D]
-
-    x_val = train_data["x"][olstm_idx + D : olstm_idx + D + 1]
-    y_val = train_data["y"][olstm_idx + D : olstm_idx + D + 1]
-
-    # rebuild into dictionary
-    training_window = {
-        "x": x_train,
-        "y": y_train,
-    }
-
-    validation_window = {
-        "x": x_val,
-        "y": y_val,
-    }
-
-    # train the model
     model.lstm_net.train()
     mu_filt, std_filt, states = model.filter(training_window, train_lstm=True)
-    # ----- compute KL divergence between prior and posterior -----
+
+    post_mu = states.get_mean("lstm", states_type="posterior")
+    post_std = states.get_std("lstm", states_type="posterior")
+    window_len = window_end - window_start
+    post_len = min(window_len, len(post_mu))
+    post_slice = slice(window_end - post_len, window_end)
+    post_lstm_mu[post_slice] = post_mu[-post_len:]
+    post_lstm_std[post_slice] = post_std[-post_len:]
+
+    mu_smooth, var_smooth = smooth_lstm_window_and_set_end_state(model, states, D)
+    smooth_len = min(window_len, len(mu_smooth))
+    smooth_slice = slice(window_end - smooth_len, window_end)
+    smooth_lstm_mu[smooth_slice] = mu_smooth[-smooth_len:]
+    smooth_lstm_var[smooth_slice] = var_smooth[-smooth_len:]
+
     posterior_state = model.lstm_net.state_dict()
-    kl_results = {
-        layer: compute_layer_kl(prior_state[layer], posterior_state[layer])
-        for layer in prior_state
-    }
+    store_parameter_diagnostics(
+        prior_state,
+        posterior_state,
+        kl_history,
+        wasserstein_history,
+    )
+    diagnostic_indices.append(window_end - 1)
+    return mu_filt, std_filt, states
 
-    # Print mean KL per layer for quick inspection
-    mean_kl = {
-        layer: {part: np.mean(values[part]) for part in values}
-        for layer, values in kl_results.items()
-    }
-    # print(f"Window {olstm_idx}: mean KL per layer → {mean_kl}")
-    # store KL history
-    for lyr in mean_kl:
-        for part in mean_kl[lyr]:
-            kl_history[lyr][part].append(mean_kl[lyr][part])
 
-    # ----- compute Wasserstein distance between prior and posterior -----
-    w_results = {
-        layer: compute_layer_wasserstein(prior_state[layer], posterior_state[layer])
-        for layer in prior_state
-    }
-    mean_w = {
-        layer: {part: np.mean(values[part]) for part in values}
-        for layer, values in w_results.items()
-    }
-    # print(f"Window {olstm_idx}: mean W₂ per layer → {mean_w}")
-    # store Wasserstein history
-    for lyr in mean_w:
-        for part in mean_w[lyr]:
-            wasserstein_history[lyr][part].append(mean_w[lyr][part])
+# Bootstrap with the first D observations, then predict the next one.
+run_online_window(0, D)
+mu_pred, std_pred = forecast_one_step_without_committing_state(model, train_data, D)
+mu_preds.append(mu_pred)
+std_preds.append(std_pred)
+pred_indices.append(D)
 
-    forecast_lstm_states = model.lstm_net.get_lstm_states()
+for next_idx in range(D, num_train):
+    # y[next_idx] is now available; replay the D-window ending at next_idx.
+    window_start = next_idx - D + 1
+    window_end = next_idx + 1
+    run_online_window(window_start, window_end)
 
-    # if olstm_idx % 1 == 0:
-    #     viewer.heatmap(
-    #         "0",
-    #         epoch=olstm_idx,
-    #         cmap="plasma",
-    #         which="mean",
-    #         vmin=0.0,
-    #         vmax=max_mu_lstm,
-    #         layer_type="LSTM",
-    #         return_img=True,
-    #         save=False,
-    #     )
-    #     viewer.heatmap(
-    #         "1",
-    #         epoch=olstm_idx,
-    #         cmap="plasma",
-    #         which="mean",
-    #         vmin=0.0,
-    #         vmax=max_mu_linear,
-    #         # layer_type="LSTM",
-    #         return_img=True,
-    #         save=False,
-    #     )
+    forecast_idx = next_idx + 1
+    if forecast_idx < num_train:
+        mu_pred, std_pred = forecast_one_step_without_committing_state(
+            model, train_data, forecast_idx
+        )
+        mu_preds.append(mu_pred)
+        std_preds.append(std_pred)
+        pred_indices.append(forecast_idx)
 
-    # store posteriors
-    post_mu = states.get_mean("lstm", states_type="posterior")[-D:]
-    post_var = states.get_std("lstm", states_type="posterior")[-D:]
-
-    post_lstm_mu[olstm_idx : olstm_idx + D] = post_mu
-    post_lstm_var[olstm_idx : olstm_idx + D] = post_var
-
-    # plt.figure(figsize=(10, 4))
-    # post_lstm_mu_arr = np.array(post_lstm_mu)
-    # post_lstm_var_arr = np.array(post_lstm_var)
-
-    # x_axis = np.arange(len(post_lstm_mu_arr))
-
-    # plt.plot(x_axis, post_lstm_mu_arr, label="Posterior Mean")
-    # plt.fill_between(
-    #     x_axis,
-    #     post_lstm_mu_arr - post_lstm_var_arr,
-    #     post_lstm_mu_arr + post_lstm_var_arr,
-    #     color="blue",
-    #     alpha=0.3,
-    # )
-    # plt.tight_layout()
-    # plt.show()
-
-    # foreacst one step ahead
-    model.lstm_net.eval()
-    mu_pred, std_pred, _ = model.forecast(validation_window)
-    mu_preds.append(mu_pred)
-    std_preds.append(std_pred)
-
-    # call smoother for online LSTM
-    if model.lstm_net.smooth and olstm_idx < len(train_data["y"]) - D:
-        _, _ = model.lstm_net.smoother()
-
-        if olstm_idx > D:
-            mu_zo_smooth = post_lstm_mu
-            var_zo_smooth = post_lstm_var
-
-            # convert to numpy arrays
-            mu_zo_smooth = np.array(mu_zo_smooth, dtype=np.float32)
-            var_zo_smooth = np.array(var_zo_smooth, dtype=np.float32)
-
-            # set smoothed LSTM output history
-            model.lstm_output_history.set(
-                mu_zo_smooth[olstm_idx - model.lstm_net.lstm_look_back_len : olstm_idx],
-                var_zo_smooth[
-                    olstm_idx - model.lstm_net.lstm_look_back_len : olstm_idx
-                ],
-            )
-
-        # set smoothed LSTM states
-        model.lstm_net.set_lstm_states(model.lstm_net.get_lstm_states_smooth(1))
-
-    # if olstm_idx == 224:
-    #     mask = pi.inflate_variance(threshold=1e-4, factor=1000.0)
-    # baseline = pi.snapshot_state()
-    # pi.add_noise_to_means(mask, std_scale=1.0)
-    # pi.prune_means_to_zero(mask)
-
-# viewer.save_gif("lstm0.gif", key="0", fps=3)
-# viewer.save_gif("linear1.gif",  key="1",  fps=3)
-
-# plot the results
-# plt.figure(figsize=(12, 5))
-# plt.plot(train_data["y"], label="True values", color="red")
-
-# # Offset prediction to align with the validation point after each training window
-# offset = D
-# x_range = np.arange(offset, offset + len(mu_preds))
-
-# mu_preds_arr = np.array(mu_preds).flatten()
-# std_preds_arr = np.array(std_preds).flatten()
-
-# plt.plot(x_range, mu_preds_arr, label="Predicted mean", color="blue")
-# plt.fill_between(
-#     x_range,
-#     mu_preds_arr - std_preds_arr,
-#     mu_preds_arr + std_preds_arr,
-#     color="blue",
-#     alpha=0.3,
-#     label="±1 std dev",
-# )
-# plt.xlabel("Time")
-# plt.ylabel("Value")
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-
-# set the correct lstm states
-model.lstm_output_history.mu = np.array(
-    post_mu[-model.lstm_net.lstm_look_back_len :], dtype=np.float32
-)
-model.lstm_output_history.std = np.array(
-    post_var[-model.lstm_net.lstm_look_back_len :], dtype=np.float32
-)
-model.lstm_net.set_lstm_states(forecast_lstm_states)
 
 # forecast a multi step ahead
 # mu_forecast, std_forecast, _ = model.filter(validation_data, train_lstm=False)
+model.lstm_net.eval()
 mu_forecast, std_forecast, _ = model.forecast(validation_data)
 
 
@@ -491,134 +510,150 @@ mu_forecast, std_forecast, _ = model.forecast(validation_data)
 #  Plot predictions and residuals
 # ------------------------------------------------------------
 fig, (ax_pred, ax_res) = plt.subplots(
-    2, 1, figsize=(14, 6), sharex=True, height_ratios=[2, 1]
+    2,
+    1,
+    figsize=DOUBLE_COL,
+    sharex=True,
+    gridspec_kw={"height_ratios": [2, 1]},
 )
 
-# ------------------- predictions (upper axis) -------------------
-# Plot training true values
 ax_pred.plot(
-    np.arange(len(train_data["y"])),
+    np.arange(num_train),
     train_data["y"].flatten(),
-    label="Train true values",
-    color="red",
+    label="training observations",
+    color="tab:red",
 )
 
-# Plot one‑step ahead predictions
-offset = D
-x_range = np.arange(offset, offset + len(mu_preds))
+pred_indices_arr = np.array(pred_indices)
 mu_preds_arr = np.array(mu_preds).flatten()
 std_preds_arr = np.array(std_preds).flatten()
-ax_pred.plot(x_range, mu_preds_arr, label="One‑step predicted mean", color="blue")
+ax_pred.plot(
+    pred_indices_arr,
+    mu_preds_arr,
+    label="online one-step mean",
+    color="tab:blue",
+)
 ax_pred.fill_between(
-    x_range,
+    pred_indices_arr,
     mu_preds_arr - std_preds_arr,
     mu_preds_arr + std_preds_arr,
-    color="blue",
+    color="tab:blue",
     alpha=0.3,
-    label="±1 std dev (1‑step)",
+    label=r"$\pm 1\sigma$ online",
 )
 
-# Plot multi‑step ahead forecasts
 true_vals = validation_data["y"].flatten()
-forecast_range = np.arange(len(train_data["y"]), len(train_data["y"]) + len(true_vals))
-ax_pred.plot(forecast_range, true_vals, label="Future true values", color="green")
+forecast_range = np.arange(num_train, num_train + len(true_vals))
+ax_pred.plot(
+    forecast_range,
+    true_vals,
+    label="validation observations",
+    color="tab:red",
+    linestyle="--",
+)
 ax_pred.plot(
     forecast_range,
     mu_forecast.flatten(),
-    label="Forecasted mean",
-    color="orange",
+    label="validation forecast mean",
+    color="tab:blue",
+    linestyle="--",
 )
 ax_pred.fill_between(
     forecast_range,
     mu_forecast.flatten() - std_forecast.flatten(),
     mu_forecast.flatten() + std_forecast.flatten(),
-    color="orange",
+    color="tab:blue",
     alpha=0.3,
-    label="±1 std dev (forecast)",
+    label=r"$\pm 1\sigma$ forecast",
 )
 
 ax_pred.set_ylabel("Value")
-ax_pred.set_title("Online LSTM: Predictions")
-ax_pred.grid(True)
-ax_pred.legend()
-
-# ------------------- residuals (lower axis) -------------------
-# Residuals for one‑step predictions
-one_step_true = train_data["y"][offset:].flatten()[: len(mu_preds_arr)]
-residual_one_step = one_step_true - mu_preds_arr
-ax_res.plot(
-    x_range,
-    residual_one_step,
-    label="Residual (1‑step)",
-    linestyle="-",
-    marker="o",
-    markersize=2,
+ax_pred.grid(True, alpha=0.25, linewidth=0.5)
+ax_pred.legend(
+    loc="lower center",
+    bbox_to_anchor=(0.5, 1.02),
+    ncol=3,
+    frameon=False,
 )
 
-# Residuals for multi‑step forecasts
+one_step_true = train_data["y"][pred_indices_arr].flatten()
+residual_one_step = one_step_true - mu_preds_arr
+ax_res.plot(
+    pred_indices_arr,
+    residual_one_step,
+    label="online one-step",
+    color="tab:blue",
+    linestyle="-",
+)
+
 residual_forecast = true_vals - mu_forecast.flatten()
 ax_res.plot(
     forecast_range,
     residual_forecast,
-    label="Residual (forecast)",
-    linestyle="-",
-    marker="x",
-    markersize=3,
+    label="validation forecast",
+    color="tab:blue",
+    linestyle="--",
 )
 
 ax_res.axhline(0.0, color="black", linewidth=0.8)
-ax_res.set_xlabel("Time")
-ax_res.set_ylabel("Residual (true − predicted)")
-ax_res.set_title("Residuals")
-ax_res.grid(True)
-ax_res.legend()
+ax_res.set_xlabel("Time step")
+ax_res.set_ylabel("Residual")
+ax_res.grid(True, alpha=0.25, linewidth=0.5)
+ax_res.legend(
+    loc="center left",
+    bbox_to_anchor=(1.01, 0.5),
+    frameon=False,
+)
 
-plt.tight_layout()
-plt.show()
+fig.tight_layout()
+save_figure(fig, "toy_online_lstm_predictions")
 
 # ------------------------------------------------------------------
 #  Plot KL divergence history over training windows
 # ------------------------------------------------------------------
-plt.figure(figsize=(12, 4))
+fig_kl, ax_kl = plt.subplots(figsize=SINGLE_COL)
 for lyr, parts in kl_history.items():
     if lyr == "SLinear.1":
         # skip linear layer
         continue
     kl_total = np.array(parts["weights"]) + np.array(parts["bias"])
-    plt.plot(
-        np.arange(len(kl_total)),
+    ax_kl.plot(
+        np.array(diagnostic_indices[: len(kl_total)]),
         kl_total,
         label=f"{lyr} (w+b)",
     )
-plt.xlabel("Training window index")
-plt.ylabel("Mean KL divergence")
-plt.ylim(0, 0.0075)  # Set y-axis limits for better visibility
-plt.title("Layer‑wise KL divergence across online training")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
+ax_kl.set_xlabel("Window end index")
+ax_kl.set_ylabel("Mean KL divergence")
+ax_kl.grid(True, alpha=0.25, linewidth=0.5)
+ax_kl.legend(
+    loc="lower center",
+    bbox_to_anchor=(0.5, 1.02),
+    frameon=False,
+)
+fig_kl.tight_layout()
+save_figure(fig_kl, "toy_online_lstm_kl")
 
 # ------------------------------------------------------------------
 #  Plot Wasserstein distance history over training windows
 # ------------------------------------------------------------------
-plt.figure(figsize=(12, 4))
+fig_w, ax_w = plt.subplots(figsize=SINGLE_COL)
 for lyr, parts in wasserstein_history.items():
     if lyr == "SLinear.1":
         # skip linear layer
         continue
     w_total = np.array(parts["weights"]) + np.array(parts["bias"])
-    plt.plot(
-        np.arange(len(w_total)),
+    ax_w.plot(
+        np.array(diagnostic_indices[: len(w_total)]),
         w_total,
         label=f"{lyr} (w+b)",
-        linestyle="-",
-        marker="x",
     )
-plt.xlabel("Training window index")
-plt.ylabel("Mean 2‑Wasserstein distance")
-plt.title("Layer‑wise 2‑Wasserstein distance across online training")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
+ax_w.set_xlabel("Window end index")
+ax_w.set_ylabel("Mean 2-Wasserstein distance")
+ax_w.grid(True, alpha=0.25, linewidth=0.5)
+ax_w.legend(
+    loc="lower center",
+    bbox_to_anchor=(0.5, 1.02),
+    frameon=False,
+)
+fig_w.tight_layout()
+save_figure(fig_w, "toy_online_lstm_wasserstein")
