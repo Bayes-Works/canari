@@ -56,7 +56,6 @@ data_processor = DataProcess(
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
 # Model
-sigma_v = 0.003
 model = Model(
     LstmNetwork(
         look_back_len=12,
@@ -66,8 +65,9 @@ model = Model(
         num_hidden_unit=40,
         device="cpu",
         manual_seed=1,
+        model_noise=True,
+        smoother=False,
     ),
-    WhiteNoise(std_error=sigma_v),
 )
 
 # Training
