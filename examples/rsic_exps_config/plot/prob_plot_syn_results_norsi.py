@@ -7,9 +7,9 @@ import ast
 import copy
 
 from matplotlib import ticker
-from examples.anm_classifier.prob_eva.prob_process_csv_results import _process_detection_df
-from examples.anm_classifier.prob_eva.prob_process_csv_results_bl import _process_detection_df_bl
-from examples.anm_classifier.prob_eva.prob_process_csv_results_skf import _process_detection_df_skf
+from examples.rsic_exps_config.syn_ts.prob_process_csv_results import _process_detection_df
+from examples.rsic_exps_config.syn_ts.prob_process_csv_results_bl import _process_detection_df_bl
+from examples.rsic_exps_config.syn_ts.prob_process_csv_results_skf import _process_detection_df_skf
 
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True) 

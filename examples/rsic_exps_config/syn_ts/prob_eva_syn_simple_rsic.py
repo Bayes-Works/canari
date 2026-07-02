@@ -11,8 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-# from src.hsl_classification_2classes_rsic_v1_realjoint3 import hsl_classification
-from src.hsl_classification_2classes_rsic_v2 import hsl_classification
+from src.hsl_classification_2classes_rsic import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -46,7 +45,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttolt_test1.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltolt.csv")
 
 # Containers for restored data
 restored_data = []
@@ -171,17 +170,9 @@ results_all = []
 # for m in range(1):
 #     for k in tqdm(range(2)):
 #         k = 76 + k * 10 + 1
-# for m in range(10):
-#     for n in tqdm(range(len(restored_data)//10)):
-num_repetition = 100
-total_batch_num = 5
-
-test_batch = 4      # TODO
-
-num_sample_each_batch = num_repetition/total_batch_num
-for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sample_each_batch, dtype="int"):
-    for q in tqdm(range(len(restored_data)//num_repetition)):
-        k = p + q * num_repetition
+for m in range(10):
+    for n in tqdm(range(len(restored_data)//10)):
+        k = m + n * 10
         # Create a new pandas dataframe df_k, with one column filled with restored_data[k][0], and index as time_stamps
         df_k = pd.DataFrame()
         df_k["obs"] = restored_data[k][0]
@@ -222,35 +213,17 @@ for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sa
         # True baselines
         true_LL_baseline = np.zeros(len(df_k))
         true_LT_baseline = np.zeros(len(df_k))
-        # LT to LT anomaly
-        anm_mag1_perweek = anm_mag1 / 52
         anm_mag2_perweek = anm_mag2 / 52
-        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        # LL to LT anomaly
+        true_LL_baseline[anm_start_index1:] = anm_mag1
         true_LL_baseline[anm_start_index2:] += np.arange(len(true_LL_baseline)-anm_start_index2) * anm_mag2_perweek
-        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
-        true_LT_baseline[anm_start_index2:] += anm_mag2_perweek
+        true_LT_baseline[anm_start_index2:] = anm_mag2_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
         true_LT_baseline_str = str(true_LT_baseline.tolist())
         estimate_LL_baseline_str = str(mu_LL_states.tolist())
         estimate_LT_baseline_str = str(mu_LT_states.tolist())
-
-        # # Plot true baselines and estimated baselines
-        # fig = plt.figure(figsize=(10, 2))
-        # gs = gridspec.GridSpec(2, 1)
-        # ax0 = plt.subplot(gs[0])
-        # ax1 = plt.subplot(gs[1])
-        # time = data_processor_k.get_time(split="all")
-        # ax0.plot(time, true_LL_baseline, label='True LL baseline', color='tab:orange')
-        # ax0.plot(time, mu_LL_states, label='Estimated LL baseline', color='tab:blue')
-        # ax1.plot(time, true_LT_baseline, label='True LT baseline', color='tab:orange')
-        # ax1.plot(time, mu_LT_states, label='Estimated LT baseline', color='tab:blue')
-        # ax0.axvline(x=time[anm_start_index1], color='g', linestyle='--', label='Anomaly 1 start')
-        # ax0.axvline(x=time[anm_start_index2], color='r', linestyle='--', label='Anomaly 2 start')
-        # ax1.axvline(x=time[anm_start_index1], color='g', linestyle='--', label='Anomaly 1 start')
-        # ax1.axvline(x=time[anm_start_index2], color='r', linestyle='--', label='Anomaly 2 start')
-        # plt.show()
         
         results_all.append([anm_mag2, anm_start_index1, anm_start_index2, all_detection_points, itv_log, itv_applied_times, true_LL_baseline_str, true_LT_baseline_str, estimate_LL_baseline_str, estimate_LT_baseline_str])
 
@@ -341,7 +314,6 @@ for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sa
         #                     final_class_log_probs[:, class_idx] + final_class_prob_stds, color=colors[class_idx], alpha=0.3)
         # ax7.set_ylim(-0.05, 1.05)
         # ax7.set_ylabel("Pr(anm)")
-        # plt.show()
 
         # Put back the states, mu_states, var_states, lstm_cell_states, and lstm_output_history of base_model
         hsl_tsad_agent.base_model.states = copy.deepcopy(states_temp)
@@ -371,4 +343,4 @@ for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sa
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v2_lttolt_test1_" + str(test_batch) + ".csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v2_wait7_lltolt.csv", index=False)

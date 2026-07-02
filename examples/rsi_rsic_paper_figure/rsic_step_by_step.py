@@ -16,7 +16,7 @@ from pytagi import Normalizer as normalizer
 from matplotlib import gridspec
 import pickle
 from pytagi import Normalizer
-from src.hsl_classification_2classes_rsic_v2 import hsl_classification
+from src.hsl_classification_2classes_rsic import hsl_classification
 
 from matplotlib import ticker
 import matplotlib.dates as mdates

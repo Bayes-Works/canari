@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v2 import hsl_classification
+from src.hsl_classification_2classes_rsic import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -45,7 +45,7 @@ scale_const_mean = copy.deepcopy(data_processor.scale_const_mean)
 scale_const_std = copy.deepcopy(data_processor.scale_const_std)
 train_data, validation_data, test_data, normalized_data = data_processor.get_splits()
 
-df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lltoll_test1.csv")
+df = pd.read_csv("data/prob_eva_syn_time_series/syn_rsic_simple_ts_gen_lttoll_test1.csv")
 
 # Containers for restored data
 restored_data = []
@@ -221,9 +221,11 @@ for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sa
         # True baselines
         true_LL_baseline = np.zeros(len(df_k))
         true_LT_baseline = np.zeros(len(df_k))
-        # LL to LL anomaly
-        true_LL_baseline[anm_start_index1:] = anm_mag1
-        true_LL_baseline[anm_start_index2:] += np.ones(len(true_LL_baseline)-anm_start_index2) * anm_mag2
+        # LT to LL anomaly
+        anm_mag1_perweek = anm_mag1 / 52
+        true_LL_baseline[anm_start_index1:] += np.arange(len(true_LL_baseline)-anm_start_index1) * anm_mag1_perweek
+        true_LL_baseline[anm_start_index2:] += anm_mag2
+        true_LT_baseline[anm_start_index1:] += anm_mag1_perweek
 
         # Convert the baselines to strings and save to results_all
         true_LL_baseline_str = str(true_LL_baseline.tolist())
@@ -365,4 +367,4 @@ for p in np.arange(test_batch * num_sample_each_batch, (test_batch + 1) * num_sa
 
 # Save the results to a CSV file
 results_df = pd.DataFrame(results_all, columns=["anomaly_magnitude", "anomaly_start_index1", "anomaly_start_index2", "anomaly_detected_index", "intervention_log", "intervention_applied_times", "true_LL_baseline", "true_LT_baseline", "estimated_LL_baseline", "estimated_LT_baseline"])
-results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v2_lltoll_test1_" + str(test_batch) + ".csv", index=False)
+results_df.to_csv("saved_results/prob_eva/syn_simple_ts_results_rsic_v2_lttoll_test1_" + str(test_batch) + ".csv", index=False)
