@@ -209,6 +209,7 @@ plot_states(
     states_type='prior',
     states_to_plot=['autoregression'],
     sub_plot=ax0,
+    color='tab:blue',
 )
 plot_states(
     data_processor=data_processor,

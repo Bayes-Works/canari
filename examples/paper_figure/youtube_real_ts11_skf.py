@@ -227,7 +227,7 @@ def main(
     })
     results_df.to_csv("saved_results/yt_plot_real_ts11_skf_results.csv", index=False)
     
-    plt.figure(figsize=(4, 3))
+    plt.figure(figsize=(4, 2.5))
     gs = gridspec.GridSpec(4, 1)
     ax0 = plt.subplot(gs[0])
     ax1 = plt.subplot(gs[1])
@@ -252,12 +252,12 @@ def main(
     ax2.plot(time, ar_mean, color="tab:blue")
     ax2.fill_between(time, ar_mean - ar_std, ar_mean + ar_std, color="tab:blue", alpha=0.2)
     ax2.set_xticklabels([])
-    ax2.set_ylabel("Residual")
+    ax2.set_ylabel("Res.")
 
     # ax4: plot anomaly probability
     ax3.plot(time, filter_marginal_abnorm_prob, color="tab:blue")
     ax3.set_ylim(-0.05, 1.05)
-    ax3.set_ylabel("$p_{\mathtt{anm}}$")
+    ax3.set_ylabel("$p^{\mathtt{anm}}$")
 
     # add grid in all subplots
     for ax in [ax0, ax1, ax2, ax3]:
