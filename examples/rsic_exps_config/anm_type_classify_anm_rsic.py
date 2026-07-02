@@ -11,7 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v2 import hsl_classification
+from src.hsl_classification_2classes_rsic import hsl_classification
 from src.matrix_profile_functions import past_only_matrix_profile
 import pytagi.metric as metric
 import pickle
@@ -40,13 +40,13 @@ df_raw.columns = ["obs"]
 # anm_baseline[:time_anomaly] = 0
 # df_raw = df_raw.add(anm_baseline, axis=0)
 
-# # LL anomaly
-# anm_type = 'LL'
-# time_anomaly = 52*6
-# anm_mag = 17
-# anm_baseline = np.ones(len(df_raw)) * anm_mag
-# anm_baseline[:time_anomaly] = 0
-# df_raw = df_raw.add(anm_baseline, axis=0)
+# LL anomaly
+anm_type = 'LL'
+time_anomaly = 52*6
+anm_mag = 35
+anm_baseline = np.ones(len(df_raw)) * anm_mag
+anm_baseline[:time_anomaly] = 0
+df_raw = df_raw.add(anm_baseline, axis=0)
 
 # # Second anomaly
 # anm2_type = 'LL'
@@ -56,14 +56,14 @@ df_raw.columns = ["obs"]
 # anm2_baseline[:time_anomaly2] = 0
 # df_raw = df_raw.add(anm2_baseline, axis=0)
 
-# # Second anomaly
-# anm2_type = 'LT'
-# time_anomaly2 = 52*8
-# anm2_mag = 12/52
-# anm2_baseline = np.arange(len(df_raw)) * anm2_mag
-# anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
-# anm2_baseline[:time_anomaly2] = 0
-# df_raw = df_raw.add(anm2_baseline, axis=0)
+# Second anomaly
+anm2_type = 'LT'
+time_anomaly2 = 52*8
+anm2_mag = 12/52
+anm2_baseline = np.arange(len(df_raw)) * anm2_mag
+anm2_baseline[time_anomaly2:] -= anm2_baseline[time_anomaly2]
+anm2_baseline[:time_anomaly2] = 0
+df_raw = df_raw.add(anm2_baseline, axis=0)
 
 # Data pre-processing
 output_col = [0]
