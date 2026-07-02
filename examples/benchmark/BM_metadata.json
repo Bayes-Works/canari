@@ -138,14 +138,14 @@
         ],
         "lag_vector": [
             0,
-            4,
-            4,
-            4
+            52,
+            52,
+            52
         ],
         "time_covariates": [
             "week_of_year"
         ],
-        "num_feature": 17,
+        "num_feature": 161,
         "train_split": 0.23,
         "validation_split": 0.07,
         "infer_len": 156,
@@ -185,14 +185,14 @@
         ],
         "lag_vector": [
             0,
-            4,
-            4,
-            4
+            52,
+            52,
+            52
         ],
         "time_covariates": [
             "week_of_year"
         ],
-        "num_feature": 17,
+        "num_feature": 161,
         "train_split": 0.289,
         "validation_split": 0.0693,
         "infer_len": 156,
@@ -232,14 +232,14 @@
         ],
         "lag_vector": [
             0,
-            4,
-            4,
-            4
+            52,
+            52,
+            52
         ],
         "time_covariates": [
             "week_of_year"
         ],
-        "num_feature": 17,
+        "num_feature": 161,
         "train_split": 0.289,
         "validation_split": 0.0693,
         "infer_len": 156,

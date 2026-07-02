@@ -51,6 +51,7 @@ model = Model(
         num_hidden_unit=40,
         device="cpu",
         manual_seed=1,
+        smoother=False,
     ),
     WhiteNoise(std_error=sigma_v),
 )

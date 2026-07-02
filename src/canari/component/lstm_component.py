@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
 import pytagi
-from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear
+from pytagi.nn import Sequential, LSTM, Linear, SLSTM, SLinear, PositionalEncoding, MultiheadAttention, RMSNorm
 from canari.component.base_component import BaseComponent
 
 
@@ -210,17 +210,51 @@ class LstmNetwork(BaseComponent):
                 )
             )
         else:
+            # # layers.append(PositionalEncoding(1))
+            layers.append(
+                    MultiheadAttention(
+                    embed_dim=self.num_features + self.look_back_len - 1,
+                    num_heads=3,
+                    seq_len=1,
+                    bias=False,
+                    gain_weight=0.25,
+                    gain_bias=0.5,
+                    pos_emb="",
+                    use_causal_mask=False,
+                    init_method="He",
+                )
+            )
+            layers.append(RMSNorm([self.num_features + self.look_back_len - 1]))
+
             layers.append(
                 LSTM(
                     self.num_features + self.look_back_len - 1,
                     self.num_hidden_unit[0],
+                    True,
                     1,
                     gain_weight=self.gain_weight,
                     gain_bias=self.gain_bias,
                 )
             )
+
             for i in range(1, self.num_layer):
-                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], 1))
+                layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], True, 1))
+
+            layers.append(
+                    MultiheadAttention(
+                    embed_dim=self.num_hidden_unit[-1],
+                    num_heads=3,
+                    seq_len=1,
+                    bias=False,
+                    gain_weight=0.25,
+                    gain_bias=0.5,
+                    pos_emb="rope",
+                    use_causal_mask=False,
+                    init_method="He",
+                )
+            )
+            # layers.append(RMSNorm([self.num_hidden_unit[-1]]))
+
             # Last layer
             layers.append(
                 Linear(
