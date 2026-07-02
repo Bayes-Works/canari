@@ -19,7 +19,6 @@ import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import torch
-from src.convert_to_class import hierachical_softmax
 from typing import List
 from scipy.stats import beta
 
