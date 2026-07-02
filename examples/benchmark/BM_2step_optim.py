@@ -23,11 +23,11 @@ with open("examples/benchmark/BM_metadata.json", "r") as f:
 
 
 def main(
-    num_trial_optim_model: int = 40,
-    num_trial_optim_skf: int = 50,
+    num_trial_optim_model: int = 50,
+    num_trial_optim_skf: int = 70,
     param_optimization: bool = True,
     plot: bool = False,
-    benchmark_no: str = ["2"],
+    benchmark_no: str = ["5"],
 ):
     for benchmark in benchmark_no:
 
