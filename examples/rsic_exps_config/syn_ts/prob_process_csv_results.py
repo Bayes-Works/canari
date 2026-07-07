@@ -139,7 +139,6 @@ def _process_detection_df(
         # detections between anomaly1 start and anomaly2 start
         between = [d for d in detected_indices if (d >= anm1_start) and (d < anm2_start)]
         if len(between) == 0:
-            # first anomaly not detected
             df.at[idx, "first_anm_detect_index"] = None
             df.at[idx, "detection_index_after_anm1"] = None
             df.at[idx, "detection_time"] = None
