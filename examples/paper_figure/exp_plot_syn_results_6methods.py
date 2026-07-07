@@ -17,19 +17,19 @@ params = {'text.usetex' : True,
 plt.rcParams.update(params)
 # plt.rcParams['text.latex.preamble'] = r'\usepackage{amsfonts}'
 
-# df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
-# df_skf = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv")
-# df_mp = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_mp.csv")
-# df_prophet = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_prophet_online.csv")
-# df_catch = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_catch.csv")
-# df_lstmed = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_lstmed.csv")
+df_il = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_il.csv")
+df_skf = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_skf.csv")
+df_mp = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_mp.csv")
+df_prophet = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_prophet_online.csv")
+df_catch = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_tranad.csv")
+df_lstmed = pd.read_csv("saved_results/prob_eva/syn_simple_regen_ts_results_lstmed.csv")
 
-df_il = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_il.csv")
-df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_skf.csv")
-df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_mp.csv")
-df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv")
-df_catch = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_tranad.csv")
-df_lstmed = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_lstmed.csv")
+# df_il = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_il.csv")
+# df_skf = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_skf.csv")
+# df_mp = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_mp.csv")
+# df_prophet = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_prophet_online.csv")
+# df_catch = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_tranad.csv")
+# df_lstmed = pd.read_csv("saved_results/prob_eva/syn_complex_regen_ts_results_lstmed.csv")
 
 df_il["anomaly_magnitude"] = np.abs(df_il["anomaly_magnitude"]) * 52
 df_skf["anomaly_magnitude"] = np.abs(df_skf["anomaly_magnitude"]) * 52
@@ -213,19 +213,11 @@ df_lstmed_mean = df_lstmed.groupby("anomaly_magnitude").agg(
 )
 
 # Plot
-fig, ax = plt.subplots(3, 1, figsize=(6, 3.5), constrained_layout=True)
-# fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(6, 3.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
 
 
 # Plot for detection_time
-ax[0].plot(df_il_mean.index, df_il_mean["detection_time"]["mean"], label=r"\textbf{RSI}", linewidth=1.8, color='tab:blue')
-ax[0].fill_between(
-    df_il_mean.index,
-    df_il_mean["detection_time"]["mean"] - df_il_mean["detection_time"]["std"],
-    df_il_mean["detection_time"]["mean"] + df_il_mean["detection_time"]["std"],
-    alpha=0.2,
-    color='tab:blue'
-)
 ax[0].plot(df_skf_mean.index, df_skf_mean["detection_time"]["mean"], label="SKF", linewidth=1, color='tab:green')
 ax[0].fill_between(
     df_skf_mean.index,
@@ -266,7 +258,15 @@ ax[0].fill_between(
     alpha=0.2,
     color='tab:pink'
 )
-ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
+ax[0].plot(df_il_mean.index, df_il_mean["detection_time"]["mean"], label=r"\textbf{RSI}", linewidth=1.8, color='tab:blue')
+ax[0].fill_between(
+    df_il_mean.index,
+    df_il_mean["detection_time"]["mean"] - df_il_mean["detection_time"]["std"],
+    df_il_mean["detection_time"]["mean"] + df_il_mean["detection_time"]["std"],
+    alpha=0.2,
+    color='tab:blue'
+)
+ax[0].set_ylabel(r"$\Delta_t~[\mathrm{yr}]$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
@@ -274,7 +274,7 @@ ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 # Show the legend outside the plot
-ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=3)
+# ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=3)
 
 # Plot for detection_rate
 ax[1].plot(df_skf_mean.index, df_skf_mean["detection_rate"]["mean"], label="SKF", linewidth=1, color='tab:green')
@@ -284,7 +284,7 @@ ax[1].plot(df_lstmed_mean.index, df_lstmed_mean["detection_rate"]["mean"], label
 ax[1].plot(df_catch_mean.index, df_catch_mean["detection_rate"]["mean"], label="Catch", linewidth=1, color='tab:pink')
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL", linewidth=1.8, color='tab:blue')
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
-ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
+ax[1].set_ylabel(r"$p^{\mathtt{det}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
@@ -342,7 +342,7 @@ ax[2].fill_between(
     alpha=0.2,
     color = "tab:blue"
 )
-ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
+ax[2].set_xlabel("Anomaly Magnitude [unit/yr]")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
 # ax[2].set_yscale('symlog', linthresh=1e2)
 ax[2].set_yscale('symlog')

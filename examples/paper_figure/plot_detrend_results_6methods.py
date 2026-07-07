@@ -187,7 +187,7 @@ ax[0].fill_between(
     alpha=0.2,
     color = "tab:blue"
 )
-ax[0].set_ylabel(r"$\Delta t\ (\mathrm{yr})$")
+ax[0].set_ylabel(r"$\Delta_t~[\mathrm{yr}]$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
@@ -205,7 +205,7 @@ ax[1].plot(df_lstmed_mean.index, df_lstmed_mean["detection_rate"]["mean"], label
 ax[1].plot(df_tranad_mean.index, df_tranad_mean["detection_rate"]["mean"], label="Catch", color = "tab:pink")
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL", color = "tab:blue", linewidth=1.8)
 # ax[3].set_xlabel("Anomaly Magnitude (unit/year)")
-ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
+ax[1].set_ylabel(r"$p^{\mathtt{det}}$")
 # ax[3].set_ylabel(r"$\Pr_{\mathrm{detect}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
@@ -263,7 +263,7 @@ ax[2].fill_between(
     alpha=0.2,
     color = "tab:blue"
 )
-ax[2].set_xlabel("Anomaly Magnitude (unit/$y$)")
+ax[2].set_xlabel("Anomaly Magnitude [unit/yr]")
 ax[2].set_ylabel(r"$\#_{\mathtt{ALM}}$")
 ax[2].set_yscale('symlog')
 ax[2].set_ylim(-0.01, 5e2)
