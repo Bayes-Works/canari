@@ -159,7 +159,7 @@ ax1.plot(time, trend_mean, color="tab:blue")
 ax1.fill_between(time, trend_mean - trend_std, trend_mean + trend_std, color="tab:blue", alpha=0.2)
 ax1.set_xticklabels([])
 # ax1.xaxis.set_major_locator(mdates.YearLocator(3))
-ax1.set_ylabel(r"$x^{\mathtt{LT}}$")
+ax1.set_ylabel(r"$x^{\mathtt{T}}$")
 ax1.yaxis.offsetText.set_fontsize(6)
 ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
 

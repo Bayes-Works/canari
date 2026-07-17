@@ -221,7 +221,7 @@ plot_states(
     color='tab:orange',
 )
 ax0.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax0.set_ylabel('$x^{\mathtt{LLd}}$')
+ax0.set_ylabel('$x^{\mathtt{Ld}}$')
 ax0.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
@@ -235,7 +235,7 @@ plot_states(
 ax1.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 ax1.yaxis.offsetText.set_fontsize(6)
 ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax1.set_ylabel('$x^{\mathtt{LTd}}$')
+ax1.set_ylabel('$x^{\mathtt{Td}}$')
 ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,

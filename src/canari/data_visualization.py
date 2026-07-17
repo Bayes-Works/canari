@@ -392,7 +392,7 @@ def plot_states(
 
         # Set ylabel to the name of the current state
         ax.set_ylabel(plot_state)
-        _add_dynamic_grids(ax, time)
+        # _add_dynamic_grids(ax, time)
 
         if sub_plot is not None:
             break
