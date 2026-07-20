@@ -27,3 +27,7 @@ docs/_build/
 
 # Metadata 
 !examples/benchmark/BM_metadata.json
+
+agent.md
+experiments/out
+experiments/planning
