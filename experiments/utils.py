@@ -8,7 +8,7 @@ from pytagi import Normalizer as normalizer
 def _apply_train_split_via_part_to_remove(
     df_raw_full: pd.DataFrame,
     train_split: float,
-    validation_start: str,
+    validation_start: str | pd.Timestamp,
     warmup_len: int,
 ):
     validation_ts = pd.Timestamp(validation_start)
@@ -51,7 +51,9 @@ def _load_base_dataframe(experiment_config: dict) -> pd.DataFrame:
 
     df.index.name = "date_time"
 
-    df.index = df.index - pd.Timedelta(weeks=1)
+    date_shift_weeks = float(experiment_config.get("date_shift_weeks", 1))
+    if date_shift_weeks != 0:
+        df.index = df.index - pd.Timedelta(weeks=date_shift_weeks)
 
     return df
 
@@ -148,8 +150,8 @@ def prepare_dataset(
     data_pro_scale = DataProcess(
         data=df_original,
         time_covariates=experiment_config.get("time_covariates", ["week_of_year"]),
-        validation_start=experiment_config["validation_start"],
-        test_start=experiment_config["test_start"],
+        validation_start=validation_date_time,
+        test_start=test_date_time,
         output_col=[0],
     )
 
@@ -158,7 +160,7 @@ def prepare_dataset(
         _apply_train_split_via_part_to_remove(
             df_original,
             train_split,
-            experiment_config["validation_start"],
+            validation_date_time,
             warmup_len,
         )
     )

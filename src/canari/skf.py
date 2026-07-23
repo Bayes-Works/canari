@@ -1532,6 +1532,7 @@ class SKF:
         plot_dir: Optional[Path] = None,
         synthetic_data: Optional[dict] = None,
         n_jobs: Optional[int] = -1,
+        test_only: Optional[bool] = False,
     ) -> Tuple[float, float, str]:
         """
         Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
@@ -1585,6 +1586,10 @@ class SKF:
         self.load_initial_states()
 
         # Quantify pre-anomaly false alarms on the original clean data
+        if test_only:
+            n = len(clean_marginal_abnorm_prob)
+            start_idx = int(anomaly_start * n)
+            clean_marginal_abnorm_prob = clean_marginal_abnorm_prob[start_idx:]
         num_false_alarm = int(np.sum(clean_marginal_abnorm_prob > threshold))
 
         # Iterate over data with synthetic anomalies

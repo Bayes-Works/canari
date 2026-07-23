@@ -441,7 +441,7 @@ def main(
             else:
                 raise
 
-        model.lstm_net.teacher_forcing = True
+        model.lstm_net.teacher_forcing = False
 
         local_training_metrics = []
         local_optimal_metrics = None

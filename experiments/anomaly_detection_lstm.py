@@ -1,6 +1,11 @@
 import fire
 import multiprocessing as mp
 import os
+
+os.environ.setdefault("RAY_LOG_TO_DRIVER", "0")
+os.environ.setdefault("RAY_LOGGER_LEVEL", "error")
+os.environ.setdefault("RAY_AIR_NEW_OUTPUT", "0")
+
 import numpy as np
 from scipy.stats import norm as _norm_dist
 import matplotlib.pyplot as plt
@@ -68,6 +73,11 @@ def _crps_gaussian(mu: np.ndarray, std: np.ndarray, obs: np.ndarray) -> float:
     """Mean CRPS for Gaussian predictive distributions (closed-form)."""
     z = (obs - mu) / std
     return float(np.nanmean(std * (z * (2 * _norm_dist.cdf(z) - 1) + 2 * _norm_dist.pdf(z) - 1.0 / np.sqrt(np.pi))))
+
+
+def _finite_float_or_none(value):
+    value = float(value)
+    return value if np.isfinite(value) else None
 
 
 def _estimate_years_per_step(time_axis) -> float:
@@ -214,7 +224,10 @@ def main(
     )
     global_params = experiment_config.get("lstm_global_params")
     use_tagiv = experiment_config["use_tagiv"]
-    max_num_epoch = int(experiment_config.get("lstm_num_epoch", 100))
+    if zero_shot:
+        max_num_epoch = 1
+    else:
+        max_num_epoch = int(experiment_config.get("lstm_num_epoch", 500))
     lstm_early_stopping_metric = str(
         experiment_config.get("lstm_early_stopping_metric", "crps")
     ).strip().lower()
@@ -735,6 +748,7 @@ def main(
                 anomaly_start=test_start_ratio,
                 anomaly_end=anomaly_end_ratio,
             )
+        actual_num_realizations = len(eval_synthetic_data)
 
         detection_rate, num_false_alarms, time_to_detection = (
             skf_optim.detect_synthetic_anomaly(
@@ -744,6 +758,7 @@ def main(
                 plot_dir=mag_plot_dir,
                 synthetic_data=eval_synthetic_data,
                 n_jobs=skf_eval_n_jobs,
+                test_only=False,
             )
         )
 
@@ -760,13 +775,15 @@ def main(
             "false_alarm_rate_per_y": false_rate_yearly,
             "time_to_detection_years_mean": ttd_mean,
             "time_to_detection_years_std": ttd_std,
-            "num_realizations": num_realizations,
+            "num_realizations": actual_num_realizations,
             "plot_directory": str(mag_plot_dir),
         }
+        ttd_mean_text = "nan" if ttd_mean is None else f"{ttd_mean:.3f}"
+        ttd_std_text = "nan" if ttd_std is None else f"{ttd_std:.3f}"
         print(
             f"  mag={mag:.4f}:  P(detect)={detection_rate:.2f}  "
             f"FA/yr={false_rate_yearly:.2f}  "
-            f"TTD(yr)={ttd_mean:.3f}\u00b1{ttd_std:.3f}"
+            f"TTD(yr)={ttd_mean_text}\u00b1{ttd_std_text}"
         )
 
     print(f"{'='*70}\n")
@@ -784,7 +801,7 @@ def main(
         summary["sigma_v_grid_search"] = sigma_v_grid_search_result
     summary_path = output_dir / "summary.json"
     with summary_path.open("w") as f:
-        json.dump(summary, f, indent=2)
+        json.dump(summary, f, indent=2, allow_nan=False)
 
     print(f"\nSaved outputs to: {output_dir}")
     print(f"Summary JSON: {summary_path}")

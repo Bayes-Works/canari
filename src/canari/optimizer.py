@@ -5,8 +5,16 @@ external libraries Ray Tune and Optuna.
 """
 
 from typing import Callable, Dict, Optional
+import logging
 import math
+import os
 import signal
+
+os.environ.setdefault("RAY_LOG_TO_DRIVER", "0")
+os.environ.setdefault("RAY_LOGGER_LEVEL", "error")
+os.environ.setdefault("RAY_AIR_NEW_OUTPUT", "0")
+
+import ray
 from ray import tune
 from ray.tune import Callback
 from ray.tune.search.optuna import OptunaSearch
@@ -14,6 +22,8 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.sample import Domain
 import optuna
 from canari import Model
+
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 signal.signal(signal.SIGSEGV, lambda signum, frame: None)
 
@@ -153,6 +163,7 @@ class Optimizer:
         """
         Run hyperparameter optimization over the defined search space.
         """
+        self._ensure_ray_initialized()
         search_config = self._ray_build_search_space()
 
         if self._grid_search:
@@ -232,6 +243,18 @@ class Optimizer:
             f"Optimal parameters at trial #{best_sample_number}. Best metric: {best_model.metric_optim:.5f}. Best print metric: {best_model.print_metric}. Best param: {self.param_optim}."
         )
         print("-----")
+
+    @staticmethod
+    def _ensure_ray_initialized():
+        """Start Ray quietly so Tune does not auto-init with noisy defaults."""
+        if ray.is_initialized():
+            return
+        ray.init(
+            include_dashboard=False,
+            configure_logging=True,
+            logging_level=logging.ERROR,
+            log_to_driver=False,
+        )
 
     def _ray_build_search_space(self) -> Dict:
         """

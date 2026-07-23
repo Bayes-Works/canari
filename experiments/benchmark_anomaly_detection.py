@@ -18,10 +18,27 @@ import fire
 import numpy as np
 import yaml
 
+os.environ.setdefault("RAY_LOG_TO_DRIVER", "0")
+os.environ.setdefault("RAY_LOGGER_LEVEL", "error")
+os.environ.setdefault("RAY_AIR_NEW_OUTPUT", "0")
+
 try:
     from experiments.anomaly_detection_lstm import main as run_anomaly_detection
 except ModuleNotFoundError:
     from anomaly_detection_lstm import main as run_anomaly_detection
+
+
+SEED_VARIABILITY_DIR = Path("/home/dw/canari/saved_params/seed_variability")
+
+
+def _seed_global_params(seed: int) -> str:
+    """Path to the global LSTM weights trained with the given seed."""
+    path = SEED_VARIABILITY_DIR / f"model_256_52_seed{seed}.bin"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No seed-variability global weights for seed {seed}: {path}"
+        )
+    return str(path)
 
 
 def _read_summary(output_dir: Path) -> dict:
@@ -47,6 +64,17 @@ def _run_single(
     )
     if condition == "local":
         config["lstm_num_layer"] = 1
+        config["num_hidden_unit"] = 64
+        config["lstm_zeroshot"] = False
+        config["lstm_increase_output_variance"] = False
+    elif condition == "global_finetune":
+        config["lstm_zeroshot"] = False
+        config["lstm_increase_output_variance"] = True
+        config["lstm_global_params"] = _seed_global_params(seed)
+    elif condition == "global_zeroshot":
+        config["lstm_zeroshot"] = True
+        config["lstm_increase_output_variance"] = False
+        config["lstm_global_params"] = _seed_global_params(seed)
     config["experiment_name"] = (
         f"{base_config['experiment_name']}_benchmark_{condition}_seed{seed}"
     )
@@ -94,9 +122,7 @@ def _collect_magnitude_results(runs: list[dict]) -> list[dict]:
                     "probability_of_detection": mag_data.get(
                         "probability_of_detection"
                     ),
-                    "false_alarm_rate_per_y": mag_data.get(
-                        "false_alarm_rate_per_y"
-                    ),
+                    "false_alarm_rate_per_y": mag_data.get("false_alarm_rate_per_y"),
                     "time_to_detection_years_mean": mag_data.get(
                         "time_to_detection_years_mean"
                     ),
@@ -225,7 +251,9 @@ def _print_condition_summary(aggregates: list[dict], condition_names: list[str])
             if a["probability_of_detection"] is not None
         ]
 
-        print(f"\n--- {cond.upper()} ({n_magnitudes} magnitudes, {total_realizations} total realizations) ---")
+        print(
+            f"\n--- {cond.upper()} ({n_magnitudes} magnitudes, {total_realizations} total realizations) ---"
+        )
         if p_dets:
             print(
                 f"  P(detect) range:   [{min(p_dets):.2f}, {max(p_dets):.2f}]  "
@@ -259,6 +287,8 @@ def benchmark(
     experiment_config_path: str,
     seeds: list[int] = (1, 2, 3),
     max_concurrent: int = 6,
+    only_conditions: list[str] | None = None,
+    folder_suffix: str = "test4",
 ):
     """Run anomaly detection for multiple seeds with and without global weights.
 
@@ -269,6 +299,11 @@ def benchmark(
             parallel. Each run receives a per-run CPU budget so the nested
             sigma_v/SKF pools stay bounded instead of oversubscribing the
             machine.
+        only_conditions: If provided, restrict execution to this subset of
+            condition names (e.g. ["global_zeroshot"]). Names must match the
+            built-in conditions: "global_finetune", "global_zeroshot", "local".
+        folder_suffix: Appended to the benchmark output folder name so that
+            partial-condition runs do not overwrite the main benchmark folder.
     """
     config_path = Path(experiment_config_path)
     with config_path.open("r") as f:
@@ -277,14 +312,24 @@ def benchmark(
     original_name = base_config["experiment_name"]
     global_params_path = base_config.get("lstm_global_params")
     output_root = Path(base_config.get("output_root", "experiments/out"))
-    benchmark_root = output_root / f"{original_name}_benchmark"
+    benchmark_root = output_root / f"{original_name}_benchmark{folder_suffix}"
     benchmark_root.mkdir(parents=True, exist_ok=True)
 
-    # Define conditions: always run local; run global only if a path is configured
+    # Define conditions: always run local; run global finetune + zero-shot if a path is configured
     conditions = []
     if global_params_path is not None:
-        conditions.append(("global", global_params_path))
+        conditions.append(("global_finetune", global_params_path))
+        conditions.append(("global_zeroshot", global_params_path))
     conditions.append(("local", None))
+
+    if only_conditions is not None:
+        allowed = set(only_conditions)
+        conditions = [(name, gp) for name, gp in conditions if name in allowed]
+        if not conditions:
+            raise ValueError(
+                f"only_conditions={only_conditions} matched no available "
+                f"conditions (available: global_finetune, global_zeroshot, local)."
+            )
 
     if len(conditions) == 1:
         print(
@@ -293,25 +338,15 @@ def benchmark(
         )
 
     # Build all (seed, condition) tasks
-    tasks = [
-        (seed, cond_name, gp)
-        for seed in seeds
-        for cond_name, gp in conditions
-    ]
+    tasks = [(seed, cond_name, gp) for seed in seeds for cond_name, gp in conditions]
 
     available_cpus = max(1, os.cpu_count() or 1)
     n_workers = max(1, min(max_concurrent, len(tasks), available_cpus))
     cpu_budget_per_run = max(1, available_cpus // n_workers)
     runs_root = benchmark_root / "runs"
-    print(
-        f"\nLaunching {len(tasks)} runs with up to {n_workers} in parallel."
-    )
-    print(
-        f"Host CPUs: {available_cpus}  |  Per-run CPU budget: {cpu_budget_per_run}"
-    )
-    print(
-        f"Per-run logs: {runs_root}/<experiment_name>/run.log"
-    )
+    print(f"\nLaunching {len(tasks)} runs with up to {n_workers} in parallel.")
+    print(f"Host CPUs: {available_cpus}  |  Per-run CPU budget: {cpu_budget_per_run}")
+    print(f"Per-run logs: {runs_root}/<experiment_name>/run.log")
     print(
         f"Tail live progress with, e.g.:\n"
         f"  tail -f {runs_root}/{original_name}_benchmark_{conditions[0][0]}_seed{list(seeds)[0]}/run.log\n"
@@ -434,7 +469,13 @@ def benchmark(
     }
     benchmark_path = benchmark_root / "summary.json"
     with benchmark_path.open("w") as f:
-        json.dump(benchmark_output, f, indent=2, default=str)
+        json.dump(
+            benchmark_output,
+            f,
+            indent=2,
+            default=str,
+            allow_nan=False,
+        )
     print(f"\nBenchmark summary saved to: {benchmark_path}")
 
 
