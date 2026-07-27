@@ -48,7 +48,7 @@ def test_slstm_infer_len_parametrized(look_back_len, start_offset, plot_mode):
     df_raw.columns = ["values"]
 
     # Resampling data
-    df = df_raw.resample("H").mean()
+    df = df_raw.resample("h").mean()
 
     # offset the data by a random start time
     df = df.iloc[start_offset:]
