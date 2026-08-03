@@ -41,7 +41,7 @@ for i in range(test_ts_num):
 print("Test time series lengths: ", test_ts_len_all)
 
 # Input
-first_anm_type = 'll'
+first_anm_type = 'lt'
 second_anm_type = 'lt'
 
 print('Results for first anomaly type: ', first_anm_type, ' and second anomaly type: ', second_anm_type)
@@ -259,7 +259,7 @@ ax[0].fill_between(
     alpha=0.2,
     color="tab:blue",
 )
-ax[0].set_ylabel(r"$\Delta_t(\mathrm{y})$")
+ax[0].set_ylabel(r"$\Delta_t$ [yr]")
 ax[0].set_yticks([0, 52, 104, 156])
 ax[0].set_yticklabels([0, 1, 2, 3])
 ax[0].set_xscale('log')
@@ -282,14 +282,14 @@ ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], l
 ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}", color="tab:brown")
 ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}", color="tab:pink")
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSIC}", linewidth=2, color="tab:blue")
-ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
+ax[1].set_ylabel(r"$p^{\mathtt{det}}$")
 ax[1].set_ylim(-0.05, 1.05)
 ax[1].set_yticks([0, 0.5, 1])
 ax[1].set_xscale('log')
 ax[1].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 # ax[1].legend(loc='lower right', fontsize=6)
 
-ax[1].set_xlabel("Anomaly Magnitude (unit/$y$)")
+ax[1].set_xlabel("Anomaly Magnitude [unit/yr]")
 
 fig.align_ylabels(ax)
 
@@ -298,6 +298,6 @@ plt.suptitle(r"\textbf{P.E.} " + first_anm_type.upper() + r" $\rightarrow$ " + s
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('detrended_ts_results_legend.png', dpi=300)
+plt.savefig('detrended_ts_results_legend.pdf')
 
 plt.show()

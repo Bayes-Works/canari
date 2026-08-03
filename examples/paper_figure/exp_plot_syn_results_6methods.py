@@ -353,5 +353,5 @@ fig.align_ylabels(ax)
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('syn_ts_results_legend.png', dpi=300)
+plt.savefig('syn_ts_results_legend.pdf')
 plt.show()

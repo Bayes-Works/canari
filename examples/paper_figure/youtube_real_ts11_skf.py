@@ -279,7 +279,7 @@ def main(
     # fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.tight_layout(h_pad=0.1, w_pad=0.1)
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig('yt_skf_real_ts11.png', dpi=300)
+    plt.savefig('yt_skf_real_ts11.pdf')
     plt.show()
 
 

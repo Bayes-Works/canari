@@ -150,8 +150,8 @@ df_il3_mean = df_il3.groupby("anomaly_magnitude").agg(
 # )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-# fig, ax = plt.subplots(3, 1, figsize=(3, 5), constrained_layout=True)
-fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(3, 5), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(3, 2.5), constrained_layout=True)
 
 
 # Plot for detection_time
@@ -192,7 +192,7 @@ ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
 # ax[0].legend(ncol=2)
 # Show the legend outside the plot
-# ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=2)
+ax[0].legend(bbox_to_anchor=(0, 2.5), loc='upper left', borderaxespad=0., ncol=2)
 
 # Plot for detection_rate
 ax[1].plot(df_il_mean.index, df_il_mean["detection_rate"]["mean"], label="IL")
@@ -253,5 +253,5 @@ fig.align_ylabels(ax)
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('syn_ts_results_legend.png', dpi=300)
+plt.savefig('syn_ts_results_legend.pdf')
 plt.show()

@@ -185,5 +185,5 @@ plt.gcf().align_ylabels([ax0, ax1, ax2, ax3])
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('online_ar.png', dpi=300)
+plt.savefig('residual_absorption_delay.pdf')
 plt.show()

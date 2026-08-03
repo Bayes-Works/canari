@@ -135,10 +135,18 @@ df_tranad_mean = df_tranad.groupby("anomaly_magnitude").agg(
 )
 
 # Plot the mean and std of df_il["mse_LL"], df_il["mse_LT"], and df_il["detection_time"] for each anomaly magnitude
-# fig, ax = plt.subplots(3, 1, figsize=(5.5, 2.5), constrained_layout=True)
-fig, ax = plt.subplots(3, 1, figsize=(3.5, 2.5), constrained_layout=True)
+fig, ax = plt.subplots(3, 1, figsize=(5.5, 3), constrained_layout=True)
+# fig, ax = plt.subplots(3, 1, figsize=(3.5, 3), constrained_layout=True)
 
 # Plot for detection_time
+ax[0].plot(df_il_mean.index, df_il_mean["detection_time"]["mean"], label=r"\textbf{RSI}", linewidth=1.8, color = "tab:blue")
+ax[0].fill_between(
+    df_il_mean.index,
+    df_il_mean["detection_time"]["mean"] - df_il_mean["detection_time"]["std"],
+    df_il_mean["detection_time"]["mean"] + df_il_mean["detection_time"]["std"],
+    alpha=0.2,
+    color = "tab:blue"
+)
 ax[0].plot(df_skf_mean.index, df_skf_mean["detection_time"]["mean"], label="SKF", color = "tab:green")
 ax[0].fill_between(
     df_skf_mean.index,
@@ -179,14 +187,6 @@ ax[0].fill_between(
     alpha=0.2,
     color = "tab:pink"
 )
-ax[0].plot(df_il_mean.index, df_il_mean["detection_time"]["mean"], label=r"\textbf{RSI}", linewidth=1.8, color = "tab:blue")
-ax[0].fill_between(
-    df_il_mean.index,
-    df_il_mean["detection_time"]["mean"] - df_il_mean["detection_time"]["std"],
-    df_il_mean["detection_time"]["mean"] + df_il_mean["detection_time"]["std"],
-    alpha=0.2,
-    color = "tab:blue"
-)
 ax[0].set_ylabel(r"$\Delta_t~[\mathrm{yr}]$")
 # ax[2].set_yticks([0, 52, 104, 156, 208, 260])
 ax[0].set_yticks([0, 52, 104, 156])
@@ -194,7 +194,7 @@ ax[0].set_yticklabels([0, 1, 2, 3])
 ax[0].set_xscale('log')
 ax[0].set_ylim(0, 52 * 3.05)
 ax[0].set_xticklabels([])
-# ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 
 
 # Plot for detection_rate
@@ -273,5 +273,5 @@ fig.align_ylabels(ax)
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.3)
-plt.savefig('detrend_ts_results.png', dpi=300)
+plt.savefig('detrend_ts_results.pdf')
 plt.show()

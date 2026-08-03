@@ -54,5 +54,5 @@ ax1.xaxis.set_major_locator(mdates.YearLocator(base=3))
 
 plt.tight_layout(h_pad=0.1, w_pad=0.1)
 plt.subplots_adjust(hspace=0.6)
-plt.savefig('syn_ts_demo.png', dpi=300)
+plt.savefig('syn_ts_demo.pdf')
 plt.show()
