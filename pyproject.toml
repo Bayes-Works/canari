@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pycanari"
 version = "0.2.5"
 description = "Canari is an open-source library for online change point detection in univariate time series."
-readme = "README.md"
+readme = { text = "Canari is an open-source library for online change point detection in univariate time series.", content-type = "text/markdown" }
 license = { text = "MIT" }
 requires-python = ">=3.10, <3.13"
 
