@@ -18,8 +18,20 @@ docs/_build/*
 # Figures
 !saved_results/time_series_toy.png
 !docs/_static/**
+!experiments/figures/
+!experiments/out/
 
 agent.md
 experiments/out
 experiments/planning
 data/
+
+
+# MD files
+experiments/*.md
+
+# plotting scripts
+experiments/plot_*.py
+
+# epistemic uncertainty exploration
+epistemic/*
