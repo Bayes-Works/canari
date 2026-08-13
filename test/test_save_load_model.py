@@ -1,3 +1,5 @@
+import copy
+
 import numpy.testing as npt
 import pytest
 from canari import Model
@@ -80,3 +82,38 @@ def test_model_save_load(smoother):
 
     model2_dict = model2.get_dict()
     compare_lstm_dict(model1_dict, model2_dict)
+
+
+@pytest.mark.parametrize("smoother", [False, True], ids=["LSTM", "SLSTM"])
+def test_load_lstm_parameter_means(tmp_path, smoother):
+    """Global LSTM means load into LSTM/SLSTM without replacing variances."""
+    config = {
+        "look_back_len": 10,
+        "num_features": 2,
+        "num_layer": 1,
+        "infer_len": 24,
+        "num_hidden_unit": 5,
+        "device": "cpu",
+    }
+    source = Model(
+        LstmNetwork(**config, manual_seed=1, smoother=False),
+        WhiteNoise(),
+    )
+    target = Model(
+        LstmNetwork(**config, manual_seed=2, smoother=smoother),
+        WhiteNoise(),
+    )
+    params_path = tmp_path / "global_model_param.bin"
+    source.lstm_net.save(filename=str(params_path))
+
+    source_params = source.lstm_net.state_dict()
+    initial_params = copy.deepcopy(target.lstm_net.state_dict())
+    target.load_lstm_parameter_means(params_path)
+    loaded_params = target.lstm_net.state_dict()
+
+    for name, params in loaded_params.items():
+        expected = source_params[name.removeprefix("S")]
+        npt.assert_allclose(params[0], expected[0])
+        npt.assert_allclose(params[2], expected[2])
+        npt.assert_allclose(params[1], initial_params[name][1])
+        npt.assert_allclose(params[3], initial_params[name][3])
