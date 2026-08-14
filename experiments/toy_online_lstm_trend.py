@@ -16,6 +16,12 @@ couples the baseline states with the LSTM's t+1 prediction:
 lstm index, and the lstm transition row is zero, so the lstm state never carries over
 from one step to the next: the coupled quantity is always the newest LSTM prediction.
 
+The online walk covers the training span, which here is everything but the last 10 % of the
+series: there is no epoch loop and nothing to early-stop, so there is no validation split to
+hold back. The test span that follows is forecast in one open loop, and every figure covers
+both. The decomposition is where that matters most here: a trend that is right is a trend
+the forecast can still be read off once the observations stop.
+
 Shared helpers live in `utils.py`. See `online_lstm_explained.md` for the details.
 """
 
@@ -30,6 +36,7 @@ import pytagi.metric as metric
 # anything pulls matplotlib in.
 from experiments.utils import (
     LstmLookBackBuffer,
+    Splits,
     add_piecewise_trend,
     generate_periodic_signal,
     initialize_state_records,
@@ -40,15 +47,20 @@ from experiments.utils import (
     plot_predictions_and_residuals,
     plot_state_records,
     print_regime_metrics,
+    record_forecast_states,
     record_window_states,
     regime_metrics,
     rewind_to_step,
+    set_output_subdir,
     smooth_window,
     store_parameter_diagnostics,
 )
 
 from canari import DataProcess, Model
 from canari.component import LocalTrend, LstmNetwork, WhiteNoise
+
+# Everything this experiment writes goes under `experiments/out/toy_online_lstm_trend/`.
+set_output_subdir("toy_online_lstm_trend")
 
 # ------------------------------------------------------------
 #  Generate synthetic data: periodic signal on top of a trend
@@ -93,17 +105,22 @@ D = 48  # length of smooth window
 # online loop. 1 means every time step gets its own one-step-ahead prediction.
 RESTART_STEP = 1
 
-# Build data processor
+# Build data processor. There is no validation split: this experiment has no epoch loop
+# and nothing to early-stop, so a held-out span in the middle would only shorten the online
+# walk for no purpose. Everything up to the test set is walked online, and the test span is
+# the one held-out stretch.
 data_processor = DataProcess(
     data=df,
     time_covariates=["hour_of_day"],
-    train_split=0.8,
-    validation_split=0.1,
+    train_split=0.9,
+    validation_split=0.0,
     output_col=output_col,
 )
 
 # split data
-train_data, validation_data, test_data, all_data = data_processor.get_splits()
+train_data, _, test_data, all_data = data_processor.get_splits()
+# Every figure is drawn over the whole series, so the split boundaries travel with it.
+splits = Splits.from_processor(data_processor)
 
 # Model: a local trend for the baseline, an LSTM for the periodic pattern.
 #
@@ -117,7 +134,7 @@ train_data, validation_data, test_data, all_data = data_processor.get_splits()
 # model works in, so the one-step-ahead MSE can be read against sigma_v ** 2.
 sigma_v = float(NOISE_STD / data_processor.scale_const_std[output_col[0]])
 model = Model(
-    LocalTrend(var_states=[1e-1, 1e-3], std_error=1e-5),
+    LocalTrend(var_states=[1e-3, 1e-3], std_error=1e-5),
     LstmNetwork(
         # Any look-back length works: `LstmLookBackBuffer` carries the smoothed LSTM
         # outputs across windows. `num_features` stays 2 whatever it is, since the input
@@ -152,6 +169,7 @@ model.lstm_net.num_samples = D + 1
 
 # store online predictions and state histories
 num_train = len(train_data["y"])
+num_all = len(all_data["y"])
 if num_train <= D:
     raise ValueError("Training data must be longer than the smoothing window D.")
 
@@ -161,7 +179,9 @@ pred_indices = []
 diagnostic_indices = []
 
 tracked_states = [name for name in model.states_name if name != "white noise"]
-state_records = initialize_state_records(tracked_states, num_train)
+# The records span the whole series: the online loop fills the training part, the forecast
+# below fills the test part.
+state_records = initialize_state_records(tracked_states, num_all)
 
 # smoothed LSTM outputs the next window looks back into
 look_back_buffer = LstmLookBackBuffer(
@@ -240,27 +260,39 @@ if tail_start < num_train:
     model.lstm_net.train()
     model.filter(make_window(train_data, tail_start, num_train), train_lstm=True)
 
-# forecast a multi step ahead
+# Forecast the test span in one open loop, from the end of the training data to the end of
+# the series. Nothing updates the states there, so the level keeps being pushed along by
+# whatever slope the trend state settled on, which is the thing this experiment is about.
 model.lstm_net.eval()
+model.lstm_net.num_samples = num_all - num_train
 model.initialize_states_history()
-mu_forecast, std_forecast, _ = model.forecast(validation_data)
+mu_forecast, std_forecast, forecast_states = model.forecast(
+    make_window(all_data, num_train, num_all)
+)
+record_forecast_states(state_records, forecast_states, start=num_train)
+forecast_indices = np.arange(num_train, num_all)
 
 # metrics on the standardized data
 pred_indices = np.array(pred_indices)
 mu_preds = np.array(mu_preds).flatten()
 std_preds = np.array(std_preds).flatten()
+mu_forecast = np.asarray(mu_forecast).flatten()
+std_forecast = np.asarray(std_forecast).flatten()
+all_obs = all_data["y"].flatten()
 train_obs = train_data["y"].flatten()
-validation_obs = validation_data["y"].flatten()
+test_obs = test_data["y"].flatten()
 
 online_mse = metric.mse(mu_preds, train_obs[pred_indices])
-validation_mse = metric.mse(mu_forecast, validation_obs)
+test_mse = metric.mse(mu_forecast, test_obs)
 noise_floor = sigma_v**2
 print(f"Number of windows       : {num_windows}")
 print(f"Noise floor (sigma_v^2) :{noise_floor: 0.4f}")
 print(f"Online one-step MSE     :{online_mse: 0.4f}"
-      f"  ({online_mse / noise_floor: 0.2f} x floor)")
-print(f"Validation forecast MSE :{validation_mse: 0.4f}"
-      f"  ({validation_mse / noise_floor: 0.2f} x floor)")
+      f"  ({online_mse / noise_floor: 0.2f} x floor)"
+      f"   [steps {D}-{num_train - 1}]")
+print(f"Test forecast MSE       :{test_mse: 0.4f}"
+      f"  ({test_mse / noise_floor: 0.2f} x floor)"
+      f"   [steps {num_train}-{num_all - 1}]")
 print()
 print_regime_metrics(
     regime_metrics(
@@ -278,14 +310,15 @@ print_regime_metrics(
 #  Figures
 # ------------------------------------------------------------
 plot_predictions_and_residuals(
-    train_obs=train_obs,
+    observations=all_obs,
     pred_indices=pred_indices,
     mu_preds=mu_preds,
     std_preds=std_preds,
-    validation_obs=validation_obs,
-    mu_forecast=mu_forecast.flatten(),
-    std_forecast=std_forecast.flatten(),
+    forecast_indices=forecast_indices,
+    mu_forecast=mu_forecast,
+    std_forecast=std_forecast,
     stem="toy_online_lstm_trend_predictions",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )
 
@@ -294,15 +327,18 @@ plot_state_records(
     states_name=tracked_states,
     smooth_lag=D,
     stem="toy_online_lstm_trend_states",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )
 
-# The observation prediction is level + lstm, so the sum should lie on the data.
+# The observation prediction is level + lstm, so the sum should lie on the data - over the
+# forecast spans too, where it is the whole prediction.
 plot_decomposition(
     records=state_records,
     component_names=["level", "lstm"],
-    observations=train_obs,
+    observations=all_obs,
     stem="toy_online_lstm_trend_decomposition",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )
 
@@ -313,8 +349,9 @@ plot_decomposition_rows(
     records=state_records,
     states_name=["level", "trend", "lstm"],
     observation_component_names=["level", "lstm"],
-    observations=train_obs,
+    observations=all_obs,
     stem="toy_online_lstm_trend_decomposition_rows",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )
 
@@ -323,6 +360,7 @@ plot_parameter_diagnostics(
     diagnostic_indices=diagnostic_indices,
     ylabel="Mean KL divergence",
     stem="toy_online_lstm_trend_kl",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )
 
@@ -331,5 +369,6 @@ plot_parameter_diagnostics(
     diagnostic_indices=diagnostic_indices,
     ylabel="Mean 2-Wasserstein distance",
     stem="toy_online_lstm_trend_wasserstein",
+    splits=splits,
     changepoints=CHANGEPOINTS,
 )

@@ -20,14 +20,15 @@ comparison is otherwise identical to the stationary one:
     online   the window scheme of `toy_online_lstm.py` over the test set with
              `train_lstm=True`, so the weights keep learning from test observations.
 
-    control  the same window scheme with `train_lstm=False`, which shares every mechanism
-             with the online run and learns nothing. It separates what the scheme costs
-             from what the updating buys.
-
-The split is 60 / 40 (50 % train, 10 % validation, 40 % test), all three scenarios start
+The split is 60 / 40 (50 % train, 10 % validation, 40 % test), both scenarios start
 from the same pretrained weights and the same frozen warm-up over `[0, test_start - D)`,
 and the online windows start `D` steps before the test set so the first prediction lands
 on the first test observation.
+
+Every figure is drawn over the whole series on absolute time steps, so the regime the
+pretraining saw and the two regimes it never did sit on one axis. Before the test set the
+two scenarios have nothing to disagree about - the weights are frozen for both - so that
+stretch is drawn once, in grey, as the context they share.
 
 Run from the repository root:
 
@@ -46,10 +47,13 @@ import pytagi.metric as metric
 # utils sets MPLCONFIGDIR and owns the matplotlib configuration, so import it before
 # anything pulls matplotlib in.
 from experiments.utils import (
+    CONTEXT_COLOR,
     DOUBLE_COL,
+    Splits,
     generate_periodic_signal,
     make_window,
     mark_changepoints,
+    mark_splits,
     plot_error_comparison,
     plot_prior_vs_posterior,
     pretrain_lstm,
@@ -58,6 +62,7 @@ from experiments.utils import (
     regime_metrics,
     run_online_windows,
     save_figure,
+    set_output_subdir,
     warm_up_filter,
 )
 
@@ -65,6 +70,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from canari import DataProcess, Model  # noqa: E402
 from canari.component import LstmNetwork, WhiteNoise  # noqa: E402
+
+# Everything this experiment writes goes under
+# `experiments/out/toy_frozen_vs_online_shift/`.
+set_output_subdir("toy_frozen_vs_online_shift")
 
 # ------------------------------------------------------------
 #  Data: stationary until the test set, then two changes
@@ -106,7 +115,6 @@ NUM_HIDDEN_UNIT = 80
 INFER_LEN = 24  # one period of the regime that is trained on
 NUM_EPOCH = 100
 MANUAL_SEED = 1
-ROLLING_WINDOW = 24
 TRANSIENT_LEN = 24  # predictions counted as the transient right after a change
 
 y = generate_periodic_signal(
@@ -129,6 +137,8 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
+# Every figure is drawn over the whole series, so the split boundaries travel with it.
+splits = Splits.from_processor(data_processor)
 
 TEST_START = data_processor.test_start
 TEST_END = data_processor.test_end
@@ -144,7 +154,15 @@ for change_start, _, _ in REGIMES[1:]:
             f"[{TEST_START}, {TEST_END}); pretraining would have seen it"
         )
 
+# The same changes on the absolute axis the figures use.
+CHANGEPOINTS = [(TEST_START + offset, label) for offset, label in TEST_CHANGEPOINTS]
+
+all_obs = all_data["y"].flatten()
 test_obs = test_data["y"].flatten()
+# Absolute time steps of the compared stretch, and the same steps counted from the start of
+# the test set. The figures use the first, the per-segment tables the second.
+test_steps = np.arange(TEST_START, TEST_END)
+test_offsets = np.arange(NUM_TEST)
 # The same series without observation noise, standardized identically. Only
 # synthetic data has this; it is what lets `print_calibration` check how the
 # predictive variance is split between the state and the noise term.
@@ -216,7 +234,7 @@ def prepared_model() -> Model:
 
     model = build_model()
     model.lstm_net.load_state_dict(pretrained_state_dict)
-    model.warm_up_seed = warm_up_filter(model, all_data, WARMUP_END)
+    model.warm_up = warm_up_filter(model, all_data, WARMUP_END)
     return model
 
 
@@ -238,8 +256,27 @@ for key, states_type in (("prior", "prior"), ("posterior", "posterior")):
     frozen_run[f"{key}_mu"] = frozen_states.get_mean("lstm", states_type)[-NUM_TEST:]
     frozen_run[f"{key}_std"] = frozen_states.get_std("lstm", states_type)[-NUM_TEST:]
 
+# Everything before the test set is context the two scenarios have no reason to disagree
+# about: the warm-up over `[0, WARMUP_END)` is identical by construction, and over the D
+# steps between it and the test set the weights are still frozen. Taking that stretch from
+# the frozen pass gives the figures one grey trace to put in front of the comparison, so a
+# row covers the series from its first step instead of starting mid-way through.
+pre_test = {
+    "name": "pre-test (weights frozen)",
+    "indices": np.arange(TEST_START),
+}
+for key, filtered in (
+    ("mu", np.asarray(mu_frozen).flatten()),
+    ("std", np.asarray(std_frozen).flatten()),
+    ("prior_mu", frozen_states.get_mean("lstm", "prior")),
+    ("prior_std", frozen_states.get_std("lstm", "prior")),
+    ("posterior_mu", frozen_states.get_mean("lstm", "posterior")),
+    ("posterior_std", frozen_states.get_std("lstm", "posterior")),
+):
+    pre_test[key] = np.concatenate([frozen_model.warm_up[key], filtered[:D]])
+
 # ------------------------------------------------------------
-#  Scenarios 2 and 3: the window scheme, with and without updating
+#  Scenario 2: the window scheme, updating the weights as the test set arrives
 # ------------------------------------------------------------
 online_model = prepared_model()
 online_run = {"name": "online weights", **run_online_windows(
@@ -248,27 +285,19 @@ online_run = {"name": "online weights", **run_online_windows(
     start=WARMUP_END,
     num_windows=NUM_TEST,
     smooth_len=D,
-    look_back_seed=online_model.warm_up_seed,
+    look_back_seed=online_model.warm_up["look_back_seed"],
     train_lstm=True,
-)}
-
-control_model = prepared_model()
-control_run = {"name": "window, no update", **run_online_windows(
-    control_model,
-    data=all_data,
-    start=WARMUP_END,
-    num_windows=NUM_TEST,
-    smooth_len=D,
-    look_back_seed=control_model.warm_up_seed,
-    train_lstm=False,
 )}
 
 # ------------------------------------------------------------
 #  Compare, on the test set only
 # ------------------------------------------------------------
-runs = [frozen_run, online_run, control_run]
+runs = [frozen_run, online_run]
 for run in runs:
-    run["pred_indices"] = np.arange(NUM_TEST)
+    # Absolute time steps, so the figures put the compared stretch where it belongs in the
+    # series. The per-segment tables below stay on test offsets, which is what
+    # `TEST_CHANGEPOINTS` and `test_obs` are indexed by.
+    run["pred_indices"] = test_steps
     # `plot_error_comparison` and the metrics below score the observation prediction.
     run["mu_preds"] = run["mu"]
     run["std_preds"] = run["std"]
@@ -286,7 +315,7 @@ for run in runs:
     print(f"\n{run['name']}")
     print_regime_metrics(
         regime_metrics(
-            pred_indices=run["pred_indices"],
+            pred_indices=test_offsets,
             mu_preds=run["mu_preds"],
             observations=test_obs,
             changepoints=TEST_CHANGEPOINTS,
@@ -313,32 +342,37 @@ fig, axes = plt.subplots(
     len(runs), 1, figsize=(DOUBLE_COL[0], 1.9 * len(runs) + 0.6),
     sharex=True, sharey=True,
 )
-steps = np.arange(NUM_TEST)
-for index, (ax, run, color) in enumerate(
-    zip(axes, runs, ("tab:blue", "tab:orange", "tab:green"))
-):
-    ax.plot(steps, test_obs, color="0.45", linewidth=0.7, alpha=0.85,
-            label="test observation")
-    ax.fill_between(steps, run["mu_preds"] - run["std_preds"],
-                    run["mu_preds"] + run["std_preds"], color=color, alpha=0.25,
+time_index = np.arange(len(all_obs))
+for index, (ax, run) in enumerate(zip(axes, runs)):
+    ax.plot(time_index, all_obs, color="tab:red", linewidth=0.7, alpha=0.85,
+            label="observation")
+    ax.plot(pre_test["indices"], pre_test["mu"], color=CONTEXT_COLOR, linewidth=0.8,
+            linestyle=(0, (4, 2)), label=pre_test["name"])
+    ax.fill_between(test_steps, run["mu_preds"] - run["std_preds"],
+                    run["mu_preds"] + run["std_preds"], color="tab:blue", alpha=0.3,
                     linewidth=0, label=r"$\pm 1\sigma$")
-    ax.plot(steps, run["mu_preds"], color=color, linewidth=1.0,
+    ax.plot(test_steps, run["mu_preds"], color="tab:blue", linewidth=1.0,
             label="one-step-ahead prediction")
-    ax.set_title(run["name"], fontsize=9, loc="left")
-    ax.set_ylabel("Value")
+    ax.set_ylabel(run["name"])
     ax.grid(True, alpha=0.2, linewidth=0.5)
-    ax.legend(loc="lower left", ncol=3, frameon=False, fontsize=7.5)
-    mark_changepoints(ax, TEST_CHANGEPOINTS, with_labels=index == 0)
-axes[-1].set_xlabel("Test time step")
+    ax.set_xlim(0, len(all_obs) - 1)
+    mark_splits(ax, splits, with_labels=index == 0)
+    mark_changepoints(ax, CHANGEPOINTS, with_labels=index == 0)
+# One legend for the figure: the rows differ only in which scenario they draw, and at full
+# series width a per-row legend sits on top of the data.
+axes[0].legend(
+    loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=4, frameon=False, fontsize=7.5,
+)
+axes[-1].set_xlabel("Time step")
 fig.tight_layout()
 save_figure(fig, "toy_frozen_vs_online_shift_predictions")
 
 plot_error_comparison(
     runs=runs,
-    observations=test_obs,
+    observations=all_obs,
     stem="toy_frozen_vs_online_shift_error",
-    window=ROLLING_WINDOW,
-    changepoints=TEST_CHANGEPOINTS,
+    splits=splits,
+    changepoints=CHANGEPOINTS,
     noise_floor=noise_floor,
 )
 
@@ -347,16 +381,22 @@ plot_error_comparison(
 # drifts off while its posterior is still dragged back onto the data every step.
 plot_prior_vs_posterior(
     runs=runs,
-    observations=test_obs,
+    observations=all_obs,
+    run_indices=test_steps,
     stem="toy_frozen_vs_online_shift_posterior",
+    context=pre_test,
     noise_var=sigma_v**2,
-    changepoints=TEST_CHANGEPOINTS,
+    splits=splits,
+    changepoints=CHANGEPOINTS,
 )
 plot_prior_vs_posterior(
     runs=runs,
-    observations=test_obs,
+    observations=all_obs,
+    run_indices=test_steps,
     stem="toy_frozen_vs_online_shift_posterior_zoom",
+    context=pre_test,
     noise_var=sigma_v**2,
-    changepoints=TEST_CHANGEPOINTS,
-    zoom=(48, 144),  # across the amplitude change
+    splits=splits,
+    changepoints=CHANGEPOINTS,
+    zoom=(TEST_START + 48, TEST_START + 144),  # across the amplitude change
 )

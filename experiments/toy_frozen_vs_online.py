@@ -15,19 +15,20 @@ epoch loop with early stopping, and both are scored on exactly the same test ste
              window backwards, rewind one step - with `train_lstm=True`, so the weights
              keep being updated from the test observations as they arrive.
 
-    control  the same window scheme with `train_lstm=False`. It shares every mechanism
-             with the online run and learns nothing, so it separates what the scheme
-             costs from what the updating buys.
-
 The online windows start `D` steps *before* the test set, so the extra t+1 step of the
 first window lands exactly on the first test observation and every test step gets a
-one-step-ahead prediction. All three are given the identical warm-up over
+one-step-ahead prediction. Both are given the identical warm-up over
 `[0, test_start - D)` with the weights frozen, so the only difference between them is
 what happens from `test_start - D` onwards.
 
 Nothing about this series changes, so the pretrained weights never go stale and there is
 nothing for the online updates to adapt to. `toy_frozen_vs_online_shift.py` is the same
 comparison on a series that does change inside the test set.
+
+Every figure is drawn over the whole series on absolute time steps: the train and
+validation spans the pretraining used, then the test span the two scenarios are scored
+on. Before the test set they have nothing to disagree about - the weights are frozen for
+both - so that stretch is drawn once, in grey, as the context they share.
 
 Run from the repository root:
 
@@ -46,15 +47,22 @@ import pytagi.metric as metric
 # utils sets MPLCONFIGDIR and owns the matplotlib configuration, so import it before
 # anything pulls matplotlib in.
 from experiments.utils import (
+    CONTEXT_COLOR,
     DOUBLE_COL,
+    GLOBAL_WEIGHTS_PATH,
+    PROJECT_ROOT,
+    SAVED_PARAMS_DIR,
+    Splits,
     generate_periodic_signal,
     make_window,
+    mark_splits,
     plot_error_comparison,
     plot_prior_vs_posterior,
     pretrain_lstm,
     print_calibration,
     run_online_windows,
     save_figure,
+    set_output_subdir,
     warm_up_filter,
 )
 
@@ -62,6 +70,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from canari import DataProcess, Model  # noqa: E402
 from canari.component import LstmNetwork, WhiteNoise  # noqa: E402
+
+# Everything this experiment writes goes under `experiments/out/toy_frozen_vs_online/`.
+set_output_subdir("toy_frozen_vs_online")
 
 # ------------------------------------------------------------
 #  Data: stationary, hourly, 30 days
@@ -94,7 +105,6 @@ NUM_HIDDEN_UNIT = 40
 INFER_LEN = 24  # one period
 NUM_EPOCH = 50
 MANUAL_SEED = 1
-ROLLING_WINDOW = 24  # one period, for the rolling-error figure
 
 y = generate_periodic_signal(
     num_time_steps=NUM_TIME_STEPS,
@@ -116,6 +126,8 @@ data_processor = DataProcess(
     output_col=output_col,
 )
 train_data, validation_data, test_data, all_data = data_processor.get_splits()
+# Every figure is drawn over the whole series, so the split boundaries travel with it.
+splits = Splits.from_processor(data_processor)
 
 TEST_START = data_processor.test_start
 TEST_END = data_processor.test_end
@@ -125,7 +137,12 @@ WARMUP_END = TEST_START - D  # where the online scheme's first window starts
 if WARMUP_END <= LOOK_BACK_LEN:
     raise ValueError("Not enough data before the test set for the warm-up.")
 
+all_obs = all_data["y"].flatten()
 test_obs = test_data["y"].flatten()
+# Absolute time steps of the compared stretch, and the same steps counted from the start of
+# the test set. The figures use the first, the per-segment tables the second.
+test_steps = np.arange(TEST_START, TEST_END)
+test_offsets = np.arange(NUM_TEST)
 # The same series without observation noise, standardized identically. Only
 # synthetic data has this; it is what lets `print_calibration` check how the
 # predictive variance is split between the state and the noise term.
@@ -187,13 +204,22 @@ print(f"  optimal epoch         : {optimal_epoch}")
 print(f"  validation log-lik    :{best_validation_log_lik: 0.3f}"
       "   (epochs are selected on the log-likelihood, not the MSE)")
 
+# This is the one pretraining in the experiments, so its weights are the global weights:
+# `toy_online_lstm_global_vs_local.py` starts its global run from this file instead of
+# training a second set of its own.
+global_model = build_model()
+global_model.lstm_net.load_state_dict(pretrained_state_dict)
+SAVED_PARAMS_DIR.mkdir(parents=True, exist_ok=True)
+global_model.lstm_net.save(str(GLOBAL_WEIGHTS_PATH))
+print(f"  global weights        : {GLOBAL_WEIGHTS_PATH.relative_to(PROJECT_ROOT)}")
+
 
 def prepared_model() -> Model:
     """A pretrained model whose memory has been carried up to `WARMUP_END`."""
 
     model = build_model()
     model.lstm_net.load_state_dict(pretrained_state_dict)
-    model.warm_up_seed = warm_up_filter(model, all_data, WARMUP_END)
+    model.warm_up = warm_up_filter(model, all_data, WARMUP_END)
     return model
 
 
@@ -217,8 +243,29 @@ for key in ("prior", "posterior"):
     frozen_run[f"{key}_mu"] = frozen_states.get_mean("lstm", key)[-NUM_TEST:]
     frozen_run[f"{key}_std"] = frozen_states.get_std("lstm", key)[-NUM_TEST:]
 
+# Everything before the test set is context the two scenarios have no reason to disagree
+# about: the warm-up over `[0, WARMUP_END)` is identical by construction, and over the D
+# steps between it and the test set the weights are still frozen. Taking that stretch from
+# the frozen pass gives the figures one grey trace to put in front of the comparison, so a
+# row covers the series from its first step instead of starting mid-way through.
+pre_test = {
+    "name": "pre-test (weights frozen)",
+    "indices": np.arange(TEST_START),
+}
+for key, warm_up_key, filtered in (
+    ("mu", "mu", np.asarray(mu_frozen).flatten()),
+    ("std", "std", np.asarray(std_frozen).flatten()),
+    ("prior_mu", "prior_mu", frozen_states.get_mean("lstm", "prior")),
+    ("prior_std", "prior_std", frozen_states.get_std("lstm", "prior")),
+    ("posterior_mu", "posterior_mu", frozen_states.get_mean("lstm", "posterior")),
+    ("posterior_std", "posterior_std", frozen_states.get_std("lstm", "posterior")),
+):
+    pre_test[key] = np.concatenate(
+        [frozen_model.warm_up[warm_up_key], filtered[:D]]
+    )
+
 # ------------------------------------------------------------
-#  Scenarios 2 and 3: the window scheme, with and without updating
+#  Scenario 2: the window scheme, updating the weights as the test set arrives
 # ------------------------------------------------------------
 online_model = prepared_model()
 online_run = {"name": "online weights", **run_online_windows(
@@ -227,27 +274,18 @@ online_run = {"name": "online weights", **run_online_windows(
     start=WARMUP_END,
     num_windows=NUM_TEST,
     smooth_len=D,
-    look_back_seed=online_model.warm_up_seed,
+    look_back_seed=online_model.warm_up["look_back_seed"],
     train_lstm=True,
-)}
-
-control_model = prepared_model()
-control_run = {"name": "window, no update", **run_online_windows(
-    control_model,
-    data=all_data,
-    start=WARMUP_END,
-    num_windows=NUM_TEST,
-    smooth_len=D,
-    look_back_seed=control_model.warm_up_seed,
-    train_lstm=False,
 )}
 
 # ------------------------------------------------------------
 #  Compare, on the test set only
 # ------------------------------------------------------------
-runs = [frozen_run, online_run, control_run]
+runs = [frozen_run, online_run]
 for run in runs:
-    run["pred_indices"] = np.arange(NUM_TEST)
+    # Absolute time steps, so the figures put the compared stretch where it belongs in the
+    # series. The tables below index `test_obs` directly and need no indices at all.
+    run["pred_indices"] = test_steps
     # The scored quantity is the observation prediction, not the state estimate.
     run["mu_preds"] = run["mu"]
     run["std_preds"] = run["std"]
@@ -276,28 +314,35 @@ fig, axes = plt.subplots(
     len(runs), 1, figsize=(DOUBLE_COL[0], 1.9 * len(runs) + 0.6),
     sharex=True, sharey=True,
 )
-steps = np.arange(NUM_TEST)
-for ax, run, color in zip(axes, runs, ("tab:blue", "tab:orange", "tab:green")):
-    ax.plot(steps, test_obs, color="0.45", linewidth=0.7, alpha=0.85,
-            label="test observation")
-    ax.fill_between(steps, run["mu_preds"] - run["std_preds"],
-                    run["mu_preds"] + run["std_preds"], color=color, alpha=0.25,
+time_index = np.arange(len(all_obs))
+for index, (ax, run) in enumerate(zip(axes, runs)):
+    ax.plot(time_index, all_obs, color="tab:red", linewidth=0.7, alpha=0.85,
+            label="observation")
+    ax.plot(pre_test["indices"], pre_test["mu"], color=CONTEXT_COLOR, linewidth=0.8,
+            linestyle=(0, (4, 2)), label=pre_test["name"])
+    ax.fill_between(test_steps, run["mu_preds"] - run["std_preds"],
+                    run["mu_preds"] + run["std_preds"], color="tab:blue", alpha=0.3,
                     linewidth=0, label=r"$\pm 1\sigma$")
-    ax.plot(steps, run["mu_preds"], color=color, linewidth=1.0,
+    ax.plot(test_steps, run["mu_preds"], color="tab:blue", linewidth=1.0,
             label="one-step-ahead prediction")
-    ax.set_title(run["name"], fontsize=9, loc="left")
-    ax.set_ylabel("Value")
+    ax.set_ylabel(run["name"])
     ax.grid(True, alpha=0.2, linewidth=0.5)
-    ax.legend(loc="lower left", ncol=3, frameon=False, fontsize=7.5)
-axes[-1].set_xlabel("Test time step")
+    ax.set_xlim(0, len(all_obs) - 1)
+    mark_splits(ax, splits, with_labels=index == 0)
+# One legend for the figure: the rows differ only in which scenario they draw, and at full
+# series width a per-row legend sits on top of the data.
+axes[0].legend(
+    loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=4, frameon=False, fontsize=7.5,
+)
+axes[-1].set_xlabel("Time step")
 fig.tight_layout()
 save_figure(fig, "toy_frozen_vs_online_predictions")
 
 plot_error_comparison(
     runs=runs,
-    observations=test_obs,
+    observations=all_obs,
     stem="toy_frozen_vs_online_error",
-    window=ROLLING_WINDOW,
+    splits=splits,
     noise_floor=noise_floor,
 )
 
@@ -305,7 +350,10 @@ plot_error_comparison(
 # the update at each step, plus what that update actually moved.
 plot_prior_vs_posterior(
     runs=runs,
-    observations=test_obs,
+    observations=all_obs,
+    run_indices=test_steps,
     stem="toy_frozen_vs_online_posterior",
+    context=pre_test,
     noise_var=sigma_v**2,
+    splits=splits,
 )

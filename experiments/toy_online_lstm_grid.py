@@ -1,27 +1,31 @@
 """
 Sweep look-back and smoothing-window lengths for the online LSTM experiment.
 
-The data, model, and online update scheme match ``toy_online_lstm.py``. For every
-``(look_back_len, D)`` pair this script records:
+The data, model, and online update scheme match ``toy_online_lstm.py``, splits included:
+the online walk takes everything up to the test set and the test span is the only held-out
+one. For every ``(look_back_len, D)`` pair this script records one number per span:
 
 - online one-step MSE over the rolling training predictions;
-- multi-step validation forecast MSE;
+- multi-step forecast MSE over the test span;
 - elapsed runtime and the number of online windows.
 
-Results are written incrementally to ``experiments/out/toy_online_lstm_grid.csv`` so a
-long sweep can be resumed with ``--resume``. Two annotated heatmaps are saved as PNG,
-PDF, and PGF files with the same stem.
+Results are written incrementally to
+``experiments/out/toy_online_lstm_grid/toy_online_lstm_grid.csv`` so a long sweep can be
+resumed with ``--resume``. Two annotated heatmaps are saved as PNG, PDF, and PGF files with
+the same stem.
 
 Examples
 --------
 Run the default 4 x 4 grid::
 
-    python experiments/toy_online_lstm_grid.py
+    python -m experiments.toy_online_lstm_grid
 
 Run a custom grid::
 
-    python experiments/toy_online_lstm_grid.py \
+    python -m experiments.toy_online_lstm_grid \
         --lookbacks 1 12 24 48 --smoothing-windows 12 24 48 96
+
+Run from the repository root: the script imports `experiments.utils`.
 """
 
 import argparse
@@ -35,17 +39,22 @@ import pytagi.metric as metric
 
 # Import utils before canari so it owns the matplotlib configuration.
 from experiments.utils import (
-    OUT_DIR,
     LstmLookBackBuffer,
     generate_periodic_signal,
     make_window,
+    output_dir,
     plot_performance_grid,
     rewind_to_step,
+    set_output_subdir,
     smooth_window,
 )
 
 from canari import DataProcess, Model
 from canari.component import LstmNetwork, WhiteNoise
+
+# Everything this sweep writes - the heatmaps and the results CSV - goes under
+# `experiments/out/toy_online_lstm_grid/`.
+set_output_subdir("toy_online_lstm_grid")
 
 DEFAULT_LOOK_BACKS = (1, 6, 12, 24)
 DEFAULT_SMOOTHING_WINDOWS = (12, 24, 48, 72)
@@ -57,8 +66,10 @@ NOISE_STD = 0.2
 REGIMES = ((0, 1.0, 24),)
 
 
-def build_data() -> tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], float]:
-    """Build the same standardized training and validation splits as the base experiment."""
+def build_data() -> tuple[
+    Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray], float
+]:
+    """Build the same standardized splits as the base experiment."""
 
     y = generate_periodic_signal(
         num_time_steps=NUM_TIME_STEPS,
@@ -76,21 +87,24 @@ def build_data() -> tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], float]:
     )
     data.index.name = "date_time"
 
+    # Same splits as the base experiment: no validation span, because there is no epoch loop
+    # to early-stop. Everything up to the test set is walked online.
     processor = DataProcess(
         data=data,
         time_covariates=["hour_of_day"],
-        train_split=0.8,
-        validation_split=0.1,
+        train_split=0.9,
+        validation_split=0.0,
         output_col=[0],
     )
-    train_data, validation_data, _, _ = processor.get_splits()
+    train_data, _, test_data, all_data = processor.get_splits()
     observation_noise_std = float(NOISE_STD / processor.scale_const_std[0])
-    return train_data, validation_data, observation_noise_std
+    return train_data, test_data, all_data, observation_noise_std
 
 
 def run_configuration(
     train_data: Dict[str, np.ndarray],
-    validation_data: Dict[str, np.ndarray],
+    test_data: Dict[str, np.ndarray],
+    all_data: Dict[str, np.ndarray],
     look_back_len: int,
     smoothing_window: int,
     observation_noise_std: float,
@@ -99,6 +113,7 @@ def run_configuration(
     """Run one configuration of the rolling online-LSTM experiment."""
 
     num_train = len(train_data["y"])
+    num_all = len(all_data["y"])
     if look_back_len < 1:
         raise ValueError("look_back_len must be at least 1.")
     if not 1 <= smoothing_window < num_train:
@@ -157,14 +172,18 @@ def run_configuration(
                 model.lstm_net.get_lstm_states(smoothing_window)
             )
 
+    # One open-loop forecast over the test span, from the end of the training data to the end
+    # of the series.
     model.lstm_net.eval()
+    model.lstm_net.num_samples = num_all - num_train
     model.initialize_states_history()
-    mu_forecast, _, _ = model.forecast(validation_data)
+    mu_forecast, _, _ = model.forecast(make_window(all_data, num_train, num_all))
 
     mu_predictions = np.asarray(mu_predictions).flatten()
+    mu_forecast = np.asarray(mu_forecast).flatten()
     prediction_indices = np.asarray(prediction_indices, dtype=int)
     train_observations = train_data["y"].flatten()
-    validation_observations = validation_data["y"].flatten()
+    test_observations = test_data["y"].flatten()
 
     return {
         "look_back_len": look_back_len,
@@ -174,7 +193,7 @@ def run_configuration(
         "online_mse": float(
             metric.mse(mu_predictions, train_observations[prediction_indices])
         ),
-        "validation_mse": float(metric.mse(mu_forecast, validation_observations)),
+        "test_mse": float(metric.mse(mu_forecast, test_observations)),
         "runtime_seconds": time.perf_counter() - started_at,
     }
 
@@ -196,7 +215,7 @@ def run_sweep(
 
     look_back_lengths = _positive_unique(look_back_lengths, "look_back_lengths")
     smoothing_windows = _positive_unique(smoothing_windows, "smoothing_windows")
-    train_data, validation_data, observation_noise_std = build_data()
+    train_data, test_data, all_data, observation_noise_std = build_data()
 
     if resume and results_path.exists():
         results = pd.read_csv(results_path).to_dict("records")
@@ -225,7 +244,8 @@ def run_sweep(
             )
             row = run_configuration(
                 train_data=train_data,
-                validation_data=validation_data,
+                test_data=test_data,
+                all_data=all_data,
                 look_back_len=look_back_len,
                 smoothing_window=smoothing_window,
                 observation_noise_std=observation_noise_std,
@@ -235,7 +255,7 @@ def run_sweep(
             pd.DataFrame(results).to_csv(results_path, index=False)
             print(
                 f"  online MSE={row['online_mse']:.6f}, "
-                f"validation MSE={row['validation_mse']:.6f}, "
+                f"test MSE={row['test_mse']:.6f}, "
                 f"runtime={row['runtime_seconds']:.1f}s",
                 flush=True,
             )
@@ -270,7 +290,7 @@ def plot_results(
         look_back_lengths=look_back_lengths,
         smoothing_windows=smoothing_windows,
         online_mse=metric_grid("online_mse"),
-        validation_mse=metric_grid("validation_mse"),
+        test_mse=metric_grid("test_mse"),
         stem=stem,
     )
 
@@ -316,7 +336,7 @@ def main() -> None:
     smoothing_windows = _positive_unique(
         args.smoothing_windows, "--smoothing-windows"
     )
-    results_path = args.results_csv or OUT_DIR / f"{args.stem}.csv"
+    results_path = args.results_csv or output_dir() / f"{args.stem}.csv"
 
     results = run_sweep(
         look_back_lengths=look_back_lengths,
@@ -331,7 +351,7 @@ def main() -> None:
         stem=args.stem,
     )
     print(f"Results CSV             : {results_path}")
-    print(f"Performance grid        : {OUT_DIR / f'{args.stem}.png'}")
+    print(f"Performance grid        : {output_dir() / f'{args.stem}.png'}")
 
 
 if __name__ == "__main__":

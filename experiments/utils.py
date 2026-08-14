@@ -13,6 +13,13 @@ online-window helpers (`make_window`, `smooth_window`, `LstmLookBackBuffer`,
 the figures. The online loop itself stays in each experiment, since that is what an
 experiment varies.
 
+Every figure covers the whole series and is drawn on absolute time steps, so training,
+validation and test are read off one x axis. `Splits` carries the boundaries from the
+`DataProcess` to the figures and `mark_splits` shades them. Over the held-out spans a
+state has a prediction and nothing else - no observation to filter against, no later
+window to smooth with - so those curves stop where the training span does, which is the
+point of showing them side by side.
+
 Any `look_back_len` is supported: `LstmLookBackBuffer` carries the smoothed LSTM outputs
 across windows, which is what a look-back longer than the window stride needs.
 
@@ -22,14 +29,51 @@ also the only place matplotlib is imported, so the experiments do not need to.
 
 import copy
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUT_DIR = PROJECT_ROOT / "experiments" / "out"
-MPLCONFIG_DIR = OUT_DIR / "mplconfig"
+EXPERIMENT_DIR = PROJECT_ROOT / "experiments"
+OUT_DIR = EXPERIMENT_DIR / "out"
+# Weights that outlive the run that produced them, and are read by another experiment.
+# `out/` is cleared between runs; this is not.
+SAVED_PARAMS_DIR = PROJECT_ROOT / "saved_params"
+GLOBAL_WEIGHTS_PATH = SAVED_PARAMS_DIR / "global_model.bin"
+# The matplotlib cache is not a result, so it lives outside `out/`, which holds one
+# subfolder per experiment and nothing else.
+MPLCONFIG_DIR = EXPERIMENT_DIR / ".mplconfig"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 MPLCONFIG_DIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIG_DIR))
+
+# Where the figures of the experiment currently running go. One process is one experiment,
+# so it is set once at the top of the script rather than threaded through every plotting
+# call; `OUT_DIR` itself is the fallback for a script that never says.
+_output_dir = OUT_DIR
+
+
+def set_output_subdir(name: str) -> Path:
+    """
+    Send every later `save_figure` to `out/<name>/`, creating it if needed.
+
+    Call it once, at the top of an experiment, with the experiment's own name: `out/` then
+    holds one self-contained folder per experiment instead of one flat pile of files whose
+    only grouping is a shared filename prefix.
+
+    Returns:
+        Path: that directory.
+    """
+
+    global _output_dir
+    _output_dir = OUT_DIR / name
+    _output_dir.mkdir(parents=True, exist_ok=True)
+    return _output_dir
+
+
+def output_dir() -> Path:
+    """The directory `save_figure` is currently writing to."""
+
+    return _output_dir
 
 from typing import Dict, List, Optional, Sequence, Tuple  # noqa: E402
 
@@ -433,33 +477,53 @@ def pretrain_lstm(
 
 def warm_up_filter(
     model: Model, data: Dict[str, np.ndarray], end: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Dict[str, np.ndarray]:
     """
     Filter `data[0:end]` with the parameters frozen, leaving the model memory - hidden
     states, LSTM look-back and LSTM cell/hidden states - sitting exactly at step `end`.
 
     Used to carry a pretrained model up to the point where a comparison starts, so that
     every scenario begins from the same memory and only differs in what it does next.
+    Because every scenario is given the identical warm-up, what it produces is also the
+    shared context the figures draw before the compared stretch begins.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: mean and variance of the posterior `lstm` state
-        over the warm-up, which is what a later online run needs to seed the look-back
-        entries that reach back before its first window.
+        Dict[str, np.ndarray]: the warm-up itself, under the keys
+
+        - `indices`: the absolute time steps covered, `[0, end)`.
+        - `mu` / `std`: the one-step-ahead prediction of the observation at every step.
+        - `prior_mu` / `prior_std` / `posterior_mu` / `posterior_std`: the `lstm` state
+          either side of each update.
+        - `look_back_seed`: mean and variance of that posterior state, which is what a
+          later online run needs to seed the look-back entries reaching back before its
+          first window.
     """
 
     model.lstm_net.num_samples = end
     model.lstm_net.eval()
-    _, _, states = model.filter(make_window(data, 0, end), train_lstm=False)
+    mu_preds, std_preds, states = model.filter(
+        make_window(data, 0, end), train_lstm=False
+    )
+
+    warm_up = {
+        "indices": np.arange(end),
+        "mu": np.asarray(mu_preds).flatten(),
+        "std": np.asarray(std_preds).flatten(),
+    }
+    for key in ("prior", "posterior"):
+        warm_up[f"{key}_mu"] = states.get_mean("lstm", key)
+        warm_up[f"{key}_std"] = states.get_std("lstm", key)
+    warm_up["look_back_seed"] = (
+        warm_up["posterior_mu"],
+        warm_up["posterior_std"] ** 2,
+    )
 
     # Release the buffer before the next pass. `smoother()` zeroes the cell and hidden
     # states, and the last entry it leaves behind is the filtered one, so putting that
     # back restores the memory the warm-up ended with.
     model.lstm_net.smoother()
     model.lstm_net.set_lstm_states(model.lstm_net.get_lstm_states(end - 1))
-    return (
-        states.get_mean("lstm", "posterior"),
-        states.get_std("lstm", "posterior") ** 2,
-    )
+    return warm_up
 
 
 def run_online_windows(
@@ -470,7 +534,7 @@ def run_online_windows(
     smooth_len: int,
     look_back_seed: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     train_lstm: bool = True,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Dict[str, np.ndarray]:
     """
     Walk `num_windows` steps of the online scheme over `data`, starting at step `start`.
 
@@ -571,6 +635,10 @@ def initialize_state_records(
       components to predict the observation at t+1,
     - 'filter': the posterior at t+1, once y(t+1) has been used,
     - 'smooth': the estimate of a time step smoothed with the full D-step lag.
+
+    `num_time_steps` is the length of the *whole* series, so that the held-out spans have
+    somewhere to be written to as well. They only ever fill the 'predict' row: see
+    `record_forecast_states`.
     """
 
     return {
@@ -611,6 +679,33 @@ def record_window_states(
         else:
             record["smooth_mu"][window_start] = smooth_mu[0]
             record["smooth_std"][window_start] = smooth_std[0]
+
+
+def record_forecast_states(
+    records: Dict[str, Dict[str, np.ndarray]],
+    states,
+    start: int,
+) -> None:
+    """
+    Store the states of a forecast, which starts at absolute time step `start`.
+
+    A forecast is a chain of prediction steps with no observation in it, so only the
+    'predict' row of each record is filled. 'filter' and 'smooth' are left at NaN: there
+    is no `y` to update against and no later window to smooth with, and drawing the prior
+    under those names would claim otherwise.
+    """
+
+    for name, record in records.items():
+        mu = states.get_mean(name, "prior")
+        std = states.get_std(name, "prior")
+        stop = start + len(mu)
+        if stop > len(record["predict_mu"]):
+            raise ValueError(
+                f"forecast of {len(mu)} steps from {start} does not fit in records of "
+                f"length {len(record['predict_mu'])}"
+            )
+        record["predict_mu"][start:stop] = mu
+        record["predict_std"][start:stop] = std
 
 
 # ------------------------------------------------------------
@@ -900,6 +995,131 @@ def print_calibration(
 
 
 CHANGE_COLOR = "0.35"
+SPLIT_COLOR = "0.45"
+# Only the two held-out spans are shaded: the training span is the reference and is left
+# white, so the eye reads "shaded = the model was not fitted here".
+SPLIT_SHADING = {"train": None, "validation": "#f2f2f2", "test": "#e4e4e4"}
+
+
+def _visible_x_range(
+    ax: plt.Axes, fallback_end: Optional[int] = None
+) -> Optional[Tuple[float, float]]:
+    """
+    The x range the axes will actually show, when that is already known.
+
+    Annotations are drawn with `annotation_clip=False`, so anything placed outside the view
+    still ends up on the page, next to the axes rather than in it. Both markers below use
+    this to leave out what is off screen. `None` means the limits are still on autoscale
+    and nothing can be ruled out yet.
+    """
+
+    if not ax.get_autoscalex_on():
+        return ax.get_xlim()
+    if fallback_end is not None:
+        return 0.0, float(fallback_end)
+    return None
+
+
+@dataclass(frozen=True)
+class Splits:
+    """
+    Where the training, validation and test spans start and end, in absolute time steps.
+
+    Every figure is drawn over the whole series, so each one needs to say which part of
+    the x axis is which. `DataProcess` already computes these boundaries; this carries
+    them to the figures without dragging the whole processor along.
+
+    Examples:
+        >>> splits = Splits.from_processor(data_processor)
+        >>> splits.spans[1]
+        ('validation', 576, 648)
+    """
+
+    train_end: int
+    validation_end: int
+    test_end: int
+
+    @classmethod
+    def from_processor(cls, data_processor) -> "Splits":
+        """Read the boundaries off a `DataProcess`."""
+
+        return cls(
+            train_end=int(data_processor.train_end),
+            validation_end=int(data_processor.validation_end),
+            test_end=int(data_processor.test_end),
+        )
+
+    @property
+    def num_time_steps(self) -> int:
+        """Length of the full series, i.e. the end of the last span."""
+
+        return self.test_end
+
+    @property
+    def spans(self) -> Tuple[Tuple[str, int, int], ...]:
+        """`(name, start, end_exclusive)` per span, in time order."""
+
+        return (
+            ("train", 0, self.train_end),
+            ("validation", self.train_end, self.validation_end),
+            ("test", self.validation_end, self.test_end),
+        )
+
+
+def mark_splits(
+    ax: plt.Axes,
+    splits: Optional[Splits],
+    with_labels: bool = False,
+) -> None:
+    """
+    Shade the validation and test spans and draw a line at every split boundary, so that
+    a figure covering the whole series still says which part the model was fitted on.
+
+    Args:
+        ax (plt.Axes): Axes to draw on.
+        splits (Optional[Splits]): the boundaries; `None` draws nothing.
+        with_labels (bool): whether to name the spans. Use it on one axes per figure,
+            usually the top one, and leave the others as bare shading. The names are
+            written inside their own span, so leave it off on single-column figures,
+            where the held-out spans are too narrow to hold them.
+    """
+
+    if splits is None:
+        return
+
+    # A zoomed figure shows one span, or part of one: names are placed on the *visible*
+    # stretch of their span, and a span that is off screen gets none. Call this after the
+    # x limits are set, or the visible stretch is not known yet.
+    x_min, x_max = _visible_x_range(ax, splits.num_time_steps)
+
+    for name, start, end in splits.spans:
+        if end <= start:
+            continue
+        shade = SPLIT_SHADING.get(name)
+        if shade is not None:
+            ax.axvspan(start, end, color=shade, linewidth=0, zorder=0)
+        if start > 0:
+            ax.axvline(
+                start, color=SPLIT_COLOR, linewidth=0.7, alpha=0.9, zorder=0.4
+            )
+        visible_start, visible_end = max(start, x_min), min(end, x_max)
+        if with_labels and visible_end > visible_start:
+            ax.annotate(
+                name,
+                xy=(0.5 * (visible_start + visible_end), 1.0),
+                xycoords=("data", "axes fraction"),
+                xytext=(0.0, -2.0),
+                textcoords="offset points",
+                ha="center",
+                va="top",
+                fontsize=6,
+                color=SPLIT_COLOR,
+                annotation_clip=False,
+                bbox=dict(
+                    boxstyle="square,pad=0.08", facecolor="white", edgecolor="none",
+                    alpha=0.7,
+                ),
+            )
 
 
 def mark_changepoints(
@@ -918,7 +1138,10 @@ def mark_changepoints(
             usually the top one, and leave the others as bare lines.
     """
 
+    visible = _visible_x_range(ax)
     for time_step, label in changepoints or ():
+        if visible is not None and not visible[0] <= time_step <= visible[1]:
+            continue
         ax.axvline(
             time_step,
             color=CHANGE_COLOR,
@@ -947,26 +1170,39 @@ def mark_changepoints(
 
 
 def save_figure(fig: plt.Figure, stem: str) -> None:
-    """Save a figure to `experiments/out/` as both .pgf and .pdf."""
+    """Save a figure to the current experiment's folder as both .pgf and .pdf."""
 
-    fig.savefig(OUT_DIR / f"{stem}.pgf", bbox_inches="tight")
-    fig.savefig(OUT_DIR / f"{stem}.pdf", bbox_inches="tight")
+    fig.savefig(output_dir() / f"{stem}.pgf", bbox_inches="tight")
+    fig.savefig(output_dir() / f"{stem}.pdf", bbox_inches="tight")
 
 
 def plot_predictions_and_residuals(
-    train_obs: np.ndarray,
+    observations: np.ndarray,
     pred_indices: np.ndarray,
     mu_preds: np.ndarray,
     std_preds: np.ndarray,
-    validation_obs: np.ndarray,
+    forecast_indices: np.ndarray,
     mu_forecast: np.ndarray,
     std_forecast: np.ndarray,
     stem: str,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
     """
-    Observations, online one-step-ahead predictions and the validation forecast, with
-    the residuals of both underneath.
+    The whole series, with the online one-step-ahead predictions over the span the model
+    is fitted on and the forecast over the held-out spans, and the residuals of both
+    underneath.
+
+    Args:
+        observations (np.ndarray): the full series, train, validation and test.
+        pred_indices (np.ndarray): absolute time steps of the online predictions.
+        mu_preds / std_preds (np.ndarray): those predictions.
+        forecast_indices (np.ndarray): absolute time steps of the forecast, i.e. the
+            validation and test spans.
+        mu_forecast / std_forecast (np.ndarray): that forecast.
+        stem (str): file stem to save under.
+        splits (Optional[Splits]): span boundaries, shaded and labelled.
+        changepoints (Optional[Sequence[Tuple[int, str]]]): marks for both axes.
     """
 
     fig, (ax_pred, ax_res) = plt.subplots(
@@ -977,12 +1213,18 @@ def plot_predictions_and_residuals(
         gridspec_kw={"height_ratios": [2, 1]},
     )
 
-    num_train = len(train_obs)
+    observations = np.asarray(observations).flatten()
+    pred_indices = np.asarray(pred_indices, dtype=int)
+    forecast_indices = np.asarray(forecast_indices, dtype=int)
+    # The axes share x, so this fixes the range for both, and `mark_splits` needs it fixed.
+    ax_pred.set_xlim(0, len(observations) - 1)
+
     ax_pred.plot(
-        np.arange(num_train),
-        train_obs,
-        label="training observations",
+        np.arange(len(observations)),
+        observations,
+        label="observations",
         color="tab:red",
+        linewidth=0.8,
     )
     ax_pred.plot(
         pred_indices,
@@ -999,23 +1241,15 @@ def plot_predictions_and_residuals(
         label=r"$\pm 1\sigma$ online",
     )
 
-    forecast_range = np.arange(num_train, num_train + len(validation_obs))
     ax_pred.plot(
-        forecast_range,
-        validation_obs,
-        label="validation observations",
-        color="tab:red",
-        linestyle="--",
-    )
-    ax_pred.plot(
-        forecast_range,
+        forecast_indices,
         mu_forecast,
-        label="validation forecast mean",
+        label="forecast mean",
         color="tab:blue",
         linestyle="--",
     )
     ax_pred.fill_between(
-        forecast_range,
+        forecast_indices,
         mu_forecast - std_forecast,
         mu_forecast + std_forecast,
         color="tab:blue",
@@ -1027,22 +1261,22 @@ def plot_predictions_and_residuals(
     ax_pred.grid(True, alpha=0.25, linewidth=0.5)
     ax_pred.legend(
         loc="lower center",
-        bbox_to_anchor=(0.5, 1.02),
+        bbox_to_anchor=(0.5, 1.06),
         ncol=3,
         frameon=False,
     )
 
     ax_res.plot(
         pred_indices,
-        train_obs[pred_indices] - mu_preds,
+        observations[pred_indices] - mu_preds,
         label="online one-step",
         color="tab:blue",
         linestyle="-",
     )
     ax_res.plot(
-        forecast_range,
-        validation_obs - mu_forecast,
-        label="validation forecast",
+        forecast_indices,
+        observations[forecast_indices] - mu_forecast,
+        label="forecast",
         color="tab:blue",
         linestyle="--",
     )
@@ -1056,8 +1290,9 @@ def plot_predictions_and_residuals(
         frameon=False,
     )
 
-    mark_changepoints(ax_pred, changepoints, with_labels=True)
-    mark_changepoints(ax_res, changepoints)
+    for index, ax in enumerate((ax_pred, ax_res)):
+        mark_splits(ax, splits, with_labels=index == 0)
+        mark_changepoints(ax, changepoints, with_labels=index == 0)
 
     fig.tight_layout()
     save_figure(fig, stem)
@@ -1066,27 +1301,29 @@ def plot_predictions_and_residuals(
 
 def plot_model_comparison(
     runs: Sequence[Dict[str, object]],
-    train_obs: np.ndarray,
-    validation_obs: np.ndarray,
+    observations: np.ndarray,
     stem: str,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
     """
-    One row per model: the observations, that model's online one-step-ahead predictions
-    with a ±1σ band, and its validation forecast. The rows share both axes, so the two
-    models can be compared by eye at any time step.
+    One row per model, each covering the whole series: the observations, that model's
+    online one-step-ahead predictions with a ±1σ band over the span it is fitted on, and
+    its forecast over the held-out spans. The rows share both axes, so the models can be
+    compared by eye at any time step.
 
     Args:
         runs (Sequence[Dict[str, object]]): one dict per model, with keys `name`,
-            `pred_indices`, `mu_preds`, `std_preds`, `mu_forecast`, `std_forecast`.
-        train_obs (np.ndarray): Training observations.
-        validation_obs (np.ndarray): Validation observations.
+            `pred_indices`, `mu_preds`, `std_preds`, `forecast_indices`, `mu_forecast`,
+            `std_forecast`. All indices are absolute time steps.
+        observations (np.ndarray): the full series, train, validation and test.
         stem (str): File stem to save under.
+        splits (Optional[Splits]): span boundaries, shaded on every row.
         changepoints (Optional[Sequence[Tuple[int, str]]]): Marks for every row.
     """
 
-    num_train = len(train_obs)
-    forecast_range = np.arange(num_train, num_train + len(validation_obs))
+    observations = np.asarray(observations).flatten()
+    time_index = np.arange(len(observations))
     fig, axes = plt.subplots(
         len(runs),
         1,
@@ -1097,23 +1334,16 @@ def plot_model_comparison(
     axes = np.atleast_1d(axes)
 
     for ax, run in zip(axes, runs):
-        pred_indices = np.asarray(run["pred_indices"])
+        pred_indices = np.asarray(run["pred_indices"], dtype=int)
         mu_preds = np.asarray(run["mu_preds"]).flatten()
         std_preds = np.asarray(run["std_preds"]).flatten()
 
         ax.plot(
-            np.arange(num_train),
-            train_obs,
+            time_index,
+            observations,
             label="observations",
             color="tab:red",
             linewidth=0.8,
-        )
-        ax.plot(
-            forecast_range,
-            validation_obs,
-            color="tab:red",
-            linewidth=0.8,
-            linestyle="--",
         )
         ax.plot(
             pred_indices,
@@ -1129,17 +1359,18 @@ def plot_model_comparison(
             alpha=0.3,
             label=r"$\pm 1\sigma$",
         )
+        forecast_indices = np.asarray(run["forecast_indices"], dtype=int)
         mu_forecast = np.asarray(run["mu_forecast"]).flatten()
         std_forecast = np.asarray(run["std_forecast"]).flatten()
         ax.plot(
-            forecast_range,
+            forecast_indices,
             mu_forecast,
-            label="validation forecast",
+            label="forecast",
             color="tab:blue",
             linestyle="--",
         )
         ax.fill_between(
-            forecast_range,
+            forecast_indices,
             mu_forecast - std_forecast,
             mu_forecast + std_forecast,
             color="tab:blue",
@@ -1147,11 +1378,13 @@ def plot_model_comparison(
         )
         ax.set_ylabel(run["name"])
         ax.grid(True, alpha=0.25, linewidth=0.5)
+        ax.set_xlim(0, len(observations) - 1)
+        mark_splits(ax, splits, with_labels=ax is axes[0])
         mark_changepoints(ax, changepoints, with_labels=ax is axes[0])
 
     axes[0].legend(
         loc="lower center",
-        bbox_to_anchor=(0.5, 1.02),
+        bbox_to_anchor=(0.5, 1.06),
         ncol=4,
         frameon=False,
     )
@@ -1161,23 +1394,30 @@ def plot_model_comparison(
     return fig
 
 
-PRIOR_COLOR = "#1f77b4"  # before y(t) is used
-POSTERIOR_COLOR = "#7570b3"  # after y(t) is used
-OBS_COLOR = "0.45"
+PRIOR_COLOR = "tab:blue"  # the prediction, before y(t) is used
+POSTERIOR_COLOR = "#7570b3"  # the same state after y(t) is used
+OBS_COLOR = "tab:red"
+
+
+CONTEXT_COLOR = "0.62"
 
 
 def plot_prior_vs_posterior(
     runs: Sequence[Dict[str, object]],
     observations: np.ndarray,
+    run_indices: np.ndarray,
     stem: str,
+    context: Optional[Dict[str, object]] = None,
     noise_var: Optional[float] = None,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
     zoom: Optional[Tuple[int, int]] = None,
 ) -> plt.Figure:
     """
-    One row per model: the prior of the hidden state at every step, the posterior of that
-    same state, and the observation, each estimate with a ±1σ band. A final row puts the
-    correction `posterior - prior` of every model on one axes.
+    One row per model, over the whole series: the prior of the hidden state at every step,
+    the posterior of that same state, and the observation, each estimate with a ±1σ band.
+    A final row puts the correction `posterior - prior` of every model on one axes, which is
+    what the observation at that step actually bought.
 
     Prior and posterior are the same quantity either side of the update at that step, so
     the correction is what the observation actually bought. It is usually small, and
@@ -1189,18 +1429,29 @@ def plot_prior_vs_posterior(
 
     Args:
         runs (Sequence[Dict[str, object]]): one dict per model, with keys `name`,
-            `prior_mu`, `prior_std`, `posterior_mu`, `posterior_std`.
-        observations (np.ndarray): the observations the models were scored against.
+            `prior_mu`, `prior_std`, `posterior_mu`, `posterior_std`, all covering
+            `run_indices`.
+        observations (np.ndarray): the full series, train, validation and test.
+        run_indices (np.ndarray): absolute time steps the run arrays cover.
         stem (str): file stem to save under.
+        context (Optional[Dict[str, object]]): the stretch before `run_indices` that every
+            model shares, with the same keys plus `indices` and `name`. Drawn in grey on
+            every row, so a row covers the series from the first step onwards.
         noise_var (Optional[float]): observation-noise variance. If given, each row's
             title also carries that model's mean Kalman gain, which is what explains the
             size of its correction.
+        splits (Optional[Splits]): span boundaries, shaded on every row.
         changepoints (Optional[Sequence[Tuple[int, str]]]): marks for every row.
-        zoom (Optional[Tuple[int, int]]): `(start, stop)` to restrict the x range to.
+        zoom (Optional[Tuple[int, int]]): `(start, stop)` in absolute time steps to
+            restrict the x range to.
     """
 
+    observations = np.asarray(observations).flatten()
+    run_indices = np.asarray(run_indices, dtype=int)
     start, stop = zoom if zoom else (0, len(observations))
-    steps = np.arange(start, stop)
+    obs_steps = np.arange(start, stop)
+    inside = (run_indices >= start) & (run_indices < stop)
+
     fig, axes = plt.subplots(
         len(runs) + 1,
         1,
@@ -1210,10 +1461,18 @@ def plot_prior_vs_posterior(
     )
     state_axes = axes[:-1]
     ax_update = axes[-1]
+    # The rows share x, so this fixes the range for all of them, and `mark_splits` needs it
+    # fixed to know which spans are on screen.
+    axes[0].set_xlim(start, stop - 1)
+
+    context_indices = None
+    if context is not None:
+        context_indices = np.asarray(context["indices"], dtype=int)
+        context_inside = (context_indices >= start) & (context_indices < stop)
 
     for ax, run in zip(state_axes, runs):
         ax.plot(
-            steps,
+            obs_steps,
             observations[start:stop],
             color=OBS_COLOR,
             linewidth=0.7,
@@ -1221,43 +1480,72 @@ def plot_prior_vs_posterior(
             label="observation",
             zorder=1,
         )
+        if context is not None and context_inside.any():
+            ax.plot(
+                context_indices[context_inside],
+                np.asarray(context["posterior_mu"])[context_inside],
+                color=CONTEXT_COLOR,
+                linewidth=0.9,
+                linestyle=(0, (4, 2)),
+                label=context.get("name", "shared warm-up"),
+                zorder=1.5,
+            )
         for key, color, label in (
             ("prior", PRIOR_COLOR, "prior (before $y_t$)"),
             ("posterior", POSTERIOR_COLOR, "posterior (after $y_t$)"),
         ):
-            mu = np.asarray(run[f"{key}_mu"])[start:stop]
-            std = np.asarray(run[f"{key}_std"])[start:stop]
+            mu = np.asarray(run[f"{key}_mu"])[inside]
+            std = np.asarray(run[f"{key}_std"])[inside]
             ax.fill_between(
-                steps, mu - std, mu + std, color=color, alpha=0.25, linewidth=0
+                run_indices[inside],
+                mu - std,
+                mu + std,
+                color=color,
+                alpha=0.3,
+                linewidth=0,
             )
-            ax.plot(steps, mu, color=color, linewidth=1.0, label=label, zorder=2)
+            ax.plot(
+                run_indices[inside],
+                mu,
+                color=color,
+                linewidth=1.0,
+                label=label,
+                zorder=2,
+            )
 
-        title = run["name"]
+        # The row is named on its y axis rather than in a title, and the mean Kalman gain
+        # goes with it: it is what explains the size of the correction row below.
+        label = run["name"]
         if noise_var is not None:
             prior_var = np.asarray(run["prior_std"]) ** 2
             gain = float(np.mean(prior_var / (prior_var + noise_var)))
-            title = f"{title}   (mean Kalman gain {gain:.2f})"
-        ax.set_title(title, fontsize=9, loc="left")
-        ax.set_ylabel("Value")
+            label = f"{label}\n(mean gain {gain:.2f})"
+        ax.set_ylabel(label)
         ax.grid(True, alpha=0.2, linewidth=0.5)
+        mark_splits(ax, splits, with_labels=ax is state_axes[0])
         mark_changepoints(ax, changepoints, with_labels=ax is state_axes[0])
 
     for run, color in zip(runs, ("tab:blue", "tab:orange", "tab:green")):
         correction = (
             np.asarray(run["posterior_mu"]) - np.asarray(run["prior_mu"])
-        )[start:stop]
-        ax_update.plot(steps, correction, color=color, linewidth=0.9, label=run["name"])
+        )[inside]
+        ax_update.plot(
+            run_indices[inside], correction, color=color, linewidth=0.9,
+            label=run["name"],
+        )
     ax_update.axhline(0.0, color="0.6", linewidth=0.6)
-    ax_update.set_title("what the update moved: posterior $-$ prior", fontsize=9,
-                        loc="left")
-    ax_update.set_ylabel("Correction")
-    ax_update.set_xlabel("Test time step")
+    ax_update.set_ylabel("posterior $-$ prior")
+    ax_update.set_xlabel("Time step")
     ax_update.grid(True, alpha=0.2, linewidth=0.5)
-    ax_update.legend(loc="lower left", ncol=3, frameon=False, fontsize=7.5)
+    ax_update.legend(
+        loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False, fontsize=7.5,
+    )
+    mark_splits(ax_update, splits)
     mark_changepoints(ax_update, changepoints)
 
     state_axes[0].legend(
-        loc="lower center", bbox_to_anchor=(0.5, 1.16), ncol=3, frameon=False,
+        loc="lower center", bbox_to_anchor=(0.5, 1.02),
+        ncol=4 if context is not None else 3, frameon=False,
         fontsize=7.5,
     )
     fig.tight_layout()
@@ -1269,46 +1557,87 @@ def plot_error_comparison(
     runs: Sequence[Dict[str, object]],
     observations: np.ndarray,
     stem: str,
-    window: int,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
     noise_floor: Optional[float] = None,
 ) -> plt.Figure:
     """
-    Rolling mean squared error of the online predictions of every model, on one axes.
+    The one-step-ahead error of every model at every step, on the same absolute time axis as
+    every other figure: the squared error on top, the log-likelihood underneath, and each
+    model's overall MSE and mean log-likelihood in the legend.
 
-    This is where the comparison is actually settled: the prediction rows show that both
-    models track the signal, this shows which one is closer and for how long.
+    Both are per step and unsmoothed. A rolling mean spreads a bad step over the whole
+    window and so blurs the moment a model is caught out, which is exactly what these
+    comparisons are about. The two panels also see different things: the squared error only
+    scores the mean, while the log-likelihood scores the mean and the variance together, so
+    a model that is close but overconfident is separated from one that is close and honest.
+
+    Args:
+        runs (Sequence[Dict[str, object]]): one dict per model, with keys `name`,
+            `pred_indices` (absolute time steps), `mu_preds` and `std_preds`.
+        observations (np.ndarray): the full series.
+        stem (str): file stem to save under.
+        splits (Optional[Splits]): span boundaries, shaded on both panels.
+        changepoints (Optional[Sequence[Tuple[int, str]]]): marks for both panels.
+        noise_floor (Optional[float]): if given, drawn on the squared-error panel as the
+            level no one-step-ahead prediction can beat.
     """
 
-    fig, ax = plt.subplots(figsize=DOUBLE_COL)
+    observations = np.asarray(observations).flatten()
+    fig, (ax_error, ax_log_lik) = plt.subplots(
+        2, 1, figsize=(DOUBLE_COL[0], 4.0), sharex=True
+    )
+
     for run, color in zip(runs, ("tab:blue", "tab:orange", "tab:green")):
-        pred_indices = np.asarray(run["pred_indices"])
-        errors = (observations[pred_indices] - np.asarray(run["mu_preds"]).flatten()) ** 2
-        rolling = np.convolve(errors, np.ones(window) / window, mode="valid")
-        ax.plot(
-            pred_indices[window - 1 :],
-            rolling,
-            label=run["name"],
-            color=color,
+        pred_indices = np.asarray(run["pred_indices"], dtype=int)
+        mu = np.asarray(run["mu_preds"]).flatten()
+        std = np.asarray(run["std_preds"]).flatten()
+        y = observations[pred_indices]
+        squared_error = (y - mu) ** 2
+        log_lik = -0.5 * np.log(2 * np.pi * std**2) - 0.5 * ((y - mu) / std) ** 2
+
+        # The two scalars the comparison is settled on go in the legend, so the figure
+        # states them itself: the panels show where the error came from, these say how much
+        # of it there was in total.
+        floor_ratio = (
+            f", {squared_error.mean() / noise_floor:.2f}$\\times$ floor"
+            if noise_floor is not None
+            else ""
         )
+        label = (
+            f"{run['name']}: MSE {squared_error.mean():.4f}{floor_ratio}, "
+            f"log-lik {log_lik.mean():.2f}"
+        )
+        ax_error.plot(
+            pred_indices, squared_error, color=color, linewidth=0.6, label=label
+        )
+        ax_log_lik.plot(pred_indices, log_lik, color=color, linewidth=0.6)
     if noise_floor is not None:
-        ax.axhline(
+        ax_error.axhline(
             noise_floor,
             color="black",
             linewidth=0.8,
             linestyle=":",
             label="noise floor",
         )
-    ax.set_yscale("log")
-    ax.set_xlabel("Time step")
-    ax.set_ylabel(f"Online MSE, {window}-step rolling mean")
-    ax.grid(True, alpha=0.25, linewidth=0.5)
-    mark_changepoints(ax, changepoints, with_labels=True)
-    ax.legend(
+
+    ax_error.set_yscale("log")
+    ax_error.set_ylabel("Squared error")
+    ax_log_lik.set_ylabel("Log-likelihood")
+    ax_log_lik.set_xlabel("Time step")
+    for index, ax in enumerate((ax_error, ax_log_lik)):
+        ax.grid(True, alpha=0.25, linewidth=0.5)
+        ax.set_xlim(0, len(observations) - 1)
+        mark_splits(ax, splits, with_labels=index == 0)
+        mark_changepoints(ax, changepoints, with_labels=index == 0)
+    # One entry per line: each label carries its own two numbers and is too long to sit
+    # beside the others.
+    ax_error.legend(
         loc="lower center",
         bbox_to_anchor=(0.5, 1.02),
-        ncol=len(runs) + 1,
+        ncol=1,
         frameon=False,
+        fontsize=7.5,
     )
     fig.tight_layout()
     save_figure(fig, stem)
@@ -1320,12 +1649,17 @@ def plot_state_records(
     states_name: Sequence[str],
     smooth_lag: int,
     stem: str,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
     """
-    One panel per hidden state with its t+1 prediction, its t+1 filtered value and its
-    lag-`smooth_lag` smoothed value. The prediction and the smoothed value carry a
-    ±1σ band.
+    One panel per hidden state, over the whole series, with its t+1 prediction, its t+1
+    filtered value and its lag-`smooth_lag` smoothed value. The prediction and the
+    smoothed value carry a ±1σ band.
+
+    Over the held-out spans only the prediction exists: there is no observation to filter
+    against and no later window to smooth with, so those two curves simply stop at the end
+    of the training span.
     """
 
     num_time_steps = len(records[states_name[0]]["predict_mu"])
@@ -1351,7 +1685,7 @@ def plot_state_records(
             record["predict_mu"] - record["predict_std"],
             record["predict_mu"] + record["predict_std"],
             color="tab:blue",
-            alpha=0.2,
+            alpha=0.3,
         )
         ax.plot(
             time_index,
@@ -1360,21 +1694,25 @@ def plot_state_records(
             color="tab:orange",
             linewidth=0.6,
         )
+        # Purple, not green: green is reserved for aleatoric bands, and this band is the
+        # state's own uncertainty.
         ax.plot(
             time_index,
             record["smooth_mu"],
             label=f"smoothed (lag {smooth_lag})",
-            color="tab:green",
+            color=POSTERIOR_COLOR,
         )
         ax.fill_between(
             time_index,
             record["smooth_mu"] - record["smooth_std"],
             record["smooth_mu"] + record["smooth_std"],
-            color="tab:green",
-            alpha=0.2,
+            color=POSTERIOR_COLOR,
+            alpha=0.3,
         )
         ax.set_ylabel(name)
         ax.grid(True, alpha=0.25, linewidth=0.5)
+        ax.set_xlim(0, num_time_steps - 1)
+        mark_splits(ax, splits, with_labels=ax is axes[0])
         mark_changepoints(ax, changepoints, with_labels=ax is axes[0])
 
     axes[0].legend(
@@ -1395,15 +1733,19 @@ def plot_decomposition(
     observations: np.ndarray,
     stem: str,
     colors: Optional[Sequence[str]] = None,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
     """
-    The t+1 predictions of the named states, their sum, and the observations. The sum is
-    what the model predicts for the observation, so it should lie on top of the data.
+    The t+1 predictions of the named states over the whole series, their sum, and the
+    observations. The sum is what the model predicts for the observation, so it should lie
+    on top of the data.
     """
 
+    # No blue in the component palette: the sum is the prediction of the observation, so blue
+    # belongs to it.
     if colors is None:
-        colors = ["tab:orange", "tab:blue", "tab:purple", "tab:brown"]
+        colors = ["tab:orange", "tab:purple", "tab:brown", "tab:olive"]
 
     time_index = np.arange(len(observations))
     fig, ax = plt.subplots(figsize=DOUBLE_COL)
@@ -1425,12 +1767,13 @@ def plot_decomposition(
         time_index,
         total,
         label=" + ".join(component_names),
-        color="black",
-        linestyle="--",
+        color="tab:blue",
     )
     ax.set_xlabel("Time step")
     ax.set_ylabel(r"$t+1$ prediction")
     ax.grid(True, alpha=0.25, linewidth=0.5)
+    ax.set_xlim(0, len(time_index) - 1)
+    mark_splits(ax, splits, with_labels=True)
     mark_changepoints(ax, changepoints, with_labels=True)
     ax.legend(
         loc="lower center",
@@ -1450,9 +1793,10 @@ def plot_decomposition_rows(
     observations: np.ndarray,
     stem: str,
     colors: Optional[Sequence[str]] = None,
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
-    """Plot an additive decomposition with one state per row.
+    """Plot an additive decomposition with one state per row, over the whole series.
 
     The first row compares the observations with the reconstructed observation prior. The
     remaining rows show the one-step-ahead prior of every requested state with its marginal
@@ -1477,8 +1821,9 @@ def plot_decomposition_rows(
     if missing:
         raise ValueError(f"states missing from decomposition records: {sorted(missing)}")
 
+    # No green: green is reserved for aleatoric bands, and these are state uncertainties.
     if colors is None:
-        colors = ["tab:orange", "tab:green", "tab:blue", "tab:purple"]
+        colors = ["tab:orange", "tab:brown", "tab:blue", "tab:purple"]
     if len(colors) < len(states_name):
         raise ValueError("colors must provide at least one color per state.")
 
@@ -1517,7 +1862,7 @@ def plot_decomposition_rows(
     axes[0].plot(
         time_index,
         reconstructed,
-        color="black",
+        color="tab:blue",
         linewidth=1.0,
         label=" + ".join(observation_component_names),
     )
@@ -1525,8 +1870,8 @@ def plot_decomposition_rows(
         time_index,
         reconstructed - reconstructed_std,
         reconstructed + reconstructed_std,
-        color="black",
-        alpha=0.12,
+        color="tab:blue",
+        alpha=0.3,
         label=r"latent $\pm 1\sigma$",
     )
     axes[0].set_ylabel("observation")
@@ -1546,7 +1891,7 @@ def plot_decomposition_rows(
             mu - std,
             mu + std,
             color=color,
-            alpha=0.2,
+            alpha=0.3,
         )
         if name in {"trend", "acceleration"}:
             ax.axhline(0.0, color="0.35", linestyle="--", linewidth=0.6)
@@ -1554,6 +1899,8 @@ def plot_decomposition_rows(
 
     for index, ax in enumerate(axes):
         ax.grid(True, alpha=0.25, linewidth=0.5)
+        ax.set_xlim(0, num_time_steps - 1)
+        mark_splits(ax, splits, with_labels=index == 0)
         mark_changepoints(ax, changepoints, with_labels=index == 0)
 
     axes[-1].set_xlabel("Time step")
@@ -1569,10 +1916,13 @@ def plot_parameter_diagnostics(
     ylabel: str,
     stem: str,
     skip_layers: Sequence[str] = ("SLinear.1",),
+    splits: Optional[Splits] = None,
     changepoints: Optional[Sequence[Tuple[int, str]]] = None,
 ) -> plt.Figure:
     """
-    Per-layer parameter-change history over the online windows, weights and bias summed.
+    Per-layer parameter-change history over the online windows, weights and bias summed,
+    on the same absolute time axis as every other figure. The curves stop at the end of
+    the training span, which is where the parameters stop being updated.
     """
 
     fig, ax = plt.subplots(figsize=SINGLE_COL)
@@ -1588,6 +1938,11 @@ def plot_parameter_diagnostics(
     ax.set_xlabel("Window end index")
     ax.set_ylabel(ylabel)
     ax.grid(True, alpha=0.25, linewidth=0.5)
+    if splits is not None:
+        ax.set_xlim(0, splits.num_time_steps - 1)
+    # This is the one single-column figure: the span names do not fit side by side at that
+    # width, so the shading and the boundary lines carry the split on their own.
+    mark_splits(ax, splits)
     mark_changepoints(ax, changepoints, with_labels=True)
     ax.legend(
         loc="lower center",
@@ -1603,14 +1958,16 @@ def plot_performance_grid(
     look_back_lengths: Sequence[int],
     smoothing_windows: Sequence[int],
     online_mse: np.ndarray,
-    validation_mse: np.ndarray,
+    test_mse: np.ndarray,
     stem: str,
 ) -> plt.Figure:
     """
-    Plot two annotated heatmaps for an online-LSTM hyperparameter sweep.
+    Plot one annotated heatmap per span of the series for an online-LSTM hyperparameter
+    sweep: the online one-step error over the training span, then the forecast error over
+    the held-out test span.
 
     Rows are smoothing-window lengths and columns are LSTM look-back lengths. Each
-    panel has its own color scale because online one-step and multi-step validation
+    panel has its own color scale because online one-step and multi-step forecast
     errors can have materially different ranges; the cell labels retain the exact
     comparison across panels.
     """
@@ -1618,19 +1975,23 @@ def plot_performance_grid(
     look_back_lengths = list(look_back_lengths)
     smoothing_windows = list(smoothing_windows)
     expected_shape = (len(smoothing_windows), len(look_back_lengths))
-    online_mse = np.asarray(online_mse, dtype=float)
-    validation_mse = np.asarray(validation_mse, dtype=float)
-    if online_mse.shape != expected_shape or validation_mse.shape != expected_shape:
-        raise ValueError(
-            "Performance grids must have shape "
-            f"{expected_shape}; got {online_mse.shape} and {validation_mse.shape}."
-        )
+    grids = {
+        "Online one-step MSE (train)": np.asarray(online_mse, dtype=float),
+        "Forecast MSE (test)": np.asarray(test_mse, dtype=float),
+    }
+    for title, values in grids.items():
+        if values.shape != expected_shape:
+            raise ValueError(
+                f"Performance grid '{title}' must have shape {expected_shape}; "
+                f"got {values.shape}."
+            )
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.2), constrained_layout=True)
-    panels = (
-        (axes[0], online_mse, "Online one-step MSE"),
-        (axes[1], validation_mse, "Validation forecast MSE"),
+    fig, axes = plt.subplots(
+        1, len(grids), figsize=(3.6 * len(grids), 3.2), constrained_layout=True
     )
+    panels = [
+        (ax, values, title) for ax, (title, values) in zip(axes, grids.items())
+    ]
 
     for ax, values, title in panels:
         image = ax.imshow(values, aspect="auto", cmap="Blues")
@@ -1687,17 +2048,17 @@ def plot_performance_grid(
                 zorder=5,
             )
 
-        ax.set_title(title)
         ax.set_xlabel("LSTM look-back length")
         ax.set_xticks(np.arange(len(look_back_lengths)), look_back_lengths)
         ax.set_yticks(np.arange(len(smoothing_windows)), smoothing_windows)
         ax.tick_params(which="minor", bottom=False, left=False)
+        # The panel is named on its colorbar, so the figure needs no titles.
         colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
-        colorbar.set_label("MSE")
+        colorbar.set_label(title)
 
     axes[0].set_ylabel("Smoothing window length (D)")
-    axes[1].set_ylabel("")
-    fig.suptitle("Online LSTM performance grid (standardized scale; lower is better)")
+    for ax in axes[1:]:
+        ax.set_ylabel("")
     save_figure(fig, stem)
-    fig.savefig(OUT_DIR / f"{stem}.png", bbox_inches="tight")
+    fig.savefig(output_dir() / f"{stem}.png", bbox_inches="tight")
     return fig

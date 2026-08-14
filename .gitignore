@@ -22,6 +22,7 @@ docs/_build/*
 !experiments/out/
 
 agent.md
+.claude/*
 experiments/out
 experiments/planning
 data/
