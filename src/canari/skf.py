@@ -13,6 +13,8 @@ On time series data, this model can:
 
 from typing import Tuple, Dict, List, Optional
 import copy
+import multiprocessing as mp
+import os
 import numpy as np
 from pytagi import metric
 from scipy.stats import norm, lognorm
@@ -20,6 +22,57 @@ from canari.model import Model
 from canari import common
 from canari.data_struct import StatesHistory
 from canari.data_process import DataProcess
+
+
+def _detect_anomaly_in_series(
+    skf,
+    synthetic_datum: Dict[str, np.ndarray],
+    num_timesteps: int,
+    max_timestep_to_detect: Optional[int],
+    threshold: float,
+) -> bool:
+    """
+    Run the Switching Kalman filter over one synthetic time series and report whether its
+    anomaly is detected within the allowed detection window. Restores `skf`'s initial states
+    afterwards so that the next series starts from the same memory.
+    """
+
+    filter_marginal_abnorm_prob, _ = skf.filter(data=synthetic_datum)
+    window_start = int(synthetic_datum["anomaly_timestep"])
+
+    if max_timestep_to_detect is None:
+        window_end = num_timesteps
+    else:
+        window_end = window_start + int(max_timestep_to_detect)
+    detection_indices = np.flatnonzero(
+        filter_marginal_abnorm_prob[window_start:window_end] > threshold
+    )
+
+    skf.load_initial_states()
+
+    return detection_indices.size > 0
+
+
+# Module-level SKF used by the worker processes of `detect_synthetic_anomaly`.
+_worker_skf = None
+
+
+def _init_detection_worker(skf):
+    """
+    Initializer for each worker process. Because the pool uses the 'fork' start method, each
+    worker inherits its own copy of `skf` and can mutate it without affecting the parent.
+    """
+
+    global _worker_skf
+    _worker_skf = skf
+
+
+def _detect_single_anomaly(args) -> bool:
+    """
+    Entry point mapped over the worker pool in `detect_synthetic_anomaly`.
+    """
+
+    return _detect_anomaly_in_series(_worker_skf, *args)
 
 
 class SKF:
@@ -1310,6 +1363,7 @@ class SKF:
         anomaly_start: Optional[float] = 0.33,
         anomaly_end: Optional[float] = 0.66,
         synthetic_data: Optional[List[dict]] = None,
+        n_jobs: Optional[int] = 1,
     ) -> Tuple[float, float]:
         """
         Add synthetic anomalies to orginal data, use Switching Kalman filter to detect those
@@ -1332,6 +1386,9 @@ class SKF:
                                         If None, it is generated from `data` using
                                         `num_anomaly`, `slope_anomaly`, `anomaly_start`,
                                         and `anomaly_end`.
+            n_jobs (Optional[int]): Number of worker processes used to filter the synthetic
+                                        time series. Defaults to 1 (sequential). Set to -1 to
+                                        use all available CPU cores.
 
         Returns:
             Tuple(detection_rate, num_false_alarm):
@@ -1359,21 +1416,32 @@ class SKF:
         num_false_alarm = int(np.sum(clean_filter_marginal_abnorm_prob > threshold))
 
         # Iterate over data with synthetic anomalies
-        for i in range(total_anomalies):
-            filter_marginal_abnorm_prob, _ = self.filter(data=synthetic_data[i])
-            window_start = int(synthetic_data[i]["anomaly_timestep"])
+        if n_jobs == -1:
+            n_jobs = os.cpu_count()
 
-            if max_timestep_to_detect is None:
-                window_end = num_timesteps
-            else:
-                window_end = window_start + int(max_timestep_to_detect)
-            detection_indices = np.flatnonzero(
-                filter_marginal_abnorm_prob[window_start:window_end] > threshold
-            )
-            if detection_indices.size > 0:
-                num_anomaly_detected += 1
-
-            self.load_initial_states()
+        if n_jobs is not None and n_jobs > 1:
+            worker_args = [
+                (synthetic_data[i], num_timesteps, max_timestep_to_detect, threshold)
+                for i in range(total_anomalies)
+            ]
+            context = mp.get_context("fork")
+            with context.Pool(
+                n_jobs, initializer=_init_detection_worker, initargs=(self,)
+            ) as pool:
+                num_anomaly_detected = sum(pool.map(_detect_single_anomaly, worker_args))
+                # Let the workers exit before the pool's terminate(), whose SIGTERM
+                # would otherwise be reported by the pytagi backend.
+                pool.close()
+                pool.join()
+        else:
+            for i in range(total_anomalies):
+                num_anomaly_detected += _detect_anomaly_in_series(
+                    self,
+                    synthetic_data[i],
+                    num_timesteps,
+                    max_timestep_to_detect,
+                    threshold,
+                )
 
         detection_rate = num_anomaly_detected / total_anomalies
 
