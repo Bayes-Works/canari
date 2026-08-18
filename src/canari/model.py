@@ -840,11 +840,11 @@ class Model:
             if _state_name == "level":
                 self.mu_states[i] = trend[0]
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 1e-6
             elif _state_name == "trend":
                 self.mu_states[i] = slope
                 if self.var_states[i, i] == 0:
-                    self.var_states[i, i] = 1e-2
+                    self.var_states[i, i] = 1e-6
             elif _state_name == "acceleration":
                 self.mu_states[i] = 0
                 if self.var_states[i, i] == 0:
@@ -1248,6 +1248,36 @@ class Model:
             self.states,
         )
 
+    def online_lstm_filter(
+        self,
+        data: Dict[str, np.ndarray],
+        start: int,
+        window_len: int,
+        end: Optional[int] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, StatesHistory]:
+        """Filter a time range while updating the LSTM with fixed-lag smoothing.
+
+        The model is first carried from the beginning of ``data`` to
+        ``start - window_len`` with frozen LSTM parameters. It then uses overlapping
+        windows of ``window_len + 1`` observations: filter forward, update the LSTM,
+        smooth backward, rewind one step, and repeat. The returned predictions align
+        with ``data[start:end]``.
+
+        Args:
+            data (Dict[str, np.ndarray]): Complete series containing ``x`` and ``y``.
+            start (int): Index of the first returned online prediction.
+            window_len (int): Fixed smoothing lag.
+            end (Optional[int]): Exclusive final index. Defaults to the end of ``data``.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, StatesHistory]: Online predictive means,
+            standard deviations, and state estimates for ``data[start:end]``.
+        """
+
+        from canari.online_lstm import online_filter_model
+
+        return online_filter_model(self, data, start, window_len, end)
+
     def smoother(self) -> StatesHistory:
         """
         Run the Kalman smoother over an entire time series data, i.e., repeatly apply the
@@ -1281,7 +1311,7 @@ class Model:
 
             # get smoothed LSTM states
             self.lstm_net.smooth_look_back_states = (
-                self.lstm_net.get_lstm_states_smooth(self.lstm_net.lstm_infer_len - 2)
+                self.lstm_net.get_lstm_states(self.lstm_net.lstm_infer_len - 2)
             )
 
         return self.states

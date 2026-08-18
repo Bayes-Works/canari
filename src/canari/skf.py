@@ -708,11 +708,21 @@ class SKF:
             >>> # If the next analysis starts from t = 200
             >>> skf.set_memory(states=skf.states, time_step=200))
         """
-        self.model["norm_norm"].set_memory(states=states, time_step=0)
         if time_step == 0:
+            self.model["norm_norm"].set_memory(states=states, time_step=0)
             self.load_initial_states()
             self.marginal_prob["norm"] = self.norm_model_prior_prob
             self.marginal_prob["abnorm"] = 1 - self.norm_model_prior_prob
+        else:
+            self.model["norm_norm"].set_memory(states=states, time_step=time_step)
+            self._set_same_states_transition_models()
+            probability_history = (
+                self.smooth_marginal_prob_history
+                if self.smooth_marginal_prob_history["norm"]
+                else self.filter_marginal_prob_history
+            )
+            self.marginal_prob["norm"] = probability_history["norm"][time_step - 1]
+            self.marginal_prob["abnorm"] = probability_history["abnorm"][time_step - 1]
 
     def get_dict(self) -> dict:
         """
@@ -1132,6 +1142,8 @@ class SKF:
     def filter(
         self,
         data: Dict[str, np.ndarray],
+        train_lstm: Optional[bool] = False,
+        reset_memory: Optional[bool] = True,
     ) -> Tuple[np.ndarray, StatesHistory]:
         """
         Run the Kalman filter over an entire dataset.
@@ -1142,6 +1154,10 @@ class SKF:
 
         Args:
             data (Dict[str, np.ndarray]): Includes 'x' and 'y'.
+            train_lstm (bool): Whether to update the LSTM parameters online.
+                Defaults to False.
+            reset_memory (bool): Whether to restore the SKF's initial memory after
+                filtering. Defaults to True.
 
         Returns:
             Tuple[np.ndarray, StatesHistory]:
@@ -1170,6 +1186,25 @@ class SKF:
 
             if self.lstm_net:
                 lstm_index = self.model["norm_norm"].get_states_index("lstm")
+                if train_lstm:
+                    prior_var = self.var_states_prior[lstm_index, lstm_index]
+                    delta_mu_lstm = np.array(
+                        (
+                            mu_states_posterior[lstm_index]
+                            - self.mu_states_prior[lstm_index]
+                        )
+                        / prior_var
+                    )
+                    delta_var_lstm = np.array(
+                        (
+                            var_states_posterior[lstm_index, lstm_index]
+                            - self.var_states_prior[lstm_index, lstm_index]
+                        )
+                        / prior_var**2
+                    )
+                    self.lstm_net.update_param(
+                        np.float32(delta_mu_lstm), np.float32(delta_var_lstm)
+                    )
                 self.lstm_output_history.update(
                     mu_states_posterior[lstm_index],
                     var_states_posterior[
@@ -1187,11 +1222,38 @@ class SKF:
                 self.marginal_prob["abnorm"]
             )
 
-        self.set_memory(states=self.model["norm_norm"].states, time_step=0)
+        if reset_memory:
+            self.set_memory(states=self.model["norm_norm"].states, time_step=0)
         return (
             np.array(self.filter_marginal_prob_history["abnorm"]),
             self.states,
         )
+
+    def online_lstm_filter(
+        self,
+        data: Dict[str, np.ndarray],
+        window_len: int,
+        end: Optional[int] = None,
+    ) -> Tuple[np.ndarray, StatesHistory]:
+        """Filter from the beginning with fixed-lag online LSTM updates.
+
+        The first window supplies the initial state and probability history. Each later
+        window contributes its newest step, so the returned values align with
+        ``data[:end]`` like the output of :meth:`filter`.
+
+        Args:
+            data (Dict[str, np.ndarray]): Complete series containing ``x`` and ``y``.
+            window_len (int): Fixed smoothing lag.
+            end (Optional[int]): Exclusive final index. Defaults to the end of ``data``.
+
+        Returns:
+            Tuple[np.ndarray, StatesHistory]: Online abnormal-model probabilities and
+            state estimates for ``data[:end]``.
+        """
+
+        from canari.online_lstm import online_filter_skf
+
+        return online_filter_skf(self, data, window_len, end)
 
     def smoother(self) -> Tuple[np.ndarray, StatesHistory]:
         """

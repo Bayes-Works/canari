@@ -88,11 +88,13 @@ def _determine_time(data_processor: DataProcess, len_states: int) -> np.ndarray:
         np.ndarray: Time values corresponding to the state sequence.
     """
 
-    train_index, val_index, _ = data_processor.get_split_indices()
+    train_index, val_index, test_index = data_processor.get_split_indices()
     if len_states == len(data_processor.data):
         return data_processor.data.index.to_numpy()
     elif len_states == len(train_index):
         return data_processor.data.index[train_index].to_numpy()
+    elif len_states == len(test_index):
+        return data_processor.data.index[test_index].to_numpy()
     else:
         return np.concatenate(
             [
