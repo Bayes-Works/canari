@@ -44,3 +44,4 @@ ai_context
 *.out
 
 experiments/notebooks/*.ipynb
+experiments/extras/*
