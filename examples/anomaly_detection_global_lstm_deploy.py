@@ -40,11 +40,18 @@ SERIES_NAME = "ts50"
 
 DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values_raw.csv"
 DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes_raw.csv"
-SAVED_SKF_PATH = ROOT / f"saved_params/{SERIES_NAME}/anomaly_detection_lstm_finetuned.pkl"
-OUTPUT_PATH = ROOT / f"saved_results/{SERIES_NAME}_results/anomaly_detection_lstm_filtered.csv"
-FIGURE_PATH = ROOT / f"saved_results/{SERIES_NAME}_results/anomaly_detection_global_lstm_deploy"
+SAVED_SKF_PATH = (
+    ROOT / f"saved_params/{SERIES_NAME}/anomaly_detection_lstm_finetuned.pkl"
+)
+OUTPUT_PATH = (
+    ROOT / f"saved_results/{SERIES_NAME}_results/anomaly_detection_lstm_filtered.csv"
+)
+FIGURE_PATH = (
+    ROOT / f"saved_results/{SERIES_NAME}_results/anomaly_detection_global_lstm_deploy"
+)
 
-BASELINE_INIT_LEN = 2 * 52
+BASELINE_INIT_LEN = 1 * 52  # also used for scaling constants
+
 
 def read_time_series():
     values = pd.read_csv(DATA_PATH)[SERIES_NAME]
@@ -60,15 +67,24 @@ def read_time_series():
 
 
 def prepare_full_series(dataframe, preprocessing):
-    data_processor = DataProcess(
-        data=dataframe,
-        time_covariates=preprocessing["time_covariates"],
+    preprocessing_arguments = {
+        "time_covariates": preprocessing["time_covariates"],
+        "output_col": preprocessing["output_col"],
+        "standardization": preprocessing["standardization"],
+    }
+    baseline_processor = DataProcess(
+        data=dataframe.iloc[:BASELINE_INIT_LEN],
         train_split=1.0,
         validation_split=0.0,
-        output_col=preprocessing["output_col"],
-        standardization=preprocessing["standardization"],
-        scale_const_mean=preprocessing["scale_const_mean"],
-        scale_const_std=preprocessing["scale_const_std"],
+        **preprocessing_arguments,
+    )
+    data_processor = DataProcess(
+        data=dataframe,
+        train_split=1.0,
+        validation_split=0.0,
+        scale_const_mean=baseline_processor.scale_const_mean,
+        scale_const_std=baseline_processor.scale_const_std,
+        **preprocessing_arguments,
     )
     _, _, _, all_data = data_processor.get_splits()
     return data_processor, all_data
@@ -91,20 +107,48 @@ def plot_results(data_processor, states, anomaly_probability, threshold):
         if observation_line.get_color() in {"r", "red"}:
             observation_line.set_color("tab:red")
 
+    detected = pd.Series(
+        anomaly_probability > threshold,
+        index=data_processor.data.index,
+    )
+    half_time_step = detected.index.to_series().diff().median() / 2
+    region_starts = detected.index[detected & ~detected.shift(fill_value=False)]
+    region_ends = detected.index[detected & ~detected.shift(-1, fill_value=False)]
+    for region_index, (region_start, region_end) in enumerate(
+        zip(region_starts, region_ends)
+    ):
+        axes[0].axvspan(
+            region_start - half_time_step,
+            region_end + half_time_step,
+            color="red",
+            alpha=0.4,
+            linewidth=0,
+            label="Detected anomaly" if region_index == 0 else None,
+        )
+    if len(region_starts):
+        axes[0].legend(
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1.02),
+            frameon=False,
+        )
+
+    # add zero horizontal line for noise component
+    axes[-2].axhline(
+        0.0,
+        color="red",
+        linestyle="--",
+        linewidth=0.8
+    )
+
     probability_axis = axes[-1]
     probability_axis.lines[0].set_color("tab:blue")
     probability_axis.lines[0].set_label(r"$p(\mathrm{abnormal})$")
     probability_axis.axhline(
         threshold,
-        color="black",
+        color="red",
         linestyle="--",
+        linewidth=0.8,
         label=rf"threshold $={threshold:.2f}$",
-    )
-    probability_axis.legend(
-        loc="lower center",
-        bbox_to_anchor=(0.5, 1.02),
-        frameon=False,
-        ncol=2,
     )
 
     figure.tight_layout()
