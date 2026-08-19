@@ -22,13 +22,15 @@ from canari import DataProcess, Model, Optimizer, SKF
 from canari.component import LocalAcceleration, LocalTrend, LstmNetwork, WhiteNoise
 
 ROOT = Path(__file__).resolve().parents[1]
+
+SERIES_NAME = "ts50"
+
 DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values.csv"
 DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes.csv"
 GLOBAL_LSTM_PATH = ROOT / "saved_params/hq_benchmark_global_model/global_BM_52_256.bin"
-SAVED_SKF_PATH = ROOT / "saved_params/anomaly_detection_lstm_finetuned.pkl"
+SAVED_SKF_PATH = ROOT / f"saved_params/{SERIES_NAME}/anomaly_detection_lstm_finetuned.pkl"
 
-SERIES_NAME = "ts50"
-VALIDATION_START = "2023-04-02"
+VALIDATION_RATIO = 0.2
 
 LOOK_BACK_LEN = 52
 INFER_LEN = 3 * 52
@@ -59,15 +61,11 @@ def prepare_data():
         index=pd.DatetimeIndex(datetimes, name="date_time"),
     )
 
-    # Train and validation together cover every observation in the detrended series.
-    validation_start_index = dataframe.index.get_loc(VALIDATION_START)
-    # DataProcess converts split fractions back to indices with floor().
-    train_split = math.nextafter(validation_start_index / len(dataframe), 1.0)
     return DataProcess(
         data=dataframe,
         time_covariates=["week_of_year"],
-        train_split=train_split,
-        validation_split=1 - train_split,
+        train_split=1-VALIDATION_RATIO,
+        validation_split=VALIDATION_RATIO,
         output_col=[0],
     )
 
