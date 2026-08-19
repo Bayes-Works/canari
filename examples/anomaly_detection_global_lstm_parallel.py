@@ -16,6 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values.csv"
 DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes.csv"
+TEST_DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values_raw.csv"
+TEST_DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes_raw.csv"
 LOG_DIR = ROOT / "logs/anomaly_detection_global_lstm"
 
 SERIES_NAMES = ["ts51", "ts52", "ts53", "ts54", "ts55", "ts56"]
@@ -29,7 +31,13 @@ def validate_series_names():
         value_series = set(next(csv.reader(file)))
     with DATETIME_PATH.open(newline="") as file:
         datetime_series = set(next(csv.reader(file)))
-    available_series = value_series & datetime_series
+    with TEST_DATA_PATH.open(newline="") as file:
+        test_value_series = set(next(csv.reader(file)))
+    with TEST_DATETIME_PATH.open(newline="") as file:
+        test_datetime_series = set(next(csv.reader(file)))
+    available_series = (
+        value_series & datetime_series & test_value_series & test_datetime_series
+    )
 
     unknown_series = sorted(set(SERIES_NAMES) - available_series)
     if unknown_series:
