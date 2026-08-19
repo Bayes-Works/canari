@@ -34,3 +34,7 @@ experiments/**
 # Agents
 AGENTS.md
 .claude/
+
+# Log
+logs/**
+*.log
