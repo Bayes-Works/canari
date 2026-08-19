@@ -1461,7 +1461,8 @@ class SKF:
         false_rate_cdf_shape: Optional[float] = 0.2,  # [false alarms/year]
         anm_mag_cdf_median: Optional[float] = 0.2,  # [unit/year]
         anm_mag_cdf_shape: Optional[float] = 0.6,  # [unit/year]
-    ) -> int:
+        return_components: Optional[bool] = False,
+    ) -> float | Tuple[float, float, float, float]:
         """
         Calculate the metric that is used when optimizing for SKF's parameters.
 
@@ -1481,9 +1482,12 @@ class SKF:
                     anm_magnitude, s=.., scale=anm_mag_cdf_median). Unit [unit/year].
             anm_mag_cdf_shape (Optional[float]): shape for the CDF: lognorm.cdf(
                     anm_magnitude, s=anm_mag_cdf_shape, scale=..). Unit [unit/year].
+            return_components (Optional[bool]): return J1, J2, J3, and their product
+                    instead of only the product. Defaults to False.
 
         Returns:
-            metric (int): metric used when optimizing for SKF's parameters.
+            float or tuple: metric used when optimizing for SKF's parameters. If
+                    `return_components` is True, returns J1, J2, J3, and the metric.
         """
 
         j1 = norm.cdf(
@@ -1497,4 +1501,6 @@ class SKF:
         )
         skf_metric = j1 * j2 * j3
 
+        if return_components:
+            return j1, j2, j3, skf_metric
         return skf_metric

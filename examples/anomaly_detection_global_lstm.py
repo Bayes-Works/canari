@@ -24,11 +24,11 @@ from canari.component import LocalAcceleration, LocalTrend, LstmNetwork, WhiteNo
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values.csv"
 DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes.csv"
-GLOBAL_LSTM_PATH = ROOT / "saved_params/global_model.bin"
+GLOBAL_LSTM_PATH = ROOT / "saved_params/hq_benchmark_global_model/global_BM_52_256.bin"
 SAVED_SKF_PATH = ROOT / "saved_params/anomaly_detection_lstm_finetuned.pkl"
 
-SERIES_NAME = "ts1"
-VALIDATION_START = "2013-04-21"
+SERIES_NAME = "ts50"
+VALIDATION_START = "2023-04-02"
 
 LOOK_BACK_LEN = 52
 INFER_LEN = 3 * 52
@@ -38,10 +38,11 @@ BASELINE_INIT_LEN = 2 * 52
 USE_SLSTM = False
 
 SIGMA_V_GRID = [0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20]
-GRID_SEARCH_N_JOBS = 1  # -1 uses all available CPU cores
+GRID_SEARCH_N_JOBS = 10  # -1 uses all available CPU cores
 SKF_OPTIMIZATION_TRIALS = 200
 SKF_STARTUP_TRIALS = 100
 NUM_SYNTHETIC_ANOMALIES = 50
+DETECT_SYNTHETIC_ANOMALIES_N_JOBS = 32
 MAX_DETECTION_STEPS = 3 * 52
 ANOMALY_SLOPES = [0.025, 0.05, 0.075, 0.225, 0.5, 0.75, 1.0]
 
@@ -156,7 +157,6 @@ def skf_with_parameters(parameters, model_input):
         norm_to_abnorm_prob=parameters["norm_to_abnorm_prob"],
         abnorm_to_norm_prob=parameters["abnorm_to_norm_prob"],
     )
-    skf.model["norm_norm"].lstm_net.teacher_forcing = False
     skf.save_initial_states()
 
     slope = float(parameters["slope"])
@@ -172,22 +172,28 @@ def skf_with_parameters(parameters, model_input):
         synthetic_data=synthetic_data,
         threshold=parameters["threshold"],
         max_timestep_to_detect=MAX_DETECTION_STEPS,
-        # Kept sequential: this runs inside a Ray Tune trial, and forking a worker
-        # pool from a Ray worker crashes it.
-        n_jobs=1,
+        n_jobs=DETECT_SYNTHETIC_ANOMALIES_N_JOBS,
     )
     false_alarms_per_year = false_alarms / model_input["data_length_years"]
 
-    skf.metric_optim = skf.objective(detection_rate, false_alarms_per_year, slope)
+    j1, j2, j3, skf.metric_optim = skf.objective(
+        detection_rate,
+        false_alarms_per_year,
+        slope,
+        return_components=True,
+    )
     skf.print_metric = {
-        "detection_rate": detection_rate,
-        "false_alarms_per_year": false_alarms_per_year,
+        "J1": float(j1),
+        "J2": float(j2),
+        "J3": float(j3),
+        "total_metric": float(skf.metric_optim),
     }
     skf.load_initial_states()
     return skf
 
 
 def main():
+    print(f"Preparing data for {SERIES_NAME}...", flush=True)
     data_processor = prepare_data()
     train_data, validation_data, _, _ = data_processor.get_splits()
 
@@ -196,6 +202,10 @@ def main():
         for sigma_v in SIGMA_V_GRID
     ]
     n_jobs = os.cpu_count() if GRID_SEARCH_N_JOBS == -1 else GRID_SEARCH_N_JOBS
+    print(
+        f"Fine-tuning {len(SIGMA_V_GRID)} LSTM candidates with {n_jobs} worker(s)...",
+        flush=True,
+    )
     if n_jobs > 1:
         context = mp.get_context("fork")
         with context.Pool(n_jobs) as pool:
@@ -205,16 +215,22 @@ def main():
     else:
         grid_results = [finetune_for_sigma_v(a) for a in grid_arguments]
 
+    print("LSTM fine-tuning complete. Early-stopping results:", flush=True)
     for sigma_v, validation_log_likelihood, _ in grid_results:
         print(
             f"sigma_v={sigma_v:.3f}: "
-            f"validation log-likelihood={validation_log_likelihood:.4f}"
+            f"validation log-likelihood={validation_log_likelihood:.4f}",
+            flush=True,
         )
-    best_sigma_v, _, best_model_dict = max(
+    best_sigma_v, best_validation_log_likelihood, best_model_dict = max(
         grid_results, key=lambda result: result[1]
     )
 
-    print(f"Best sigma_v: {best_sigma_v}")
+    print(
+        f"Selected sigma_v={best_sigma_v:.3f} with validation log-likelihood="
+        f"{best_validation_log_likelihood:.4f}",
+        flush=True,
+    )
     train_validation_data = data_processor.get_splits(split="train_val")
     data_length_years = (
         train_validation_data["time"][-1] - train_validation_data["time"][0]
@@ -242,7 +258,12 @@ def main():
         num_startup_trials=SKF_STARTUP_TRIALS,
         max_concurrent=1,  # allows for more informative sequential trials
     )
+    print(
+        f"Optimizing SKF parameters over {SKF_OPTIMIZATION_TRIALS} trials...",
+        flush=True,
+    )
     optimizer.optimize()
+    print("SKF optimization complete. Building the best model...", flush=True)
     best_skf_parameters = optimizer.get_best_param()
     best_skf = skf_with_parameters(best_skf_parameters, model_input)
 
@@ -260,9 +281,10 @@ def main():
     }
 
     SAVED_SKF_PATH.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Saving fine-tuned SKF model to {SAVED_SKF_PATH}...", flush=True)
     with SAVED_SKF_PATH.open("wb") as file:
         pickle.dump(saved_model, file)
-    print(f"Saved complete fine-tuned SKF model to {SAVED_SKF_PATH}")
+    print(f"Saved complete fine-tuned SKF model to {SAVED_SKF_PATH}", flush=True)
 
 
 if __name__ == "__main__":

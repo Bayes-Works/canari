@@ -271,11 +271,13 @@ class Optimizer:
                 sample_str = f"{self.current_sample}/{self.total_samples}".rjust(width)
                 if print_metric is None:
                     print(
-                        f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}"
+                        f"# {sample_str} - Metric: {metric:.3f} - Parameter: {params}",
+                        flush=True,
                     )
                 else:
                     print(
-                        f"# {sample_str} - Metric: {metric:.3f} - Print metric: {print_metric} - Parameter: {params}"
+                        f"# {sample_str} - Metric: {metric:.3f} - Print metric: {print_metric} - Parameter: {params}",
+                        flush=True,
                     )
 
         return _Progress(total_samples)
