@@ -23,7 +23,7 @@ from canari.component import LocalAcceleration, LocalTrend, LstmNetwork, WhiteNo
 
 ROOT = Path(__file__).resolve().parents[1]
 
-SERIES_NAME = "ts50"
+SERIES_NAME = os.environ.get("CANARI_SERIES_NAME", "ts50")
 
 DATA_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_values.csv"
 DATETIME_PATH = ROOT / "data/BM_detrend_data/weekly/weekly_datetimes.csv"
@@ -40,11 +40,11 @@ BASELINE_INIT_LEN = 2 * 52
 USE_SLSTM = False
 
 SIGMA_V_GRID = [0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20]
-GRID_SEARCH_N_JOBS = 10  # -1 uses all available CPU cores
+GRID_SEARCH_N_JOBS = 7  # -1 uses all available CPU cores
 SKF_OPTIMIZATION_TRIALS = 200
 SKF_STARTUP_TRIALS = 100
 NUM_SYNTHETIC_ANOMALIES = 50
-DETECT_SYNTHETIC_ANOMALIES_N_JOBS = 32
+DETECT_SYNTHETIC_ANOMALIES_N_JOBS = 7
 MAX_DETECTION_STEPS = 3 * 52
 ANOMALY_SLOPES = [0.025, 0.05, 0.075, 0.225, 0.5, 0.75, 1.0]
 
