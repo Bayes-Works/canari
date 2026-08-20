@@ -20,7 +20,7 @@ from canari import DataProcess, Model
 from canari.component import LstmNetwork, WhiteNoise
 
 ROOT = Path(__file__).resolve().parents[1]
-SERIES = "ts50"
+SERIES = "MAT001PIAP-F510_x_cleaned"
 NUM_EPOCHS = 100
 ONLINE_WINDOW_LEN = 52
 SIGMA_V = 0.1
@@ -28,10 +28,8 @@ COLORS = {"offline": "tab:blue", "online": "tab:green"}
 
 
 def load_data():
-    values = pd.read_csv(ROOT / "data/BM_detrend_data/weekly/weekly_values.csv")[SERIES]
-    datetimes = pd.read_csv(ROOT / "data/BM_detrend_data/weekly/weekly_datetimes.csv")[
-        SERIES
-    ]
+    values = pd.read_csv(ROOT / "data/exp01_data/ts_weekly_values.csv")[SERIES]
+    datetimes = pd.read_csv(ROOT / "data/exp01_data/ts_weekly_datetimes.csv")[SERIES]
     # Missing observations are kept as NaN so that the weekly time steps stay regular.
     series = pd.DataFrame({"date_time": pd.to_datetime(datetimes), SERIES: values})
     series = series.dropna(subset=["date_time"]).set_index("date_time")
@@ -45,17 +43,22 @@ def load_data():
 
 
 def build_model():
-    return Model(
+    model = Model(
         LstmNetwork(
             look_back_len=52,
             num_features=2,
-            infer_len=52,
-            num_hidden_unit=64,
+            infer_len=52 * 3,
+            num_hidden_unit=256,
             num_layer=1,
             manual_seed=1,
         ),
         WhiteNoise(std_error=SIGMA_V),
     )
+
+    # load global model
+    # model.load_lstm_parameter_means("saved_params/global_BM_52_256.bin")
+
+    return model
 
 
 def run_offline(data_processor, train_data, validation_data):
@@ -164,7 +167,9 @@ def main():
         ),
     }
 
-    print(f"\nSeries {SERIES}: {len(train_obs)} train, {len(validation_obs)} validation")
+    print(
+        f"\nSeries {SERIES}: {len(train_obs)} train, {len(validation_obs)} validation"
+    )
     print(f"{'':9}{'train LL':>10}{'train MSE':>11}{'val LL':>10}{'val MSE':>10}")
     for method, splits in scores.items():
         print(

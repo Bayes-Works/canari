@@ -293,6 +293,41 @@ class Model:
                 1  # dummy intialization until otherwise specified
             )
 
+    def load_lstm_parameter_means(self, filename: str) -> None:
+        """Load LSTM parameter means while preserving the current variances."""
+        lstm_component = next(
+            (
+                component
+                for component in self.components.values()
+                if "lstm" in component.component_name
+            ),
+            None,
+        )
+        if lstm_component is None:
+            raise ValueError("The model does not contain an LSTM component.")
+
+        source_component = copy.deepcopy(lstm_component)
+        source_component.smoother = False
+        source_component.load_lstm_net = None
+        source_network = source_component.initialize_lstm_network()
+        source_network.load(filename=str(filename))
+
+        current_params = copy.deepcopy(self.lstm_net.state_dict())
+        source_params = {
+            name.removeprefix("S"): params
+            for name, params in source_network.state_dict().items()
+        }
+        mean_params = {
+            name: (
+                source_params[name.removeprefix("S")][0],
+                params[1],
+                source_params[name.removeprefix("S")][2],
+                params[3],
+            )
+            for name, params in current_params.items()
+        }
+        self.lstm_net.load_state_dict(mean_params)
+
     def _initialize_autoregression(self):
         """
         Initialize autoregression-related attributes.
@@ -1310,8 +1345,8 @@ class Model:
             self.lstm_net.smooth_look_back_var = var_sequence
 
             # get smoothed LSTM states
-            self.lstm_net.smooth_look_back_states = (
-                self.lstm_net.get_lstm_states(self.lstm_net.lstm_infer_len - 2)
+            self.lstm_net.smooth_look_back_states = self.lstm_net.get_lstm_states(
+                self.lstm_net.lstm_infer_len - 2
             )
 
         return self.states
