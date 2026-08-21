@@ -57,7 +57,7 @@ PLOT_STYLE = {
 SERIES = "MAT001PIAP-F510_x_cleaned"
 VALUES_PATH = ROOT / "data/exp01_data/ts_weekly_values.csv"
 DATETIMES_PATH = ROOT / "data/exp01_data/ts_weekly_datetimes.csv"
-GLOBAL_MEANS_PATH = ROOT / "saved_params/global_BM_52_256.bin"
+GLOBAL_MEANS_PATH = ROOT / "saved_params/hq_benchmark_global_model/global_BM_52_256.bin"
 
 WEEKS_PER_YEAR = 52
 TRAIN_YEARS = 2

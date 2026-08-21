@@ -36,3 +36,9 @@ experiments/plot_*.py
 
 # epistemic uncertainty exploration
 epistemic/*
+
+logs/*
+experiments/config/*
+experiments/notebooks/*
+experiments/extras/*
+Figures/*
