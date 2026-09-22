@@ -30,6 +30,9 @@ class ModelAssemble:
             covariate_model if isinstance(covariate_model, list) else [covariate_model]
         )
         self._recal_covar_col = True
+        # Metric for optimization
+        self.metric_optim = None
+        self.print_metric = None
 
     def forward(
         self,
@@ -167,7 +170,7 @@ class ModelAssemble:
         mu_obs_preds = []
         std_obs_preds = []
 
-        for x in data["x"]:
+        for index, (x, y) in enumerate(zip(data["x"], data["y"])):
             (
                 mu_obs_pred,
                 var_obs_pred,
@@ -175,6 +178,9 @@ class ModelAssemble:
 
             for model in [self.target_model] + self.covariate_model:
                 if model.lstm_net:
+                    model.update_lstm_states_history(
+                        index, last_step=len(data["y"]) - 1
+                    )
                     model.update_lstm_output_history(
                         model.mu_states_prior, model.var_states_prior
                     )
