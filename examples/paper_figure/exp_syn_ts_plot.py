@@ -41,10 +41,10 @@ ax1 = plt.subplot(gs[1])
 
 ax0.plot(df_simple['ds'], df_simple['y'], label="Simple TS", color='C0')
 ax0.set_xticklabels([])
-ax0.set_title('(a) Simple time series: $\phi^{\mathtt{AR}}=0.5$', loc='center', fontsize=12)
+ax0.set_title('(a) Série temporelle simple : $\phi^{\mathtt{AR}}=0.5$', loc='center', fontsize=12)
 ax1.plot(df_complex['ds'], df_complex['y'], label="Complex TS", color='C1')
 ax1.set_xticks(df_simple['ds'][::52*4])
-ax1.set_title('(b) Complex time series: $\phi^{\mathtt{AR}}=0.9$', loc='center', fontsize=12)
+ax1.set_title('(b) Série temporelle complexe : $\phi^{\mathtt{AR}}=0.9$', loc='center', fontsize=12)
 # ax1.legend()
 
 # Format x-axis ticks as year only

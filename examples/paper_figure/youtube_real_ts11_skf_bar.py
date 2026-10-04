@@ -16,7 +16,7 @@ from canari import (
     plot_skf_states,
     plot_states,
 )
-from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise, Autoregression
+from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNoise, Autoregression, BoundedAutoregression
 import pickle
 from matplotlib import gridspec
 import matplotlib.ticker as ticker
@@ -87,10 +87,10 @@ def main(
         model = Model(
             LocalTrend(mu_states=model_dict['states_optimal'].mu_prior[0][0:2].reshape(-1)),
             LSTM,
-            Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+            BoundedAutoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                        mu_states=[model_dict["mu_states"][autoregression_index].item(), 0], 
+                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item(), 0], gamma = 1.5),
         )
 
         model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -116,10 +116,10 @@ def main(
             # LocalAcceleration(mu_states=[model_dict["mu_states"][0].item(), model_dict["mu_states"][1].item(), 0], var_states=[1e-12, 1e-12, 1e-4]),
             LocalAcceleration(),
             LSTM,
-            Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
+            BoundedAutoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                        mu_states=[model_dict["mu_states"][autoregression_index].item(), 0], 
+                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item(), 0], gamma = 1.5),
         )
         norm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
         abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -245,14 +245,16 @@ def main(
     ax1.plot(time, trend_mean, color="tab:blue")
     ax1.fill_between(time, trend_mean - trend_std, trend_mean + trend_std, color="tab:blue", alpha=0.2)
     ax1.set_xticklabels([])
-    ax1.set_ylabel("Tendance")
+    # ax1.set_ylabel("Tendance")
+    ax1.set_ylabel("$x^{\mathtt{T}}$")
     ax1.set_yticks([-0.02, -0.05])
 
     # ax3: plot autoregression
     ax2.plot(time, ar_mean, color="tab:blue")
     ax2.fill_between(time, ar_mean - ar_std, ar_mean + ar_std, color="tab:blue", alpha=0.2)
     ax2.set_xticklabels([])
-    ax2.set_ylabel("Residu")
+    # ax2.set_ylabel("Residu")
+    ax2.set_ylabel("$x^{\mathtt{BAR}}$")
     ax2.set_yticks([-0.5, 0.5])
 
     # ax4: plot anomaly probability
@@ -280,7 +282,7 @@ def main(
     # fig.suptitle("SKF hidden states", fontsize=10, y=1)
     plt.tight_layout(h_pad=0.1, w_pad=0.1)
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig('yt_skf_real_ts11.pdf')
+    plt.savefig('yt_skf_real_ts11_bar.pdf')
     plt.show()
 
 

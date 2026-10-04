@@ -401,7 +401,7 @@ ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"S
 #     alpha=0.2,
 #     color="tab:blue",
 # )
-# ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"Prophet", color="tab:green", linewidth=0.7)
+ax[0].plot(df_prophet_group.index, df_prophet_group["detection_time"]["mean"], label=r"Prophet", color="tab:green", linewidth=0.7)
 # ax[0].fill_between(
 #     df_prophet_group.index,
 #     df_prophet_group["detection_time"]["mean"] - df_prophet_group["detection_time"]["std"],
@@ -409,7 +409,7 @@ ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"S
 #     alpha=0.2,
 #     color="tab:green",
 # )
-# ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"LSTMED", color="tab:purple", linewidth=0.7)
+ax[0].plot(df_lstmed_group.index, df_lstmed_group["detection_time"]["mean"], label=r"LSTMED", color="tab:purple", linewidth=0.7)
 # ax[0].fill_between(
 #     df_lstmed_group.index,
 #     df_lstmed_group["detection_time"]["mean"] - df_lstmed_group["detection_time"]["std"],
@@ -417,7 +417,7 @@ ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"S
 #     alpha=0.2,
 #     color="tab:purple",
 # )
-# ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"TranAD", color="tab:brown", linewidth=0.7)
+ax[0].plot(df_tranad_group.index, df_tranad_group["detection_time"]["mean"], label=r"TranAD", color="tab:brown", linewidth=0.7)
 # ax[0].fill_between(
 #     df_tranad_group.index,
 #     df_tranad_group["detection_time"]["mean"] - df_tranad_group["detection_time"]["std"],
@@ -425,7 +425,7 @@ ax[0].plot(df_skf_group.index, df_skf_group["detection_time"]["mean"], label=r"S
 #     alpha=0.2,
 #     color="tab:brown",
 # )
-# ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"DAMP", color="tab:orange")
+ax[0].plot(df_damp_group.index, df_damp_group["detection_time"]["mean"], label=r"DAMP", color="tab:orange")
 # ax[0].fill_between(
 #     df_damp_group.index,
 #     df_damp_group["detection_time"]["mean"] - df_damp_group["detection_time"]["std"],
@@ -452,10 +452,10 @@ ax[0].set_xticklabels([])
 # Plot for detection_rate
 # ax[1].plot(df_rsi_group.index, df_rsi_group["detection_rate"]["mean"], label=r"\textbf{RSI}")
 ax[1].plot(df_skf_group.index, df_skf_group["detection_rate"]["mean"], label=r"\textbf{SKF}", color="tab:blue", linewidth=0.7)
-# ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], label=r"\textbf{Prophet}", color="tab:green", linewidth=0.7)
-# ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}", color="tab:purple", linewidth=0.7)
-# ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}", color="tab:brown", linewidth=0.7)
-# ax[1].plot(df_damp_group.index, df_damp_group["detection_rate"]["mean"], label=r"\textbf{DAMP}", color="tab:orange")
+ax[1].plot(df_prophet_group.index, df_prophet_group["detection_rate"]["mean"], label=r"\textbf{Prophet}", color="tab:green", linewidth=0.7)
+ax[1].plot(df_lstmed_group.index, df_lstmed_group["detection_rate"]["mean"], label=r"\textbf{LSTMED}", color="tab:purple", linewidth=0.7)
+ax[1].plot(df_tranad_group.index, df_tranad_group["detection_rate"]["mean"], label=r"\textbf{TranAD}", color="tab:brown", linewidth=0.7)
+ax[1].plot(df_damp_group.index, df_damp_group["detection_rate"]["mean"], label=r"\textbf{DAMP}", color="tab:orange")
 ax[1].plot(df_rsic_group.index, df_rsic_group["detection_rate"]["mean"], label=r"\textbf{RSI}", color="tab:red", linewidth=1.8)
 ax[1].set_ylabel(r"$\mathcal{P}_{\mathtt{DET}}$")
 ax[1].set_ylim(-0.05, 1.05)

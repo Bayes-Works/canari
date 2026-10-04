@@ -189,11 +189,12 @@ hsl_tsad_agent.learn_intervention(training_samples_path='data/anm_type_class_tra
 
 # Manual intervention on the test set
 intervention_time_global = 415
-confidence_enough_step = 550
+confidence_enough_step = 520
 # True anomaly baseline
 true_correction_trend = normed_anm_mag
 true_correction_level = true_correction_trend * (intervention_time_global - time_anomaly)
-dummy_level_correction = (true_correction_level + true_correction_trend * (confidence_enough_step - time_anomaly)) / 2 * 0.7
+dummy_level_correction = 0
+dummy_trend_correction = true_correction_trend * 0.7
 
 intervention_time = intervention_time_global - data_processor.validation_end
 test_data_before_itv = copy.deepcopy(test_data)
@@ -218,12 +219,18 @@ LTd_index = hsl_tsad_agent.drift_model.states_name.index("trend")
 # hsl_tsad_agent.base_model.var_states[LL_index, LL_index] += hsl_tsad_agent.drift_model.var_states[LLd_index, LLd_index]
 # hsl_tsad_agent.base_model.var_states[LT_index, LT_index] += hsl_tsad_agent.drift_model.var_states[LTd_index, LTd_index]
 
-# Correction with true anomaly baseline
-hsl_tsad_agent.base_model.mu_states[LL_index] += true_correction_level
-hsl_tsad_agent.base_model.mu_states[LT_index] += true_correction_trend
+# # Correction with true anomaly baseline
+# hsl_tsad_agent.base_model.mu_states[LL_index] += true_correction_level
+# hsl_tsad_agent.base_model.mu_states[LT_index] += true_correction_trend
 
 # # Dummy correction on level only
 # hsl_tsad_agent.base_model.mu_states[LL_index] += dummy_level_correction
+
+# Dummy correction on level and trend
+hsl_tsad_agent.base_model.mu_states[LL_index] += dummy_level_correction
+hsl_tsad_agent.base_model.mu_states[LT_index] += dummy_trend_correction
+hsl_tsad_agent.base_model.var_states[LL_index, LL_index] += 0.1
+hsl_tsad_agent.base_model.var_states[LT_index, LT_index] += dummy_trend_correction * 0.009
 
 hsl_tsad_agent.drift_model.mu_states[LLd_index] = 0
 hsl_tsad_agent.drift_model.mu_states[LTd_index] = hsl_tsad_agent.mu_LTd
@@ -235,16 +242,16 @@ std_y_preds = np.append(std_y_preds, std_obs_preds)
 # Deep copy hsl_tsad_agent.drift_model.states
 drift_model_states_dummy = copy.deepcopy(hsl_tsad_agent.drift_model.states)
 base_model_states_dummy = copy.deepcopy(hsl_tsad_agent.base_model.states)
-print(drift_model_states_dummy.mu_prior)
+# print(drift_model_states_dummy.mu_prior)
 # for i in range(intervention_time + 10, len(drift_model_states_dummy.mu_prior)):
 # for i in range(-(len(drift_model_states_dummy.mu_prior)-intervention_time_global)+5, -1):
 for i in range(-(len(drift_model_states_dummy.mu_prior)-confidence_enough_step)+5, -1):
-    print(drift_model_states_dummy.mu_prior[i])
+    # print(drift_model_states_dummy.mu_prior[i])
     drift_model_states_dummy.mu_prior[i] = np.full_like(drift_model_states_dummy.mu_prior[i], np.nan)
     base_model_states_dummy.mu_prior[i] = np.full_like(base_model_states_dummy.mu_prior[i], np.nan)
     mu_y_preds[i] = np.nan
-    print(drift_model_states_dummy.mu_prior[i])
-    print('-----------------------')
+    # print(drift_model_states_dummy.mu_prior[i])
+    # print('-----------------------')
 
 
 # # Freeze the mu_prior and var_prior of the drift model states to the values at the intervention time
@@ -260,12 +267,12 @@ for i in range(-(len(drift_model_states_dummy.mu_prior)-confidence_enough_step)+
 #  Plot
 state_type = "prior"
 # fig = plt.figure(figsize=(6, 2.5), constrained_layout=True)
-fig = plt.figure(figsize=(3, 2.5), constrained_layout=True)
-gs = gridspec.GridSpec(4, 1)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-ax2 = plt.subplot(gs[2])
-ax3 = plt.subplot(gs[3])
+fig = plt.figure(figsize=(6, 1.5), constrained_layout=True)
+gs = gridspec.GridSpec(2, 2)
+ax0 = plt.subplot(gs[0, 0])
+ax1 = plt.subplot(gs[1, 0])
+ax2 = plt.subplot(gs[0, 1])
+ax3 = plt.subplot(gs[1, 1])
 
 plot_data(
     data_processor=data_processor,
@@ -276,11 +283,11 @@ plot_data(
     test_label = 'Obs.'
 )
 time = data_processor.get_time(split="all")
-ax0.plot(time, mu_y_preds, color='tab:grey', label='Predicted obs.')
-ax0.fill_between(time, 
-                 mu_y_preds - std_y_preds, 
-                 mu_y_preds + std_y_preds, 
-                 color='tab:grey', alpha=0.2)
+# ax0.plot(time, mu_y_preds, color='tab:grey', label='Predicted obs.')
+# ax0.fill_between(time, 
+#                  mu_y_preds - std_y_preds, 
+#                  mu_y_preds + std_y_preds, 
+#                  color='tab:grey', alpha=0.2)
 plot_states(
     data_processor=data_processor,
     standardization=True,
@@ -316,19 +323,20 @@ plot_states(
 )
 ax1.set_ylabel('$x^{\mathtt{T}}$')
 # ax1.yaxis.offsetText.set_fontsize(6)
-ax1.set_xticklabels([])
+# ax1.set_xticklabels([])
 plot_states(
     data_processor=data_processor,
     standardization=True,
     # states=hsl_tsad_agent.base_model.states,
-    states=base_model_states_dummy,
+    states=drift_model_states_dummy,
     states_type=state_type,
-    states_to_plot=['autoregression'],
+    states_to_plot=['level'],
     sub_plot=ax2,
     color='tab:orange',
 )
-ax2.set_ylabel('$x^{\mathtt{AR}}$')
+ax2.set_ylabel('$x^{\mathtt{Ld}}$')
 ax2.set_xticklabels([])
+ax2.set_yticks([-0.05, 0.05])
 plot_states(
     data_processor=data_processor,
     standardization=True,
@@ -340,11 +348,20 @@ plot_states(
     color='tab:orange',
 )
 ax3.set_ylabel('$x^{\mathtt{Td}}$')
+ax3.set_yticks([-0.00025, 0.00025])
+# Set ax3 y-axis to scientific notation of \times 10^{-4}
+ax3.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+ax3.yaxis.offsetText.set_fontsize(6)
 
-ax0.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax1.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax2.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
-ax3.axvline(x=time[time_anomaly], color='tab:red', linestyle='--', label='Anomaly')
+ax0.axvline(x=time[confidence_enough_step], color='tab:red', linestyle='--', label='Detection')
+ax1.axvline(x=time[confidence_enough_step], color='tab:red', linestyle='--', label='Detection')
+ax2.axvline(x=time[confidence_enough_step], color='tab:red', linestyle='--', label='Detection')
+ax3.axvline(x=time[confidence_enough_step], color='tab:red', linestyle='--', label='Detection')
+
+ax0.axvline(x=time[intervention_time_global], color='tab:grey', linestyle='--', label='Intervention')
+ax1.axvline(x=time[intervention_time_global], color='tab:grey', linestyle='--', label='Intervention')
+ax2.axvline(x=time[intervention_time_global], color='tab:grey', linestyle='--', label='Intervention')
+ax3.axvline(x=time[intervention_time_global], color='tab:grey', linestyle='--', label='Intervention')
 
 # Only plot from the beginning of the test set
 ax0.set_xlim(time[data_processor.validation_end], time[-1])
@@ -356,12 +373,13 @@ tick_positions = [pd.Timestamp(f'{y}-01-01') for y in [2018, 2020, 2022, 2024]]
 for ax in [ax0, ax1, ax2, ax3]:
     ax.set_xticks(tick_positions)
 ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 ax0.set_xticklabels([])
-ax1.set_xticklabels([])
+# ax1.set_xticklabels([])
 ax2.set_xticklabels([])
 
 # ax1.set_ylim(-0.00041018286422543604, 0.0012889237594637154)
-ax3.set_ylim(-0.00041018286422543604, 0.0012889237594637154)
+# ax3.set_ylim(-0.00041018286422543604, 0.0012889237594637154)
 # ax1.set_ylim(ax3.get_ylim())
 
 # # Set ax3 x ticks to every 3 years and only show year number
@@ -371,14 +389,15 @@ ax3.set_ylim(-0.00041018286422543604, 0.0012889237594637154)
 # ax0.xaxis.set_major_locator(ticker.MultipleLocator(52*12))
 # ax3.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f'{int(x/(52*12))}'))
 
-# Plot stationary AR
-phi_ar = model_dict['states_optimal'].mu_prior[-1][phi_index].item()
-sigma_ar = np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item())
-std_ar_stationary = sigma_ar / np.sqrt(1 - phi_ar**2)
-ax3.fill_between(time, 0 - 0.0002, 0 + 0.0001, color='tab:blue', alpha=0.2, label='Stationary AR std')
+# # Plot stationary AR
+# phi_ar = model_dict['states_optimal'].mu_prior[-1][phi_index].item()
+# sigma_ar = np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item())
+# std_ar_stationary = sigma_ar / np.sqrt(1 - phi_ar**2)
+# ax3.fill_between(time, 0 - std_ar_stationary, 0 + std_ar_stationary, color='tab:orange', alpha=0.2, label='Stationary AR std')
 
-fig.align_ylabels([ax0, ax1, ax2, ax3])
-plt.tight_layout(h_pad=0.1, w_pad=0.1)
+fig.align_ylabels([ax0, ax1, ax2])
+plt.tight_layout(h_pad=0.1, w_pad=0.6)
+fig.set_constrained_layout_pads(wspace=0.6) 
 plt.subplots_adjust(hspace=0.4)
-plt.savefig('rsic_step_by_step_1.pdf', dpi=300)
+plt.savefig('rsi_itv_demo.pdf')
 plt.show()

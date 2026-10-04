@@ -56,7 +56,7 @@ t = np.arange(N_STEPS)
 series = np.array([simulate_ar1(N_STEPS, PHI_AR, SIGMA_AR) for _ in range(N_SERIES)])
 
 # ------------------------------------------------------------------ plot
-fig, ax = plt.subplots(figsize=(5.0, 1.8))
+fig, ax = plt.subplots(figsize=(3.7, 1.8))
 
 # Nested stationary-bound regions, lightest for the largest gamma
 greys = {1: "0.62", 2: "0.78", 3: "0.90"}
@@ -91,7 +91,7 @@ for gamma in GAMMAS:
 
 ax.set_xlim(0, N_STEPS - 1)
 ax.set_ylim(-4.2 * sigma_ar0, 4.2 * sigma_ar0)
-ax.set_xlabel(r"Time step $t$")
+ax.set_xlabel(r"Pas de temps $t$")
 ax.set_ylabel(r"$x^{\mathtt{AR}}$")
 # ax.set_title(
 #     rf"AR realizations ($\phi^{{\mathtt{{AR}}}}={PHI_AR}$, "

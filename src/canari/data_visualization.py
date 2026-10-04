@@ -203,7 +203,7 @@ def plot_data(
             alpha=0.1,
             edgecolor=None,
         )
-    _add_dynamic_grids(ax, total_time)
+    # _add_dynamic_grids(ax, total_time)
 
 
 def plot_prediction(

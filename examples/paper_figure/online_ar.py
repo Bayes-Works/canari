@@ -133,8 +133,8 @@ ax0.set_ylabel("Obs.")
 ax0.xaxis.set_major_locator(mdates.YearLocator(2))
 legend_handles = [
     Line2D([0], [0], color='k', label='Obs.'),
-    Line2D([0], [0], color='tab:blue', label='Estimates'),
-    Line2D([0], [0], color='r', linestyle='--', label='True values'),
+    Line2D([0], [0], color='tab:blue', label='Estimation'),
+    Line2D([0], [0], color='r', linestyle='--', label='Valeur réelle'),
 ]
 # ax0.legend(handles=legend_handles, loc='upper right', fontsize=7)
 ax0.legend(handles=legend_handles, bbox_to_anchor=(0, 1.9), loc='upper left', borderaxespad=0., ncol=3, frameon=False)
