@@ -14,6 +14,8 @@ data/**
 # Data
 !data/toy_time_series/
 !data/toy_time_series/**
+!data/icold2022/
+!data/icold2022/**
 
 # Docs
 docs/_build/
