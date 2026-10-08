@@ -203,8 +203,8 @@ def plot_data(
         ax.axvspan(
             data_processor.data.index[data_processor.validation_end - 1],
             data_processor.data.index[data_processor.test_end-1],
-            # color="black",
-            color="purple",
+            color="black",
+            # color="purple",
             alpha=0.2,
             edgecolor=None,
             linewidth=0,
