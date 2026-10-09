@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -306,15 +307,15 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for canari.data_struct</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This module manages historical values for LSTM&#39; output, cell and hidden states.</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">This module manages historical values for LSTM' output, cell and hidden states.</span>
 
 <span class="sd">It provides two data classes:</span>
 
 <span class="sd">- `LstmOutputHistory`: Maintain a rolling history of the LSTM mean and variance outputs.</span>
 <span class="sd">- `StatesHistory`: Save prior, posterior, and smoothed estimates of hidden states over time.</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
@@ -326,7 +327,7 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.LstmOutputHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">LstmOutputHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Container for saving a rolling history of LSTM output means and variances</span>
 <span class="sd">    over a fixed lookback window.</span>
 
@@ -340,7 +341,7 @@ document.write(`
 <span class="sd">        mu (np.ndarray): Rolling array storing the LSTM mean outputs.</span>
 <span class="sd">        var (np.ndarray): Rolling array storing the LSTM variance outputs.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">mu</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">var</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -348,12 +349,12 @@ document.write(`
 <div class="viewcode-block" id="LstmOutputHistory.initialize">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">look_back_len</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Initialize :attr:`mu` and :attr:`var` with a specified lookback length.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            look_back_len (int): Number of time steps to keep in history.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">look_back_len</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">look_back_len</span><span class="p">)</span></div>
 
@@ -361,7 +362,7 @@ document.write(`
 <div class="viewcode-block" id="LstmOutputHistory.update">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.update">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu_lstm</span><span class="p">,</span> <span class="n">var_lstm</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update the rolling window with new LSTM outputs.</span>
 
 <span class="sd">        Removes the oldest values and inserts the newest ones at the end of the arrays.</span>
@@ -369,7 +370,7 @@ document.write(`
 <span class="sd">        Args:</span>
 <span class="sd">            mu_lstm (np.ndarray or float): Latest LSTM mean output.</span>
 <span class="sd">            var_lstm (np.ndarray or float): Latest LSTM variance output.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_lstm</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
@@ -379,7 +380,7 @@ document.write(`
 <div class="viewcode-block" id="LstmOutputHistory.set">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.LstmOutputHistory.set">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Set the entire rolling window directly with new values for `mu` and `var`.</span>
 
 <span class="sd">        Args:</span>
@@ -388,7 +389,7 @@ document.write(`
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If the shapes of `mu` and `var` do not match the initialized window size.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
 </div>
@@ -399,7 +400,7 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.StatesHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">StatesHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Save estimates of hidden states over time.</span>
 
 <span class="sd">    Stores the evolution of prior, posterior, and smoothed values for hidden states over time,</span>
@@ -416,7 +417,7 @@ document.write(`
 <span class="sd">        cov_states (List[np.ndarray]):  Cross-covariance matrix for the hidden states</span>
 <span class="sd">                                        at two consecutive timesteps `t` and `t+1`.</span>
 <span class="sd">        states_name (List[str]): Names of the tracked hidden states.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">mu_prior</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">var_prior</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -430,13 +431,13 @@ document.write(`
 <div class="viewcode-block" id="StatesHistory.initialize">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.StatesHistory.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">states_name</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Initialize `mu_prior`, `var_prior`, `mu_posterior`, `var_posterior`,</span>
 <span class="sd">        `mu_smooth`, `var_smooth`, and `cov_states` as empty lists.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            states_name (List[str]): List of hidden state names.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_prior</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var_prior</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mu_posterior</span> <span class="o">=</span> <span class="p">[]</span>
@@ -452,12 +453,12 @@ document.write(`
     <span class="k">def</span><span class="w"> </span><span class="nf">get_mean</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">states_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
+        <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"posterior"</span><span class="p">,</span>
         <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">scale_const_mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">scale_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Retrieve the mean values over time for a specified hidden states and for either</span>
 <span class="sd">        a) the prior predicted value, b) the posterior updated values after the filter step,</span>
 <span class="sd">        or c) the posterior updated values after the smoother step (smoothed estimates).</span>
@@ -465,8 +466,8 @@ document.write(`
 <span class="sd">        Args:</span>
 <span class="sd">            states_name (str, optional): Name of hidden state to extract.</span>
 <span class="sd">            states_index (int, optional): Index of the hidden state to extract.</span>
-<span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>
-<span class="sd">                Defaults to &quot;posterior&quot;.</span>
+<span class="sd">            states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').</span>
+<span class="sd">                Defaults to "posterior".</span>
 <span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
 <span class="sd">                                                Defaults to True.</span>
 <span class="sd">            scale_const_mean (float, optional): Mean used for unstandardization.</span>
@@ -474,24 +475,24 @@ document.write(`
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: 1D arrays of means over time.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
-        <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;prior&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"prior"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_prior</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;posterior&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"posterior"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_posterior</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;smooth&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"smooth"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_smooth</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Incorrect states_type: choose from &#39;prior&#39;, &#39;posterior&#39;, or &#39;smooth&#39;.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."</span>
             <span class="p">)</span>
         
         <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">states_name</span><span class="p">)</span>
         <span class="n">mean</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">standardization</span><span class="p">:</span>
-            <span class="n">scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">&quot;level&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">scale_const_mean</span> <span class="o">=</span> <span class="n">scale_const_mean</span> <span class="k">if</span> <span class="n">states_name</span> <span class="o">==</span> <span class="s2">"level"</span> <span class="k">else</span> <span class="mi">0</span>
             <span class="n">mean</span> <span class="o">=</span> <span class="n">Normalizer</span><span class="o">.</span><span class="n">unstandardize</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">scale_const_mean</span><span class="p">,</span> <span class="n">scale_const_std</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">mean</span></div>
@@ -502,11 +503,11 @@ document.write(`
     <span class="k">def</span><span class="w"> </span><span class="nf">get_std</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">states_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;posterior&quot;</span><span class="p">,</span>
+        <span class="n">states_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"posterior"</span><span class="p">,</span>
         <span class="n">standardization</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">scale_const_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Retrieve the standard deviation values over time for a specified hidden states and</span>
 <span class="sd">        for either a) the prior predicted value, b) the posterior updated values after the</span>
 <span class="sd">        filter step, or c) the posterior updated values after the smoother step</span>
@@ -515,25 +516,25 @@ document.write(`
 <span class="sd">        Args:</span>
 <span class="sd">            states_name (str, optional): Name of hidden state to extract.</span>
 <span class="sd">            states_index (int, optional): Index of the hidden state to extract.</span>
-<span class="sd">            states_type (str, optional): Type of states to return (&#39;prior&#39;, &#39;posterior&#39;, &#39;smooth&#39;).</span>
-<span class="sd">                Defaults to &quot;posterior&quot;.</span>
+<span class="sd">            states_type (str, optional): Type of states to return ('prior', 'posterior', 'smooth').</span>
+<span class="sd">                Defaults to "posterior".</span>
 <span class="sd">            standardization (bool, optional): Get the standardized values for hidden states.</span>
 <span class="sd">                                    Defaults to True.</span>
 <span class="sd">            scale_const_std (float, optional): Standard deviation used for unstandardization.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: 1D arrays of standard deviations over time.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
-        <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;prior&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"prior"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_prior</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;posterior&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"posterior"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_posterior</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">&quot;smooth&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">states_type</span> <span class="o">==</span> <span class="s2">"smooth"</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_smooth</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Incorrect states_type: choose from &#39;prior&#39;, &#39;posterior&#39;, or &#39;smooth&#39;.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."</span>
             <span class="p">)</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states_name</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">states_name</span><span class="p">)</span>
@@ -553,9 +554,9 @@ document.write(`
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.OutputHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">OutputHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Save output history mean and variance</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">mu</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">var</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -563,9 +564,9 @@ document.write(`
 <div class="viewcode-block" id="OutputHistory.initialize">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.OutputHistory.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Initialize `mu` and `var`  as empty lists.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="p">[]</span></div>
@@ -574,9 +575,9 @@ document.write(`
 <div class="viewcode-block" id="OutputHistory.save_output_history">
 <a class="viewcode-back" href="../../api/canari.data_struct.html#canari.data_struct.OutputHistory.save_output_history">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">save_output_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Add `mu` and `var` to the saved history</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mu</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">item</span><span class="p">())</span></div>

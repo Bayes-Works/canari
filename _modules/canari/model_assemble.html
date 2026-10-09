@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -306,11 +307,11 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for canari.model_assemble</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Assemble of multiple :class:~canari.model.Model instances. This class is</span>
 <span class="sd">used when the target model depends on a covariate that is itself modeled</span>
 <span class="sd">by another :class:`~canari.model.Model`.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -322,13 +323,13 @@ document.write(`
 <div class="viewcode-block" id="ModelAssemble">
 <a class="viewcode-back" href="../../api/canari.model_assemble.html#canari.model_assemble.ModelAssemble">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelAssemble</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Assemble of :class:`~canari.model.Model` instances.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        target_model (Model): the target (dependent) model.</span>
 <span class="sd">        covariate_model(List[Model]): the independent model used as input for the target one.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -349,7 +350,7 @@ document.write(`
         <span class="n">posterior_covariate</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">update_param_covar_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Make a one-step-ahead prediction using the prediction step of the Kalman filter.</span>
 <span class="sd">        If no `input_covariates` for LSTM, use an empty `np.ndarray`.</span>
 <span class="sd">        Recall :meth:`~canari.model.Model.forward` for each model.</span>
@@ -372,7 +373,7 @@ document.write(`
 <span class="sd">                    The predictive mean of the observation at `t+1`.</span>
 <span class="sd">                - :attr:`var_pred` (np.ndarray):</span>
 <span class="sd">                    The predictive variance of the observation at `t+1`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">mu_pred</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">var_pred</span> <span class="o">=</span> <span class="p">[]</span>
@@ -399,7 +400,7 @@ document.write(`
             <span class="c1"># save output history</span>
             <span class="n">model</span><span class="o">.</span><span class="n">output_history</span><span class="o">.</span><span class="n">save_output_history</span><span class="p">(</span><span class="n">mu_pred_covar</span><span class="p">,</span> <span class="n">var_pred_covar</span><span class="p">)</span>
 
-            <span class="c1"># Replace in target model&#39;s input</span>
+            <span class="c1"># Replace in target model's input</span>
             <span class="n">mu_input_covariates</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">output_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_pred_covar</span>
             <span class="n">var_input_covariates</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">output_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_pred_covar</span>
 
@@ -437,9 +438,9 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">obs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update step in the Kalman filter for one time step.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="p">(</span>
             <span class="n">delta_mu_states</span><span class="p">,</span>
@@ -458,14 +459,14 @@ document.write(`
         <span class="n">posterior_covariate</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">update_param_covar_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Perform multi-step-ahead forecast over an entire dataset by recursively making</span>
 <span class="sd">        one-step-ahead predictions, i.e., reapeatly apply the</span>
 <span class="sd">        Kalman prediction step over multiple time steps.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            data (Dict[str, np.ndarray]): A dictionary containing key &#39;x&#39; as input covariates,</span>
-<span class="sd">                                            if exists &#39;y&#39; (real observations) will not be used.</span>
+<span class="sd">            data (Dict[str, np.ndarray]): A dictionary containing key 'x' as input covariates,</span>
+<span class="sd">                                            if exists 'y' (real observations) will not be used.</span>
 <span class="sd">            posterior_covariate (Optional[bool]): Estimate the posterior for covariate model or not.</span>
 <span class="sd">                        If True, the posteriors for covariates are used as input for the target model.</span>
 <span class="sd">                        Otherwise, priors are used. Defaults to False.</span>
@@ -480,12 +481,12 @@ document.write(`
 <span class="sd">                    The means for forecasts.</span>
 <span class="sd">                - **std_obs_preds** (np.ndarray):</span>
 <span class="sd">                    The standard deviations for forecasts.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">std_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">"x"</span><span class="p">]:</span>
             <span class="p">(</span>
                 <span class="n">mu_obs_pred</span><span class="p">,</span>
                 <span class="n">var_obs_pred</span><span class="p">,</span>
@@ -518,12 +519,12 @@ document.write(`
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run the Kalman filter over an entire dataset, i.e., repeatly apply the Kalman prediction and</span>
 <span class="sd">        update steps over multiple time steps.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            data (Dict[str, np.ndarray]): Includes &#39;x&#39; and &#39;y&#39;.</span>
+<span class="sd">            data (Dict[str, np.ndarray]): Includes 'x' and 'y'.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Tuple[np.ndarray, np.ndarray]:</span>
@@ -533,7 +534,7 @@ document.write(`
 <span class="sd">                    The means for forecasts.</span>
 <span class="sd">                - **std_obs_preds** (np.ndarray):</span>
 <span class="sd">                    The standard deviations for forecasts.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">mu_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">std_obs_preds</span> <span class="o">=</span> <span class="p">[]</span>
@@ -542,7 +543,7 @@ document.write(`
             <span class="n">model</span><span class="o">.</span><span class="n">initialize_states_history</span><span class="p">()</span>
             <span class="n">model</span><span class="o">.</span><span class="n">output_history</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
 
-        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])):</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"x"</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">"y"</span><span class="p">])):</span>
             <span class="p">(</span>
                 <span class="n">mu_obs_pred</span><span class="p">,</span>
                 <span class="n">var_obs_pred</span><span class="p">,</span>
@@ -553,7 +554,7 @@ document.write(`
             <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target_model</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="p">:</span>
                     <span class="n">model</span><span class="o">.</span><span class="n">update_lstm_states_history</span><span class="p">(</span>
-                        <span class="n">index</span><span class="p">,</span> <span class="n">last_step</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+                        <span class="n">index</span><span class="p">,</span> <span class="n">last_step</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"y"</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="p">)</span>
                     <span class="n">model</span><span class="o">.</span><span class="n">update_lstm_output_history</span><span class="p">(</span>
                         <span class="n">model</span><span class="o">.</span><span class="n">mu_states_posterior</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">var_states_posterior</span>
@@ -575,18 +576,18 @@ document.write(`
     <span class="k">def</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">matrix_inversion_tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;relative&quot;</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
+        <span class="n">tol_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"relative"</span><span class="p">,</span>  <span class="c1"># relative of absolute</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run the Kalman smoother over an entire time series data, i.e., repeatly apply the</span>
 <span class="sd">        RTS smoothing equation over multiple time steps.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            matrix_inversion_tol (float): Numerical stability threshold for matrix</span>
 <span class="sd">                                            pseudoinversion (pinv). Defaults to 1E-12.</span>
-<span class="sd">            tol_type (Optional[str]): Tolerance type, &quot;relative&quot; or &quot;absolute&quot;.</span>
-<span class="sd">                                        Defaults to &quot;relative&quot;.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            tol_type (Optional[str]): Tolerance type, "relative" or "absolute".</span>
+<span class="sd">                                        Defaults to "relative".</span>
+<span class="sd">        """</span>
 
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target_model</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
             <span class="n">model</span><span class="o">.</span><span class="n">smoother</span><span class="p">(</span><span class="n">matrix_inversion_tol</span><span class="o">=</span><span class="n">matrix_inversion_tol</span><span class="p">,</span> <span class="n">tol_type</span><span class="o">=</span><span class="n">tol_type</span><span class="p">)</span></div>
@@ -604,16 +605,16 @@ document.write(`
         <span class="n">white_noise_max_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">white_noise_decay_factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Train the :class:`~canari.component.lstm_component.LstmNetwork` component for each model</span>
 <span class="sd">        on the provided training set, then evaluate on the validation set.</span>
 <span class="sd">        Optionally apply exponential decay on the white noise standard deviation over epochs.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            train_data (Dict[str, np.ndarray]):</span>
-<span class="sd">                Dictionary with keys `&#39;x&#39;` and `&#39;y&#39;` for training inputs and targets.</span>
+<span class="sd">                Dictionary with keys `'x'` and `'y'` for training inputs and targets.</span>
 <span class="sd">            validation_data (Dict[str, np.ndarray]):</span>
-<span class="sd">                Dictionary with keys `&#39;x&#39;` and `&#39;y&#39;` for validation inputs and targets.</span>
+<span class="sd">                Dictionary with keys `'x'` and `'y'` for validation inputs and targets.</span>
 <span class="sd">            posterior_covariate (Optional[bool]): Estimate the posterior for covariate model or not.</span>
 <span class="sd">                        If True, the posteriors for covariates are used as input for the target model.</span>
 <span class="sd">                        Otherwise, priors are used. Defaults to False.</span>
@@ -637,15 +638,15 @@ document.write(`
 <span class="sd">                    The means for multi-step-ahead predictions for the validation set.</span>
 <span class="sd">                - **std_validation_preds** (np.ndarray):</span>
 <span class="sd">                    The standard deviations for multi-step-ahead predictions for the validation set.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_recal_covariates_col</span><span class="p">(</span>
-            <span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;covariates_col&quot;</span><span class="p">],</span> <span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;data_col_names&quot;</span><span class="p">]</span>
+            <span class="n">train_data</span><span class="p">[</span><span class="s2">"covariates_col"</span><span class="p">],</span> <span class="n">train_data</span><span class="p">[</span><span class="s2">"data_col_names"</span><span class="p">]</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">white_noise_decay</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target_model</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">noise_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;white noise&quot;</span><span class="p">,</span> <span class="s2">&quot;heteroscedastic noise&quot;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">noise_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"white noise"</span><span class="p">,</span> <span class="s2">"heteroscedastic noise"</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="n">noise_type</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">model</span><span class="o">.</span><span class="n">white_noise_decay</span><span class="p">(</span>
                             <span class="n">model</span><span class="o">.</span><span class="n">_current_epoch</span><span class="p">,</span>
@@ -660,13 +661,13 @@ document.write(`
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lstm_net</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
                 <span class="n">pretrain_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
-                <span class="c1"># pretrain_data[&quot;cov_names&quot;] = [</span>
-                <span class="c1">#     pretrain_data[&quot;cov_names&quot;][model.input_col[0]]</span>
+                <span class="c1"># pretrain_data["cov_names"] = [</span>
+                <span class="c1">#     pretrain_data["cov_names"][model.input_col[0]]</span>
                 <span class="c1"># ]</span>
                 <span class="n">selected_names</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="n">pretrain_data</span><span class="p">[</span><span class="s2">&quot;cov_names&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">input_col</span>
+                    <span class="n">pretrain_data</span><span class="p">[</span><span class="s2">"cov_names"</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">input_col</span>
                 <span class="p">]</span>
-                <span class="n">pretrain_data</span><span class="p">[</span><span class="s2">&quot;cov_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_names</span>
+                <span class="n">pretrain_data</span><span class="p">[</span><span class="s2">"cov_names"</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_names</span>
                 <span class="n">model</span><span class="o">.</span><span class="n">pretraining_filter</span><span class="p">(</span><span class="n">pretrain_data</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
@@ -688,23 +689,23 @@ document.write(`
 <div class="viewcode-block" id="ModelAssemble.set_memory">
 <a class="viewcode-back" href="../../api/canari.model_assemble.html#canari.model_assemble.ModelAssemble.set_memory">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Set memory for each model to a specific time step.</span>
 <span class="sd">        Recall :meth:`~canari.model.Model.set_memory` for each model.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            time_step (int): Time step to set the memory.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target_model</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
             <span class="n">model</span><span class="o">.</span><span class="n">set_memory</span><span class="p">(</span><span class="n">time_step</span><span class="o">=</span><span class="n">time_step</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_recal_covariates_col</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covariates_col</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data_col_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Re-estimate model.input_col, model.output_col, and model.output_lag_col</span>
-<span class="sd">        following data[&quot;x&quot;].</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        following data["x"].</span>
+<span class="sd">        """</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recal_covar_col</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariate_model</span><span class="p">:</span>
@@ -712,7 +713,7 @@ document.write(`
                 <span class="n">model</span><span class="o">.</span><span class="n">output_lag_col</span> <span class="o">=</span> <span class="p">[</span>
                     <span class="n">i</span>
                     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_col_names</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_name</span><span class="si">}</span><span class="s2">_lag&quot;</span> <span class="ow">in</span> <span class="n">col</span>
+                    <span class="k">if</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">output_name</span><span class="si">}</span><span class="s2">_lag"</span> <span class="ow">in</span> <span class="n">col</span>
                 <span class="p">]</span>
                 <span class="n">covariates_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">covariates_col</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input_col</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>

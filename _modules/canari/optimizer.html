@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -306,11 +307,11 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for canari.optimizer</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">This module automates the search for optimal hyperparameters of</span>
 <span class="sd">:class:`~canari.model.Model` and :class:`~canari.skf.SKF` instances by leveraging the</span>
 <span class="sd">external libraries Ray Tune and Optuna.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
@@ -328,7 +329,7 @@ document.write(`
 <div class="viewcode-block" id="Optimizer">
 <a class="viewcode-back" href="../../api/canari.optimizer.html#canari.optimizer.Optimizer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Optimizer</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Optimize hyperparameters for :class:`~canari.model.Model` and :class:`~canari.skf.SKF`</span>
 <span class="sd">    using the Ray Tune and Optuna external libraries.</span>
 <span class="sd">    Optimization is based on the metric saved in :attr:`~canari.model.Model.metric_optim` for</span>
@@ -343,17 +344,17 @@ document.write(`
 <span class="sd">            bounds of the optimization. Users can also use Ray Tune search space object</span>
 <span class="sd">            such as: tune.randint(12, 53), tune.uniform(0.1, 0.4), tune.loguniform(1e-1, 4e-1).</span>
 <span class="sd">        model_input (Dict): Any other inputs for the model that is different from the</span>
-<span class="sd">            model&#39;s parameters.</span>
+<span class="sd">            model's parameters.</span>
 <span class="sd">        num_optimization_trial (int, optional):</span>
 <span class="sd">            Number of random search trials (ignored for grid-search). Defaults to 50.</span>
 <span class="sd">        grid_search (bool, optional):</span>
 <span class="sd">            If True, perform grid search. Defaults to False.</span>
 <span class="sd">        algorithm (str, optional):</span>
-<span class="sd">            Search algorithm: &#39;TPE&#39; (OptunaSearch) or &#39;random&#39; (random sampling).</span>
-<span class="sd">            Defaults to &#39;TPE&#39;.</span>
-<span class="sd">        mode (str, optional): Direction for optimization stopping: &quot;min&quot; or &quot;max&quot;.</span>
-<span class="sd">            Defaults to &quot;min&quot;.</span>
-<span class="sd">        back_end (str, optional): &quot;ray&quot;. Using the external library Ray for optimization.</span>
+<span class="sd">            Search algorithm: 'TPE' (OptunaSearch) or 'random' (random sampling).</span>
+<span class="sd">            Defaults to 'TPE'.</span>
+<span class="sd">        mode (str, optional): Direction for optimization stopping: "min" or "max".</span>
+<span class="sd">            Defaults to "min".</span>
+<span class="sd">        back_end (str, optional): "ray". Using the external library Ray for optimization.</span>
 <span class="sd">        num_startup_trials (int, optional): Number of start up trial when using TPE sampling.</span>
 <span class="sd">            Defaults to 20.</span>
 <span class="sd">        max_concurrent (int, optional): Maximum number of trials to run in parallel. Defaults to 1.</span>
@@ -363,7 +364,7 @@ document.write(`
 <span class="sd">            The best model instance initialized with optimal parameters after running optimize().</span>
 <span class="sd">        param_optim (Dict):</span>
 <span class="sd">            The best hyperparameter configuration found during optimization.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -372,15 +373,15 @@ document.write(`
         <span class="n">model_input</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">num_optimization_trial</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
         <span class="n">grid_search</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;min&quot;</span><span class="p">,</span>
-        <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;TPE&quot;</span><span class="p">,</span>  <span class="c1"># &quot;TPE&quot; or &quot;random&quot;</span>
-        <span class="n">back_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;ray&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"min"</span><span class="p">,</span>
+        <span class="n">algorithm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"TPE"</span><span class="p">,</span>  <span class="c1"># "TPE" or "random"</span>
+        <span class="n">back_end</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"ray"</span><span class="p">,</span>
         <span class="n">num_startup_trials</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
         <span class="n">max_concurrent</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Initialize the Optimizer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="kc">None</span>
@@ -399,12 +400,12 @@ document.write(`
 <div class="viewcode-block" id="Optimizer.objective">
 <a class="viewcode-back" href="../../api/canari.optimizer.html#canari.optimizer.Optimizer.objective">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Returns a metric that is used for optimization</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: Metric used for optimization.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model_input</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -418,52 +419,52 @@ document.write(`
         <span class="n">_print_metric</span> <span class="o">=</span> <span class="n">trained_model</span><span class="o">.</span><span class="n">print_metric</span>
 
         <span class="n">metric</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">metric</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_metric</span>
-        <span class="n">metric</span><span class="p">[</span><span class="s2">&quot;print_metric&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_print_metric</span>
+        <span class="n">metric</span><span class="p">[</span><span class="s2">"metric"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_metric</span>
+        <span class="n">metric</span><span class="p">[</span><span class="s2">"print_metric"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_print_metric</span>
         <span class="k">return</span> <span class="n">metric</span></div>
 
 
 <div class="viewcode-block" id="Optimizer.optimize">
 <a class="viewcode-back" href="../../api/canari.optimizer.html#canari.optimizer.Optimizer.optimize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run optimziation</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backend</span> <span class="o">==</span> <span class="s2">&quot;ray&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backend</span> <span class="o">==</span> <span class="s2">"ray"</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_ray_optimizer</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="Optimizer.get_best_model">
 <a class="viewcode-back" href="../../api/canari.optimizer.html#canari.optimizer.Optimizer.get_best_model">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_best_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Retrieve the optimized model instance after running optimization.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Model instance initialized with the best hyperparameter values.</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span></div>
 
 
 <div class="viewcode-block" id="Optimizer.get_best_param">
 <a class="viewcode-back" href="../../api/canari.optimizer.html#canari.optimizer.Optimizer.get_best_param">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_best_param</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Retrieve the optimized parameters after running optimization.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: Best hyperparameter values.</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ray_optimizer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run hyperparameter optimization over the defined search space.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">search_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ray_build_search_space</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grid_search</span><span class="p">:</span>
@@ -485,7 +486,7 @@ document.write(`
             <span class="n">custom_logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ray_progress_callback</span><span class="p">(</span>
                 <span class="n">total_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span>
             <span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">&quot;TPE&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">"TPE"</span><span class="p">:</span>
                 <span class="n">sampler</span> <span class="o">=</span> <span class="n">optuna</span><span class="o">.</span><span class="n">samplers</span><span class="o">.</span><span class="n">TPESampler</span><span class="p">(</span>
                     <span class="n">n_startup_trials</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_startup_trials</span><span class="p">,</span>
                     <span class="n">multivariate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -495,7 +496,7 @@ document.write(`
                     <span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
                     <span class="n">search_alg</span><span class="o">=</span><span class="n">OptunaSearch</span><span class="p">(</span>
-                        <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">,</span> <span class="n">sampler</span><span class="o">=</span><span class="n">sampler</span>
+                        <span class="n">metric</span><span class="o">=</span><span class="s2">"metric"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">,</span> <span class="n">sampler</span><span class="o">=</span><span class="n">sampler</span>
                     <span class="p">),</span>
                     <span class="n">num_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_optimization_trial</span><span class="p">,</span>
                     <span class="n">max_concurrent_trials</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_concurrent</span><span class="p">,</span>
@@ -503,8 +504,8 @@ document.write(`
                     <span class="n">raise_on_failed_trial</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                     <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">custom_logger</span><span class="p">],</span>
                 <span class="p">)</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">&quot;random&quot;</span><span class="p">:</span>
-                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_algorithm</span> <span class="o">==</span> <span class="s2">"random"</span><span class="p">:</span>
+                <span class="n">scheduler</span> <span class="o">=</span> <span class="n">ASHAScheduler</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">"metric"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
                 <span class="n">optimizer_runner</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span>
                     <span class="n">config</span><span class="o">=</span><span class="n">search_config</span><span class="p">,</span>
@@ -516,15 +517,15 @@ document.write(`
                     <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">custom_logger</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;algorithm must be &#39;TPE&#39; or &#39;random&#39;&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"algorithm must be 'TPE' or 'random'"</span><span class="p">)</span>
 
         <span class="c1"># Best params &amp; model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_config</span><span class="p">(</span>
-            <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+            <span class="n">metric</span><span class="o">=</span><span class="s2">"metric"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
         <span class="p">)</span>
-        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
+        <span class="n">best_trial</span> <span class="o">=</span> <span class="n">optimizer_runner</span><span class="o">.</span><span class="n">get_best_trial</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">"metric"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
         <span class="n">best_sample_number</span> <span class="o">=</span> <span class="n">custom_logger</span><span class="o">.</span><span class="n">trial_sample_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="n">best_trial</span><span class="o">.</span><span class="n">trial_id</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span>
+            <span class="n">best_trial</span><span class="o">.</span><span class="n">trial_id</span><span class="p">,</span> <span class="s2">"Unknown"</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model_input</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -538,21 +539,21 @@ document.write(`
 
         <span class="bp">self</span><span class="o">.</span><span class="n">model_optim</span> <span class="o">=</span> <span class="n">best_model</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"-----"</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Optimal parameters at trial #</span><span class="si">{</span><span class="n">best_sample_number</span><span class="si">}</span><span class="s2">. Best metric: </span><span class="si">{</span><span class="n">best_model</span><span class="o">.</span><span class="n">metric_optim</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">. Best print metric: </span><span class="si">{</span><span class="n">best_model</span><span class="o">.</span><span class="n">print_metric</span><span class="si">}</span><span class="s2">. Best param: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Optimal parameters at trial #</span><span class="si">{</span><span class="n">best_sample_number</span><span class="si">}</span><span class="s2">. Best metric: </span><span class="si">{</span><span class="n">best_model</span><span class="o">.</span><span class="n">metric_optim</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">. Best print metric: </span><span class="si">{</span><span class="n">best_model</span><span class="o">.</span><span class="n">print_metric</span><span class="si">}</span><span class="s2">. Best param: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">param_optim</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"-----"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ray_build_search_space</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Convert param to Ray Tune search space objects.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">search_config</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grid_search</span><span class="p">:</span>
                 <span class="n">search_config</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">tune</span><span class="o">.</span><span class="n">grid_search</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;here grid search&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"here grid search"</span><span class="p">)</span>
                 <span class="k">continue</span>
 
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">Domain</span><span class="p">):</span>
@@ -573,7 +574,7 @@ document.write(`
         <span class="k">return</span> <span class="n">search_config</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ray_progress_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callback</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a Ray Tune callback bound to this optimizer instance.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a Ray Tune callback bound to this optimizer instance."""</span>
 
         <span class="k">class</span><span class="w"> </span><span class="nc">_Progress</span><span class="p">(</span><span class="n">Callback</span><span class="p">):</span>
             <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total</span><span class="p">):</span>
@@ -583,21 +584,21 @@ document.write(`
 
             <span class="k">def</span><span class="w"> </span><span class="nf">on_trial_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">metric</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span>
+                <span class="n">metric</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"metric"</span><span class="p">]</span>
                 <span class="n">params</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">config</span>
-                <span class="n">print_metric</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;print_metric&quot;</span><span class="p">]</span>
+                <span class="n">print_metric</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"print_metric"</span><span class="p">]</span>
 
                 <span class="bp">self</span><span class="o">.</span><span class="n">trial_sample_map</span><span class="p">[</span><span class="n">trial</span><span class="o">.</span><span class="n">trial_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span>
 
-                <span class="n">width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="n">sample_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+                <span class="n">width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">sample_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">current_sample</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_samples</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">print_metric</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="nb">print</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;# </span><span class="si">{</span><span class="n">sample_str</span><span class="si">}</span><span class="s2"> - Metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> - Parameter: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"# </span><span class="si">{</span><span class="n">sample_str</span><span class="si">}</span><span class="s2"> - Metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> - Parameter: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="nb">print</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;# </span><span class="si">{</span><span class="n">sample_str</span><span class="si">}</span><span class="s2"> - Metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> - Print metric: </span><span class="si">{</span><span class="n">print_metric</span><span class="si">}</span><span class="s2"> - Parameter: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"# </span><span class="si">{</span><span class="n">sample_str</span><span class="si">}</span><span class="s2"> - Metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> - Print metric: </span><span class="si">{</span><span class="n">print_metric</span><span class="si">}</span><span class="s2"> - Parameter: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">_Progress</span><span class="p">(</span><span class="n">total_samples</span><span class="p">)</span></div>

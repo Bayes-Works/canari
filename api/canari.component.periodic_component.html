@@ -162,6 +162,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -355,7 +356,7 @@ initialized to zeros.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># With known mu_states and var_states</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">Periodic</span><span class="p">(</span><span class="n">mu_states</span><span class="o">=</span><span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">var_states</span><span class="o">=</span><span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="n">std_error</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">52</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">states_name</span>
-<span class="go">[&#39;periodic 1&#39;, &#39;periodic 2&#39;]</span>
+<span class="go">['periodic 1', 'periodic 2']</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">mu_states</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">var_states</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span><span class="o">.</span><span class="n">transition_matrix</span>

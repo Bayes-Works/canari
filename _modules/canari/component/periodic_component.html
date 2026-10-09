@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -314,8 +315,8 @@ document.write(`
 <div class="viewcode-block" id="Periodic">
 <a class="viewcode-back" href="../../../api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Periodic</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    `Periodic` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    `Periodic` class, inheriting from Canari's `BaseComponent`.</span>
 <span class="sd">    It models a cyclic behavior with a fixed period using a Fourrier-form harmonic.</span>
 <span class="sd">    It has two hidden states.</span>
 
@@ -335,13 +336,13 @@ document.write(`
 <span class="sd">        &gt;&gt;&gt; # With known mu_states and var_states</span>
 <span class="sd">        &gt;&gt;&gt; periodic = Periodic(mu_states=[0., 0.], var_states=[1., 1.], std_error=0.1, period=52)</span>
 <span class="sd">        &gt;&gt;&gt; periodic.states_name</span>
-<span class="sd">        [&#39;periodic 1&#39;, &#39;periodic 2&#39;]</span>
+<span class="sd">        ['periodic 1', 'periodic 2']</span>
 <span class="sd">        &gt;&gt;&gt; periodic.mu_states</span>
 <span class="sd">        &gt;&gt;&gt; periodic.var_states</span>
 <span class="sd">        &gt;&gt;&gt; periodic.transition_matrix</span>
 <span class="sd">        &gt;&gt;&gt; periodic.observation_matrix</span>
 <span class="sd">        &gt;&gt;&gt; periodic.process_noise_matrix</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -359,7 +360,7 @@ document.write(`
 <div class="viewcode-block" id="Periodic.initialize_component_name">
 <a class="viewcode-back" href="../../../api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_component_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_component_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">&quot;periodic&quot;</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">"periodic"</span></div>
 
 
 <div class="viewcode-block" id="Periodic.initialize_num_states">
@@ -371,18 +372,18 @@ document.write(`
 <div class="viewcode-block" id="Periodic.initialize_states_name">
 <a class="viewcode-back" href="../../../api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_states_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;periodic 1&quot;</span><span class="p">,</span> <span class="s2">&quot;periodic 2&quot;</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"periodic 1"</span><span class="p">,</span> <span class="s2">"periodic 2"</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="Periodic.initialize_transition_matrix">
 <a class="viewcode-back" href="../../../api/canari.component.periodic_component.html#canari.component.periodic_component.Periodic.initialize_transition_matrix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_transition_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Transition matrix:</span>
 <span class="sd">            [[cos(w), sin(w)],</span>
 <span class="sd">             [-sin(w), cos(w)]]</span>
 <span class="sd">        where w = 2π / period</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">w</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_transition_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
             <span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">w</span><span class="p">)],</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">w</span><span class="p">)]]</span>
@@ -410,7 +411,7 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mu_states</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;Incorrect mu_states dimension for the periodic component.&quot;</span>
+                <span class="s2">"Incorrect mu_states dimension for the periodic component."</span>
             <span class="p">)</span></div>
 
 
@@ -423,7 +424,7 @@ document.write(`
             <span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_var_states</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;Incorrect var_states dimension for the periodic component.&quot;</span>
+                <span class="s2">"Incorrect var_states dimension for the periodic component."</span>
             <span class="p">)</span></div>
 </div>
 

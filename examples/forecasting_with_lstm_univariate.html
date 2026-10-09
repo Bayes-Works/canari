@@ -165,6 +165,7 @@
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
@@ -376,18 +377,18 @@ from canari.component import LocalTrend, LstmNetwork, WhiteNoise
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>project_root = Path.cwd().resolve().parents[1]
-data_file = str(project_root / &quot;data/toy_time_series/sine.csv&quot;)
-df = pd.read_csv(data_file, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file = str(project_root / "data/toy_time_series/sine.csv")
+df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # Add a trend to the data
 linear_space = np.linspace(0, 2, num=len(df))
 df = df.add(linear_space, axis=0)
 #
-data_file_time = str(project_root / &quot;data/toy_time_series/sine_datetime.csv&quot;)
-time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file_time = str(project_root / "data/toy_time_series/sine_datetime.csv")
+time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_index = pd.to_datetime(time_index[0])
 df.index = time_index
-df.index.name = &quot;time&quot;
-df.columns = [&quot;values&quot;]
+df.index.name = "time"
+df.columns = ["values"]
 </pre></div>
 </div>
 </div>
@@ -487,7 +488,7 @@ pattern = LstmNetwork(
 residual = WhiteNoise(std_error=0.05)
 
 model = Model(local_trend, pattern, residual)
-model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
+model.auto_initialize_baseline_states(train_data["y"][0 : 24])
 </pre></div>
 </div>
 </div>
@@ -518,7 +519,7 @@ for epoch in range(num_epoch):
     )
 
     # Calculate the log-likelihood metric
-    validation_obs = data_processor.get_data(&quot;validation&quot;).flatten()
+    validation_obs = data_processor.get_data("validation").flatten()
     mse = metric.mse(mu_validation_preds, validation_obs)
 
     # Early-stopping
@@ -596,16 +597,16 @@ plot_prediction(
     mean_validation_pred=mu_validation_preds,
     std_validation_pred = std_validation_preds,
     sub_plot=ax[0],
-    color=&quot;k&quot;,
+    color="k",
     )
 plot_prediction(
     data_processor=data_processor,
     mean_test_pred=mu_test_preds,
     std_test_pred = std_test_preds,
     sub_plot=ax[0],
-    color=&quot;b&quot;,
+    color="b",
     )
-ax[-1].set_xlabel(&quot;MM-DD&quot;)
+ax[-1].set_xlabel("MM-DD")
 plt.show()
 </pre></div>
 </div>

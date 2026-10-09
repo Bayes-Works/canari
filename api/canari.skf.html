@@ -164,6 +164,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -403,7 +404,7 @@ used to model an abnormal one. At each time step, SKF estimates the probability 
 <span class="go">        num_features=2,</span>
 <span class="go">        num_layer=1,</span>
 <span class="go">        num_hidden_unit=50,</span>
-<span class="go">        device=&quot;cpu&quot;,</span>
+<span class="go">        device="cpu",</span>
 <span class="go">        manual_seed=1,</span>
 <span class="go">    )</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">residual</span> <span class="o">=</span> <span class="n">WhiteNoise</span><span class="p">(</span><span class="n">std_error</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
@@ -726,7 +727,7 @@ defined in <a class="reference internal" href="canari.data_process.html#canari.d
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="mi">23</span><span class="p">])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">skf</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"y"</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="mi">23</span><span class="p">])</span>
 </pre></div>
 </div>
 </dd></dl>

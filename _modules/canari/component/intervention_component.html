@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -314,8 +315,8 @@ document.write(`
 <div class="viewcode-block" id="Intervention">
 <a class="viewcode-back" href="../../../api/canari.component.intervention_component.html#canari.component.intervention_component.Intervention">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Intervention</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    `Intervention` class, inheriting from Canari&#39;s `BaseComponent`.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    `Intervention` class, inheriting from Canari's `BaseComponent`.</span>
 <span class="sd">    It is used to add a hidden state for intervention.</span>
 
 <span class="sd">    NOTE: This component is under development. At the moment, use one `Intervention` hidden state per intervention event.</span>
@@ -332,7 +333,7 @@ document.write(`
 <span class="sd">        array([[1]])</span>
 <span class="sd">        &gt;&gt;&gt; intervention.process_noise_matrix</span>
 <span class="sd">        array([[0]])</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -346,7 +347,7 @@ document.write(`
 <div class="viewcode-block" id="Intervention.initialize_component_name">
 <a class="viewcode-back" href="../../../api/canari.component.intervention_component.html#canari.component.intervention_component.Intervention.initialize_component_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_component_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">&quot;intervention&quot;</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_component_name</span> <span class="o">=</span> <span class="s2">"intervention"</span></div>
 
 
 <div class="viewcode-block" id="Intervention.initialize_num_states">
@@ -358,7 +359,7 @@ document.write(`
 <div class="viewcode-block" id="Intervention.initialize_states_name">
 <a class="viewcode-back" href="../../../api/canari.component.intervention_component.html#canari.component.intervention_component.Intervention.initialize_states_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize_states_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;intervention&quot;</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_states_name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"intervention"</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="Intervention.initialize_transition_matrix">

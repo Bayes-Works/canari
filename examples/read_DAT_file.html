@@ -165,6 +165,7 @@
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Read .DAT data files</a></li>
@@ -320,12 +321,12 @@ document.write(`
 
 <span class="n">data_file</span> <span class="o">=</span> <span class="o">.</span><span class="n">DAT</span>
 <span class="n">df_raw</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span>
-                    <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">,</span>  <span class="c1"># Semicolon as delimiter</span>
-                    <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span>
-                    <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
-                    <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span>  <span class="c1"># Treat empty strings as NaN</span>
+                    <span class="n">sep</span><span class="o">=</span><span class="s2">";"</span><span class="p">,</span>  <span class="c1"># Semicolon as delimiter</span>
+                    <span class="n">quotechar</span><span class="o">=</span><span class="s1">'"'</span><span class="p">,</span>
+                    <span class="n">engine</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span>
+                    <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="s2">""</span><span class="p">],</span>  <span class="c1"># Treat empty strings as NaN</span>
                     <span class="n">skipinitialspace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                    <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;ISO-8859-1&quot;</span><span class="p">,</span>
+                    <span class="n">encoding</span><span class="o">=</span><span class="s2">"ISO-8859-1"</span><span class="p">,</span>
                     <span class="p">)</span>
 </pre></div>
 </div>

@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Forecasting with LSTM and explanatory time series &#8212; canari v.0.2.5 documentation</title>
+    <title>Forecasting using ICOLD2022 data &#8212; canari v.0.2.5 documentation</title>
   
   
   
@@ -44,11 +44,11 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/forecasting_with_lstm_multivariate';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/forecasting_icold2022';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Forecasting using ICOLD2022 data" href="forecasting_icold2022.html" />
-    <link rel="prev" title="Univariate time series forecasting with LSTM" href="forecasting_with_lstm_univariate.html" />
+    <link rel="next" title="Anomaly detection using the switching Kalman filter" href="anomaly_detection.html" />
+    <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -164,8 +164,8 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../tutorials.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Forecasting with LSTM and explanatory time series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
@@ -298,7 +298,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Forecasting with LSTM and explanatory time series</h1>
+    <h1>Forecasting using ICOLD2022 data</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -308,16 +308,12 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Add-dependent-variables">Add dependent variables</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-model-from-components">Define model from components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-the-LSTM-neural-network">Training the LSTM neural network</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Set-relevant-variables-for-predicting-in-the-test-set">Set relevant variables for predicting in the test set</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hyper-parameter">Hyper-parameter</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-processing">Data processing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Model-definition-and-training">Model definition and training</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Forecast-on-the-test-set">Forecast on the test set</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions-and-hidden-states">Predictions and hidden states</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions">Predictions</a></li>
 </ul>
             </nav>
         </div>
@@ -329,280 +325,114 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Forecasting-with-LSTM-and-explanatory-time-series">
-<h1>Forecasting with LSTM and explanatory time series<a class="headerlink" href="#Forecasting-with-LSTM-and-explanatory-time-series" title="Link to this heading">#</a></h1>
-<p>This tutorial example presents how to handle non-linear dependencies between a target and an explanatory time series using a LSTM neural network.</p>
-<p>The calibration of the LSTM neural network relies on the raw traning set that is deemed to be trend-stationnary.</p>
-<p>In this example, we use a simple sine-like signal onto which we added a synthetic linear trend.</p>
-<section id="Import-libraries">
-<h2>Import libraries<a class="headerlink" href="#Import-libraries" title="Link to this heading">#</a></h2>
-<p>Import the various libraries that will be employed in this example.</p>
+  <section id="Forecasting-using-ICOLD2022-data">
+<h1>Forecasting using ICOLD2022 data<a class="headerlink" href="#Forecasting-using-ICOLD2022-data" title="Link to this heading">#</a></h1>
+<p>This example shows how to use canari for forecasting the displacement of a real dam by exploiting its dependency on the reservoir water level. ICOLD2022 data is used.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
-from pytagi import Normalizer as normalizer
 import pytagi.metric as metric
-</pre></div>
-</div>
-</div>
-</section>
-<section id="Import-from-Canari">
-<h2>Import from Canari<a class="headerlink" href="#Import-from-Canari" title="Link to this heading">#</a></h2>
-<p>From Canari, we need to import several classes that will be reused in this example. Notably, we need to import the components that will be used to build the model; In terms of baseline, we use the <code class="docutils literal notranslate"><span class="pre">LocalTrend</span></code> and components. The recurrent pattern is modelled using a <code class="docutils literal notranslate"><span class="pre">LstmNetwork</span></code> and the residual is modelled by a <code class="docutils literal notranslate"><span class="pre">WhiteNoise</span></code> compoment.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from canari import (
+from pytagi import Normalizer as normalizer
+from canari import (
     DataProcess,
     Model,
     plot_data,
     plot_prediction,
-    plot_states,
 )
-from canari.component import LocalTrend, LstmNetwork, WhiteNoise
+from canari.component import LstmNetwork, WhiteNoise
 </pre></div>
 </div>
 </div>
-</section>
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
-<p>The raw <code class="docutils literal notranslate"><span class="pre">.csv</span></code> data is saved in a dataframe using the Panda external library.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>project_root = Path.cwd().resolve().parents[1]
-data_file = str(project_root / "data/toy_time_series/sine.csv")
-df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
-# Add a trend to the data
-linear_space = np.linspace(0, 2, num=len(df))
-df = df.add(linear_space, axis=0)
-#
-data_file_time = str(project_root / "data/toy_time_series/sine_datetime.csv")
-time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
-time_index = pd.to_datetime(time_index[0])
-df.index = time_index
-df.index.name = "time"
-df.columns = ["values"]
-df.head()
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>values</th>
-    </tr>
-    <tr>
-      <th>time</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2000-01-03 00:00:00</th>
-      <td>0.000000</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 01:00:00</th>
-      <td>-0.250698</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 02:00:00</th>
-      <td>-0.481395</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 03:00:00</th>
-      <td>-0.682093</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 04:00:00</th>
-      <td>-0.832791</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-</section>
-<section id="Add-dependent-variables">
-<h2>Add dependent variables<a class="headerlink" href="#Add-dependent-variables" title="Link to this heading">#</a></h2>
-<p>We define the dependent explanatory variables as the moving average with window-lenght equal to 3 and a lag of two time steps.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Add columns with lagged values
-lag = [2]
-df = DataProcess.add_lagged_columns(df, lag)
-
-# Add moving average
-df['Moving_Average'] =  df['values'].rolling(window=3).mean()
-df.head()
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>values</th>
-      <th>values_lag1</th>
-      <th>values_lag2</th>
-      <th>Moving_Average</th>
-    </tr>
-    <tr>
-      <th>time</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2000-01-03 00:00:00</th>
-      <td>0.000000</td>
-      <td>0.000000</td>
-      <td>0.000000</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 01:00:00</th>
-      <td>-0.250698</td>
-      <td>0.000000</td>
-      <td>0.000000</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 02:00:00</th>
-      <td>-0.481395</td>
-      <td>-0.250698</td>
-      <td>0.000000</td>
-      <td>-0.244031</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 03:00:00</th>
-      <td>-0.682093</td>
-      <td>-0.481395</td>
-      <td>-0.250698</td>
-      <td>-0.471395</td>
-    </tr>
-    <tr>
-      <th>2000-01-03 04:00:00</th>
-      <td>-0.832791</td>
-      <td>-0.682093</td>
-      <td>-0.481395</td>
-      <td>-0.665426</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-</section>
-<section id="Data-preprocess">
-<h2>Data preprocess<a class="headerlink" href="#Data-preprocess" title="Link to this heading">#</a></h2>
-<p>In terms of pre-processsing, we define here our choice of using the first 80% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 10% are the implicitely defined as the test set.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>output_col = [0]
-data_processor = DataProcess(
-    data=df,
-    train_split=0.8,
-    validation_split=0.1,
-    output_col=output_col,
-)
-train_data, validation_data, test_data, standardized_data = data_processor.get_splits()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># # Read data
+data_file = "../../data/icold2022/icold_2022.csv"
+# data/icold2022/icold_2022.csv
+# data_file = "data/icold2022/icold_2022.csv"
+df_raw = pd.read_csv(data_file, delimiter=",", header=0,
+                     names=["datetime","cb2","cb3","waterlevel","temp_a","temp_b"],
+                     usecols=["datetime","cb2","waterlevel"],
+                     index_col="datetime", parse_dates=True)
+
+# Resample
+df_raw = df_raw.loc['2000-01-30':'2012-12-31']
+df = df_raw.resample("W").last()
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Define-model-from-components">
-<h2>Define model from components<a class="headerlink" href="#Define-model-from-components" title="Link to this heading">#</a></h2>
-<p>We instantiatiate each component brom their base class. The <code class="docutils literal notranslate"><span class="pre">local_trend</span></code> baseline component relies on the default hyperparameters. The recurrent <code class="docutils literal notranslate"><span class="pre">pattern</span></code> will use a 1-layer LSTM neural network with 50 hidden units with a look-back length of 19 time steps. The look-back window consists in the set of past neural network’s outputs that are employed as explanatory variables in order to predict the current output. In addition there are 4 features that are used as explanatory variables. The
-<code class="docutils literal notranslate"><span class="pre">residual</span></code> is modelled by a Gaussian white noise with a mean 0 and a user-defined standard deviation of 0.05.</p>
-<p>Note that we use <code class="docutils literal notranslate"><span class="pre">auto_initialize_baseline_states</span></code> in order to automatically initialize the baseline hidden states based on the first day of data.</p>
+<section id="Hyper-parameter">
+<h2>Hyper-parameter<a class="headerlink" href="#Hyper-parameter" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>water_level_lag = 2  # Number of lagged values of the water level
+look_back_len = 3    # Look-back length for LSTM, i.e., Number of lagged values of the displacement
+sigma_v = 0.19654017672095225 # standard deviation for the noise component
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Data-processing">
+<h2>Data processing<a class="headerlink" href="#Data-processing" title="Link to this heading">#</a></h2>
+<p>We define here our choice of using the first 70% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 20% are the implicitely defined as the test set. “week_of_year” is used as time covariate.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>local_trend = LocalTrend()
-pattern = LstmNetwork(
-        look_back_len=19,
-        num_features=4,  # number of data's columns + time covariates
-        num_layer=1,
-        num_hidden_unit=50,
-        manual_seed=1,
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Data processing
+df_lagged = DataProcess.add_lagged_columns(df, [0, water_level_lag])
+output_col = [0]
+data_processor = DataProcess(
+        data=df_lagged,
+        time_covariates=["week_of_year"],
+        train_split=0.7,
+        validation_split=0.1,
+        output_col=output_col,
     )
-residual = WhiteNoise(std_error=0.05)
-
-model = Model(local_trend, pattern, residual)
-model.auto_initialize_baseline_states(train_data["y"][0 : 24])
+train_data, validation_data, test_data, _ = data_processor.get_splits()
 </pre></div>
 </div>
 </div>
 </section>
-<section id="Training-the-LSTM-neural-network">
-<h2>Training the LSTM neural network<a class="headerlink" href="#Training-the-LSTM-neural-network" title="Link to this heading">#</a></h2>
-<p>The training of the LSTM neural network model is done using the training and validation sets. The training set is used to perform the time series decomposition into a baseline, pattern and residual and to simultanously learn the LSTM neural network parameters. The validation set is used in order to identify the optimal training epoch for the LSTM neural network. Note that it is essential to perform this training on a dataset that is either stationnary or trend-stationnary.</p>
+<section id="Model-definition-and-training">
+<h2>Model definition and training<a class="headerlink" href="#Model-definition-and-training" title="Link to this heading">#</a></h2>
+<p>The model is trained over 50 epochs with early-stopping, and the log-likelihood is reported for the validation period</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>num_epoch = 50
-for epoch in range(num_epoch):
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>SEED = 1
+model = Model(
+    LstmNetwork(
+        look_back_len=look_back_len,
+        num_features=data_processor.data.shape[1],
+        num_layer=1,
+        num_hidden_unit=50,
+        manual_seed=SEED,
+        smoother=False,
+    ),
+    WhiteNoise(std_error=sigma_v),
+)
+
+mu_validation_preds_optim = None
+std_validation_preds_optim = None
+
+NUM_EPOCH = 50
+for epoch in range(NUM_EPOCH):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
         validation_data=validation_data,
     )
 
-    # Unstandardize the predictions
     mu_validation_preds = normalizer.unstandardize(
         mu_validation_preds,
         data_processor.scale_const_mean[output_col],
@@ -613,12 +443,20 @@ for epoch in range(num_epoch):
         data_processor.scale_const_std[output_col],
     )
 
-    # Calculate the log-likelihood metric
     validation_obs = data_processor.get_data("validation").flatten()
-    mse = metric.mse(mu_validation_preds, validation_obs)
+    validation_log_lik = metric.log_likelihood(
+        prediction=mu_validation_preds,
+        observation=validation_obs,
+        std=std_validation_preds,
+    )
 
-    # Early-stopping
-    model.early_stopping(evaluate_metric=mse, current_epoch=epoch, max_epoch=num_epoch)
+    # Early-stopping on the validation set
+    model.early_stopping(
+        evaluate_metric=-validation_log_lik,
+        current_epoch=epoch,
+        max_epoch=NUM_EPOCH,
+    )
+
     if epoch == model.optimal_epoch:
         mu_validation_preds_optim = mu_validation_preds
         std_validation_preds_optim = std_validation_preds
@@ -629,32 +467,19 @@ for epoch in range(num_epoch):
 </div>
 </div>
 </section>
-<section id="Set-relevant-variables-for-predicting-in-the-test-set">
-<h2>Set relevant variables for predicting in the test set<a class="headerlink" href="#Set-relevant-variables-for-predicting-in-the-test-set" title="Link to this heading">#</a></h2>
-<p>In order to forecast on the test set, we need to set the LSTM and SSM states to the values corresponding to the last time step of the validation set. Note that the values corresponds to those associated with the optimal training epoch as identified using the validation set.</p>
+<section id="Forecast-on-the-test-set">
+<h2>Forecast on the test set<a class="headerlink" href="#Forecast-on-the-test-set" title="Link to this heading">#</a></h2>
+<p>In order to forecast on the test set, we need to set the LSTM and SSM states to the values corresponding to the last time step of the validation set. Note that the values corresponds to those associated with the optimal training epoch as identified using the validation set. Then, we perform recursive 1-step ahead forecasts on the test set and then proceed with un-standardization of the data in order to retreive the original scale of the raw data</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>model.set_memory(
-    time_step=data_processor.test_start - 1,
-)
-</pre></div>
-</div>
-</div>
-</section>
-<section id="Forecast-on-the-test-set">
-<h2>Forecast on the test set<a class="headerlink" href="#Forecast-on-the-test-set" title="Link to this heading">#</a></h2>
-<p>We perform recursive 1-step ahead forecasts on the test set and then proceed with un-standardization of the data in order to retreive the original scale of the raw data.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>mu_test_preds, std_test_preds, states = model.forecast(
-    data=test_data,
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Test predictions
+model.set_memory(time_step=data_processor.test_start - 1)
 
-# Unstandardize the predictions
+# Tartget predictions
+mu_test_preds, std_test_preds,_ = model.forecast(data=test_data)
+
 mu_test_preds = normalizer.unstandardize(
     mu_test_preds,
     data_processor.scale_const_mean[output_col],
@@ -668,49 +493,72 @@ std_test_preds = normalizer.unstandardize_std(
 </div>
 </div>
 </section>
-<section id="Predictions-and-hidden-states">
-<h2>Predictions and hidden states<a class="headerlink" href="#Predictions-and-hidden-states" title="Link to this heading">#</a></h2>
-<p>We represent the time-series decomposition visually where the raw data is overlaid with the baseline hidden state represented by the <em>level</em>. The rate of change of the baseline is characterized by the <em>trend</em> hidden states. The recurrent pattern is captured by the LSTM neural network. The posterior estimate for the residuals are displayed for the white noise component. The forecast period corresponds to the last day of data following the validation set, which is depicted by the green-shaded
-region.</p>
+<section id="Predictions">
+<h2>Predictions<a class="headerlink" href="#Predictions" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plot_states(
-    data_processor=data_processor,
-    states=states,
-    )
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+#
+ax = axes[0]
+plt.sca(ax)
 plot_data(
     data_processor=data_processor,
-    plot_train_data=True,
-    plot_test_data=True,
-    plot_validation_data=True,
-    sub_plot=ax[0]
-    )
+    standardization=False,
+    plot_column=output_col,
+    plot_nan=False,
+    validation_label="Observation",
+)
 plot_prediction(
     data_processor=data_processor,
-    mean_validation_pred=mu_validation_preds,
-    std_validation_pred = std_validation_preds,
-    sub_plot=ax[0],
-    color="k",
-    )
+    mean_validation_pred=mu_validation_preds_optim,
+    std_validation_pred=std_validation_preds_optim,
+    validation_label=[r"$\mu$", r"$\mu \pm 2\sigma$"],
+    color="blue",
+    num_std=2,
+)
 plot_prediction(
     data_processor=data_processor,
     mean_test_pred=mu_test_preds,
-    std_test_pred = std_test_preds,
-    sub_plot=ax[0],
-    color="b",
-    )
-ax[-1].set_xlabel("MM-DD")
-plt.show()
+    std_test_pred=std_test_preds,
+    color="blue",
+    num_std=2,
+)
+ax.grid(False, which="both", axis="x")
+ax.set_ylim(-30, 25)
+ax.set_ylabel("Displacement [mm]")
+ax.legend()
+#
+ax = axes[1]
+plt.sca(ax)
+plot_data(
+    data_processor=data_processor,
+    standardization=False,
+    plot_column=[1],
+    plot_nan=False,
+)
+
+ax.grid(False, which="both", axis="x")
+ax.set_ylabel("Water level [m]")
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;Water level [m]&#39;)
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_forecasting_with_lstm_multivariate_20_0.png" src="../_images/examples_forecasting_with_lstm_multivariate_20_0.png" />
+<img alt="../_images/examples_forecasting_icold2022_13_1.png" src="../_images/examples_forecasting_icold2022_13_1.png" />
 </div>
 </div>
 </section>
@@ -728,20 +576,20 @@ plt.show()
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="forecasting_with_lstm_univariate.html"
+       href="forecasting_with_lstm_multivariate.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Univariate time series forecasting with LSTM</p>
+        <p class="prev-next-title">Forecasting with LSTM and explanatory time series</p>
       </div>
     </a>
     <a class="right-next"
-       href="forecasting_icold2022.html"
+       href="anomaly_detection.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Forecasting using ICOLD2022 data</p>
+        <p class="prev-next-title">Anomaly detection using the switching Kalman filter</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -761,16 +609,12 @@ plt.show()
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-libraries">Import libraries</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-from-Canari">Import from Canari</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-data">Read data</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Add-dependent-variables">Add dependent variables</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-preprocess">Data preprocess</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Define-model-from-components">Define model from components</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Training-the-LSTM-neural-network">Training the LSTM neural network</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Set-relevant-variables-for-predicting-in-the-test-set">Set relevant variables for predicting in the test set</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Hyper-parameter">Hyper-parameter</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-processing">Data processing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Model-definition-and-training">Model definition and training</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Forecast-on-the-test-set">Forecast on the test set</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions-and-hidden-states">Predictions and hidden states</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Predictions">Predictions</a></li>
 </ul>
   </nav></div>
 

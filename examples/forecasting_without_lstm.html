@@ -165,6 +165,7 @@
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
@@ -372,18 +373,18 @@ from canari.component import LocalTrend, Periodic, WhiteNoise
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>project_root = Path.cwd().resolve().parents[1]
-data_file = str(project_root / &quot;data/toy_time_series/sine.csv&quot;)
-df = pd.read_csv(data_file, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file = str(project_root / "data/toy_time_series/sine.csv")
+df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # Add a trend to the data
 linear_space = np.linspace(0, 2, num=len(df))
 df = df.add(linear_space, axis=0)
 #
-data_file_time = str(project_root / &quot;data/toy_time_series/sine_datetime.csv&quot;)
-time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file_time = str(project_root / "data/toy_time_series/sine_datetime.csv")
+time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_index = pd.to_datetime(time_index[0])
 df.index = time_index
-df.index.name = &quot;time&quot;
-df.columns = [&quot;values&quot;]
+df.index.name = "time"
+df.columns = ["values"]
 </pre></div>
 </div>
 </div>
@@ -477,7 +478,7 @@ pattern = Periodic(mu_states=[0,0],var_states=[1,1],period=24)
 residual = WhiteNoise(std_error=0.1)
 
 model = Model(local_trend, pattern, residual)
-model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
+model.auto_initialize_baseline_states(train_data["y"][0 : 24])
 </pre></div>
 </div>
 </div>
@@ -516,7 +517,7 @@ model.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plot_states(
     data_processor=data_processor,
     states=states,
-    states_to_plot=[&quot;level&quot;,&quot;trend&quot;,&quot;periodic 1&quot;, &quot;white noise&quot;]
+    states_to_plot=["level","trend","periodic 1", "white noise"]
     )
 plot_data(
     data_processor=data_processor,
@@ -530,9 +531,9 @@ plot_prediction(
     mean_validation_pred=mu_val_pred,
     std_validation_pred = std_val_pred,
     sub_plot=ax[0],
-    color=&quot;k&quot;,
+    color="k",
     )
-ax[-1].set_xlabel(&quot;MM-DD&quot;)
+ax[-1].set_xlabel("MM-DD")
 plt.show()
 </pre></div>
 </div>

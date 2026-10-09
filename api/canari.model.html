@@ -164,6 +164,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/anomaly_detection.html">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples/read_DAT_file.html">Read .DAT data files</a></li>
@@ -735,7 +736,7 @@ defined in <a class="reference internal" href="canari.data_process.html#canari.d
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">all_data</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">get_splits</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">52</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">auto_initialize_baseline_states</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="s2">"y"</span><span class="p">][</span><span class="mi">0</span> <span class="p">:</span> <span class="mi">52</span><span class="p">])</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1085,8 +1086,8 @@ Otherwise, obtain the memory at the current time step.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;lstm&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">level_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">&quot;level&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lstm_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">"lstm"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">level_index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_states_index</span><span class="p">(</span><span class="s2">"level"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>

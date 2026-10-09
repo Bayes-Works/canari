@@ -48,7 +48,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Swithing Kalman filter parameter tuning using synthetic anomalies" href="parameter_tuning.html" />
-    <link rel="prev" title="Forecasting with LSTM and explanatory time series" href="forecasting_with_lstm_multivariate.html" />
+    <link rel="prev" title="Forecasting using ICOLD2022 data" href="forecasting_icold2022.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="EN"/>
   </head>
@@ -165,6 +165,7 @@
 <li class="toctree-l2"><a class="reference internal" href="forecasting_without_lstm.html">Univariate time series forecasting without LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_univariate.html">Univariate time series forecasting with LSTM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forecasting_with_lstm_multivariate.html">Forecasting with LSTM and explanatory time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="forecasting_icold2022.html">Forecasting using ICOLD2022 data</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Anomaly detection using the switching Kalman filter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parameter_tuning.html">Swithing Kalman filter parameter tuning using synthetic anomalies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="read_DAT_file.html">Read .DAT data files</a></li>
@@ -379,8 +380,8 @@ from canari.component import LocalTrend, LocalAcceleration, LstmNetwork, WhiteNo
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>project_root = Path.cwd().resolve().parents[1]
-data_file = str(project_root / &quot;data/toy_time_series/sine.csv&quot;)
-df = pd.read_csv(data_file, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file = str(project_root / "data/toy_time_series/sine.csv")
+df = pd.read_csv(data_file, skiprows=1, delimiter=",", header=None)
 # Add synthetic anomaly to data
 trend = np.linspace(0, 0, num=len(df))
 time_anomaly = 120
@@ -388,12 +389,12 @@ new_trend = np.linspace(0, 1, num=len(df) - time_anomaly)
 trend[time_anomaly:] = trend[time_anomaly:] + new_trend
 df = df.add(trend, axis=0)
 #
-data_file_time = str(project_root / &quot;data/toy_time_series/sine_datetime.csv&quot;)
-time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=&quot;,&quot;, header=None)
+data_file_time = str(project_root / "data/toy_time_series/sine_datetime.csv")
+time_index = pd.read_csv(data_file_time, skiprows=1, delimiter=",", header=None)
 time_index = pd.to_datetime(time_index[0])
 df.index = time_index
-df.index.name = &quot;time&quot;
-df.columns = [&quot;values&quot;]
+df.index.name = "time"
+df.columns = ["values"]
 </pre></div>
 </div>
 </div>
@@ -408,7 +409,7 @@ df.columns = [&quot;values&quot;]
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>output_col = [0]
 data_processor = DataProcess(
     data=df,
-    time_covariates=[&quot;hour_of_day&quot;],
+    time_covariates=["hour_of_day"],
     train_split=0.4,
     validation_split=0.1,
     output_col=output_col,
@@ -496,7 +497,7 @@ pattern = LstmNetwork(
     num_features=2,
     num_layer=1,
     num_hidden_unit=50,
-    device=&quot;cpu&quot;,
+    device="cpu",
     manual_seed=1,
     smoother = False,
 )
@@ -535,7 +536,7 @@ ab_model = Model(local_acceleration, pattern, residual)
     std_transition_error=1e-4,
     norm_to_abnorm_prob=1e-4,
 )
-skf.auto_initialize_baseline_states(train_data[&quot;y&quot;][0 : 24])
+skf.auto_initialize_baseline_states(train_data["y"][0 : 24])
 </pre></div>
 </div>
 </div>
@@ -570,7 +571,7 @@ for epoch in range(num_epoch):
         data_processor.scale_const_std[data_processor.output_col],
     )
 
-    validation_obs = data_processor.get_data(&quot;validation&quot;).flatten()
+    validation_obs = data_processor.get_data("validation").flatten()
     validation_log_lik = metric.log_likelihood(
         prediction=mu_validation_preds_unnorm,
         observation=validation_obs,
@@ -586,8 +587,8 @@ for epoch in range(num_epoch):
     if skf.stop_training:
         break
 
-print(f&quot;Optimal epoch               : {skf.optimal_epoch}&quot;)
-print(f&quot;Validation Log-likelihood   :{skf.early_stop_metric: 0.4f}&quot;)
+print(f"Optimal epoch               : {skf.optimal_epoch}")
+print(f"Validation Log-likelihood   :{skf.early_stop_metric: 0.4f}")
 </pre></div>
 </div>
 </div>
@@ -626,15 +627,15 @@ a stationnary regime to a trend-stationnary one.</p>
     data_processor=data_processor,
     states=states,
     model_prob=filter_marginal_abnorm_prob,
-    legend_location=&quot;upper left&quot;,
+    legend_location="upper left",
 )
 ax[0].axvline(
     x=data_processor.data.index[time_anomaly],
-    color=&quot;r&quot;,
-    linestyle=&quot;--&quot;,
+    color="r",
+    linestyle="--",
 )
-fig.suptitle(&quot;SKF hidden states&quot;, fontsize=10, y=1)
-ax[-1].set_xlabel(&quot;MM-DD&quot;)
+fig.suptitle("SKF hidden states", fontsize=10, y=1)
+ax[-1].set_xlabel("MM-DD")
 plt.show()
 </pre></div>
 </div>
@@ -661,12 +662,12 @@ plt.show()
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="forecasting_with_lstm_multivariate.html"
+       href="forecasting_icold2022.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Forecasting with LSTM and explanatory time series</p>
+        <p class="prev-next-title">Forecasting using ICOLD2022 data</p>
       </div>
     </a>
     <a class="right-next"
