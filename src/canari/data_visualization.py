@@ -191,7 +191,7 @@ def plot_data(
             data_processor.data.index[data_processor.validation_start],
             data_processor.data.index[data_processor.validation_end-1],
             color="green",
-            alpha=0.1,
+            alpha=0.2,
             edgecolor=None,
             linewidth=0
         )
@@ -201,10 +201,10 @@ def plot_data(
         and data_processor.test_start != data_processor.test_end
     ):
         ax.axvspan(
-            data_processor.data.index[data_processor.test_start-1],
-            data_processor.data.index[data_processor.test_end - 1],
+            data_processor.data.index[data_processor.test_start],
+            data_processor.data.index[data_processor.test_end-1],
             color="black",
-            alpha=0.1,
+            alpha=0.2,
             edgecolor=None,
             linewidth=0
         )
