@@ -349,13 +349,11 @@ from canari.component import LstmNetwork, WhiteNoise
 <section id="Read-data">
 <h2>Read data<a class="headerlink" href="#Read-data" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># # Read data
-data_file = "../../data/icold2022/icold_2022.csv"
-# data/icold2022/icold_2022.csv
-# data_file = "data/icold2022/icold_2022.csv"
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>data_file = "../../data/icold2022/icold_2022.csv"
+
 df_raw = pd.read_csv(data_file, delimiter=",", header=0,
                      names=["datetime","cb2","cb3","waterlevel","temp_a","temp_b"],
                      usecols=["datetime","cb2","waterlevel"],
@@ -385,11 +383,10 @@ sigma_v = 0.19654017672095225 # standard deviation for the noise component
 <h2>Data processing<a class="headerlink" href="#Data-processing" title="Link to this heading">#</a></h2>
 <p>We define here our choice of using the first 70% of the raw time series for trainig and the following 10% for the validaiton set. The remaining last 20% are the implicitely defined as the test set. “week_of_year” is used as time covariate.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Data processing
-df_lagged = DataProcess.add_lagged_columns(df, [0, water_level_lag])
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>df_lagged = DataProcess.add_lagged_columns(df, [0, water_level_lag])
 output_col = [0]
 data_processor = DataProcess(
         data=df_lagged,
@@ -411,6 +408,8 @@ train_data, validation_data, test_data, _ = data_processor.get_splits()
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>SEED = 1
+NUM_EPOCH = 50
+
 model = Model(
     LstmNetwork(
         look_back_len=look_back_len,
@@ -426,7 +425,6 @@ model = Model(
 mu_validation_preds_optim = None
 std_validation_preds_optim = None
 
-NUM_EPOCH = 50
 for epoch in range(NUM_EPOCH):
     (mu_validation_preds, std_validation_preds, states) = model.lstm_train(
         train_data=train_data,
@@ -471,13 +469,11 @@ for epoch in range(NUM_EPOCH):
 <h2>Forecast on the test set<a class="headerlink" href="#Forecast-on-the-test-set" title="Link to this heading">#</a></h2>
 <p>In order to forecast on the test set, we need to set the LSTM and SSM states to the values corresponding to the last time step of the validation set. Note that the values corresponds to those associated with the optimal training epoch as identified using the validation set. Then, we perform recursive 1-step ahead forecasts on the test set and then proceed with un-standardization of the data in order to retreive the original scale of the raw data</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Test predictions
-model.set_memory(time_step=data_processor.test_start - 1)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>model.set_memory(time_step=data_processor.test_start - 1)
 
-# Tartget predictions
 mu_test_preds, std_test_preds,_ = model.forecast(data=test_data)
 
 mu_test_preds = normalizer.unstandardize(
@@ -496,12 +492,12 @@ std_test_preds = normalizer.unstandardize_std(
 <section id="Predictions">
 <h2>Predictions<a class="headerlink" href="#Predictions" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Plot
 fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-#
+
 ax = axes[0]
 plt.sca(ax)
 plot_data(
@@ -530,7 +526,7 @@ ax.grid(False, which="both", axis="x")
 ax.set_ylim(-30, 25)
 ax.set_ylabel("Displacement [mm]")
 ax.legend()
-#
+
 ax = axes[1]
 plt.sca(ax)
 plot_data(
@@ -546,8 +542,7 @@ ax.set_ylabel("Water level [m]")
 </div>
 </div>
 <div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
