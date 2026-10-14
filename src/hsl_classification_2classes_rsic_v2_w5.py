@@ -11,7 +11,7 @@ from pytagi import Normalizer as normalizer
 from typing import Tuple, Dict, Optional, Callable
 import numpy as np
 import copy
-from canari.common import likelihood, likelihood_laplace_approx
+from canari.common import likelihood
 import pandas as pd
 from tqdm import tqdm
 from pytagi.nn import Linear, OutputUpdater, Sequential, ReLU, EvenExp, Remax, MixtureReLU
@@ -122,7 +122,7 @@ class hsl_classification:
                     var_states_posterior[lstm_index, lstm_index],
                 )
 
-            self.base_model._save_states_history()
+            self.base_model.save_states_history()
             self.base_model.set_states(mu_states_posterior, var_states_posterior)
             mu_obs_preds.append(mu_obs_pred)
             std_obs_preds.append(var_obs_pred**0.5)
@@ -144,7 +144,7 @@ class hsl_classification:
                     var_states_posterior_gen[lstm_index_gen, lstm_index_gen],
                 )
 
-            self.generate_model._save_states_history()
+            self.generate_model.save_states_history()
             self.generate_model.set_states(mu_states_posterior, var_states_posterior)
             #########################################################################################################
 
@@ -153,7 +153,7 @@ class hsl_classification:
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
                 obs=self.base_model.mu_states_posterior[self.AR_index], 
                 obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
-            self.drift_model._save_states_history()
+            self.drift_model.save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             mu_ar_preds.append(mu_ar_pred)
             std_ar_preds.append(var_ar_pred**0.5)
@@ -226,14 +226,14 @@ class hsl_classification:
                         var_states_posterior[lstm_index, lstm_index],
                     )
 
-                base_model_copy._save_states_history()
+                base_model_copy.save_states_history()
                 base_model_copy.set_states(mu_states_posterior, var_states_posterior)
 
                 mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                     obs=base_model_copy.mu_states_posterior[self.AR_index], 
                     obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
+                drift_model_copy.save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
                 mu_ar_preds.append(mu_ar_pred)
@@ -342,7 +342,7 @@ class hsl_classification:
                     var_states_posterior[lstm_index, lstm_index],
                 )
 
-            self.init_base_model._save_states_history()
+            self.init_base_model.save_states_history()
             self.init_base_model.set_states(mu_states_posterior, var_states_posterior)
 
             # Drift model filter process
@@ -350,7 +350,7 @@ class hsl_classification:
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.init_drift_model.backward(
                 obs=self.init_base_model.mu_states_posterior[self.AR_index], 
                 obs_var=self.init_base_model.var_states_posterior[self.AR_index, self.AR_index])
-            self.init_drift_model._save_states_history()
+            self.init_drift_model.save_states_history()
             self.init_drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
 
             i += 1
@@ -504,14 +504,14 @@ class hsl_classification:
                             var_states_posterior[lstm_index, lstm_index],
                         )
 
-                    base_model_copy._save_states_history()
+                    base_model_copy.save_states_history()
                     base_model_copy.set_states(mu_states_posterior, var_states_posterior)
 
                     mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                     _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                         obs=base_model_copy.mu_states_posterior[self.AR_index], 
                         obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                    drift_model_copy._save_states_history()
+                    drift_model_copy.save_states_history()
                     drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                     mu_ar_preds.append(mu_ar_pred)
                     std_ar_preds.append(var_ar_pred**0.5)
@@ -898,7 +898,7 @@ class hsl_classification:
                     var_states_posterior[lstm_index, lstm_index],
                 )
 
-            self.base_model._save_states_history()
+            self.base_model.save_states_history()
             self.base_model.set_states(mu_states_posterior, var_states_posterior)
             self.mu_obs_preds.append(mu_obs_pred)
             self.std_obs_preds.append(var_obs_pred**0.5)
@@ -908,7 +908,7 @@ class hsl_classification:
             _, _, mu_drift_states_posterior, var_drift_states_posterior = self.drift_model.backward(
                 obs=self.base_model.mu_states_posterior[self.AR_index], 
                 obs_var=self.base_model.var_states_posterior[self.AR_index, self.AR_index])
-            self.drift_model._save_states_history()
+            self.drift_model.save_states_history()
             self.drift_model.set_states(mu_drift_states_posterior, var_drift_states_posterior)
 
             self.current_time_step += 1
@@ -979,7 +979,7 @@ class hsl_classification:
                     # mu_states_prior[lstm_index],
                     # var_states_prior[lstm_index, lstm_index],
                 )
-            ssm_copy._save_states_history()
+            ssm_copy.save_states_history()
             ssm_copy.set_states(mu_states_posterior, var_states_posterior)
 
             mu_y_preds.append(mu_obs_pred)
@@ -1083,9 +1083,9 @@ class hsl_classification:
                     # mu_states_prior[lstm_index],
                     # var_states_prior[lstm_index, lstm_index],
                 )
-            ssm_copy._save_states_history()
+            ssm_copy.save_states_history()
             ssm_copy.set_states(mu_states_posterior, var_states_posterior)
-            drift_model_copy._save_states_history()
+            drift_model_copy.save_states_history()
             drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
             LL_track.append(mu_states_prior[LL_index].item())
             # ssm_copy.set_states(mu_states_prior, var_states_prior)
@@ -1425,7 +1425,7 @@ class hsl_classification:
                         var_states_posterior[lstm_index, lstm_index],
                     )
 
-                base_model_copy._save_states_history()
+                base_model_copy.save_states_history()
                 base_model_copy.set_states(mu_states_posterior, var_states_posterior)
                 mu_obs_preds.append(mu_obs_pred)
                 std_obs_preds.append(var_obs_pred**0.5)
@@ -1434,7 +1434,7 @@ class hsl_classification:
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                     obs=base_model_copy.mu_states_posterior[self.AR_index], 
                     obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
+                drift_model_copy.save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 mu_ar_preds.append(mu_ar_pred)
                 std_ar_preds.append(var_ar_pred**0.5)
