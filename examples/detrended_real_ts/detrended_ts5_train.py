@@ -67,7 +67,6 @@ for epoch in range(num_epoch):
         train_data=train_data,
         validation_data=validation_data,
     )
-    model.set_memory(states=model.states, time_step=0)
 
     # Unstandardize the predictions
     mu_validation_preds_unnorm = normalizer.unstandardize(
@@ -120,8 +119,6 @@ print(f"Validation MSE      :{model.early_stop_metric: 0.4f}")
 op_model_dict = model.get_dict()
 # Print the keys of the model_dict
 op_model_dict['states_optimal'] = states_optim
-op_model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
-op_model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 
 phi_index = op_model_dict["states_name"].index("phi")
 W2bar_index = op_model_dict["states_name"].index("W2bar")
@@ -132,8 +129,8 @@ op_model = Model(
     LSTM,
     Autoregression(std_error=np.sqrt(op_model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=op_model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[op_model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[op_model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                   mu_states=[op_model_dict["memory"]["mu_states"][autoregression_index].item()], 
+                   var_states=[op_model_dict["memory"]["var_states"][autoregression_index, autoregression_index].item()]),
 )
 
 op_model.lstm_net.load_state_dict(model.lstm_net.state_dict())
@@ -280,8 +277,6 @@ plt.show()
 ###################### Save the parameters for two models ######################
 model_dict = model.get_dict()
 model_dict['states_optimal'] = states_optim
-model_dict['early_stop_init_mu_states'] = model.early_stop_init_mu_states
-model_dict['early_stop_init_var_states'] = model.early_stop_init_var_states
 model_dict['gen_phi_ar'] = ar_model.states.get_mean(states_type="prior", states_name="phi")[-1]
 model_dict['gen_sigma_ar'] = np.sqrt(ar_model.states.get_mean(states_type="prior", states_name="W2bar")[-1])
 
@@ -305,8 +300,8 @@ pretrained_model = Model(
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                   mu_states=[model_dict["memory"]["mu_states"][autoregression_index].item()], 
+                   var_states=[model_dict["memory"]["var_states"][autoregression_index, autoregression_index].item()]),
 )
 
 pretrained_model.lstm_net.load_state_dict(model.lstm_net.state_dict())

@@ -210,14 +210,14 @@ class hsl_detection:
                         var_states_posterior[lstm_index, lstm_index],
                     )
 
-                base_model_copy._save_states_history()
+                base_model_copy.save_states_history()
                 base_model_copy.set_states(mu_states_posterior, var_states_posterior)
 
                 mu_ar_pred, var_ar_pred, mu_drift_states_prior, _ = drift_model_copy.forward()
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                     obs=base_model_copy.mu_states_posterior[self.AR_index], 
                     obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
+                drift_model_copy.save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 self.LTd_buffer.append(mu_drift_states_prior[1].item())
                 mu_ar_preds.append(mu_ar_pred)
@@ -488,14 +488,14 @@ class hsl_detection:
                             var_states_posterior[lstm_index, lstm_index],
                         )
 
-                    base_model_copy._save_states_history()
+                    base_model_copy.save_states_history()
                     base_model_copy.set_states(mu_states_posterior, var_states_posterior)
 
                     mu_ar_pred, var_ar_pred, _, _ = drift_model_copy.forward()
                     _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                         obs=base_model_copy.mu_states_posterior[self.AR_index], 
                         obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                    drift_model_copy._save_states_history()
+                    drift_model_copy.save_states_history()
                     drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                     mu_ar_preds.append(mu_ar_pred)
                     std_ar_preds.append(var_ar_pred**0.5)
@@ -908,7 +908,7 @@ class hsl_detection:
                         var_states_posterior[lstm_index, lstm_index],
                     )
 
-                base_model_copy._save_states_history()
+                base_model_copy.save_states_history()
                 base_model_copy.set_states(mu_states_posterior, var_states_posterior)
                 mu_obs_preds.append(mu_obs_pred)
                 std_obs_preds.append(var_obs_pred**0.5)
@@ -917,7 +917,7 @@ class hsl_detection:
                 _, _, mu_drift_states_posterior, var_drift_states_posterior = drift_model_copy.backward(
                     obs=base_model_copy.mu_states_posterior[self.AR_index], 
                     obs_var=base_model_copy.var_states_posterior[self.AR_index, self.AR_index])
-                drift_model_copy._save_states_history()
+                drift_model_copy.save_states_history()
                 drift_model_copy.set_states(mu_drift_states_posterior, var_drift_states_posterior)
                 mu_ar_preds.append(mu_ar_pred)
                 std_ar_preds.append(var_ar_pred**0.5)

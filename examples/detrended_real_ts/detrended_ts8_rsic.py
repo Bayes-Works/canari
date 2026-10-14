@@ -86,6 +86,10 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 # Load model_dict from local
 with open("saved_params/real_ts8_tsmodel_detrended.pkl", "rb") as f:
     model_dict = pickle.load(f)
+# Rename LSTM layer keys saved by older pytagi (LSTM/Linear -> SLSTM/SLinear)
+model_dict["lstm_network_params"] = {
+    (k if k.startswith("S") else "S" + k): v for k, v in model_dict["lstm_network_params"].items()
+}
 
 LSTM = LstmNetwork(
         look_back_len=22,
