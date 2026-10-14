@@ -50,6 +50,8 @@ class hsl_detection:
         self.detection_threshold = 0.5
         self.mu_itv_all, self.std_itv_all = [], []
         self.nn_train_with = 'tagiv'
+        # Max look-back step for LTd history (NN input size = log2(step_look_back) + 2)
+        self.step_look_back = 64
         self.current_time_step = 0
         self.lstm_history = []
         self.lstm_cell_states = []
@@ -1003,7 +1005,9 @@ class hsl_detection:
         samples_df = pd.DataFrame(samples)
         samples_df.to_csv(save_to_path, index=False)
 
-    def _get_look_back_time_steps(self, current_step, step_look_back = 64):
+    def _get_look_back_time_steps(self, current_step, step_look_back = None):
+        if step_look_back is None:
+            step_look_back = self.step_look_back
         look_back_step_list = [0]
         current = 1
         while current <=  step_look_back:

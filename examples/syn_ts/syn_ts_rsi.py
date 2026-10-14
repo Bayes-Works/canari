@@ -60,6 +60,10 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 # Load model_dict from local
 with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "rb") as f:
     model_dict = pickle.load(f)
+# Rename LSTM layer keys saved by older pytagi (LSTM/Linear -> SLSTM/SLinear)
+model_dict["lstm_network_params"] = {
+    (k if k.startswith("S") else "S" + k): v for k, v in model_dict["lstm_network_params"].items()
+}
 
 LSTM = LstmNetwork(
         look_back_len=52,
@@ -123,6 +127,8 @@ hsl_tsad_agent.detection_threshold = 0.1
 
 # hsl_tsad_agent.collect_synthetic_samples(num_time_series=1000, save_to_path='data/hsl_tsad_training_samples/rsi_learn_samples_syn_simple_phi05.csv')
 hsl_tsad_agent.nn_train_with = 'tagiv'
+# The saved syn model was trained on 9-step LTd histories (look-back up to 128)
+hsl_tsad_agent.step_look_back = 128
 hsl_tsad_agent.mean_train, hsl_tsad_agent.std_train, hsl_tsad_agent.mean_target, hsl_tsad_agent.std_target = -2.3938367e-06, 0.0005101522, np.array([-3.7390430e-04, -3.8285822e-02, 1.1304788e+02]), np.array([1.1202391e-02, 1.4862328e+00, 6.9198441e+01])
 hsl_tsad_agent.learn_intervention(training_samples_path='data/hsl_tsad_training_samples/rsi_learn_samples_syn_simple_phi05.csv', 
                                   load_model_path='saved_params/NN_intervention_model_syn_simple_phi05_rsi.pkl', max_training_epoch=50)

@@ -11,8 +11,7 @@ from canari import (
     plot_prediction,
     plot_states,
 )
-from src.hsl_classification_2classes_rsic_v2 import hsl_classification
-from src.matrix_profile_functions import past_only_matrix_profile
+from src.hsl_classification_2classes_rsic_v2_w5 import hsl_classification
 import pytagi.metric as metric
 import pickle
 import ast
@@ -98,6 +97,12 @@ train_val_data["y"] = train_val_data["y"][0:data_processor.validation_end, :]
 # Load model_dict from local
 with open("saved_params/ssm_ts_anmtype_simple_phi05.pkl", "rb") as f:
     model_dict = pickle.load(f)
+# Rename LSTM layer keys saved by older pytagi (LSTM/Linear -> SLSTM/SLinear)
+model_dict["lstm_network_params"] = {
+    (k if k.startswith("S") else "S" + k): v for k, v in model_dict["lstm_network_params"].items()
+}
+# Older pickles keep mu_states/var_states at top level; newer ones under "memory"
+model_memory = model_dict.get("memory", model_dict)
 
 LSTM = LstmNetwork(
         look_back_len=52,
@@ -118,8 +123,8 @@ pretrained_model = Model(
     LSTM,
     Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                    phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                   mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                   var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                   mu_states=[model_memory["mu_states"][autoregression_index].item()], 
+                   var_states=[model_memory["var_states"][autoregression_index, autoregression_index].item()]),
 )
 print("phi_AR_gen =", model_dict['gen_phi_ar'])
 print("sigma_AR_gen =", model_dict['gen_sigma_ar'])
