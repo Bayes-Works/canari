@@ -8,9 +8,8 @@ from pytagi import Normalizer
 from canari import (
     DataProcess,
     Model,
-    ModelOptimizer,
+    Optimizer,
     SKF,
-    SKFOptimizer,
     plot_data,
     plot_prediction,
     plot_skf_states,
@@ -66,6 +65,12 @@ def main(
 
     with open("saved_params/real_ts10_tsmodel_raw.pkl", "rb") as f:
         model_dict = pickle.load(f)
+    # Rename LSTM layer keys saved by older pytagi (LSTM/Linear -> SLSTM/SLinear)
+    model_dict["lstm_network_params"] = {
+        (k if k.startswith("S") else "S" + k): v for k, v in model_dict["lstm_network_params"].items()
+    }
+    # Older pickles keep mu_states/var_states at top level; newer ones under "memory"
+    model_memory = model_dict.get("memory", model_dict)
 
     LSTM = LstmNetwork(
             look_back_len=30,
@@ -88,8 +93,8 @@ def main(
             LSTM,
             Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                        mu_states=[model_memory["mu_states"][autoregression_index].item()], 
+                        var_states=[model_memory["var_states"][autoregression_index, autoregression_index].item()]),
         )
 
         model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -117,8 +122,8 @@ def main(
             LSTM,
             Autoregression(std_error=np.sqrt(model_dict['states_optimal'].mu_prior[-1][W2bar_index].item()), 
                         phi=model_dict['states_optimal'].mu_prior[-1][phi_index].item(), 
-                        mu_states=[model_dict["mu_states"][autoregression_index].item()], 
-                        var_states=[model_dict["var_states"][autoregression_index, autoregression_index].item()]),
+                        mu_states=[model_memory["mu_states"][autoregression_index].item()], 
+                        var_states=[model_memory["var_states"][autoregression_index, autoregression_index].item()]),
         )
         norm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
         abnorm_model.lstm_net.load_state_dict(model_dict["lstm_network_params"])
@@ -129,6 +134,28 @@ def main(
             std_transition_error=skf_param_space["std_transition_error"],
             norm_to_abnorm_prob=skf_param_space["norm_to_abnorm_prob"],
         )
+        return skf
+
+    # Same objective as the former SKFOptimizer: find the smallest detectable slope.
+    # Trials that miss too many anomalies or raise any false alarm get the slope upper bound.
+    def skf_with_objective(skf_param_space, model_param: dict):
+        skf = initialize_skf(skf_param_space, model_param)
+        skf.save_initial_states()
+        detection_rate, num_false_alarm = skf.detect_synthetic_anomaly(
+            data=train_data,
+            threshold=skf_param_space["threshold_anm_prob"],
+            num_anomaly=50,
+            slope_anomaly=skf_param_space["slope"],
+        )
+        skf.load_initial_states()
+        if detection_rate < 0.5 or num_false_alarm > 0:
+            skf.metric_optim = slope_upper_bound
+        else:
+            skf.metric_optim = np.abs(skf_param_space["slope"])
+        skf.print_metric = {
+            "detection_rate": detection_rate,
+            "num_false_alarm": num_false_alarm,
+        }
         return skf
 
     # Define parameter search space
@@ -170,13 +197,12 @@ def main(
             "threshold_anm_prob": [1e-2, 1.],
         }
         # Define optimizer
-        skf_optimizer = SKFOptimizer(
-            initialize_skf=initialize_skf,
-            model_param=model_optim_dict,
-            param_space=skf_param_space,
-            data=train_data,
-            num_synthetic_anomaly=50,
+        skf_optimizer = Optimizer(
+            model=skf_with_objective,
+            param=skf_param_space,
+            model_input=model_optim_dict,
             num_optimization_trial=num_trial_optimization * 2,
+            mode="min",
         )
         skf_optimizer.optimize()
 
