@@ -336,15 +336,15 @@ def plot_states(
         # Get mean and std to plot
         if standardization:
             mu_states = states.get_mean(
-                states_type=states_type, states_name=plot_state, standardization=True
+                states_type=states_type, states_index=idx, standardization=True
             )
             std_states = states.get_std(
-                states_type=states_type, states_name=plot_state, standardization=True
+                states_type=states_type, states_index=idx, standardization=True
             )
         else:
             mu_states = states.get_mean(
                 states_type=states_type,
-                states_name=plot_state,
+                states_index=idx,
                 standardization=False,
                 scale_const_mean=data_processor.scale_const_mean[
                     data_processor.output_col
@@ -355,7 +355,7 @@ def plot_states(
             )
             std_states = states.get_std(
                 states_type=states_type,
-                states_name=plot_state,
+                states_index=idx,
                 standardization=False,
                 scale_const_std=data_processor.scale_const_std[
                     data_processor.output_col
@@ -461,15 +461,15 @@ def plot_skf_states(
         # Get mean and std to plot
         if standardization:
             mu_states = states.get_mean(
-                states_type=states_type, states_name=plot_state, standardization=True
+                states_type=states_type, states_index=idx, standardization=True
             )
             std_states = states.get_std(
-                states_type=states_type, states_name=plot_state, standardization=True
+                states_type=states_type, states_index=idx, standardization=True
             )
         else:
             mu_states = states.get_mean(
                 states_type=states_type,
-                states_name=plot_state,
+                states_index=idx,
                 standardization=False,
                 scale_const_mean=data_processor.scale_const_mean[
                     data_processor.output_col
@@ -480,7 +480,7 @@ def plot_skf_states(
             )
             std_states = states.get_std(
                 states_type=states_type,
-                states_name=plot_state,
+                states_index=idx,
                 standardization=False,
                 scale_const_std=data_processor.scale_const_std[
                     data_processor.output_col

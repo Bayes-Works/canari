@@ -125,6 +125,7 @@ class StatesHistory:
     def get_mean(
         self,
         states_name: Optional[str] = None,
+        states_index: Optional[int] = None,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
         scale_const_mean: Optional[float] = 0,
@@ -159,8 +160,10 @@ class StatesHistory:
             raise ValueError(
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
-        
-        idx = self.states_name.index(states_name)
+        if states_index is None:
+            idx = self.states_name.index(states_name)
+        else:
+            idx = states_index
         mean = values[:, idx].flatten()
 
         if not standardization:
@@ -172,6 +175,7 @@ class StatesHistory:
     def get_std(
         self,
         states_name: Optional[str] = None,
+        states_index: Optional[int] = None,
         states_type: Optional[str] = "posterior",
         standardization: Optional[bool] = True,
         scale_const_std: Optional[float] = 1,
@@ -206,7 +210,10 @@ class StatesHistory:
                 f"Incorrect states_type: choose from 'prior', 'posterior', or 'smooth'."
             )
 
-        idx = self.states_name.index(states_name)
+        if states_index is None:
+            idx = self.states_name.index(states_name)
+        else:
+            idx = states_index
         standard_deviation = values[:, idx, idx] ** 0.5
 
         if not standardization:

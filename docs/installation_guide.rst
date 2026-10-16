@@ -12,7 +12,7 @@ Create Miniconda Environment
 
    .. code-block:: sh
 
-      conda create --name canari python=3.12
+      conda create --name canari python=3.10
 
 3. Activate conda environment:
 
