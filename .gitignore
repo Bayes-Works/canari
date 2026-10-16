@@ -23,3 +23,6 @@ docs/_build/**
 
 # Metadata 
 !examples/benchmark/BM_metadata.json
+/data/anm_type_class_train_samples
+/data/hsl_tsad_training_samples
+/data/prob_eva_syn_time_series
