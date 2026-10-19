@@ -210,11 +210,11 @@ class LstmNetwork(BaseComponent):
                 )
             )
         else:
-            # # layers.append(PositionalEncoding(1))
+            # layers.append(PositionalEncoding(1))
             layers.append(
                     MultiheadAttention(
                     embed_dim=self.num_features + self.look_back_len - 1,
-                    num_heads=3,
+                    num_heads=1,
                     seq_len=1,
                     bias=False,
                     gain_weight=0.25,
@@ -240,19 +240,19 @@ class LstmNetwork(BaseComponent):
             for i in range(1, self.num_layer):
                 layers.append(LSTM(self.num_hidden_unit[i], self.num_hidden_unit[i], True, 1))
 
-            layers.append(
-                    MultiheadAttention(
-                    embed_dim=self.num_hidden_unit[-1],
-                    num_heads=3,
-                    seq_len=1,
-                    bias=False,
-                    gain_weight=0.25,
-                    gain_bias=0.5,
-                    pos_emb="rope",
-                    use_causal_mask=False,
-                    init_method="He",
-                )
-            )
+            # layers.append(
+            #         MultiheadAttention(
+            #         embed_dim=self.num_hidden_unit[-1],
+            #         num_heads=1,
+            #         seq_len=1,
+            #         bias=False,
+            #         gain_weight=0.25,
+            #         gain_bias=0.5,
+            #         pos_emb="rope",
+            #         use_causal_mask=False,
+            #         init_method="He",
+            #     )
+            # )
             # layers.append(RMSNorm([self.num_hidden_unit[-1]]))
 
             # Last layer
