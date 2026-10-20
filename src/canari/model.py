@@ -1489,10 +1489,11 @@ class Model:
                     The posterior variance of the hidden states.
         """
 
-        delta_mu_states, delta_var_states = common.backward(
+        delta_mu_states, delta_var_states = common.backward_v1(
             obs,
             self.mu_obs_predict,
             self.var_obs_predict,
+            self.mu_states_prior,
             self.var_states_prior,
             self.observation_matrix,
         )
@@ -1733,6 +1734,7 @@ class Model:
             self.lstm_net.train()
 
         for index, (x, y, time) in enumerate(zip(data["x"], data["y"], data["time"])):
+            print("Index", index)
             # Intervention
             if intervention and (interv := intervention.get(time)) is not None:
                 self._states_intervention(interv["mu"], interv["var"])

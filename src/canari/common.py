@@ -148,6 +148,51 @@ def backward(
         delta_var_states,
     )
 
+def backward_v1(
+    obs: float,
+    mu_obs_predict: np.ndarray,
+    var_obs_predict: np.ndarray,
+    mu_states_prior: np.ndarray,
+    var_states_prior: np.ndarray,
+    observation_matrix: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Perform the backward step in Kalman filter.
+
+    Args:
+        obs (float): Observation.
+        mu_obs_predict (np.ndarray): Predicted mean.
+        var_obs_predict (np.ndarray): Predicted variance.
+        var_states_prior (np.ndarray): Prior covariance matrix for hidden states.
+        observation_matrix (np.ndarray): Observation matrix.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            A tuple containing:
+
+                - **delta_mu_states** (np.ndarray):
+                    The delta or corrections for the hidden states means.
+                - **delta_var_states** (np.ndarray):
+                    The delta or corrections for the hidden states covariance matrix.
+    """
+
+    mu_states_prior = mu_states_prior.reshape(-1, 1)
+    observation_matrix_mod = np.vstack([observation_matrix, [1, 0, 0, 1]])
+    obs = np.asarray(obs).item()
+    obs_mod = np.array([[obs], [obs - mu_states_prior[2, 0]]])
+    mu_obs_predict_mod = observation_matrix_mod @ mu_states_prior
+    var_obs_predict_mod = (
+        observation_matrix_mod @ var_states_prior @ observation_matrix_mod.T
+    )
+    cov_obs_states = observation_matrix_mod @ var_states_prior
+    jcb = cov_obs_states.T @ np.linalg.pinv(var_obs_predict_mod, rcond=1e-12)
+    delta_mu_states = jcb @ (obs_mod - mu_obs_predict_mod)
+    delta_var_states = -jcb @ cov_obs_states
+    return (
+        delta_mu_states.reshape(-1, 1),
+        delta_var_states,
+    )
+
 
 def rts_smoother(
     mu_states_prior: np.ndarray,
